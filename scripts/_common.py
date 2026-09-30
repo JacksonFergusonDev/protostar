@@ -1,11 +1,14 @@
-"""Shared constants, environment setup, and subprocess utilities for repository scripts."""
+"""Shared paths, output, downloads, and subprocess helpers for repository scripts."""
 
 from __future__ import annotations
 
 import os
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from collections.abc import Sequence
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +28,55 @@ VENV_BIN: Path = VENV_DIR / ("Scripts" if sys.platform == "win32" else "bin")
 for _path in (str(REPO_ROOT), str(SCRIPTS_DIR), str(SRC_DIR)):
     if _path not in sys.path:
         sys.path.insert(0, _path)
+
+
+class OutputStyle(StrEnum):
+    """Shared emphasis for human-facing repository script output."""
+
+    PLAIN = ""
+    TITLE = "bold blue"
+    DETAIL = "dim"
+    SUCCESS = "bold green"
+    WARNING = "bold yellow"
+    ERROR = "bold red"
+    COMMAND = "bold cyan"
+
+
+def report(
+    message: str = "",
+    *,
+    style: OutputStyle = OutputStyle.PLAIN,
+    stderr: bool = False,
+    end: str = "\n",
+) -> None:
+    """Prints literal text, styled on terminals and plain when redirected.
+
+    Non-interactive scripts need only the standard library, including in CI.
+    Text is never parsed as markup, and unsupported stream characters are
+    replaced so redirected Windows output cannot fail on an encoding error.
+    """
+    stream = sys.stderr if stderr else sys.stdout
+    encoding = stream.encoding or "utf-8"
+    message = message.encode(encoding, errors="replace").decode(encoding)
+    if not stream.isatty():
+        print(message, file=stream, end=end, flush=True)
+        return
+
+    from rich.console import Console
+
+    Console(file=stream, highlight=False, markup=False).print(
+        message, style=style.value, end=end, soft_wrap=True
+    )
+
+
+def fetch_bytes(url: str, *, timeout: float = 10) -> bytes:
+    """Downloads at most 10 MiB, reporting a fetch failure before exiting."""
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            return bytes(response.read(10 * 1024 * 1024))
+    except (urllib.error.URLError, TimeoutError) as error:
+        report(f"Failed to fetch {url}: {error}", style=OutputStyle.ERROR, stderr=True)
+        sys.exit(1)
 
 
 def get_repo_env(extra: dict[str, str] | None = None) -> dict[str, str]:

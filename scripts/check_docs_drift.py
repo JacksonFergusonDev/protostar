@@ -31,7 +31,7 @@ _repo_root = Path(__file__).resolve().parent.parent
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
-from scripts._common import DOCS_DIR, REPO_ROOT
+from scripts._common import DOCS_DIR, REPO_ROOT, OutputStyle, report
 from scripts.check_doc_links import docs_path_to_file, extract_anchors
 
 FIRST_PROJECT = DOCS_DIR / "first-project.md"
@@ -679,15 +679,18 @@ def main() -> int:
         problems = check()
         if problems:
             failed = True
-            print(f"  ✗  {label}")
+            report(f"  FAIL  {label}", style=OutputStyle.ERROR)
             for problem in problems:
-                print(f"       {problem}")
+                report(f"       {problem}", style=OutputStyle.DETAIL)
         else:
-            print(f"  ✓  {label}")
+            report(f"  OK  {label}", style=OutputStyle.DETAIL)
     if failed:
-        print("\nDocumentation is out of date. Update the pages above.")
+        report(
+            "\nDocumentation is out of date. Update the pages above.",
+            style=OutputStyle.ERROR,
+        )
         return 1
-    print("\nDocumentation agrees with the code.")
+    report("\nDocumentation agrees with the code.", style=OutputStyle.SUCCESS)
     return 0
 
 

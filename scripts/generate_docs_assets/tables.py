@@ -30,6 +30,7 @@ from protostar.modules import (
     RuffModule,
 )
 from protostar.options import Condition
+from scripts._common import OutputStyle, report
 from scripts.generate_docs_assets.common import (
     REPO_ROOT,
     ManifestEncoder,
@@ -284,7 +285,9 @@ def generate_capability_tables() -> None:
                     ]
                 )
     except Exception as e:
-        print(f"Warning: Failed to load built-in templates: {e}")
+        report(
+            f"Warning: Failed to load built-in templates: {e}", style=OutputStyle.ERROR
+        )
 
     _write_generated_doc(
         "table_templates.md", _format_markdown_table(template_headers, template_rows)

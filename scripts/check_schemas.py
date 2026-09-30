@@ -15,7 +15,6 @@ Run:
 
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
 import tempfile
@@ -30,7 +29,8 @@ from scripts._common import (
     REPO_ROOT,
     SNAPSHOTS_DIR,
     SRC_DIR,
-    VENV_BIN,
+    OutputStyle,
+    report,
     run_repo_cmd,
 )
 
@@ -40,16 +40,12 @@ def ensure_environment_synced() -> None:
     try:
         run_repo_cmd(["uv", "sync", "--quiet"], check=True)
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        print(
-            f"\033[1;31m✖ Failed to sync environment with uv: {e}\033[0m",
-            file=sys.stderr,
+        report(
+            f"FAIL Failed to sync environment with uv: {e}",
+            stderr=True,
+            style=OutputStyle.ERROR,
         )
         sys.exit(1)
-
-    if VENV_BIN.is_dir() and str(VENV_BIN) not in os.environ.get("PATH", "").split(
-        os.pathsep
-    ):
-        os.environ["PATH"] = f"{VENV_BIN}{os.pathsep}{os.environ.get('PATH', '')}"
 
 
 def _run_validator(name: str, cmd: list[str]) -> bool:
@@ -62,12 +58,12 @@ def _run_validator(name: str, cmd: list[str]) -> bool:
     Returns:
         True if the validation command exited with 0, False otherwise.
     """
-    print(f"\033[1;34m=== Validating {name} ===\033[0m")
+    report(f"=== Validating {name} ===", style=OutputStyle.TITLE)
     result = run_repo_cmd(cmd)
     if result.returncode == 0:
-        print(f"\033[1;32m✔ {name} valid\033[0m\n")
+        report(f"OK {name} valid\n", style=OutputStyle.SUCCESS)
         return True
-    print(f"\033[1;31m✖ {name} failed validation\033[0m\n", file=sys.stderr)
+    report(f"FAIL {name} failed validation\n", stderr=True, style=OutputStyle.ERROR)
     return False
 
 
@@ -84,7 +80,9 @@ def validate_prek_configs() -> bool:
         prek_files.extend(sorted(snapshots_dir.rglob(".pre-commit-config.yaml")))
 
     if not prek_files:
-        print("No pre-commit/prek configuration files found.")
+        report(
+            "No pre-commit/prek configuration files found.", style=OutputStyle.DETAIL
+        )
         return True
 
     cmd = [
@@ -263,10 +261,10 @@ def main() -> None:
             all_passed = False
 
     if not all_passed:
-        print("\033[1;31m✖ Schema validation failed.\033[0m", file=sys.stderr)
+        report("FAIL Schema validation failed.", stderr=True, style=OutputStyle.ERROR)
         sys.exit(1)
 
-    print("\033[1;32m✔ All schema checks passed.\033[0m")
+    report("OK All schema checks passed.", style=OutputStyle.SUCCESS)
 
 
 if __name__ == "__main__":

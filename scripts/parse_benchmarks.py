@@ -11,7 +11,7 @@ if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
 from protostar.fs import atomic_write_text
-from scripts._common import REPO_ROOT
+from scripts._common import REPO_ROOT, OutputStyle, report
 
 
 class BenchmarkOutput(TypedDict):
@@ -98,16 +98,20 @@ def main() -> None:
     args = parse_args()
 
     if not args.input.exists():
-        print(f"Error: Input file '{args.input}' does not exist.", file=sys.stderr)
+        report(
+            f"Error: Input file '{args.input}' does not exist.",
+            stderr=True,
+            style=OutputStyle.ERROR,
+        )
         sys.exit(1)
 
     try:
         converted_data = process_benchmarks(args.input)
     except json.JSONDecodeError as e:
-        print(f"Error parsing JSON: {e}", file=sys.stderr)
+        report(f"Error parsing JSON: {e}", stderr=True, style=OutputStyle.ERROR)
         sys.exit(1)
     except Exception as e:
-        print(f"Unexpected error: {e}", file=sys.stderr)
+        report(f"Unexpected error: {e}", stderr=True, style=OutputStyle.ERROR)
         sys.exit(1)
 
     atomic_write_text(args.output, json.dumps(converted_data, indent=2) + "\n")

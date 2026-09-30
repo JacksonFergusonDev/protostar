@@ -2,18 +2,17 @@
 import argparse
 import json
 import sys
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 _repo_root = Path(__file__).resolve().parent.parent
-if str(_repo_root) not in sys.path:
-    sys.path.insert(0, str(_repo_root))
+for _path in (str(_repo_root), str(_repo_root / "src")):
+    if _path not in sys.path:
+        sys.path.insert(0, _path)
 
 from protostar._fallbacks import DEFAULT_REVISIONS
 from protostar.fs import atomic_write_text
 from protostar.registry import RemoteHook
-from scripts._common import SRC_DIR
+from scripts._common import SRC_DIR, OutputStyle, fetch_bytes, report
 
 REGISTRY_URL = (
     "https://jacksonfergusondev.github.io/protostar-hook-registry/registry.json"
@@ -50,17 +49,16 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print(f"Fetching latest registry from {REGISTRY_URL}...")
+    report(f"Fetching latest registry from {REGISTRY_URL}...", style=OutputStyle.DETAIL)
+    raw = fetch_bytes(REGISTRY_URL, timeout=5)
     try:
-        with urllib.request.urlopen(REGISTRY_URL, timeout=5) as response:
-            raw = response.read(10 * 1024 * 1024)
-            data = json.loads(raw.decode("utf-8"))
-    except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
-        print(f"Failed to fetch registry: {e}", file=sys.stderr)
+        data = json.loads(raw.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        report(f"Invalid registry JSON: {e}", style=OutputStyle.ERROR, stderr=True)
         sys.exit(1)
 
     if not isinstance(data, dict) or data.get("schema_version") != 1:
-        print("Invalid registry schema.")
+        report("Invalid registry schema.", style=OutputStyle.ERROR, stderr=True)
         sys.exit(1)
 
     raw_remote_hooks = data.get("hooks", {})
@@ -69,27 +67,39 @@ def main() -> None:
         k: v for k, v in raw_remote_hooks.items() if k in supported_hook_urls
     }
     if not remote_hooks:
-        print("Remote registry has no supported hooks.")
+        report(
+            "Remote registry has no supported hooks.",
+            style=OutputStyle.ERROR,
+            stderr=True,
+        )
         sys.exit(1)
 
     # Compare
     is_out_of_date = dict(remote_hooks) != dict(DEFAULT_REVISIONS)
 
     if not is_out_of_date:
-        print("Fallbacks are perfectly up to date with the remote registry!")
+        report("Fallbacks match the remote registry.", style=OutputStyle.DETAIL)
         sys.exit(0)
 
     if args.check:
-        print("ERROR: Fallbacks are out of date compared to the remote registry!")
-        print(
-            "Please run `uv run python scripts/sync_registry_fallbacks.py` to update them."
+        report(
+            "Fallbacks are out of date compared to the remote registry.",
+            style=OutputStyle.ERROR,
+            stderr=True,
+        )
+        report(
+            "Run `uv run python scripts/sync_registry_fallbacks.py` to update them.",
+            style=OutputStyle.COMMAND,
+            stderr=True,
         )
         sys.exit(1)
 
-    print("Fallbacks are out of date. Updating src/protostar/_fallbacks.py...")
     new_content = generate_fallbacks_content(remote_hooks)
     atomic_write_text(FALLBACKS_FILE, new_content)
-    print("Updated src/protostar/_fallbacks.py. Review and commit the changes.")
+    report(
+        "Updated src/protostar/_fallbacks.py. Review and commit the changes.",
+        style=OutputStyle.WARNING,
+    )
 
 
 if __name__ == "__main__":

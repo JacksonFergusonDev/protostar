@@ -23,9 +23,10 @@ _repo_root = Path(__file__).resolve().parent.parent
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
-from scripts._common import SNAPSHOTS_DIR, SRC_DIR
+from scripts._common import SNAPSHOTS_DIR, OutputStyle, report
 
-sys.path.insert(0, str(SRC_DIR))
+# _common adds src/ to sys.path before importing the project.
+# isort: split
 from protostar.text_merge import merge_text
 
 REPETITIVE = [f"line {c}\n" for c in "abcdefghij"] + ["\n", "}\n", "    pass\n"]
@@ -94,7 +95,10 @@ def compare(
                     "only git clean" if ours is None else "only protostar clean"
                 ] += 1
     agreed = counts["both clean"] + counts["both conflict"]
-    print(f"{name}: {agreed / cases:.2%} same verdict  {dict(counts)}")
+    report(
+        f"{name}: {agreed / cases:.2%} same verdict  {dict(counts)}",
+        style=OutputStyle.DETAIL,
+    )
 
 
 def main() -> None:

@@ -33,7 +33,7 @@ if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
 from protostar.cli.palette import INK
-from scripts._common import SNAPSHOTS_DIR, VENV_BIN
+from scripts._common import SNAPSHOTS_DIR, VENV_BIN, OutputStyle, report
 from scripts.prepare_sandbox import CONFIG_ENV_VAR, sync_project
 
 DEFAULT_COLS = 78
@@ -606,21 +606,24 @@ def main() -> None:
         out_path.parent.mkdir(parents=True, exist_ok=True)
 
         if trials_count == 1:
-            print(f"🎬 Recording demo '{target}' -> {out_path} ...")
+            report(
+                f"Recording demo '{target}' -> {out_path} ...", style=OutputStyle.TITLE
+            )
             with PTYSession(
                 cols=args.cols, rows=args.rows, setup=SCENARIOS[target].setup
             ) as session:
                 SCENARIOS[target].record(session)
                 session.save(out_path)
             duration = float(session.events[-1][0]) if session.events else 0.0
-            print(
-                f"✔ Recorded '{target}' successfully in {duration:.2f}s "
-                f"({len(session.events)} events)."
+            report(
+                f"OK Recorded '{target}' successfully in {duration:.2f}s ({len(session.events)} events).",
+                style=OutputStyle.SUCCESS,
             )
             continue
 
-        print(
-            f"🎬 Recording demo '{target}' ({trials_count} trials requested) -> {out_path} ..."
+        report(
+            f"Recording demo '{target}' ({trials_count} trials requested) -> {out_path} ...",
+            style=OutputStyle.TITLE,
         )
         trial_results: list[DemoTrialResult] = []
         trial_paths: list[Path] = []
@@ -631,7 +634,10 @@ def main() -> None:
                     f".{out_path.stem}.trial_{trial_idx}.tmp.cast"
                 )
                 trial_paths.append(tmp_cast)
-                print(f"  ↳ [Trial {trial_idx}/{trials_count}] Recording ...")
+                report(
+                    f"  -> [Trial {trial_idx}/{trials_count}] Recording ...",
+                    style=OutputStyle.DETAIL,
+                )
                 try:
                     with PTYSession(
                         cols=args.cols, rows=args.rows, setup=SCENARIOS[target].setup
@@ -648,9 +654,9 @@ def main() -> None:
                             status="success",
                         )
                     )
-                    print(
-                        f"    ✔ Trial {trial_idx} completed in {duration:.2f}s "
-                        f"({event_count} events)"
+                    report(
+                        f"    OK Trial {trial_idx} completed in {duration:.2f}s ({event_count} events)",
+                        style=OutputStyle.SUCCESS,
                     )
                 except Exception as exc:
                     trial_results.append(
@@ -661,7 +667,10 @@ def main() -> None:
                             status=f"failed: {exc}",
                         )
                     )
-                    print(f"    ✖ Trial {trial_idx} failed: {exc}")
+                    report(
+                        f"    FAIL Trial {trial_idx} failed: {exc}",
+                        style=OutputStyle.ERROR,
+                    )
 
             successful_trials = [t for t in trial_results if t.status == "success"]
             if not successful_trials:
@@ -706,12 +715,12 @@ def main() -> None:
                 "output_file": str(out_path),
             }
 
-            print(f"\n=== DEMO TRIAL SUMMARY [{target}] ===")
+            report(f"\n=== DEMO TRIAL SUMMARY [{target}] ===", style=OutputStyle.TITLE)
             print(json.dumps(summary, indent=2))
-            print("====================================\n")
-            print(
-                f"✔ Selected trial {winner.trial} ({winner.duration_s:.2f}s) "
-                f"saved to {out_path}"
+            report("====================================\n", style=OutputStyle.DETAIL)
+            report(
+                f"OK Selected trial {winner.trial} ({winner.duration_s:.2f}s) saved to {out_path}",
+                style=OutputStyle.SUCCESS,
             )
         finally:
             for p in trial_paths:

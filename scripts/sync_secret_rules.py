@@ -24,8 +24,6 @@ import json
 import re
 import sys
 import tomllib
-import urllib.error
-import urllib.request
 import warnings
 import zlib
 from dataclasses import dataclass
@@ -50,10 +48,11 @@ from protostar.secret_guard import (
     decode_rules,
     encode_rules,
 )
+from scripts._common import REPO_ROOT, SRC_DIR, OutputStyle, fetch_bytes, report
 
 GITLEAKS_REPO = "https://github.com/gitleaks/gitleaks"
 RAW_URL = "https://raw.githubusercontent.com/gitleaks/gitleaks/{tag}/{path}"
-RULES_FILE = _repo_root / "src" / "protostar" / "_secret_rules.py"
+RULES_FILE = SRC_DIR / "protostar" / "_secret_rules.py"
 
 # Rules the translator cannot express faithfully, mapped to the reason. They
 # are recorded in the generated module's OMITTED table rather than lost.
@@ -511,16 +510,6 @@ def read_payload(module_text: str) -> bytes | None:
     return None
 
 
-def _fetch(tag: str, path: str) -> bytes:
-    url = RAW_URL.format(tag=tag, path=path)
-    try:
-        with urllib.request.urlopen(url, timeout=10) as response:
-            return bytes(response.read(10 * 1024 * 1024))
-    except (urllib.error.URLError, TimeoutError) as error:
-        print(f"Failed to fetch {url}: {error}", file=sys.stderr)
-        sys.exit(1)
-
-
 def main() -> None:
     """Regenerates the rules module, checks that it is current, or prints it."""
     parser = argparse.ArgumentParser(
@@ -543,36 +532,51 @@ def main() -> None:
     if args.dump:
         payload = read_payload(current) if current is not None else None
         if payload is None:
-            print(f"No rules payload in {RULES_FILE.relative_to(_repo_root)}.")
+            report(
+                f"No rules payload in {RULES_FILE.relative_to(REPO_ROOT)}.",
+                style=OutputStyle.ERROR,
+                stderr=True,
+            )
             sys.exit(1)
         print(json.dumps(dataclasses.asdict(decode_rules(payload)), indent=2))
         return
 
     tag = DEFAULT_REVISIONS[GITLEAKS_REPO]
-    print(f"Fetching gitleaks {tag} rules...")
-    source = _fetch(tag, "config/gitleaks.toml")
-    license_text = _fetch(tag, "LICENSE").decode("utf-8")
+    report(f"Fetching gitleaks {tag} rules...", style=OutputStyle.DETAIL)
+    source = fetch_bytes(RAW_URL.format(tag=tag, path="config/gitleaks.toml"))
+    license_text = fetch_bytes(RAW_URL.format(tag=tag, path="LICENSE")).decode("utf-8")
     try:
         content = generate(tag, source, license_text, current)
     except TranslationError as error:
-        print(f"Cannot translate gitleaks {tag}: {error}", file=sys.stderr)
-        print("Extend the translator, or add the rule to EXCLUDE with a reason.")
+        report(
+            f"Cannot translate gitleaks {tag}: {error}",
+            stderr=True,
+            style=OutputStyle.ERROR,
+        )
+        report(
+            "Extend the translator, or add the rule to EXCLUDE with a reason.",
+            style=OutputStyle.DETAIL,
+        )
         sys.exit(1)
 
     if args.check:
         if content != current:
-            print(
-                f"{RULES_FILE.relative_to(_repo_root)} is out of date with gitleaks "
-                f"{tag}. Run `just sync-secret-rules` and commit the result."
+            report(
+                f"{RULES_FILE.relative_to(REPO_ROOT)} is out of date with gitleaks {tag}. Run `just sync-secret-rules` and commit the result.",
+                style=OutputStyle.ERROR,
+                stderr=True,
             )
             sys.exit(1)
-        print(f"Secret rules match gitleaks {tag}.")
+        report(f"Secret rules match gitleaks {tag}.", style=OutputStyle.DETAIL)
         return
     if content == current:
-        print(f"Secret rules already match gitleaks {tag}.")
+        report(f"Secret rules already match gitleaks {tag}.", style=OutputStyle.DETAIL)
         return
     atomic_write_text(RULES_FILE, content)
-    print(f"Wrote {RULES_FILE.relative_to(_repo_root)} from gitleaks {tag}.")
+    report(
+        f"Wrote {RULES_FILE.relative_to(REPO_ROOT)} from gitleaks {tag}.",
+        style=OutputStyle.WARNING,
+    )
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ _repo_root = Path(__file__).resolve().parent.parent.parent
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
+from scripts._common import OutputStyle, report
 from scripts.generate_docs_assets import (
     generate_diff_fixtures,
     generate_docs_assets,
@@ -40,7 +41,7 @@ def main() -> None:
     generate_docs_assets()
     if args.diffs:
         generate_diff_fixtures()
-    print("Documentation assets updated successfully!")
+    report("Documentation assets updated successfully!", style=OutputStyle.SUCCESS)
 
 
 if __name__ == "__main__":

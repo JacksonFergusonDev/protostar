@@ -39,7 +39,10 @@ def test_preparation_refreshes_both_inputs_before_review(
         with pytest.raises(SystemExit) as error:
             prepare_release.main()
         assert error.value.code == 1
-        assert "commit the changes and rerun" in capsys.readouterr().out
+        output = capsys.readouterr().out
+        assert "Review required" in output
+        assert "commit the changes and rerun" in output
+        assert "just bump <part>" in output
     else:
         prepare_release.main()
         assert "current and committed" in capsys.readouterr().out
@@ -89,7 +92,7 @@ def test_fallback_refresh_writes_successfully_while_check_only_reports_drift(
     revisions[next(iter(revisions))] = "v99.0.0"
     payload = json.dumps({"schema_version": 1, "hooks": revisions}).encode()
     mocker.patch(
-        "scripts.sync_registry_fallbacks.urllib.request.urlopen",
+        "scripts._common.urllib.request.urlopen",
         return_value=io.BytesIO(payload),
     )
     monkeypatch.setattr(sync_registry_fallbacks, "FALLBACKS_FILE", target)

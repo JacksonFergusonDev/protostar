@@ -8,9 +8,16 @@ home directory or Protostar configuration.
 import argparse
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import tomlkit
+
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+
+from scripts._common import OutputStyle, report
 
 CONFIG_ENV_VAR = "PROTOSTAR_CONFIG"
 
@@ -87,7 +94,10 @@ def existing_project(workspace: Path) -> None:
         "test:\n    uv run pytest\n",
     )
     commit(workspace, "chore: establish existing project")
-    print("Existing project ready. Try `protostar init` or `protostar init --dry-run`.")
+    report(
+        "Existing project ready. Try `protostar init` or `protostar init --dry-run`.",
+        style=OutputStyle.SUCCESS,
+    )
 
 
 def template_text(
@@ -224,13 +234,17 @@ def main() -> None:
         return
     fixture = args.fixture or args.workspace.parent / "fixture"
     sync_project(args.workspace, fixture, conflict=args.scenario == "sync-conflict")
-    print(f"Updated template: {fixture / 'team-template'}")
+    report(f"Updated template: {fixture / 'team-template'}", style=OutputStyle.WARNING)
     if args.scenario == "sync":
-        print(
-            "Managed project ready. Try `protostar status`, `protostar diff`, or `protostar sync`."
+        report(
+            "Managed project ready. Try `protostar status`, `protostar diff`, or `protostar sync`.",
+            style=OutputStyle.DETAIL,
         )
     else:
-        print("Conflict ready. Run `protostar sync` to choose a resolution.")
+        report(
+            "Conflict ready. Run `protostar sync` to choose a resolution.",
+            style=OutputStyle.WARNING,
+        )
 
 
 if __name__ == "__main__":

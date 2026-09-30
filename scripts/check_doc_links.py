@@ -23,7 +23,7 @@ _repo_root = Path(__file__).resolve().parent.parent
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
-from scripts._common import DOCS_DIR, REPO_ROOT
+from scripts._common import DOCS_DIR, REPO_ROOT, OutputStyle, report
 
 
 def slugify(text: str) -> str:
@@ -111,7 +111,7 @@ def check_tool_urls() -> list[tuple[str, str, str]]:
         reasons = dict(zip(urls, pool.map(check_url, urls.values()), strict=True))
     for name, url in urls.items():
         if reasons[name] is None:
-            print(f"  \u2713  {name:35s}  {url}")
+            report(f"  OK  {name:35s}  {url}", style=OutputStyle.DETAIL)
     return [
         (name, urls[name], reason)
         for name, reason in reasons.items()
@@ -122,7 +122,7 @@ def check_tool_urls() -> list[tuple[str, str, str]]:
 def main() -> None:
     from protostar.docs_registry import DocsPage
 
-    print("Validating DocsPage enum paths...\n")
+    report("Validating DocsPage enum paths...\n", style=OutputStyle.TITLE)
 
     broken: list[tuple[str, str, Path, str]] = []
     valid: list[tuple[str, str, Path]] = []
@@ -147,35 +147,46 @@ def main() -> None:
 
     for label, docs_path, resolved in valid:
         rel = resolved.relative_to(REPO_ROOT)
-        print(f"  \u2713  {label:35s}  {docs_path!r:35s}  \u2192  {rel}")
+        report(
+            f"  OK  {label:35s}  {docs_path!r:35s}  ->  {rel}",
+            style=OutputStyle.DETAIL,
+        )
 
-    print("\nValidating tool documentation links...\n")
+    report("\nValidating tool documentation links...\n", style=OutputStyle.TITLE)
     dead = check_tool_urls()
 
     if dead:
-        print(f"\n{'─' * 80}")
-        print(f"DEAD TOOL DOCUMENTATION LINKS ({len(dead)}):\n")
+        report(f"\n{'=' * 80}", style=OutputStyle.DETAIL)
+        report(
+            f"DEAD TOOL DOCUMENTATION LINKS ({len(dead)}):\n", style=OutputStyle.ERROR
+        )
         for name, url, reason in dead:
-            print(f"  \u2717  {name:35s}  {url}  [{reason}]")
-        print("\nUpdate the module's ToolInfo.docs_url.")
+            report(f"  FAIL  {name:35s}  {url}  [{reason}]", style=OutputStyle.ERROR)
+        report("\nUpdate the module's ToolInfo.docs_url.", style=OutputStyle.WARNING)
 
     if broken:
-        print(f"\n{'─' * 80}")
-        print(f"BROKEN DOCUMENTATION REFERENCES ({len(broken)}):\n")
+        report(f"\n{'=' * 80}", style=OutputStyle.DETAIL)
+        report(
+            f"BROKEN DOCUMENTATION REFERENCES ({len(broken)}):\n",
+            style=OutputStyle.ERROR,
+        )
         for label, docs_path, resolved, reason in broken:
             rel = resolved.relative_to(REPO_ROOT)
-            print(
-                f"  \u2717  {label:35s}  {docs_path!r:35s}  \u2192  {rel}  [{reason}]"
+            report(
+                f"  FAIL  {label:35s}  {docs_path!r:35s}  ->  {rel}  [{reason}]",
+                style=OutputStyle.ERROR,
             )
-        print(
-            f"\n{'─' * 80}\n"
-            f"{len(broken)} broken reference(s) detected.\n"
-            "Update the docs_path value in DocsPage, or create the missing file/anchor."
+        report(
+            f"\n{'=' * 80}\n{len(broken)} broken reference(s) detected.\nUpdate the docs_path value in DocsPage, or create the missing file/anchor.",
+            style=OutputStyle.WARNING,
         )
     if broken or dead:
         sys.exit(1)
 
-    print(f"\nAll {len(valid)} documentation reference(s) are valid.")
+    report(
+        f"\nAll {len(valid)} documentation reference(s) are valid.",
+        style=OutputStyle.SUCCESS,
+    )
     sys.exit(0)
 
 

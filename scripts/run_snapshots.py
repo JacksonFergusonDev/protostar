@@ -30,6 +30,11 @@ from scripts._common import (
 from scripts._common import (
     SNAPSHOTS_DIR as SNAPSHOTS_DIR,
 )
+from scripts._common import (
+    OutputStyle,
+    report,
+    run_repo_cmd,
+)
 from scripts.generate_docs_assets import (
     generate_diff_fixtures,
     generate_docs_assets,
@@ -281,11 +286,15 @@ def _execute_fixture_scenario(
                 text=True,
             )
         except subprocess.CalledProcessError as e:
-            print(f"Scenario command failed: {' '.join(e.cmd)}", file=sys.stderr)
+            report(
+                f"Scenario command failed: {' '.join(e.cmd)}",
+                stderr=True,
+                style=OutputStyle.ERROR,
+            )
             if e.stdout:
-                print(f"STDOUT:\n{e.stdout}", file=sys.stderr)
+                report(f"STDOUT:\n{e.stdout}", stderr=True, style=OutputStyle.DETAIL)
             if e.stderr:
-                print(f"STDERR:\n{e.stderr}", file=sys.stderr)
+                report(f"STDERR:\n{e.stderr}", stderr=True, style=OutputStyle.DETAIL)
             raise
     return planned, existing
 
@@ -407,7 +416,10 @@ def _build_fixture_scenario(
             static_cwd, scenario.name, publish_tree=scenario.publishes_tree
         )
         check_planned_tree(scenario.name, static_cwd, planned, existing)
-        print(f"  ✔ Scenario [{scenario.name}] snapshots generated")
+        report(
+            f"  OK Scenario [{scenario.name}] snapshots generated",
+            style=OutputStyle.SUCCESS,
+        )
 
 
 def build_snapshots(scenario_name: str | None = None) -> None:
@@ -495,7 +507,7 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
                 disk_files.add(file_path.resolve())
 
     # 2. Collect Git tracked files for the target paths
-    ls_result = subprocess.run(
+    ls_result = run_repo_cmd(
         ["git", "ls-files", "--", *rel_targets],
         cwd=base_dir,
         capture_output=True,
@@ -513,7 +525,7 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
     deleted_tracked_files = tracked_files - disk_files
 
     # 3. Check for modified tracked files against HEAD (covers both staged and unstaged changes)
-    diff_stat_result = subprocess.run(
+    diff_stat_result = run_repo_cmd(
         ["git", "diff", "HEAD", "--name-status", "--", *rel_targets],
         cwd=base_dir,
         capture_output=True,
@@ -527,11 +539,14 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
     has_drift = bool(untracked_disk_files or deleted_tracked_files or head_diff_lines)
     if not has_drift:
         targets_str = ", ".join(rel_targets)
-        print(f"✔ All snapshots and assets in [{targets_str}] match expected state.")
+        report(
+            f"OK All snapshots and assets in [{targets_str}] match expected state.",
+            style=OutputStyle.SUCCESS,
+        )
         return True
 
     # 4. Generate unified diff for tracked changes against HEAD
-    diff_result = subprocess.run(
+    diff_result = run_repo_cmd(
         ["git", "diff", "HEAD", "--color=never", "--", *rel_targets],
         cwd=base_dir,
         capture_output=True,
@@ -548,7 +563,7 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
             if untracked_path.is_relative_to(base_dir)
             else untracked_path.as_posix()
         )
-        untracked_diff = subprocess.run(
+        untracked_diff = run_repo_cmd(
             ["git", "diff", "--no-index", "--color=never", "/dev/null", rel_untracked],
             cwd=base_dir,
             capture_output=True,
@@ -558,23 +573,30 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
             untracked_diff_blocks.append(untracked_diff.stdout.strip())
 
     targets_display = " ".join(rel_targets)
-    print("\n" + "=" * 80, file=sys.stderr)
-    print(
-        f"❌ SNAPSHOT REGRESSION DETECTED (Drift found in {targets_display})",
-        file=sys.stderr,
+    report("\n" + "=" * 80, stderr=True, style=OutputStyle.DETAIL)
+    report(
+        f"SNAPSHOT REGRESSION DETECTED (Drift found in {targets_display})",
+        stderr=True,
+        style=OutputStyle.ERROR,
     )
-    print("=" * 80, file=sys.stderr)
-    print("\nModified or untracked snapshot files:", file=sys.stderr)
+    report("=" * 80, stderr=True, style=OutputStyle.DETAIL)
+    report(
+        "\nModified or untracked snapshot files:", stderr=True, style=OutputStyle.TITLE
+    )
 
     reported_paths: set[str] = set()
     for line in head_diff_lines:
         parts = line.split(maxsplit=1)
         if len(parts) == 2:
             status_code, diff_path_str = parts
-            print(f"  {status_code} {diff_path_str}", file=sys.stderr)
+            report(
+                f"  {status_code} {diff_path_str}",
+                stderr=True,
+                style=OutputStyle.DETAIL,
+            )
             reported_paths.add(diff_path_str)
         else:
-            print(f"  {line}", file=sys.stderr)
+            report(f"  {line}", stderr=True, style=OutputStyle.DETAIL)
 
     for untracked_path in sorted(untracked_disk_files):
         rel = (
@@ -583,7 +605,7 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
             else untracked_path.as_posix()
         )
         if rel not in reported_paths:
-            print(f"  ?? {rel}", file=sys.stderr)
+            report(f"  ?? {rel}", stderr=True, style=OutputStyle.DETAIL)
 
     for deleted_path in sorted(deleted_tracked_files):
         rel = (
@@ -592,7 +614,7 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
             else deleted_path.as_posix()
         )
         if rel not in reported_paths:
-            print(f"  D  {rel}", file=sys.stderr)
+            report(f"  D  {rel}", stderr=True, style=OutputStyle.DETAIL)
 
     all_diffs: list[str] = []
     if diff_output:
@@ -601,25 +623,37 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
         all_diffs.extend(untracked_diff_blocks)
 
     if all_diffs:
-        print("\n--- Unified Diff ---", file=sys.stderr)
-        print("\n".join(all_diffs), file=sys.stderr)
+        report("\n--- Unified Diff ---", stderr=True, style=OutputStyle.TITLE)
+        report("\n".join(all_diffs), stderr=True, style=OutputStyle.DETAIL)
 
-    print("\n" + "=" * 80, file=sys.stderr)
-    print("AGENT INSTRUCTIONS:", file=sys.stderr)
-    print(
+    report("\n" + "=" * 80, stderr=True, style=OutputStyle.DETAIL)
+    report("AGENT INSTRUCTIONS:", stderr=True, style=OutputStyle.WARNING)
+    report(
         "- If this diff is INTENDED (you updated templates, flags, or opinions):",
-        file=sys.stderr,
+        stderr=True,
+        style=OutputStyle.WARNING,
     )
-    print("    Stage the updated snapshots and commit:", file=sys.stderr)
-    print(f"    git add {targets_display}", file=sys.stderr)
-    print(
+    report(
+        "    Stage the updated snapshots and commit:",
+        stderr=True,
+        style=OutputStyle.TITLE,
+    )
+    report(f"    git add {targets_display}", stderr=True, style=OutputStyle.COMMAND)
+    report(
         "- If this diff is an UNINTENDED REGRESSION:",
-        file=sys.stderr,
+        stderr=True,
+        style=OutputStyle.WARNING,
     )
-    print("    Discard modifications and fix your code:", file=sys.stderr)
-    print(f"    git restore {targets_display}", file=sys.stderr)
-    print(f"    git clean -fd {targets_display}", file=sys.stderr)
-    print("=" * 80 + "\n", file=sys.stderr)
+    report(
+        "    Discard modifications and fix your code:",
+        stderr=True,
+        style=OutputStyle.TITLE,
+    )
+    report(f"    git restore {targets_display}", stderr=True, style=OutputStyle.COMMAND)
+    report(
+        f"    git clean -fd {targets_display}", stderr=True, style=OutputStyle.COMMAND
+    )
+    report("=" * 80 + "\n", stderr=True, style=OutputStyle.DETAIL)
 
     return False
 
@@ -662,17 +696,25 @@ def main() -> None:
             generate_docs_assets()
 
         scenario_msg = f" [{args.scenario}]" if args.scenario else "s"
-        print(f"Generating regression snapshot{scenario_msg}...")
+        report(
+            f"Generating regression snapshot{scenario_msg}...", style=OutputStyle.TITLE
+        )
         build_snapshots(scenario_name=args.scenario)
-        print("✔ Regression snapshots generated.")
+        report("OK Regression snapshots generated.", style=OutputStyle.SUCCESS)
 
         if not args.scenario and not args.skip_docs:
             generate_diff_fixtures()
 
-        print("\nAll snapshots and documentation assets updated successfully!")
+        report(
+            "\nAll snapshots and documentation assets updated successfully!",
+            style=OutputStyle.SUCCESS,
+        )
 
         if not args.no_check:
-            print("\nVerifying snapshot drift against git HEAD...")
+            report(
+                "\nVerifying snapshot drift against git HEAD...",
+                style=OutputStyle.TITLE,
+            )
             if args.scenario:
                 targets_to_check = [SNAPSHOTS_DIR / args.scenario]
                 if SCENARIOS[args.scenario].publishes_tree:
@@ -688,7 +730,10 @@ def main() -> None:
                 sys.exit(1)
 
     except KeyboardInterrupt:
-        print("\n\nOperation cancelled by user. Exiting gracefully.")
+        report(
+            "\n\nOperation cancelled by user. Exiting gracefully.",
+            style=OutputStyle.ERROR,
+        )
         sys.exit(130)
 
 

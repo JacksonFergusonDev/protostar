@@ -10,6 +10,7 @@ _repo_root = Path(__file__).resolve().parent.parent.parent
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
+from scripts._common import OutputStyle, report
 from scripts.generate_docs_assets.cli_terminals import (
     generate_cli_dry_run_svg,
     generate_cli_help_svgs,
@@ -66,7 +67,7 @@ def generate_docs_assets() -> None:
     DOCS_GENERATED_DIR.mkdir(parents=True, exist_ok=True)
     DOCS_TERMINALS_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("Generating static documentation assets...")
+    report("Generating static documentation assets...", style=OutputStyle.TITLE)
     generate_cli_help_svgs()
     generate_cli_dry_run_svg()
     generate_cli_init_svg()
@@ -81,4 +82,4 @@ def generate_docs_assets() -> None:
     generate_schema_tables()
     generate_template_schema_fixture()
     generate_diagnostic_panel_svg()
-    print("✔ Static documentation assets generated.\n")
+    report("OK Static documentation assets generated.\n", style=OutputStyle.SUCCESS)
