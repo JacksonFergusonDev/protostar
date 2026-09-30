@@ -185,7 +185,7 @@ def test_trust_boundary_rejects_untrusted_in_json_mode(mocker: Any) -> None:
 
     mocker.patch("protostar.cli.ui.is_json_mode", True)
     request = InitRequest(is_external=True, is_trusted=False)
-    with pytest.raises(SecurityViolationError, match="Untrusted external template"):
+    with pytest.raises(SecurityViolationError, match="isn't trusted"):
         _run_engine(mock_engine, request)
 
 
@@ -220,6 +220,35 @@ def test_untrusted_commands_lists_every_command_in_order(mocker: Any) -> None:
         assert not needs_review(request, manifest)
 
 
+def test_untrusted_commands_include_the_dependency_installs(mocker: Any) -> None:
+    """uv builds the project a template shaped, so its installs are gated too."""
+    from protostar.cli.ui import needs_review, untrusted_commands
+    from protostar.intent import DependencyGroup
+    from protostar.manifest import EnvironmentManifest
+    from protostar.models import InitRequest
+
+    manifest = _untrusted_engine(mocker).plan()
+    manifest.dependencies.add("fastapi")
+    manifest.dependencies.add_dev("pytest")
+    assert untrusted_commands(InitRequest(is_external=True), manifest) == (
+        ("git", "init"),
+        ("uv", "add", "fastapi"),
+        ("uv", "add", "--dev", "pytest"),
+        ("uv", "run", "setup"),
+    )
+
+    # A template with no tasks at all still needs confirmation for its installs.
+    installs_only = EnvironmentManifest()
+    installs_only.dependencies.add("fastapi")
+    assert needs_review(InitRequest(is_external=True), installs_only)
+
+    includes_only = EnvironmentManifest()
+    includes_only.dependencies.add_include(DependencyGroup.DEV, DependencyGroup.DOCS)
+    assert untrusted_commands(InitRequest(is_external=True), includes_only) == (
+        ("uv", "lock"),
+    )
+
+
 def test_trust_boundary_runs_exactly_the_confirmed_commands(mocker: Any) -> None:
     """A review's confirmation lets the commands it listed run, and no others."""
     from protostar.cli.ui import _run_engine
@@ -230,7 +259,7 @@ def test_trust_boundary_runs_exactly_the_confirmed_commands(mocker: Any) -> None
     request = InitRequest(is_external=True)
     engine = _untrusted_engine(mocker)
     stale = InitDecision(InitDraft(), (), (("git", "init"),))
-    with pytest.raises(ProtostarError, match="Untrusted external template"):
+    with pytest.raises(ProtostarError, match="isn't trusted"):
         _run_engine(engine, request, stale)
     engine.execute.assert_not_called()
 

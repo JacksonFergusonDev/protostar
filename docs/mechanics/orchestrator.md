@@ -44,7 +44,7 @@ flowchart TD
     4. **Manifest-First Collision Check:** Derives planned target files via `manifest.target_files()` and records existing targets in `manifest.collisions`. Planning returns the manifest even if a collision choice is pending.
 
 === "2. Interactive Resolution (CLI Layer)"
-    When the manifest lists collisions or an external template has untrusted tasks:
+    When the manifest lists collisions or an untrusted external template's run executes commands:
 
     * **Interactive CLI:** In interactive terminals, the CLI prompts you to `Merge`, `Overwrite`, or `Abort`. If authorized, it updates the request's collision strategy and calls `plan()` again.
     * **Headless Contexts:** In non-interactive environments (CI/CD), `cli.py` aborts safely with an error message instructing you to supply `--force-merge` or `--force-replace`.

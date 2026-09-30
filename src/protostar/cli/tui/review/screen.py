@@ -189,8 +189,9 @@ def describe(
 def _trust_text(commands: tuple[tuple[str, ...], ...]) -> RenderableType:
     return Group(
         Text(
-            "This template comes from an external source that isn't marked "
-            "trusted. Applying runs these commands on your system:"
+            "This template comes from a source you haven't marked trusted. "
+            "Applying runs these commands in the files it writes, and those files "
+            "can make them run the template's code:"
         ),
         *indented_lines([shlex.join(command) for command in commands], "bold"),
         Text(

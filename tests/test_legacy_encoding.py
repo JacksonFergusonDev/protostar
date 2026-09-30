@@ -192,10 +192,10 @@ def test_remote_template_warning_banner(legacy_console, mocker):
     mocker.patch.object(Orchestrator, "plan", return_value=manifest)
     request = InitRequest(is_external=True, is_trusted=False)
 
-    with pytest.raises(ProtostarError, match="Untrusted external template"):
+    with pytest.raises(ProtostarError, match="isn't trusted"):
         ui._run_engine(Orchestrator([], UserConfig(), request=request), request)
 
-    assert "!  REMOTE TEMPLATE WARNING !" in legacy_console()
+    assert "!  UNTRUSTED TEMPLATE !" in legacy_console()
 
 
 def test_rollback_report_marks_and_docs_link(legacy_console, mocker):

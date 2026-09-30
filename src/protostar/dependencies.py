@@ -27,7 +27,68 @@ from .progress import ProgressStep, no_progress
 from .sync_state import DependencyState
 from .system import ProcessRunner
 
-__all__ = ["DependencyGroup", "RequirementIdentity", "install_dependencies"]
+__all__ = [
+    "LOCK_COMMAND",
+    "DependencyGroup",
+    "RequirementIdentity",
+    "add_command",
+    "install_dependencies",
+    "resolver_commands",
+]
+
+LOCK_COMMAND = ("uv", "lock")
+"""Refreshes ``uv.lock`` when only dependency-group includes changed."""
+
+
+def add_command(group: DependencyGroup, packages: Sequence[str]) -> tuple[str, ...]:
+    """Returns the uv command that adds packages to a dependency group.
+
+    Args:
+        group: The dependency group the packages join.
+        packages: The requirements to add.
+
+    Returns:
+        The command, as its arguments.
+    """
+    return ("uv", "add", *group.cli_args, *packages)
+
+
+def _groups(
+    dependencies_manifest: DependencyManifest,
+) -> tuple[tuple[DependencyGroup, list[str]], ...]:
+    """Returns each dependency group with its requests, in installation order."""
+    return (
+        (DependencyGroup.MAIN, dependencies_manifest.dependencies),
+        (DependencyGroup.DEV, dependencies_manifest.dev_dependencies),
+        (DependencyGroup.DOCS, dependencies_manifest.docs_dependencies),
+    )
+
+
+def resolver_commands(
+    dependencies_manifest: DependencyManifest,
+) -> tuple[tuple[str, ...], ...]:
+    """Returns every resolver command a run with these requests may execute.
+
+    uv may build the project while it adds packages or locks: to install it, or
+    to read dynamic metadata. That runs the project's build backend and any build
+    hooks, so these commands can execute code the workspace's files declare. The list covers every request; a
+    review may later decline some, which only shortens what runs.
+
+    Args:
+        dependencies_manifest: The planned dependency requests and includes.
+
+    Returns:
+        One ``uv add`` per group with requests, in installation order, or
+        ``uv lock`` when only dependency-group includes are declared.
+    """
+    commands = tuple(
+        add_command(group, packages)
+        for group, packages in _groups(dependencies_manifest)
+        if packages
+    )
+    if not commands and dependencies_manifest.includes:
+        return (LOCK_COMMAND,)
+    return commands
 
 
 def _install_group(
@@ -44,7 +105,7 @@ def _install_group(
     if not packages:
         return
 
-    cmd = ["uv", "add", *group.cli_args, *packages]
+    cmd = list(add_command(group, packages))
     noun = "dependency" if len(packages) == 1 else "dependencies"
     with progress(f"Installing {len(packages)} {group.label} {noun}"):
         process_runner.run(cmd, timeout=600)
@@ -60,24 +121,8 @@ def install_dependencies(
     Raises:
         CommandExecutionError | CommandTimeoutError: If any installation fails.
     """
-    _install_group(
-        dependencies_manifest.dependencies,
-        DependencyGroup.MAIN,
-        process_runner,
-        progress,
-    )
-    _install_group(
-        dependencies_manifest.dev_dependencies,
-        DependencyGroup.DEV,
-        process_runner,
-        progress,
-    )
-    _install_group(
-        dependencies_manifest.docs_dependencies,
-        DependencyGroup.DOCS,
-        process_runner,
-        progress,
-    )
+    for group, packages in _groups(dependencies_manifest):
+        _install_group(packages, group, process_runner, progress)
 
 
 @dataclass(frozen=True)

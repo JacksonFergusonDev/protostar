@@ -36,6 +36,7 @@ from protostar.errors import (
 )
 from protostar.init_draft import InitDecision, InitDraft
 from protostar.intent import TemplateOrigin, TemplateReference
+from protostar.manifest import DependencyManifest
 from protostar.recipe import Tool
 from protostar.sync_state import SyncState, serialize_state
 from protostar.system_deps import GlobalExecutable
@@ -453,7 +454,9 @@ def test_maybe_run_interactive_init_success(mocker):
     mock_exit = mocker.patch("sys.exit", side_effect=SystemExit)
 
     mock_orchestrator.return_value.plan.return_value = mocker.MagicMock(
-        diagnostics=[], tasks=mocker.MagicMock(system_tasks=[], post_install_tasks=[])
+        diagnostics=[],
+        tasks=mocker.MagicMock(system_tasks=[], post_install_tasks=[]),
+        dependencies=DependencyManifest(),
     )
     mock_orchestrator.return_value.execute.return_value = mocker.MagicMock(
         diagnostics=(), touched_paths=frozenset()
@@ -980,7 +983,9 @@ def test_cli_resolves_user_template_aliases(mocker) -> None:
     mock_orchestrator = mocker.patch("protostar.cli.main.Orchestrator")
     # _run_engine will call plan/execute on the mock — set up safe returns
     mock_orchestrator.return_value.plan.return_value = mocker.MagicMock(
-        diagnostics=[], tasks=mocker.MagicMock(system_tasks=[], post_install_tasks=[])
+        diagnostics=[],
+        tasks=mocker.MagicMock(system_tasks=[], post_install_tasks=[]),
+        dependencies=DependencyManifest(),
     )
     mock_orchestrator.return_value.execute.return_value = mocker.MagicMock(
         diagnostics=(), touched_paths=frozenset()
