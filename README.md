@@ -33,7 +33,7 @@
 
 </div>
 
-Setting up a new python project often requires the same manual steps: configuring linters, writing `Dockerfile`, `.gitignore` and `.dockerignore` files, setting up virtual environments, and linking IDEs. **Protostar** automates this boilerplate so you can skip the setup and get straight to writing code.
+Pick your tools, and Protostar writes their configuration, hooks, and CI. When your template improves, updates merge into your files by meaning, so your edits stay.
 
 <div align="center">
 <picture>
@@ -75,222 +75,147 @@ Protostar is Python-only and builds on uv. It's young, and it grows with the peo
 
 ---
 
-## Official Documentation
+## Get Started
 
-Ready to dive deeper? The README only scratches the surface.
-
-Head over to the **[Official Documentation](https://protostar.jacksonferguson.me/)** for:
-
-- **Command Reference:** Full flags and capabilities for `init`.
-- **Agent & Machine Interface:** Driving Protostar programmatically via `--json` and `--dry-run`.
-- **Built-in Templates:** Scaffolds for Library packages, CLI applications, REST APIs, Machine Learning, and Astrophysics workflows.
-- **Configuration & Shell Autocomplete:** Setting up global defaults, CLI autocompletion, and advanced AST overrides.
-- **Architecture Mechanics:** Deep dives into the Orchestrator, Executor, and Manifest lifecycle.
-
----
-
-## Design Philosophy
-
-Protostar is built to save you time and stay out of your way. It adheres to a strict separation of concerns to avoid generating bloated artifacts you'll inevitably just delete manually:
-
-1. **Foundational Scaffolding:** The `protostar init` command establishes dependency managers, directory structures, and tooling at a repository's inception. It can also be safely re-run with `--force-merge`: Protostar reconciles only the contributions it previously recorded, preserving unowned workspace content and local edits.
-
-1. **Plan First, Write Later:** Many setup scripts run a sequence of shell commands and fail unpredictably midway through, leaving behind half-configured files. Protostar plans all changes upfront in memory during the read-only `plan()` phase before touching disk or running subprocesses in `execute()`. Furthermore, execution is transaction-managed: if an error or interruption occurs, managed subprocesses are stopped and all Protostar-tracked workspace modifications (direct file writes, AST merges, and declared dependency files) are automatically rolled back. (Note: Protostar reliably reverts tracked workspace mutations, but cannot infer or revert arbitrary, undeclared side effects produced by external shell commands).
-
-1. **AI & Agent Ready:** With position-independent `--json` flags and atomic dry-running, AI agents and automation scripts can programmatically interrogate the CLI, plan workspace changes, resolve collisions, and execute headless scaffolding without hanging on interactive prompts.
-
-1. **Fail Loud, Fail Early:** Pre-flight checks ensure all system dependencies (like `uv`, `git`, or `direnv`) are present before any state is mutated.
-
-1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. In merge mode, it reconciles managed TOML and YAML contributions (including GitHub Actions workflows, by job and step) from recorded ownership baselines, checksum-gates other generated files and named regions, and appends missing ignore patterns. Existing unowned content is not adopted; locally edited managed content is preserved with a diagnostic.
-
-1. **Actionable Diagnostics:** When things break, Protostar bubbles up the exact `stderr` so you know immediately if a network request or dependency resolution failed. For unexpected internal crashes, it automatically generates a URL-encoded GitHub issue containing your system environment details to make debugging painless. You can also append the global `--verbose` (or `-v`) flag to any command to enable rich, detailed stack traces and debug-level logging.
-
----
-
-## Performance & Latency Isolation
-
-Protostar is built to be lightweight, so Python's startup overhead never slows down your local development.
-
-- **Fast Hook Resolution:** Instead of making slow Git network calls to resolve hook versions (like `pre-commit autoupdate`), Protostar resolves them via a pre-compiled JSON registry fetched in milliseconds, with an offline fallback if you are disconnected.
-- **Micro-Optimization:** We measure initialization latency using two benchmarking approaches:
-  1. **Fast-Path Execution:** Measures the latency of non-interactive commands (e.g., `protostar help init`).
-  1. **TUI-Path Execution:** Measures the time until the interactive recipe editor draws its first frame.
-
-Our CI pipeline enforces a strict performance budget using `hyperfine`, gating any PR that introduces significant regressions in either path. We maintain historical tracking to ensure long-term architectural stability rather than chasing absolute CI metrics (which are subject to heavy VM variance).
-
-- **View CI Trends:** [Performance Dashboard](https://protostar.jacksonferguson.me/benchmarks/)
-
----
-
-## Installation
-
-Protostar offers full cross-platform support and runs natively on Linux, macOS, and Windows.
-
-### macOS (Homebrew)
-
-```bash
-brew install jacksonfergusondev/tap/protostar
-```
-
-### Universal (uv)
-
-For isolated CLI tool installation on any OS, `uv` is highly recommended:
+Install Protostar with [uv](https://docs.astral.sh/uv/) on any platform:
 
 ```bash
 uv tool install protostar
 ```
 
-### Universal (pipx)
+Or with Homebrew on macOS:
 
 ```bash
-pipx install protostar
+brew install jacksonfergusondev/tap/protostar
 ```
 
-### Universal (pip)
+Protostar needs uv and git. Homebrew installs both for you, and the [installation guide](https://protostar.jacksonferguson.me/installation/) covers every platform.
+
+Then make a folder for your project and run `protostar init` inside it:
 
 ```bash
-pip install protostar
+mkdir my-project
+cd my-project
+protostar init
 ```
 
-> **Note:** If you install Protostar into an existing Python environment with `pip`, it will bring in `textual` for the interactive recipe editor. For guaranteed isolation and to avoid dependency conflicts, prefer `uv tool` or Homebrew.
-
-### Shell Autocompletion
-
-Protostar includes built-in autocompletion for `bash`, `zsh`, `fish`, and `powershell`. Run:
-
-```bash
-protostar completion
-```
-
-This detects your current shell and outputs a zero-overhead one-liner to enable tab completion for subcommands, flags, and templates.
+Choose a template and the tools you want, look over a preview of every file it will create, and apply. When it's done, `protostar guide` shows how to run, test, and check the project. New to Python projects? [Your First Project](https://protostar.jacksonferguson.me/first-project/) walks through every step.
 
 ---
 
-## Quick Start
+## Start From a Template
 
-Protostar is designed to be run right after you `mkdir` a new project.
+Each built-in template is a project shape. Pick one, then switch its tools on or off:
 
-### Interactive Setup
+| Template | For |
+| :--- | :--- |
+| `cli` | A command-line app, with Typer and Rich |
+| `api` | A web API, with FastAPI |
+| `lib` | A library other people install from PyPI |
+| `ml` | Machine learning and data science, with PyTorch and Jupyter |
+| `astro` | Astronomy and astrophysics data analysis, with Astropy |
 
-If you run `protostar` without any arguments, it launches an interactive Terminal User Interface (TUI).
-
-The recipe editor first lets you choose a **Template**. Templates are the fastest way to use Protostar, instantly wiring together tools, dependencies, and directory structures. You can choose from built-in domain templates (like `astro` or `cli`), select your own custom global aliases, or build an environment from scratch.
-
-```bash
-mkdir orbital-mechanics-sim
-cd orbital-mechanics-sim
-protostar
-```
-
-### Headless Scaffolding & Tri-State Toggles
-
-For rapid, repeatable initialization, bypass the TUI entirely. Templates are the primary way to drive Protostar headlessly:
+Every built-in template comes in two tiers. **Workbench** keeps the tooling light, for exploring and analysis. **Production** adds the full quality gate for something you'll publish: type checking, tests, commit hooks, CI, and releases. A project can move up whenever it's ready:
 
 ```bash
-protostar init --template cli
+protostar sync --tier production
 ```
 
-Because Protostar uses **tri-state toggling** (on / off / template-default), you always remain in control. You can load a template but explicitly override its default opinions by passing `--<flag>` to force a tool on, or `--no-<flag>` to force it off:
+---
 
-```bash
-protostar init --template cli --no-direnv --docker
-```
+## What It Can Set Up
 
-*Result: Scaffolds the cli template, strips out the default direnv scaffolding, and generates container artifacts (`Dockerfile`, `.dockerignore`).*
+| Area | Tools |
+| :--- | :--- |
+| Code quality | Ruff, plus a type checker: mypy, ty, or Pyrefly |
+| Tests | pytest, with coverage reports on Codecov |
+| Commit checks | pre-commit or prek hooks, and Commitizen for commit messages |
+| Automation | GitHub Actions CI, releases to PyPI, and Renovate for dependency updates |
+| Documentation | Zensical sites, and publishing on Read the Docs |
+| Everyday work | just for short commands, direnv for environments, and Docker images |
+| Collaboration | An `AGENTS.md` for coding assistants, and contributing guides and issue forms |
+| Markdown | rumdl or markdownlint |
 
-To bypass any interactive collision prompts when running in headless CI environments, use `--force-merge` or `--force-replace`. You can also explicitly override the target Python version by passing `--python-version 3.13`.
+The [tooling matrix](https://protostar.jacksonferguson.me/usage/tooling-matrix/) lists every tool, its flag, and the files it writes.
 
-For a one time scaffold without Protostar managing future updates, add `--one-shot`:
+---
 
-```bash
-protostar init --template cli --one-shot
-```
+## Everyday Commands
 
-This leaves `[tool.protostar]` out of `pyproject.toml` and does not create `protostar.lock`. The Python dependency lockfile, `uv.lock`, is still generated. `protostar status`, `diff`, and `sync` require a recorded recipe and ownership state, so they are unavailable for a one shot scaffold. Use this flag only in a project that is not already tracked by Protostar.
+| Command | What it does |
+| :--- | :--- |
+| `protostar init` | Set up a new project, or bring Protostar into one you already have |
+| `protostar status` | Show what an update would change, and anything waiting for your decision |
+| `protostar sync` | Apply updates from your template and from Protostar, keeping your edits |
+| `protostar guide` | Show how to run, test, check, and document this project |
+| `protostar eject` | Stop tracking the project, and keep every file |
 
-To stop tracking a project after initialization, run `protostar eject`. It shows the two changes and asks for confirmation before deleting `protostar.lock` and removing `[tool.protostar]` from `pyproject.toml`. Use `protostar eject --dry-run` to preview the TOML diff, or `protostar eject --yes` to confirm in a noninteractive run. The scaffolded files and `uv.lock` remain.
+---
 
-### Dry-Run Simulations & Agent Integration
+## Make Your Own Template
 
-You can preview the entire scaffolding plan without touching disk or running subprocesses by passing `--dry-run`:
-
-```bash
-protostar init --template cli --dry-run
-```
-
-For AI coding agents and automated scripts, append the position-independent `--json` flag. Protostar outputs structured, machine-parseable JSON envelopes to `stdout` while routing all human logs to `stderr`:
-
-```bash
-# Plan scaffolding via JSON
-protostar init --template cli --dry-run --json
-
-# Execute scaffolding via JSON
-protostar init --template cli --force-merge --json
-```
-
-See the **[Agent & Machine Interface Guide](https://protostar.jacksonferguson.me/usage/agent-interface/)** for complete protocol documentation.
-
-### Custom Templates & Global Aliases
-
-If you want to enforce team-wide standards across multiple repositories, you can host your own custom template TOML files remotely (or store them locally). Use the `--from` flag to dynamically fetch and inject them. Protostar automatically translates web UI links into raw text links for GitHub, GitLab, Bitbucket, Codeberg, and Sourcehut, and natively supports unpacking `.zip`/`.tar.gz` repository archives.
-
-```bash
-protostar init --from https://raw.githubusercontent.com/YourOrg/standards/main/backend.toml
-```
-
-**Global Aliases & Explicit Trust:** Instead of typing long URLs, you can register templates in your global configuration (`~/.config/protostar/config.toml`) with shorthand strings or rich metadata tables:
+A template is a short TOML file. This one gives every new service a team's tools, with stricter type checking than the default:
 
 ```toml
-# Shorthand string alias:
-[templates]
-simple-api = "https://raw.githubusercontent.com/YourOrg/standards/main/api.toml"
+name = "Service"
+description = "Our team's FastAPI service"
 
-# Rich metadata table with explicit trust:
-[templates.backend]
-name = "Enterprise Backend"
-source = "https://raw.githubusercontent.com/YourOrg/standards/main/backend.toml"
-description = "Internal microservice standard with FastAPI and tracing"
-trusted = true
-```
-
-Now you can run `protostar init --template backend` anywhere, and it will automatically appear alongside built-ins in `protostar init --list-templates`, shell auto-completion, and the interactive template picker.
-
-*Note: To prevent unauthorized code execution, a template you haven't marked trusted asks you to confirm every command its run executes, including dependency installs, since its files decide what they do. Templates configured with `trusted = true` skip this confirmation.*
-
-### Authoring Custom Templates & Schema Validation
-
-You can author custom templates to enforce organizational standards across dependencies, linter configurations, and directory structures. Protostar can export the official JSON Schema to enable real-time linting and autocompletion in editors like VS Code (via *Even Better TOML*):
-
-```bash
-# Export the template JSON Schema
-protostar export-schema --json > protostar-template.schema.json
-```
-
-Add the schema header to the top of your custom template file for editor validation:
-
-```toml
-#:schema ./protostar-template.schema.json
-
-# --- Dependencies ---
 dependencies = ["fastapi", "uvicorn"]
+
 ruff = true
+mypy = true
 pytest = true
+ci = true
+
+[dev.pyproject.strict_typing]
+requires = "mypy"
+content = '''
+[tool.mypy]
+strict = true
+'''
 ```
 
-For full template specifications, AST injections, and multi-file repository templating, visit the **[Template Authoring Guide](https://protostar.jacksonferguson.me/usage/authoring-templates/)**.
+Share it as a file, a URL, or a Git repository, and start projects from it:
+
+```bash
+protostar init --from https://github.com/your-org/service-template
+```
+
+Tag its releases, and every project made from it can move to the newest one with `protostar sync --to latest`. The [authoring guide](https://protostar.jacksonferguson.me/usage/authoring-templates/) covers starter files, options, tiers, and checking a template in CI.
 
 ---
 
-## Collaboration
+## Go Deeper
 
-This tool uses a highly decoupled, plugin-style architecture. The CLI parser dynamically evaluates module registries at runtime.
+Written for people who already know Python tooling:
 
-- **To add support for a new core tool (e.g., a linter or formatter):** Subclass `BootstrapModule`.
-- **To define a new domain workflow:** Author a declarative TOML Template. (Built-in templates follow a stricter contract; see `docs/developer/built-in-templates.md` before proposing one.)
+| If you want to | Read |
+| :--- | :--- |
+| Compare Protostar with Copier, Cookiecutter, and `uv init` | [Why Protostar?](https://protostar.jacksonferguson.me/why-protostar/) |
+| Review and settle updates in a project | [Project Lifecycle](https://protostar.jacksonferguson.me/usage/lifecycle/) |
+| Open update pull requests and check projects in CI | [Automating Updates](https://protostar.jacksonferguson.me/usage/automating-updates/) |
+| Drive Protostar from scripts or coding agents | [Agent & Machine Interface](https://protostar.jacksonferguson.me/usage/agent-interface/) |
+| Write and publish templates for a team | [Authoring Templates](https://protostar.jacksonferguson.me/usage/authoring-templates/) |
+| Look up every command and flag | [CLI Reference](https://protostar.jacksonferguson.me/usage/cli-reference/) |
+| See how planning, merging, and rollback work | [Design Principles](https://protostar.jacksonferguson.me/design-principles/) |
 
-Protostar maintains strict engineering standards to ensure reliability, including 100% type-hinting, isolated `pytest` environments (mocked subprocesses and `tmp_path` disk isolation), and automated `ruff` formatting.
+---
 
-Please see the [Documentation](https://protostar.jacksonferguson.me/developer/overview/) for full details on our development setup, architectural rules, and pull request guidelines.
+## How It's Built
+
+Protostar edits other people's work, so it's built to be careful:
+
+- **It plans before it acts.** Every change is worked out in memory and shown to you first. If a step fails or you press Ctrl+C, every file it wrote is restored exactly as it was.
+- **The engine is separate from the interface.** The same core runs behind the interactive editor, the command line, and coding agents, which is why every command can also answer in JSON.
+- **It's tested thoroughly.** Over 3,500 tests, including runs of the real tools, pass on Linux, macOS, and Windows, with strict type checking and at least 85% coverage.
+- **Its docs are checked against its code.** Before every push, a script confirms that the commands, errors, exit codes, and file paths the docs mention still match the code.
+- **It stays fast.** CI measures startup time on every change and blocks regressions; see the [performance dashboard](https://protostar.jacksonferguson.me/benchmarks/).
+
+---
+
+## Contributing
+
+Bug reports and feature requests are welcome in [GitHub issues](https://github.com/jacksonfergusondev/protostar/issues). To work on Protostar itself, start with [CONTRIBUTING.md](CONTRIBUTING.md) and the [developer guide](https://protostar.jacksonferguson.me/developer/overview/).
 
 ---
 
