@@ -33,7 +33,14 @@ if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
 from protostar.cli.palette import INK
-from scripts._common import SNAPSHOTS_DIR, VENV_BIN, OutputStyle, report
+from scripts._common import (
+    SNAPSHOTS_DIR,
+    VENV_BIN,
+    CodeLanguage,
+    OutputStyle,
+    report,
+    report_code,
+)
 from scripts.prepare_sandbox import CONFIG_ENV_VAR, sync_project
 
 DEFAULT_COLS = 78
@@ -716,7 +723,7 @@ def main() -> None:
             }
 
             report(f"\n=== DEMO TRIAL SUMMARY [{target}] ===", style=OutputStyle.TITLE)
-            print(json.dumps(summary, indent=2))
+            report_code(json.dumps(summary, indent=2), CodeLanguage.JSON)
             report("====================================\n", style=OutputStyle.DETAIL)
             report(
                 f"OK Selected trial {winner.trial} ({winner.duration_s:.2f}s) saved to {out_path}",

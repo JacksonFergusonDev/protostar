@@ -10,7 +10,7 @@ import urllib.request
 from collections.abc import Sequence
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 # Canonical repository root and directory anchors
 REPO_ROOT: Path = Path(__file__).resolve().parent.parent
@@ -42,6 +42,20 @@ class OutputStyle(StrEnum):
     COMMAND = "bold cyan"
 
 
+class CodeLanguage(StrEnum):
+    """Languages used by structured script output."""
+
+    DIFF = "diff"
+    JSON = "json"
+
+
+def _styled_output(stream: TextIO) -> bool:
+    """Keeps CI plain and honors explicit color choices for captured output."""
+    if os.environ.get("CI") or "NO_COLOR" in os.environ:
+        return False
+    return stream.isatty() or os.environ.get("FORCE_COLOR", "") not in {"", "0"}
+
+
 def report(
     message: str = "",
     *,
@@ -51,21 +65,41 @@ def report(
 ) -> None:
     """Prints literal text, styled on terminals and plain when redirected.
 
-    Non-interactive scripts need only the standard library, including in CI.
+    CI and ordinary redirected output need only the standard library. Set
+    FORCE_COLOR=1 to keep terminal formatting through a local output capture.
     Text is never parsed as markup, and unsupported stream characters are
     replaced so redirected Windows output cannot fail on an encoding error.
     """
     stream = sys.stderr if stderr else sys.stdout
     encoding = stream.encoding or "utf-8"
     message = message.encode(encoding, errors="replace").decode(encoding)
-    if not stream.isatty():
+    if not _styled_output(stream):
         print(message, file=stream, end=end, flush=True)
         return
 
     from rich.console import Console
 
-    Console(file=stream, highlight=False, markup=False).print(
+    Console(file=stream, force_terminal=True, highlight=False, markup=False).print(
         message, style=style.value, end=end, soft_wrap=True
+    )
+
+
+def report_code(source: str, language: CodeLanguage, *, stderr: bool = False) -> None:
+    """Highlights code on terminals; redirected CI output keeps its raw text."""
+    stream = sys.stderr if stderr else sys.stdout
+    if not _styled_output(stream):
+        report(source, stderr=stderr)
+        return
+
+    from rich.console import Console
+    from rich.syntax import Syntax
+
+    encoding = stream.encoding or "utf-8"
+    source = source.encode(encoding, errors="replace").decode(encoding)
+    console = Console(file=stream, force_terminal=True, highlight=False, markup=False)
+    console.print(
+        Syntax(source, language.value, theme="ansi_dark", background_color="default"),
+        soft_wrap=True,
     )
 
 

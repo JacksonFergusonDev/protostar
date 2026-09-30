@@ -33,8 +33,10 @@ from scripts._common import (
     SNAPSHOTS_DIR as SNAPSHOTS_DIR,
 )
 from scripts._common import (
+    CodeLanguage,
     OutputStyle,
     report,
+    report_code,
     run_repo_cmd,
 )
 from scripts.generate_docs_assets import (
@@ -632,7 +634,7 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
 
     if all_diffs:
         report("\n--- Unified Diff ---", stderr=True, style=OutputStyle.TITLE)
-        report("\n".join(all_diffs), stderr=True, style=OutputStyle.DETAIL)
+        report_code("\n".join(all_diffs), CodeLanguage.DIFF, stderr=True)
 
     report("\n" + "=" * 80, stderr=True, style=OutputStyle.DETAIL)
     report("AGENT INSTRUCTIONS:", stderr=True, style=OutputStyle.WARNING)

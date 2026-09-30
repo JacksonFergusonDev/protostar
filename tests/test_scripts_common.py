@@ -11,14 +11,25 @@ from pathlib import Path
 import pytest
 from pytest_mock import MockerFixture
 from rich.console import Console
+from rich.text import Text
 
-from scripts._common import SCRIPTS_DIR, OutputStyle, fetch_bytes, report
+from scripts._common import (
+    SCRIPTS_DIR,
+    CodeLanguage,
+    OutputStyle,
+    fetch_bytes,
+    report,
+    report_code,
+)
 
 
 @pytest.mark.parametrize("terminal", [False, True])
 def test_output_is_literal_and_safe_on_strict_cp1252(
     terminal: bool, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
 ) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.delenv("CI", raising=False)
+    monkeypatch.delenv("FORCE_COLOR", raising=False)
     buffer = io.BytesIO()
     with io.TextIOWrapper(buffer, encoding="cp1252", errors="strict") as stream:
         monkeypatch.setattr(sys, "stdout", stream)
@@ -51,6 +62,55 @@ def test_output_is_literal_and_safe_on_strict_cp1252(
     else:
         console.assert_not_called()
         assert "\x1b" not in output
+
+
+@pytest.mark.parametrize("language", [CodeLanguage.DIFF, CodeLanguage.JSON])
+def test_code_output_highlights_without_losing_long_lines(
+    language: CodeLanguage, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
+) -> None:
+    monkeypatch.delenv("CI", raising=False)
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    stream = io.StringIO()
+    monkeypatch.setattr(sys, "stdout", stream)
+    mocker.patch(
+        "rich.console.Console",
+        return_value=Console(
+            file=stream,
+            force_terminal=True,
+            color_system="standard",
+            no_color=False,
+            width=20,
+        ),
+    )
+    long_line = "x" * 200
+    source = (
+        f"--- a/file\n+++ b/file\n@@ -1 +1 @@\n-before\n+{long_line}"
+        if language == CodeLanguage.DIFF
+        else json.dumps({"key": long_line})
+    )
+
+    report_code(source, language)
+
+    output = stream.getvalue()
+    assert "\x1b[" in output
+    assert source in Text.from_ansi(output).plain
+
+
+def test_ci_code_output_stays_plain_even_when_color_is_forced(
+    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setenv("CI", "true")
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    console = mocker.patch("rich.console.Console")
+    source = '{"key": "value"}'
+
+    report_code(source, CodeLanguage.JSON, stderr=True)
+
+    console.assert_not_called()
+    assert capsys.readouterr().err == source + "\n"
 
 
 def test_fetch_is_bounded_and_closes_the_response(mocker: MockerFixture) -> None:
@@ -129,10 +189,12 @@ def test_release_scripts_run_in_ci_without_site_packages(
         [sys.executable, "-S", "-c", _CI_PROBE, str(SCRIPTS_DIR / script), mode],
         cwd=tmp_path,
         env={
-            **os.environ,
+            **{key: value for key, value in os.environ.items() if key != "NO_COLOR"},
             "HOME": str(tmp_path),
             "USERPROFILE": str(tmp_path),
             "XDG_CONFIG_HOME": str(tmp_path),
+            "CI": "true",
+            "FORCE_COLOR": "1",
         },
         capture_output=True,
         text=True,

@@ -48,7 +48,15 @@ from protostar.secret_guard import (
     decode_rules,
     encode_rules,
 )
-from scripts._common import REPO_ROOT, SRC_DIR, OutputStyle, fetch_bytes, report
+from scripts._common import (
+    REPO_ROOT,
+    SRC_DIR,
+    CodeLanguage,
+    OutputStyle,
+    fetch_bytes,
+    report,
+    report_code,
+)
 
 GITLEAKS_REPO = "https://github.com/gitleaks/gitleaks"
 RAW_URL = "https://raw.githubusercontent.com/gitleaks/gitleaks/{tag}/{path}"
@@ -538,7 +546,10 @@ def main() -> None:
                 stderr=True,
             )
             sys.exit(1)
-        print(json.dumps(dataclasses.asdict(decode_rules(payload)), indent=2))
+        report_code(
+            json.dumps(dataclasses.asdict(decode_rules(payload)), indent=2),
+            CodeLanguage.JSON,
+        )
         return
 
     tag = DEFAULT_REVISIONS[GITLEAKS_REPO]
