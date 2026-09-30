@@ -1,0 +1,2457 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="What Protostar does that other Python scaffolding tools don't, where they're the better choice, and how they compare.">
+      
+      
+      
+        <link rel="canonical" href="https://protostar.jacksonferguson.me/0.10.0/why-protostar/">
+      
+      
+        <link rel="prev" href="../getting-started/">
+      
+      
+        <link rel="next" href="../design-principles/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/favicon.png">
+      <meta name="generator" content="zensical-0.0.65">
+    
+    
+      
+        <title>Why Protostar? - Protostar</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.40d3fdbb.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.812a03bb.min.css">
+      
+      
+  
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+  
+  <style>:root{--md-admonition-icon--info:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22m11.62%201%205.66%205.67-2.12%202.12-2.12-2.12-1.42%201.42%202.33%202.32-1.16%201.17.45.46a2.5%202.5%200%200%201%202.83.5l-3.53%203.53a2.5%202.5%200%200%201-.5-2.83l-.46-.45-1.17%201.16-2.32-2.33-1.42%201.42%202.12%202.12-2.12%202.12L1%2011.62%203.14%209.5l2.12%202.12%201.41-1.41-2.83-2.83c-.78-.78-.78-2.05%200-2.83l.71-.71c.78-.78%202.05-.78%202.83%200l2.83%202.83%201.41-1.41L9.5%203.14zM18%2014a4%204%200%200%201-4%204v-2a2%202%200%200%200%202-2zm4%200a8%208%200%200%201-8%208v-2a6%206%200%200%200%206-6z%22/%3E%3C/svg%3E');--md-admonition-icon--note:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22m21.9%208.9-1.7%201-4-6.9%201.7-1zm-12.1-1%203%205.2%206.1-3.5-3-5.2zm1.6%204.8-2-3.5-4.3%202.5%202%203.5zm-9.3%201.9%201%201.7%202.6-1.5-1-1.7zm10-.6-.3-.4-4.3%202.5.3.4c.2.3.5.6.8.8L7%2022h2l1.4-4.3h.1L12%2022h2l-1.9-5.6c.5-.7.5-1.6%200-2.4%22/%3E%3C/svg%3E');--md-admonition-icon--tip:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22m13.13%2022.19-1.63-3.83c1.57-.58%203.04-1.36%204.4-2.27zM5.64%2012.5l-3.83-1.63%206.1-2.77C7%209.46%206.22%2010.93%205.64%2012.5M21.61%202.39S16.66.269%2011%205.93c-2.19%202.19-3.5%204.6-4.35%206.71-.28.75-.09%201.57.46%202.13l2.13%202.12c.55.56%201.37.74%202.12.46A19.1%2019.1%200%200%200%2018.07%2013c5.66-5.66%203.54-10.61%203.54-10.61m-7.07%207.07c-.78-.78-.78-2.05%200-2.83s2.05-.78%202.83%200c.77.78.78%202.05%200%202.83s-2.05.78-2.83%200m-5.66%207.07-1.41-1.41zM6.24%2022l3.64-3.64c-.34-.09-.67-.24-.97-.45L4.83%2022zM2%2022h1.41l4.77-4.76-1.42-1.41L2%2020.59zm0-2.83%204.09-4.08c-.21-.3-.36-.62-.45-.97L2%2017.76z%22/%3E%3C/svg%3E');--md-admonition-icon--warning:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M13%2014h-2V9h2m0%209h-2v-2h2M1%2021h22L12%202z%22/%3E%3C/svg%3E');}</style>
+
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/asciinema-player@3.8.1/dist/bundle/asciinema-player.css">
+    
+    <script>__md_scope=new URL("..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#why-protostar" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="./.." title="Protostar" class="md-header__button md-logo" aria-label="Protostar" data-md-component="logo">
+      
+  <img src="../assets/favicon.svg" alt="Protostar">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Protostar
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Why Protostar?
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/jacksonfergusondev/protostar" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jacksonfergusondev/protostar
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="./.." title="Protostar" class="md-nav__button md-logo" aria-label="Protostar" data-md-component="logo">
+      
+  <img src="../assets/favicon.svg" alt="Protostar">
+
+    </a>
+    Protostar
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/jacksonfergusondev/protostar" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jacksonfergusondev/protostar
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./.." class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../first-project/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3 1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Your First Project
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m20 22-3.86-1.55c.7-1.53 1.2-3.11 1.51-4.72zM7.86 20.45 4 22l2.35-6.27c.31 1.61.81 3.19 1.51 4.72M12 2s5 2 5 10c0 3.1-.75 5.75-1.67 7.83A2 2 0 0 1 13.5 21h-3a2 2 0 0 1-1.83-1.17C7.76 17.75 7 15.1 7 12c0-8 5-10 5-10m0 10c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Getting Started
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3c-1.27 0-2.4.8-2.82 2H3v2h1.95L2 14c-.47 2 1 3 3.5 3s4.06-1 3.5-3L6.05 7h3.12c.33.85.98 1.5 1.83 1.83V20H2v2h20v-2h-9V8.82c.85-.32 1.5-.97 1.82-1.82h3.13L15 14c-.47 2 1 3 3.5 3s4.06-1 3.5-3l-2.95-7H21V5h-6.17C14.4 3.8 13.27 3 12 3m0 2a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1m-6.5 5.25L7 14H4zm13 0L20 14h-3z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Why Protostar?
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3c-1.27 0-2.4.8-2.82 2H3v2h1.95L2 14c-.47 2 1 3 3.5 3s4.06-1 3.5-3L6.05 7h3.12c.33.85.98 1.5 1.83 1.83V20H2v2h20v-2h-9V8.82c.85-.32 1.5-.97 1.82-1.82h3.13L15 14c-.47 2 1 3 3.5 3s4.06-1 3.5-3l-2.95-7H21V5h-6.17C14.4 3.8 13.27 3 12 3m0 2a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1m-6.5 5.25L7 14H4zm13 0L20 14h-3z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Why Protostar?
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#simple-declarative-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Simple, Declarative Templates
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Simple, Declarative Templates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-template-says-what-not-how" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A Template Says What, Not How
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#every-tool-is-a-switch" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Every Tool Is a Switch
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#updates-that-understand-your-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Updates That Understand Your Files
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Updates That Understand Your Files">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#merges-by-structure-not-by-line" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Merges by Structure, Not by Line
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#one-update-two-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        One Update, Two Tools
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clear-decisions-not-conflict-markers" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Clear Decisions, Not Conflict Markers
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#existing-projects-releases-and-automation" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Existing Projects, Releases, and Automation
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Existing Projects, Releases, and Automation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#it-works-on-the-project-you-already-have" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        It Works on the Project You Already Have
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#template-releases-you-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Template Releases You Control
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#its-safe-to-automate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        It's Safe to Automate
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-not-ask-a-coding-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Why Not Ask a Coding Agent?
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-another-tool-is-the-better-choice" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        When Another Tool Is the Better Choice
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-protostar-is-headed" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Where Protostar Is Headed
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        At a Glance
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Next Steps
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design-principles/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11h3v2h-3zM1 11h3v2H1zM13 1v3h-2V1zM4.92 3.5l2.13 2.14-1.42 1.41L3.5 4.93zm12.03 2.13 2.12-2.13 1.43 1.43-2.13 2.12zM12 6a6 6 0 0 1 6 6c0 2.22-1.21 4.16-3 5.2V19a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1.8c-1.79-1.04-3-2.98-3-5.2a6 6 0 0 1 6-6m2 15v1a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-1zm-3-3h2v-2.13c1.73-.44 3-2.01 3-3.87a4 4 0 0 0-4-4 4 4 0 0 0-4 4c0 1.86 1.27 3.43 3 3.87z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Design Principles
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  User Guide
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  User Guide
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/init/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Initialization
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Project Lifecycle
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/automating-updates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Automating Updates
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Templates
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/authoring-templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Authoring Templates
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/tooling-matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Tooling & Flags Matrix
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Global Configuration
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/project-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Project Recipes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/agent-interface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Agent & Machine Interface
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/rollback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Automatic Rollback
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CLI Reference
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Troubleshooting & FAQ
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Mechanics
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_8">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Mechanics
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mechanics/manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Manifest
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mechanics/orchestrator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Orchestrator
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mechanics/executor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Executor
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mechanics/rollback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Rollback Internals
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mechanics/modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Modules
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mechanics/error_handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Error Handling
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Developer Guide
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_9">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Developer Guide
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Overview
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/extending-protostar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Extending Protostar
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/built-in-templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Built-in Templates
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/pyproject-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  pyproject.toml Layout
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_5" id="__nav_9_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reconciliation
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_5_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_9_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Reconciliation
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/reconciliation/kernel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Kernel & Ownership
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/reconciliation/state/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Ownership State
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/reconciliation/formats/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Format Engines
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/reconciliation/documents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Managed Documents
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/reconciliation/execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Execution & Review
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Testing & Philosophy
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  API Reference
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#simple-declarative-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Simple, Declarative Templates
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Simple, Declarative Templates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-template-says-what-not-how" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A Template Says What, Not How
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#every-tool-is-a-switch" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Every Tool Is a Switch
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#updates-that-understand-your-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Updates That Understand Your Files
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Updates That Understand Your Files">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#merges-by-structure-not-by-line" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Merges by Structure, Not by Line
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#one-update-two-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        One Update, Two Tools
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clear-decisions-not-conflict-markers" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Clear Decisions, Not Conflict Markers
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#existing-projects-releases-and-automation" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Existing Projects, Releases, and Automation
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Existing Projects, Releases, and Automation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#it-works-on-the-project-you-already-have" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        It Works on the Project You Already Have
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#template-releases-you-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Template Releases You Control
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#its-safe-to-automate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        It's Safe to Automate
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-not-ask-a-coding-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Why Not Ask a Coding Agent?
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-another-tool-is-the-better-choice" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        When Another Tool Is the Better Choice
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-protostar-is-headed" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Where Protostar Is Headed
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        At a Glance
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Next Steps
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+  
+  
+
+
+<h1 id="why-protostar">Why Protostar?<a class="headerlink" href="#why-protostar" title="Permanent link">&para;</a></h1>
+<p>Protostar is a scaffolding tool that understands the Python tools it sets up and the files they live in. That understanding is what keeps it simple. A template says which tools it wants (<code>ruff = true</code>, <code>mypy = false</code>), and Protostar writes everything those tools need. When the template changes, the update merges by meaning rather than by line: most of it applies on its own, and what's left is a clear choice about one setting, never a block of conflict markers.</p>
+<p>General-purpose templaters like Copier and Cookiecutter work with any language because they treat every file as text. Protostar makes the opposite trade: it only does Python, and in exchange its templates stay short and its updates stay clean.</p>
+<div class="grid cards">
+<ul>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17 21-2.75-3 1.16-1.16L17 18.43l3.59-3.59 1.16 1.41M12.8 21H5c-1.11 0-2-.89-2-2V5c0-1.11.89-2 2-2h14c1.11 0 2 .89 2 2v7.8c-.61-.35-1.28-.6-2-.72V5H5v14h7.08c.12.72.37 1.39.72 2m-.8-4H7v-2h5m2.68-2H7v-2h10v1.08c-.85.14-1.63.46-2.32.92M17 9H7V7h10"/></svg></span> <strong>Templates declare, they don't script</strong></p>
+<p>A template is a short TOML file: the tools you want, your dependencies, and only the settings that differ from each tool's defaults. There's no Jinja and no conditional logic.</p>
+</li>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6m0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4m0-7c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3"/></svg></span> <strong>Every tool is a switch</strong></p>
+<p>Each tool brings its own configuration, commit hooks, and CI steps. Turn any tool on or off, at <code>init</code> or a year later, without touching the template.</p>
+</li>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 3a3 3 0 0 1 3 3c0 1.29-.81 2.39-1.96 2.81.54 5 5.04 5.96 7.15 6.15A2.985 2.985 0 0 1 18 13a3 3 0 0 1 3 3 3 3 0 0 1-3 3c-1.31 0-2.43-.84-2.84-2-4.25-.2-5.72-1.81-7.16-3.61v1.78c1.17.41 2 1.52 2 2.83a3 3 0 0 1-3 3 3 3 0 0 1-3-3c0-1.31.83-2.42 2-2.83V8.83A2.99 2.99 0 0 1 4 6a3 3 0 0 1 3-3m0 2a1 1 0 0 0-1 1 1 1 0 0 0 1 1 1 1 0 0 0 1-1 1 1 0 0 0-1-1m0 12a1 1 0 0 0-1 1 1 1 0 0 0 1 1 1 1 0 0 0 1-1 1 1 0 0 0-1-1m11-2a1 1 0 0 0-1 1 1 1 0 0 0 1 1 1 1 0 0 0 1-1 1 1 0 0 0-1-1"/></svg></span> <strong>Merges that understand the file</strong></p>
+<p><code>pyproject.toml</code> merges key by key, dependencies go through uv, and workflows merge by job and step. Changes that collide in a line-based merge simply combine.</p>
+</li>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 11c0 5.55-3.84 10.74-9 12-5.16-1.26-9-6.45-9-12V5l9-4 9 4zm-9 10c3.75-1 7-5.46 7-9.78V6.3l-7-3.12L5 6.3v4.92C5 15.54 8.25 20 12 21m-2-4-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9"/></svg></span> <strong>Clear decisions, not conflict markers</strong></p>
+<p>A real conflict is one setting, with both sides and the command for each choice. Your version stays in place until you choose, and a failed run rolls back.</p>
+</li>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m15 13-4 4v-3H2v-2h9V9zM5 20v-4h2v2h10v-7.81l-5-4.5L7.21 10H4.22L12 3l10 9h-3v8z"/></svg></span> <strong>Works on the project you already have</strong></p>
+<p>It reads an existing repository, proposes each change it would make, and lets you keep yours, including all of them.</p>
+</li>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.5 15.5c0 1.11-.89 2-2 2s-2-.89-2-2 .9-2 2-2 2 .9 2 2m-9-2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.89 2-2-.89-2-2-2M23 15v3c0 .55-.45 1-1 1h-1v1c0 1.11-.89 2-2 2H5a2 2 0 0 1-2-2v-1H2c-.55 0-1-.45-1-1v-3c0-.55.45-1 1-1h1c0-3.87 3.13-7 7-7h1V5.73c-.6-.34-1-.99-1-1.73 0-1.1.9-2 2-2s2 .9 2 2c0 .74-.4 1.39-1 1.73V7h1c3.87 0 7 3.13 7 7h1c.55 0 1 .45 1 1m-2 1h-2v-2c0-2.76-2.24-5-5-5h-4c-2.76 0-5 2.24-5 5v2H3v1h2v3h14v-3h2z"/></svg></span> <strong>Safe to automate</strong></p>
+<p><code>protostar sync --check</code> gates CI, and every command speaks JSON without prompting, for scripts and coding agents.</p>
+</li>
+</ul>
+</div>
+<h2 id="simple-declarative-templates">Simple, Declarative Templates<a class="headerlink" href="#simple-declarative-templates" title="Permanent link">&para;</a></h2>
+<h3 id="a-template-says-what-not-how">A Template Says What, Not How<a class="headerlink" href="#a-template-says-what-not-how" title="Permanent link">&para;</a></h3>
+<p>Each tool Protostar supports is a module that knows its own configuration: the settings it needs in <code>pyproject.toml</code>, its commit hook, its CI step, its entry in <code>.gitignore</code>. A template doesn't write any of that. It names the tools it wants and states only what's different about its project, such as a stricter setting, a dependency, or a starter file.</p>
+<p>Here is a complete template for a FastAPI service with a full quality gate, next to what the same template takes in Copier:</p>
+<div class="grid cards">
+<ul>
+<li>
+<p><strong>Protostar:</strong> the whole template</p>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Service"</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"FastAPI service with the team's quality gate"</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">dependencies</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"fastapi"</span><span class="p">,</span><span class="w"> </span><span class="s2">"uvicorn"</span><span class="p">]</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">ruff</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">mypy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">pytest</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">prek</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">ci</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">docker</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="k">[dev.pyproject.strict_typing]</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="n">requires</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"mypy"</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="n">content</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'''</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="s1">[tool.mypy]</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="s1">strict = true</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="s1">'''</span>
+</span></code></pre></div>
+</li>
+<li>
+<p><strong>Copier:</strong> the files the author writes and maintains</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>copier.yml
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>pyproject.toml.jinja
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>.pre-commit-config.yaml.jinja
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>.github/workflows/ci.yml.jinja
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>{% if use_docker %}Dockerfile{% endif %}.jinja
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>{% if use_docker %}.dockerignore{% endif %}.jinja
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>.gitignore
+</span></code></pre></div>
+<p>Every setting, hook version, and action version lives in these files. Each optional tool needs a question in <code>copier.yml</code> and an <code>{% if %}</code> in every file it touches.</p>
+</li>
+</ul>
+</div>
+<p>From those 18 lines, <code>protostar init</code> produces a <code>pyproject.toml</code> with Ruff, mypy, and pytest configured, a commit hook configuration, a GitHub Actions workflow, a Dockerfile, and ignore files. That's about 200 lines outside <code>pyproject.toml</code>, and the template's author writes and maintains none of them. When Protostar improves a tool's defaults, every template gets the improvement.</p>
+<p>Templates are data, not code. A template has a JSON Schema, so your editor can validate it as you type, and <code>protostar check-template</code> lints it in CI. Placeholders like <code>&lt;% PACKAGE_NAME %&gt;</code> are the only markup inside files. A single TOML file is a complete template; a folder or repository adds starter files.</p>
+<h3 id="every-tool-is-a-switch">Every Tool Is a Switch<a class="headerlink" href="#every-tool-is-a-switch" title="Permanent link">&para;</a></h3>
+<p>Because each tool is a component, every tool in every template is already a choice, and the author writes no question for it. mypy alone appears in four places in the project above: a dev dependency, the <code>[tool.mypy]</code> table, a commit hook, and a CI step. One flag covers all four:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>protostar<span class="w"> </span>init<span class="w"> </span>--from<span class="w"> </span>service.toml<span class="w"> </span>--no-mypy<span class="w"> </span>--no-docker
+</span></code></pre></div>
+<p>The same holds later. Turn a tool off in an existing project, and <code>protostar sync</code> removes what it added: unedited configuration disappears, and anything you edited is kept as a decision for you.</p>
+<p>Templates can also offer two tiers of the same project shape: <strong>workbench</strong> for exploring, and <strong>production</strong> for the full quality gate. An analysis project can start lean and gain CI, commit hooks, and type checking the day it becomes something to publish:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>protostar<span class="w"> </span>sync<span class="w"> </span>--tier<span class="w"> </span>production
+</span></code></pre></div>
+<p>A template's own choices, like which database to use, are declared <a href="../usage/authoring-templates/#template-options">options</a>. An option includes or leaves out whole files, dependencies, and configuration blocks, so a choice never turns into conditional logic inside a file.</p>
+<h2 id="updates-that-understand-your-files">Updates That Understand Your Files<a class="headerlink" href="#updates-that-understand-your-files" title="Permanent link">&para;</a></h2>
+<h3 id="merges-by-structure-not-by-line">Merges by Structure, Not by Line<a class="headerlink" href="#merges-by-structure-not-by-line" title="Permanent link">&para;</a></h3>
+<p>Copier and Cruft update a project by regenerating the template's old and new versions and merging the difference into your files line by line, the way Git merges branches. That works well for most files. It works worst on the ones a Python project changes most: <code>pyproject.toml</code>, where you and the template add to the same lists, and <code>uv.lock</code>, which nobody should merge by hand.</p>
+<p>Protostar reads each file it manages in that file's own format, and merges only the parts that changed:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">File</th>
+<th style="text-align: left;">How an update merges</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>pyproject.toml</code>, <code>zensical.toml</code></td>
+<td style="text-align: left;">Key by key and table by table, keeping your comments and formatting. Ruff's rule lists merge as sets, so your rules and the template's both stay.</td>
+</tr>
+<tr>
+<td style="text-align: left;">Dependencies</td>
+<td style="text-align: left;">Added and removed through uv, which rewrites <code>uv.lock</code>. The lockfile is never merged as text.</td>
+</tr>
+<tr>
+<td style="text-align: left;">GitHub Actions workflows</td>
+<td style="text-align: left;">By job and by step name, so your own jobs, steps, and triggers stay. An action version you or Renovate changed is yours.</td>
+</tr>
+<tr>
+<td style="text-align: left;">Hook configuration, Codecov, Read the Docs</td>
+<td style="text-align: left;">Key by key (YAML).</td>
+</tr>
+<tr>
+<td style="text-align: left;">Renovate and VS Code settings</td>
+<td style="text-align: left;">Key by key, comments included (JSONC).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>justfile</code>, <code>Dockerfile</code>, managed blocks in <code>AGENTS.md</code> and <code>CONTRIBUTING.md</code></td>
+<td style="text-align: left;">Line by line, three ways, like Git.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>.gitignore</code></td>
+<td style="text-align: left;">Missing patterns are added. Nothing is removed.</td>
+</tr>
+</tbody>
+</table>
+<p>It works from a record. <code>protostar.lock</code> stores what Protostar last applied to each file, so it can tell your edit from its own update. It never has to regenerate an old template version to find out, which is how Copier's update works, and why that update depends on the old version still rendering. Content Protostar didn't write stays yours unless you choose otherwise, even when it's identical to what Protostar would write.</p>
+<h3 id="one-update-two-tools">One Update, Two Tools<a class="headerlink" href="#one-update-two-tools" title="Permanent link">&para;</a></h3>
+<p>Here is the same template update applied by Copier and by Protostar. The project started from a template that depends on <code>httpx</code> and configures Ruff. Since then, the team has run <code>uv add rich</code> and set Ruff's <code>line-length</code> to 100. The template's next release adds <code>pydantic</code>, a <code>pytest</code> dev dependency, and Ruff's <code>SIM</code> rules.</p>
+<div class="grid cards">
+<ul>
+<li>
+<p><strong>Copier:</strong> <code>copier update</code></p>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">dependencies</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="s2">"httpx"</span><span class="p">,</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="err">&lt;&lt;&lt;&lt;&lt;&lt;&lt; before updating</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="s2">"rich&gt;=15.0.0"</span><span class="err">,</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="o">=</span><span class="err">======</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="s2">"pydantic"</span><span class="err">,</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="err">&gt;&gt;&gt;&gt;&gt;&gt;&gt;</span><span class="w"> </span><span class="n">after</span><span class="w"> </span><span class="n">updating</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="err">]</span>
+</span></code></pre></div>
+<p>It merged the dev dependency and Ruff rules correctly and kept the line length. But both sides had added a line after <code>httpx</code>, which a line-based merge can't settle, so it wrote these markers, and three more sets into <code>uv.lock</code>. The command exited successfully, and uv can't read the project until someone resolves both files by hand.</p>
+</li>
+<li>
+<p><strong>Protostar:</strong> <code>protostar sync</code></p>
+<div class="language-diff highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="w"> </span>dependencies = [
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w"> </span>    "httpx&gt;=0.28.1",
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="gi">+    "pydantic&gt;=2.13.5",</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w"> </span>    "rich&gt;=15.0.0",
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w"> </span>]
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w"> </span>dev = [
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="gi">+    "pytest&gt;=9.1.1",</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w"> </span>    "ruff&gt;=0.16.9",
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w"> </span>]
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="gd">-extend-select = ["B"]</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="gi">+extend-select = ["B", "SIM"]</span>
+</span></code></pre></div>
+<p>It added both packages through uv, which rewrote <code>uv.lock</code> itself, and merged the Ruff rules by key. It reported the line length as an edit it kept, with the command that takes the template's value instead, and <code>protostar sync --check</code> passed.</p>
+</li>
+</ul>
+</div>
+<p>Nothing about this scenario is unusual. Adding a dependency is routine on both sides, which is why a line-based merge meets it so often.</p>
+<details class="info">
+<summary>How this was run</summary>
+<p>Copier 9.18.2 and Protostar 0.10.0, on 2026-09-30. Each template lived in a local folder, and Copier's was a Git repository with a tag per release, as Copier's updates require. Its template ran <code>uv lock</code> as a task, as uv templates commonly do. The Protostar template declared the same dependencies and a <code>[tool.ruff.lint]</code> payload, and was registered as an alias with <code>trusted = true</code>, the counterpart of Copier's <code>--trust</code>. The commands were <code>copier update --trust --defaults</code> and <code>protostar sync</code>, each run in a committed project after the same edits.</p>
+</details>
+<h3 id="clear-decisions-not-conflict-markers">Clear Decisions, Not Conflict Markers<a class="headerlink" href="#clear-decisions-not-conflict-markers" title="Permanent link">&para;</a></h3>
+<p>Structure-aware merging leaves only true conflicts: you and the update changed the same setting. Had the template in the example above also changed <code>line-length</code>, this is all <code>protostar status</code> would ask about:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>pyproject.toml tool.ruff.line-length: You and the update both changed it.
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  Yours stays until you choose:
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    keep yours        protostar sync --resolve 76d476390115=local
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    use the update's  protostar sync --resolve 76d476390115=desired
+</span></code></pre></div>
+<ul>
+<li>Your version stays in the file until you choose. Protostar never writes conflict markers or <code>.rej</code> files.</li>
+<li><code>protostar status</code>, <code>protostar diff</code>, and <code>protostar sync --dry-run</code> show every pending change as a labelled file tree and unified diffs, before anything is written.</li>
+<li>In a terminal, <code>protostar sync</code> opens a review screen with your side, the update's side, and the file each choice produces. Headless, <code>--resolve</code> settles each conflict by an ID derived from its content, so a choice can never apply to content you didn't review.</li>
+<li>An edit you keep stays kept, and <code>sync --check</code> still passes. You can take the update later, one edit at a time.</li>
+<li>Execution is transactional. If a step fails or you press Ctrl+C, every file Protostar wrote, including <code>pyproject.toml</code> and <code>uv.lock</code>, is restored to its exact original bytes.</li>
+</ul>
+<div class="protostar-demo-shell">
+  <div class="panel-top">
+    <span class="terminal-dots" aria-hidden="true">
+      <span class="dot dot-close"></span>
+      <span class="dot dot-minimize"></span>
+      <span class="dot dot-maximize"></span>
+    </span>
+    <span class="terminal-title">PROTOSTAR / SYNC</span>
+  </div>
+  <div class="protostar-asciinema" data-asciinema="../assets/demo_sync.cast">
+    <noscript>
+      <a href="../../assets/demo_sync.cast">Download the Protostar terminal recording</a>
+    </noscript>
+  </div>
+</div>
+
+<p>A template update meets a team's own edits: keep both versions of the overlapping lines, take the template's stricter coverage floor, apply, and <code>sync --check</code> passes.</p>
+<h2 id="existing-projects-releases-and-automation">Existing Projects, Releases, and Automation<a class="headerlink" href="#existing-projects-releases-and-automation" title="Permanent link">&para;</a></h2>
+<h3 id="it-works-on-the-project-you-already-have">It Works on the Project You Already Have<a class="headerlink" href="#it-works-on-the-project-you-already-have" title="Permanent link">&para;</a></h3>
+<p>Most templates assume an empty directory. Run <code>protostar init</code> in an existing repository, and it first reads what's there: the Python version from <code>requires-python</code>, the author and license from <code>[project]</code>, and the tools you already use, which the recipe editor starts switched on. Reading changes nothing and runs nothing.</p>
+<p>Every change it would then make to a file you wrote is a proposal you can keep out. <strong>Keep all mine</strong> adopts the project exactly as it is. <code>protostar status</code> then lists each change you kept out, with the command that takes it, so the project can adopt its template's standards one at a time. With Copier, the documented route is to overwrite the project and restore your changes by hand; a first-class adopt command is an <a href="https://github.com/copier-org/copier/issues/2486">open request</a>.</p>
+<h3 id="template-releases-you-control">Template Releases You Control<a class="headerlink" href="#template-releases-you-control" title="Permanent link">&para;</a></h3>
+<p>A repository template starts new projects on its newest release tag. <code>protostar status</code> says when a newer release exists, and <code>protostar sync --to v1.3.0</code> moves the project there with the same review as any update. Each project records the exact commit it applied, so a moved tag or a pushed branch changes nothing until you move the project yourself.</p>
+<p>Declarative <a href="../usage/authoring-templates/#migrations">migrations</a> handle what a merge can't, such as a renamed or retired starter file, or a renamed variable. They never run commands, so a dry run lists them and a failed run rolls them back.</p>
+<h3 id="its-safe-to-automate">It's Safe to Automate<a class="headerlink" href="#its-safe-to-automate" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>protostar sync --check</code> exits <code>1</code> when a project is out of step with its recipe, so CI can gate on it. Edits you chose to keep don't fail it.</li>
+<li>Every command takes <code>--json</code>: one envelope on <code>stdout</code>, and no prompts. A missing decision fails with a structured error instead of hanging.</li>
+<li><code>--dry-run</code> shows the complete plan without writing a file or running a command.</li>
+<li><code>protostar.lock</code> records the Protostar release that wrote it. An older release refuses to run instead of quietly rolling the project back, so a teammate on an old version can't undo an update.</li>
+</ul>
+<p><a href="../usage/automating-updates/">Automating Updates</a> has a ready-made workflow that opens a weekly update pull request. The same commands let a coding agent plan, review, and apply changes; see the <a href="../usage/agent-interface/">agent interface</a>.</p>
+<h2 id="why-not-ask-a-coding-agent">Why Not Ask a Coding Agent?<a class="headerlink" href="#why-not-ask-a-coding-agent" title="Permanent link">&para;</a></h2>
+<p>An agent can write a good setup in a minute, tailored to what you asked for. But it writes it a little differently in every repository, and a year later it can't tell which lines you changed on purpose. Protostar gives the setup a record: projects from the same template start alike, and every later change arrives as a reviewable diff. The two work well together, since an agent can drive Protostar with <code>--json</code>, <code>--dry-run</code>, and <code>--resolve</code>.</p>
+<h2 id="when-another-tool-is-the-better-choice">When Another Tool Is the Better Choice<a class="headerlink" href="#when-another-tool-is-the-better-choice" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Your project isn't Python, or doesn't use uv.</strong> Protostar builds on uv, so it doesn't fit a project managed by Poetry, PDM, or conda. Copier and Cookiecutter work with any language and any tooling.</li>
+<li><strong>Your template's value is starter code that keeps changing.</strong> Protostar keeps configuration, dependencies, tool files, and managed blocks current. The starter files a template ships are written once and then belong to the project. A later release can move or retire them through a migration, but its edits to them don't reach existing projects. Copier merges every file on every update, starter code included.</li>
+<li><strong>You need logic inside files.</strong> Copier's Jinja can compute any file from the answers to its questions. Protostar's options include or leave out whole files and configuration, and its placeholders only insert values.</li>
+<li><strong>You want files once and never again.</strong> Cookiecutter has the largest collection of ready-made templates, and a GitHub template repository needs no tool at all.</li>
+<li><strong>You want a bare project.</strong> <code>uv init</code> is already installed and creates one instantly. Protostar runs <code>uv init</code> for you, and adds everything after it.</li>
+<li><strong>You want every generated file locked.</strong> projen generates configuration from a <code>.projenrc</code> program and treats generated files as read-only, which suits teams that allow no local deviation. Protostar assumes every project will diverge somewhere, and keeps those edits.</li>
+</ul>
+<h2 id="where-protostar-is-headed">Where Protostar Is Headed<a class="headerlink" href="#where-protostar-is-headed" title="Permanent link">&para;</a></h2>
+<p>Protostar is young, and it grows with the people using it. What comes next depends on what users run into, so if something stands between Protostar and your project or your team, <a href="https://github.com/jacksonfergusondev/protostar/issues/new?template=feature_request.yml">open a feature request</a>. Each release's notes are on <a href="https://github.com/jacksonfergusondev/protostar/releases">GitHub</a>.</p>
+<p>These are the gaps known today:</p>
+<ul>
+<li>GitHub Actions is the only CI it generates.</li>
+<li>A project inside a uv workspace isn't supported.</li>
+<li>A project follows one template; templates can't be layered, such as an organization's base under a team's template.</li>
+<li>Nothing opens update pull requests for you yet. Copier has a Renovate manager that does; with Protostar, a <a href="../usage/automating-updates/#open-update-pull-requests-on-a-schedule">scheduled workflow</a> runs <code>protostar sync</code> and opens the pull request itself.</li>
+<li>There are few community templates so far.</li>
+</ul>
+<p>Until 1.0, a release may still change a command or the template format when that makes Protostar simpler.</p>
+<h2 id="at-a-glance">At a Glance<a class="headerlink" href="#at-a-glance" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;"></th>
+<th style="text-align: left;">Protostar</th>
+<th style="text-align: left;">Copier</th>
+<th style="text-align: left;">Cookiecutter + Cruft</th>
+<th style="text-align: left;"><code>uv init</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Languages</strong></td>
+<td style="text-align: left;">Python, with uv</td>
+<td style="text-align: left;">Any</td>
+<td style="text-align: left;">Any</td>
+<td style="text-align: left;">Python</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Template format</strong></td>
+<td style="text-align: left;">TOML and plain files, with a JSON Schema</td>
+<td style="text-align: left;">YAML questions and Jinja files</td>
+<td style="text-align: left;">JSON variables and Jinja files</td>
+<td style="text-align: left;">None: app, library, or bare</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Tool configuration</strong></td>
+<td style="text-align: left;">Written by Protostar's modules; templates state the difference</td>
+<td style="text-align: left;">Written by the template author</td>
+<td style="text-align: left;">Written by the template author</td>
+<td style="text-align: left;">None</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Optional tools</strong></td>
+<td style="text-align: left;">Every tool is a flag, with nothing in the template</td>
+<td style="text-align: left;">A question, plus a conditional in each file</td>
+<td style="text-align: left;">A variable, plus a conditional in each file</td>
+<td style="text-align: left;">—</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Updates a project</strong></td>
+<td style="text-align: left;"><code>protostar sync</code></td>
+<td style="text-align: left;"><code>copier update</code></td>
+<td style="text-align: left;"><code>cruft update</code></td>
+<td style="text-align: left;">No</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>How updates merge</strong></td>
+<td style="text-align: left;">By key, job, and step; dependencies through uv; lines only for free-form files</td>
+<td style="text-align: left;">Line by line, through Git</td>
+<td style="text-align: left;">Line by line, through Git</td>
+<td style="text-align: left;">—</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Updates starter files</strong></td>
+<td style="text-align: left;">No: written once; migrations move or retire them</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">—</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Conflicts</strong></td>
+<td style="text-align: left;">Kept out of the file and settled by a choice</td>
+<td style="text-align: left;">Markers or <code>.rej</code> files written into the project</td>
+<td style="text-align: left;">Markers or <code>.rej</code> files written into the project</td>
+<td style="text-align: left;">—</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Existing projects</strong></td>
+<td style="text-align: left;">Reads them and proposes each change</td>
+<td style="text-align: left;">Overwrite or skip each file</td>
+<td style="text-align: left;"><code>cruft link</code>, for projects first made from the template</td>
+<td style="text-align: left;">—</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>CI check</strong></td>
+<td style="text-align: left;"><code>sync --check</code>: is the project in step?</td>
+<td style="text-align: left;"><code>check-update</code>: is a newer release out?</td>
+<td style="text-align: left;"><code>cruft check</code>: is a newer template out?</td>
+<td style="text-align: left;">—</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Machine interface</strong></td>
+<td style="text-align: left;"><code>--json</code> on every command</td>
+<td style="text-align: left;">Python API</td>
+<td style="text-align: left;">Python API</td>
+<td style="text-align: left;">—</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Maturity</strong></td>
+<td style="text-align: left;">New, pre-1.0</td>
+<td style="text-align: left;">Mature, wide template ecosystem</td>
+<td style="text-align: left;">The largest template ecosystem</td>
+<td style="text-align: left;">Built into uv</td>
+</tr>
+</tbody>
+</table>
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><a href="../first-project/">Your First Project</a>:</strong> Scaffold a project step by step, from choosing a template to running its checks.</li>
+<li><strong><a href="../usage/authoring-templates/">Authoring Templates</a>:</strong> Write a template for your team, from a single TOML file to a versioned repository.</li>
+<li><strong><a href="../usage/lifecycle/">Project Lifecycle</a>:</strong> Review, sync, and resolve updates in a project you already have.</li>
+<li><strong><a href="../design-principles/">Design Principles</a>:</strong> The architecture behind the planning, merging, and rollback guarantees.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../getting-started/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Getting Started">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Getting Started
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../design-principles/" class="md-footer__link md-footer__link--next" aria-label="Next: Design Principles">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Design Principles
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      &copy; 2026 Jackson Ferguson. <a href="https://github.com/jacksonfergusondev/protostar/blob/main/LICENSE">License</a>
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/jacksonfergusondev/protostar" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/protostar/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.linkedin.com/in/jackson--ferguson/" target="_blank" rel="noopener" title="www.linkedin.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3M135.4 416H69V202.2h66.5V416zM102.2 96a38.5 38.5 0 1 1 0 77 38.5 38.5 0 1 1 0-77m282.1 320h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="mailto:jackson.ferguson0@gmail.com" target="_blank" rel="noopener" title="" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4l208 156a48 48 0 0 0 57.6 0l208-156c12.1-9.1 19.2-23.3 19.2-38.4 0-26.5-21.5-48-48-48zM0 196v188c0 35.3 28.7 64 64 64h384c35.3 0 64-28.7 64-64V196L313.6 344.8c-34.1 25.6-81.1 25.6-115.2 0z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["content.code.copy","content.tabs.link","content.tooltips","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.sections","navigation.top","search.highlight"],"redirect":null,"search":"../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":{"alias":true,"default":"latest","provider":"mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.c04ba553.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3.8.1/dist/bundle/asciinema-player.min.js" defer></script>
+      
+        <script src="../javascripts/asciinema-init.js" defer></script>
+      
+    
+  </body>
+</html>
