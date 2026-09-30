@@ -4,7 +4,7 @@ import shlex
 from pathlib import Path
 
 from .config import UserConfig
-from .dependencies import install_dependencies
+from .dependencies import LOCK_COMMAND, install_dependencies
 from .errors import (
     CommandExecutionError,
     CommandTimeoutError,
@@ -282,7 +282,7 @@ class SystemExecutor(Reconciliation):
             enforce_path_jail(Path(path), self.journal.workspace_root)
             self.journal.record_mutation(Path(path))
         with self.progress("Refreshing uv.lock"):
-            self.process_runner.run(["uv", "lock"], timeout=600)
+            self.process_runner.run(list(LOCK_COMMAND), timeout=600)
         self._resolution_dirty = False
 
     def _write_state(self) -> None:

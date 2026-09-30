@@ -251,7 +251,7 @@ trusted = true
 
 Now you can run `protostar init --template backend` anywhere, and it will automatically appear alongside built-ins in `protostar init --list-templates`, shell auto-completion, and the interactive template picker.
 
-*Note: To prevent unauthorized remote code execution, external templates containing shell tasks prompt for user confirmation. Templates explicitly configured with `trusted = true` bypass this prompt automatically.*
+*Note: To prevent unauthorized code execution, a template you haven't marked trusted asks you to confirm every command its run executes, including dependency installs, since its files decide what they do. Templates configured with `trusted = true` skip this confirmation.*
 
 ### Authoring Custom Templates & Schema Validation
 

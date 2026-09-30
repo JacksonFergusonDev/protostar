@@ -238,7 +238,7 @@ Standard project variables—such as the human-readable project name, PEP 8 sani
 
 ## Security Model: The Remote Trust Dialog
 
-Protostar enforces a strict security boundary for external templates to prevent untrusted remote code execution.
+A template you haven't marked trusted can't run anything without your confirmation. That covers more than its own `system_tasks` and `post_install_tasks`. Protostar's own commands run in the files the template writes, and those files can make them run its code: `uv add` builds the project through its build backend and any build hooks the template configured, and `direnv allow` authorizes the `.envrc` it ships. So the gate lists every command the run executes: setup commands such as `git init` and `uv init`, each dependency install, and the commands that run after install.
 
 ```mermaid
 flowchart TD
@@ -257,7 +257,7 @@ flowchart TD
     FetchRemote --> ParseRemote
 
     ParseBuiltin --> HasTasks
-    ParseRemote --> HasTasks{Blueprint Contains\nExecutable Tasks?}:::decision
+    ParseRemote --> HasTasks{Run Executes\nAny Command?}:::decision
 
     HasTasks -- No --> Execute([Proceed to Execution]):::terminal
     HasTasks -- Yes --> TrustCheck{Trust Boundary Eval}:::decision
@@ -273,13 +273,15 @@ flowchart TD
 
 While Protostar enforces filesystem path jailing (preventing templates from writing outside your workspace) and binary safelisting (disallowing direct calls to shells like `/bin/sh`), developer tools like `uv run`, `git`, and `npm` can still execute scripts provided within the repository.
 
-To address this, Protostar prompts for confirmation before running external commands:
+To address this, Protostar asks for confirmation before running any command for a template it doesn't trust:
 
 1. __Built-in Templates:__ Trusted implicitly (shipped within the validated Protostar package).
 1. __Explicitly Trusted Aliases:__ Trusted when configured with `trusted = true` under `[templates.<alias>]` in your global `config.toml`.
-1. __Untrusted External Templates (`--from` or untrusted aliases):__ If an untrusted template attempts to execute `system_tasks` or `post_install_tasks`, the Orchestrator halts before touching disk or shell. The change review lists the template's exact commands under __Untrusted template__, and __Apply__ stays disabled until you tick the checkbox confirming them (`T`).
+1. __Untrusted External Templates (`--from` or untrusted aliases):__ If the run executes any command, nothing is written and nothing runs until you confirm. The change review lists every command under __Untrusted template__, and __Apply__ stays disabled until you tick the checkbox confirming them (`T`). Only the commands you confirmed run.
 
-In non-interactive environments (e.g., CI/CD or `--json` mode), untrusted templates with executable tasks abort immediately with `SecurityViolationError` to prevent hanging or unauthorized execution. To run them headlessly, configure them with `trusted = true` in your global configuration aliases.
+Almost every `init` runs a command, so in practice an untrusted template always asks. In non-interactive environments (e.g., CI/CD or `--json` mode), it aborts immediately with `SecurityViolationError` (exit code `77`) instead of hanging. To run it headlessly, configure it as an alias with `trusted = true` in your global configuration.
+
+`protostar sync` never runs a template's tasks and asks no trust question. It does run `uv add` or `uv lock` when an update changes dependencies, and those can build the project, so review `protostar sync --dry-run` before taking an update from a template you don't control.
 
 ## Ready to Author Your Own Templates?
 

@@ -18,6 +18,7 @@ from rich.tree import Tree
 
 from protostar.cli import schema
 from protostar.config import active_config_source
+from protostar.dependencies import resolver_commands
 from protostar.docs_registry import DocsPage
 from protostar.errors import (
     ConfigurationError,
@@ -292,19 +293,26 @@ def untrusted_commands(
 ) -> tuple[tuple[str, ...], ...]:
     """Returns every command a run of an untrusted external template executes.
 
+    The template's own tasks are not the only risk. Protostar's commands run in
+    the files the template writes, and those files can make them run its code:
+    ``direnv allow`` authorizes its ``.envrc``, and ``uv add`` builds the project
+    through its build backend and build hooks. So every command is listed.
+
     Args:
         request: The resolved init request, carrying the template's trust facts.
         manifest: The planned manifest.
 
     Returns:
-        Each system and post-install command in execution order, or nothing
-        when the template is built in or configured as trusted.
+        Each setup command, dependency install, and post-install command in
+        execution order, or nothing when the template is built in or configured
+        as trusted.
     """
     if not request.is_external or request.is_trusted:
         return ()
-    return tuple(
-        tuple(task.command)
-        for task in (*manifest.tasks.system_tasks, *manifest.tasks.post_install_tasks)
+    return (
+        *(tuple(task.command) for task in manifest.tasks.system_tasks),
+        *resolver_commands(manifest.dependencies),
+        *(tuple(task.command) for task in manifest.tasks.post_install_tasks),
     )
 
 
@@ -381,24 +389,26 @@ def _run_engine(
     # --- Trust Boundary ---
     commands = untrusted_commands(request, manifest)
     if commands and (decision is None or decision.confirmed_commands != commands):
+        config = active_config_source().path
+        refusal = SecurityViolationError(
+            "Execution aborted: this template isn't trusted, and the commands "
+            "its run executes need your confirmation.",
+            hint=(
+                "Review and confirm them by running init in an interactive "
+                "terminal, or configure the template as an alias in "
+                f"{config or 'your global configuration'} with 'trusted = true'."
+            ),
+        )
         # JSON mode: reject immediately without prompting to avoid blocking agents.
         if is_json_mode:
-            raise SecurityViolationError(
-                "Execution aborted: Untrusted external template contains "
-                "executable tasks. To trust this source, configure it with "
-                "'trusted = true' in your global configuration.",
-                hint=(
-                    f"Configure the template in {active_config_source().path} "
-                    "with 'trusted = true' "
-                    "and re-run."
-                ),
-            )
+            raise refusal
 
         warning = glyph("⚠️", "!")
         console.print(
-            f"\n[bold red]{warning}  REMOTE TEMPLATE WARNING {warning}[/bold red]\n\n"
-            "This template was loaded from an external source and will execute "
-            "the following shell commands on your system:"
+            f"\n[bold red]{warning}  UNTRUSTED TEMPLATE {warning}[/bold red]\n\n"
+            "This template comes from a source you haven't marked trusted. "
+            "Protostar would run these commands in the files it writes, and those "
+            "files can make them run the template's code:"
         )
         for command in commands:
             console.print(
@@ -408,12 +418,7 @@ def _run_engine(
                 )
             )
         console.print()
-
-        raise ProtostarError(
-            "Execution aborted: Untrusted external template contains executable tasks.\n"
-            "To trust this template in non-interactive environments, add its URL to "
-            "the [templates] block in your global configuration."
-        )
+        raise refusal
 
     # --- Execute ---
     hook_revisions = decision.hook_revisions if decision else None
