@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790896217125,
+  "lastUpdate": 1790896224568,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20473,6 +20473,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 938.19,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "87a8cc8213edd19426bb15c038be28d1a8ad880c",
+          "message": "test(jsonc): catch the mutants that survived in jsonc_ast (#408)\n\n* test(jsonc): catch the mutants that survived in jsonc_ast\n\nThe first mutation run left 332 survivors in jsonc_ast, most in the\nparser: tests checked that bad input failed, never what the error said.\n\n- Every parse failure is checked whole: its reason and its line and\n  column, including input that ends inside a token, a break at the very\n  start, and what strict JSON rejects. Numbers decode to their types,\n  block comments end at their own close, and the node and size limits\n  hold exactly.\n- Edits land byte for byte where the document would put them: into\n  empty objects however their braces sit, after trailing commas and\n  block comments, beside the opening brace, below a leading comment,\n  with non-ASCII keys, and arrays keep unchanged elements as written.\n- Impossible edits name their path, values JSON cannot hold are named\n  with their hint, and the first line break sets the newline.\n- reconcile_jsonc: unchanged values keep their spelling, a missing file\n  ignores the text passed, proposals and settled conflicts are reported\n  for missing files, nothing is proposed or retracted by default,\n  overwrite keeps ownership, and empty or newly filled tables are owned.\n\nThe rest are equivalent: ensure_ascii=None and allow_nan=None behave as\nFalse, casts, node kinds no reader checks, positions the parser has not\nyet moved from, and searches whose None bound means the same as 0.\n\n* test(jsonc): cover stray characters, comments around edits, and end-of-input errors\n\nThe follow-up mutation run left real survivors that needed new inputs:\nan uppercase X wherever the parser checks a character class (before a\nkey, after a number, inside an exponent, inside a line comment), input\nending right after a colon or inside an escape, a number too long for\nint, a strict comment after whitespace, insertion beside block comments\nbefore and after the edit, a colon on the line after its key, cyclic and\nappended values, and where a deleted file's conflict sits.",
+          "timestamp": "2026-10-01T16:08:05-07:00",
+          "tree_id": "4a0b68266a75bd5871bebef2a10e625a4e456731",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/87a8cc8213edd19426bb15c038be28d1a8ad880c"
+        },
+        "date": 1790896223013,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 188.28,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 779.63,
             "unit": "ms"
           }
         ]
