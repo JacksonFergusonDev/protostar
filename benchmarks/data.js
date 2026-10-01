@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790818277565,
+  "lastUpdate": 1790819385774,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20099,6 +20099,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 993.13,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a484b43e4d2f8def940533e3450d44533cf6a962",
+          "message": "docs: link the example template and project repositories (#399)\n\nPoint the README, Why Protostar, and the authoring guide at\nprotostar-example-templates and protostar-example-project, including the\nupdate pull request the project's scheduled workflow opened when the\ntemplate tagged v1.1.0.",
+          "timestamp": "2026-09-30T18:46:14-07:00",
+          "tree_id": "17ead089c03f1cdcc2ea9ee3cdf57f9879df91fc",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a484b43e4d2f8def940533e3450d44533cf6a962"
+        },
+        "date": 1790819384606,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 290.28,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1281.65,
             "unit": "ms"
           }
         ]
