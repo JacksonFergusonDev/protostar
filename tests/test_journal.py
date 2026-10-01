@@ -255,7 +255,7 @@ def test_record_tree_creation_reports_what_it_could_not_remove(
     real_unlink = os.unlink
 
     def unlink(name: str | Path, *args: object, **kwargs: object) -> None:
-        if Path(name).name == "pre-commit":
+        if Path(name).name == "HEAD":
             raise PermissionError(13, "Permission denied", str(name))
         real_unlink(name, *args, **kwargs)  # type: ignore[arg-type]
 
@@ -267,10 +267,34 @@ def test_record_tree_creation_reports_what_it_could_not_remove(
     [failure] = result.errors
     assert failure.path == target
     assert "Permission denied" in failure.detail
-    assert "more" in failure.detail  # hooks/ stays too: it still holds the hook.
+    # .git/ stays too, since it still holds what could not go.
+    assert failure.detail.endswith("HEAD' (and 1 more)")
     # Everything removable is still removed.
-    assert not (target / "HEAD").exists()
-    assert (target / "hooks" / "pre-commit").exists()
+    assert not (target / "hooks").exists()
+    assert (target / "HEAD").exists()
+
+
+def test_record_tree_creation_reports_a_single_leftover_alone(
+    tmp_path: Path, mocker: MockerFixture
+) -> None:
+    target = tmp_path / ".git"
+    journal = MutationJournal(tmp_path)
+    journal.record_tree_creation(target)
+    target.mkdir()
+    real_rmdir = os.rmdir
+    raised: list[OSError] = []
+
+    def rmdir(name: str | Path, *args: object, **kwargs: object) -> None:
+        if Path(name).name == ".git":
+            raised.append(PermissionError(13, "Permission denied", str(name)))
+            raise raised[-1]
+        real_rmdir(name, *args, **kwargs)  # type: ignore[arg-type]
+
+    mocker.patch("os.rmdir", side_effect=rmdir)
+
+    [failure] = journal.rollback().errors
+
+    assert failure.detail == str(raised[0])
 
 
 def test_record_tree_creation_lists_the_tree_as_a_directory(tmp_path: Path) -> None:
