@@ -2,8 +2,10 @@ import sys
 from pathlib import Path
 
 import pytest
+from pytest_mock import MockerFixture
 
 from protostar.errors import (
+    FileSystemError,
     SecurityViolationError,
     TransactionStateError,
     UnsupportedFilesystemNodeError,
@@ -115,8 +117,9 @@ def test_journal_cannot_rollback_committed(tmp_path: Path) -> None:
     target.write_text("hello")
 
     journal.commit()
-    with pytest.raises(TransactionStateError):
+    with pytest.raises(TransactionStateError) as error:
         journal.rollback()
+    assert (error.value.operation, error.value.state) == ("roll back", "committed")
     assert target.exists()
 
 
@@ -124,8 +127,12 @@ def test_journal_rejects_mutation_after_rollback(tmp_path: Path) -> None:
     journal = MutationJournal(tmp_path)
     journal.rollback()
 
-    with pytest.raises(TransactionStateError):
+    with pytest.raises(TransactionStateError) as error:
         journal.record_mutation(tmp_path / "later.txt")
+    assert (error.value.operation, error.value.state) == (
+        "record a mutation in",
+        "rolled back",
+    )
 
 
 def test_journal_rejects_symlink_before_mutation(tmp_path: Path) -> None:
@@ -135,9 +142,10 @@ def test_journal_rejects_symlink_before_mutation(tmp_path: Path) -> None:
     link.symlink_to(target)
     journal = MutationJournal(tmp_path)
 
-    with pytest.raises(UnsupportedFilesystemNodeError):
+    with pytest.raises(UnsupportedFilesystemNodeError) as error:
         journal.record_mutation(link)
 
+    assert (error.value.path, error.value.node_type) == (link, "symbolic link")
     assert link.is_symlink()
     assert target.read_text() == "original"
 
@@ -206,6 +214,10 @@ def test_journal_continues_after_one_path_fails(tmp_path: Path) -> None:
 
     assert not result.succeeded
     assert result.failed_paths == (blocked_directory,)
+    [failure] = result.errors
+    assert failure.path == blocked_directory
+    # The OS error names the directory it could not remove.
+    assert blocked_directory.name in failure.detail
     assert existing.read_text() == "original"
 
 
@@ -230,6 +242,28 @@ def test_record_tree_creation_absent(tmp_path: Path) -> None:
     assert not target.exists()
 
 
+def test_record_tree_creation_lists_the_tree_as_a_directory(tmp_path: Path) -> None:
+    journal = MutationJournal(tmp_path)
+
+    journal.record_tree_creation(tmp_path / ".git")
+
+    assert journal.touched_paths == frozenset({".git/"})
+    assert journal.created_paths == frozenset({".git"})
+
+
+def test_record_tree_creation_rejects_a_finished_transaction(tmp_path: Path) -> None:
+    journal = MutationJournal(tmp_path)
+    journal.commit()
+
+    with pytest.raises(TransactionStateError) as error:
+        journal.record_tree_creation(tmp_path / ".git")
+
+    assert (error.value.operation, error.value.state) == (
+        "record a tree creation in",
+        "committed",
+    )
+
+
 def test_record_tree_creation_existing(tmp_path: Path) -> None:
     """Tests that record_tree_creation falls back to mutation for existing trees."""
     journal = MutationJournal(workspace_root=tmp_path)
@@ -242,3 +276,109 @@ def test_record_tree_creation_existing(tmp_path: Path) -> None:
     # Check that it recorded as a directory, not a created tree
     state = journal._journal[target]
     assert state.kind == "directory"
+
+
+def test_journal_lists_existing_directories_with_a_trailing_slash(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "notes.txt").write_text("notes")
+    journal = MutationJournal(tmp_path)
+
+    journal.record_mutation(tmp_path / "docs")
+    journal.record_mutation(tmp_path / "notes.txt")
+
+    assert journal.touched_paths == frozenset({"docs/", "notes.txt"})
+    assert journal.mutated_paths == frozenset({"docs", "notes.txt"})
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX directory modes")
+def test_journal_restores_original_directory_mode(tmp_path: Path) -> None:
+    target = tmp_path / "bin"
+    target.mkdir()
+    target.chmod(0o750)
+    journal = MutationJournal(tmp_path)
+    journal.record_mutation(target)
+    target.chmod(0o700)
+
+    assert journal.rollback().succeeded
+
+    assert target.stat().st_mode & 0o777 == 0o750
+
+
+def test_journal_recreates_a_directory_whose_parent_was_removed(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "a" / "b"
+    target.mkdir(parents=True)
+    journal = MutationJournal(tmp_path)
+    journal.record_mutation(target)
+    target.rmdir()
+    target.parent.rmdir()
+
+    assert journal.rollback().succeeded
+
+    assert target.is_dir()
+
+
+def test_journal_restores_a_directory_replaced_by_a_file(tmp_path: Path) -> None:
+    target = tmp_path / "config"
+    target.mkdir()
+    journal = MutationJournal(tmp_path)
+    journal.record_mutation(target)
+    target.rmdir()
+    target.write_text("not a directory")
+
+    assert journal.rollback().succeeded
+
+    assert target.is_dir()
+
+
+def test_journal_commit_rejects_a_finished_transaction(tmp_path: Path) -> None:
+    journal = MutationJournal(tmp_path)
+    journal.commit()
+
+    with pytest.raises(TransactionStateError) as error:
+        journal.commit()
+
+    assert (error.value.operation, error.value.state) == ("commit", "committed")
+
+
+def test_journal_wraps_a_failed_inspection(
+    tmp_path: Path, mocker: MockerFixture
+) -> None:
+    target = tmp_path / "file.txt"
+    denied = PermissionError(13, "Permission denied")
+    real_lstat = Path.lstat
+
+    def lstat(path: Path) -> object:
+        if path == target:
+            raise denied
+        return real_lstat(path)
+
+    mocker.patch.object(Path, "lstat", autospec=True, side_effect=lstat)
+    journal = MutationJournal(tmp_path)
+
+    with pytest.raises(FileSystemError) as error:
+        journal.record_mutation(target)
+
+    assert error.value.operation == "inspect path before mutation"
+    assert error.value.path == str(target)
+    assert error.value.original is denied
+    assert journal.touched_paths == frozenset()
+
+
+def test_journal_wraps_a_failed_read(tmp_path: Path, mocker: MockerFixture) -> None:
+    target = tmp_path / "file.txt"
+    target.write_text("original")
+    denied = PermissionError(13, "Permission denied")
+    mocker.patch.object(Path, "read_bytes", autospec=True, side_effect=denied)
+    journal = MutationJournal(tmp_path)
+
+    with pytest.raises(FileSystemError) as error:
+        journal.record_mutation(target)
+
+    assert error.value.operation == "read existing file for journaling"
+    assert error.value.path == str(target)
+    assert error.value.original is denied
+    assert journal.touched_paths == frozenset()

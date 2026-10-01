@@ -108,10 +108,8 @@ class MutationJournal:
         return enforce_path_jail(path, self._workspace_root, dereference_leaf=False)
 
     def _format_display_path(self, path: Path, is_dir: bool = False) -> str:
-        try:
-            display = path.relative_to(self._workspace_root).as_posix()
-        except ValueError:
-            display = path.as_posix()
+        # Every journaled path went through normalize_path, so it is inside the root.
+        display = path.relative_to(self._workspace_root).as_posix()
         return f"{display}/" if is_dir else display
 
     @property
