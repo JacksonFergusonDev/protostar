@@ -19,6 +19,8 @@ from protostar.config_edit import ConfigEdit, OpenInEditor, SaveConfig
 from protostar.errors import ConfigurationError, InvalidUsageError
 from protostar.modules import MypyModule
 
+pytestmark = pytest.mark.usefixtures("settled_pilot")
+
 # A bare name renders the same on Windows, whose paths use backslashes.
 PATH = Path("config.toml")
 GIT = {"user.name": "Ada Lovelace", "user.email": "ada@example.com"}

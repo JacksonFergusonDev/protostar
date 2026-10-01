@@ -19,6 +19,39 @@ from protostar.manifest import EnvironmentManifest
 from protostar.system_deps import GlobalExecutable
 
 
+@pytest.fixture
+def settled_pilot(monkeypatch):
+    """Drain cascading UI messages and rendering instead of guessing CPU idleness.
+
+    Pilot's default pause inserts one barrier per widget. A child can post
+    to a parent after its barrier passed, and scrolls run after rendering.
+    Wait for those phases too, but leave background workers to the test.
+    """
+    import asyncio
+
+    from textual.pilot import Pilot
+
+    pause = Pilot.pause
+
+    async def idle(*args, **kwargs):
+        # Every opted-in test exercises immediate idleness: correctness must
+        # come from message and rendering barriers, not an incidental sleep.
+        await asyncio.sleep(0)
+
+    async def settled(self, delay=None):
+        async with asyncio.timeout(30):
+            await pause(self, 0 if delay is None else delay)
+            while True:
+                await self.wait_for_scheduled_animations()
+                nodes = [self.app, *self.app.screen.walk_children(with_self=True)]
+                if not any(node.message_queue_size for node in nodes):
+                    break
+                await pause(self, 0)
+
+    monkeypatch.setattr(Pilot, "pause", settled)
+    monkeypatch.setattr("textual.pilot.wait_for_idle", idle)
+
+
 @pytest.fixture(autouse=True)
 def mock_global_config_file(mocker, tmp_path):
     """Mocks the global configuration file and clears singleton caches for all tests."""

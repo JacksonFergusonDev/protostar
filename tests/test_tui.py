@@ -56,6 +56,8 @@ from protostar.system_deps import GlobalExecutable
 from protostar.templates import discover_templates
 from protostar.tiers import Tier
 
+pytestmark = pytest.mark.usefixtures("settled_pilot")
+
 
 @pytest.fixture(autouse=True)
 def workspace(tmp_path, monkeypatch):
@@ -68,17 +70,6 @@ def workspace(tmp_path, monkeypatch):
     monkeypatch.setattr(shutil, "which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setenv("PROTOSTAR_OFFLINE_HOOK_REGISTRY", "1")
     return project
-
-
-@pytest.fixture(params=[False, True])
-def early_idle(request, mocker):
-    """Also exercise event propagation when CPU idleness is reported at once."""
-    if request.param:
-
-        async def idle(*args, **kwargs):
-            await asyncio.sleep(0)
-
-        mocker.patch("textual.pilot.wait_for_idle", side_effect=idle)
 
 
 def make_app(draft=None, config=None):
@@ -96,18 +87,17 @@ def template_draft(path, text, **changes):
 
 async def settle(pilot):
     """Wait for workers, including those a finishing worker starts."""
-    # Handle pending messages first: they are what start the workers.
-    await pilot.pause()
-    for _ in range(10):
-        workers = list(pilot.app.workers)
-        if not workers:
-            break
-        for worker in workers:
-            # A newer exclusive run supersedes a debounced one; that is expected.
-            with contextlib.suppress(WorkerCancelled):
-                await worker.wait()
-        await pilot.pause()
-    await pilot.pause()
+    async with asyncio.timeout(30):
+        while True:
+            # Drain messages first: they are what start the workers.
+            await pilot.pause()
+            workers = list(pilot.app.workers)
+            if not workers:
+                return
+            for worker in workers:
+                # A newer exclusive run supersedes a debounced one.
+                with contextlib.suppress(WorkerCancelled):
+                    await worker.wait()
 
 
 async def wait_until(pilot, predicate):
@@ -934,19 +924,8 @@ async def test_alias_and_load_error(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_remote_template_loads_in_a_worker(tmp_path, mocker):
-    local = tmp_path / "remote.toml"
-    local.write_text('name = "Remote"\ndocker = true\n')
-    release = threading.Event()
-    load = TemplateSource.load
-
-    def slow_load(target, **kwargs):
-        release.wait(timeout=5)
-        return load(str(local), **kwargs)
-
-    mocker.patch(
-        "protostar.cli.tui.recipe.screen.TemplateSource.load", side_effect=slow_load
-    )
+async def test_remote_template_loads_in_a_worker(held_template_load):
+    release = held_template_load
     config = UserConfig(
         templates={"remote": TemplateAliasConfig(source="https://example.com/t.git")}
     )
@@ -967,20 +946,30 @@ async def test_remote_template_loads_in_a_worker(tmp_path, mocker):
         assert not app.screen.query_one("#continue", Button).disabled
 
 
-@pytest.mark.asyncio
-async def test_reselecting_the_current_template_abandons_a_load(
-    tmp_path, mocker, early_idle
-):
+@pytest.fixture
+def held_template_load(tmp_path, mocker):
+    """Hold acquisition until released, unblocking it even when the test fails."""
     local = tmp_path / "remote.toml"
     local.write_text('name = "Remote"\ndocker = true\n')
     release = threading.Event()
     load = TemplateSource.load
+
+    def slow_load(target, **kwargs):
+        assert release.wait(timeout=30), "Template acquisition was never released"
+        return load(str(local), **kwargs)
+
     mocker.patch(
-        "protostar.cli.tui.recipe.screen.TemplateSource.load",
-        side_effect=lambda target, **kwargs: (
-            release.wait(timeout=5) and load(str(local), **kwargs)
-        ),
+        "protostar.cli.tui.recipe.screen.TemplateSource.load", side_effect=slow_load
     )
+    try:
+        yield release
+    finally:
+        release.set()
+
+
+@pytest.mark.asyncio
+async def test_reselecting_the_current_template_abandons_a_load(held_template_load):
+    release = held_template_load
     config = UserConfig(
         templates={"remote": TemplateAliasConfig(source="https://example.com/t.git")}
     )
@@ -1463,7 +1452,7 @@ async def test_any_python_3_minimum_or_none_is_accepted():
 
 
 @pytest.mark.asyncio
-async def test_invalid_github_username_shows_actionable_preview_error(early_idle):
+async def test_invalid_github_username_shows_actionable_preview_error():
     app = make_app()
     async with app.run_test(size=(110, 45)) as pilot:
         await settle(pilot)
@@ -2041,9 +2030,7 @@ async def test_the_chosen_strategy_reaches_execution(collisions, mocker, strateg
 
 
 @pytest.mark.asyncio
-async def test_trust_gate_blocks_until_the_commands_are_confirmed(
-    tmp_path, mocker, early_idle
-):
+async def test_trust_gate_blocks_until_the_commands_are_confirmed(tmp_path, mocker):
     app = make_review(untrusted_draft(tmp_path / "t.toml"))
     async with app.run_test(size=(120, 50)) as pilot:
         await settle(pilot)
@@ -2146,12 +2133,16 @@ async def test_review_keys_scroll_the_diff_from_the_file_tree(collisions):
         assert app.focused is app.screen.query_one("#decisions", Tree)
         assert legend(app) == {"Move", "Scroll diff", "Next", "Keybindings"}
         await highlight(pilot, ".pre-commit-config.yaml")
+        await pilot.wait_for_scheduled_animations()
         tree = app.screen.query_one("#files", Tree)
         pane = app.screen.query_one("#diff-pane")
         assert pane.max_scroll_y > 0
         await pilot.press("pagedown")
+        await wait_until(pilot, lambda: pane.scroll_y > 0)
+        await pilot.wait_for_scheduled_animations()
         assert pane.scroll_y > 0
         await pilot.press("pageup")
+        await wait_until(pilot, lambda: pane.scroll_y == 0)
         assert pane.scroll_y == 0
         assert app.focused is tree
         # A key whose control is hidden does nothing.

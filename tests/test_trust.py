@@ -11,6 +11,8 @@ from protostar.intent import DependencyGroup, ResolverFootprint, TemplateOrigin
 from protostar.preparation import ResolverAction
 from protostar.recipe import RecipeSource
 
+pytestmark = pytest.mark.usefixtures("settled_pilot")
+
 REPOSITORY = "https://github.com/acme/templates"
 COMMANDS = (("uv", "add", "fastapi"), ("uv", "run", "prek", "install"))
 

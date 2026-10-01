@@ -1,6 +1,7 @@
 """The sync conflict screen: choosing sides by key, previews, and the CLI hand-off."""
 
 import argparse
+import asyncio
 import contextlib
 import io
 import json
@@ -32,6 +33,8 @@ from protostar.merge import (
     ResolutionChoice,
 )
 from protostar.recipe import RecipeIntent, Tool, establish_recipe
+
+pytestmark = pytest.mark.usefixtures("settled_pilot")
 
 RENOVATE = ".github/renovate.json"
 NOTES = "notes.txt"
@@ -83,16 +86,15 @@ def make_app():
 
 async def settle(pilot):
     """Wait for the preview worker, including one a key press starts."""
-    await pilot.pause()
-    for _ in range(10):
-        workers = list(pilot.app.workers)
-        if not workers:
-            break
-        for worker in workers:
-            with contextlib.suppress(WorkerCancelled):
-                await worker.wait()
-        await pilot.pause()
-    await pilot.pause()
+    async with asyncio.timeout(30):
+        while True:
+            await pilot.pause()
+            workers = list(pilot.app.workers)
+            if not workers:
+                return
+            for worker in workers:
+                with contextlib.suppress(WorkerCancelled):
+                    await worker.wait()
 
 
 def plain(app, selector):
