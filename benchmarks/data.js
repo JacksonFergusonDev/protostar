@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790888042150,
+  "lastUpdate": 1790896186896,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20405,6 +20405,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 952.98,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "829ed4549651fca866694c323058a20c61657933",
+          "message": "test(text): catch the mutants that survived in text_merge (#405)\n\n* test(text): catch the mutants that survived in text_merge\n\nThe first mutation run left 60 survivors in text_merge.\n\n- What each decision shows: a preserved edit or deletion's sides, both\n  ways of settling it, a whole-text conflict's sides when unowned or\n  deleted, and every line of a multi-line hunk. An unedited, unchanged\n  text keeps its ownership, and mixed line endings count as an edit.\n- The alignment's cost bound at its exact value, on a stretch that does\n  not start at the first line.\n- Fifteen merges that came out differently under a small change to the\n  patience anchors, the longest increasing run, the difflib fallback,\n  or how a conflict is narrowed. They were found by searching random\n  edits of short texts, so each pins a merge the property tests allow\n  but do not fix.\n\nEight survivors are equivalent and stay: diff3's run detection only\nsplits stable runs into shorter ones, `previous` entries are always\noverwritten before use, a stretch with one empty side aligns nothing\neither way, and difflib's autojunk applies only from 200 lines.\n\n* test(text): type a preserved side as a Value\n\n* test(text): give the multi-line hunk a multi-line base\n\nThe follow-up mutation run left one real survivor: the hunk test's base\nside was a single line, so joining it with any separator looked the same.",
+          "timestamp": "2026-10-01T16:06:31-07:00",
+          "tree_id": "3d5aeee8c2cf2932c13e146d0f0904d906537e4f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/829ed4549651fca866694c323058a20c61657933"
+        },
+        "date": 1790896185718,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 278.76,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1193.05,
             "unit": "ms"
           }
         ]
