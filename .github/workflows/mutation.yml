@@ -89,7 +89,13 @@ jobs:
           echo
           uv run --no-sync python scripts/mutation_report.py report \
             --json mutants/summary.json --survivors mutants/survivors.txt
+          echo
+          echo "Every survivor's change is in the \`mutation-${{ matrix.module }}\` artifact, as survivors.md."
         } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Write survivor diffs
+      if: ${{ !cancelled() }}
+      run: uv run --no-sync python scripts/mutation_report.py diffs --out mutants/survivors.md
 
     - name: Upload results
       if: ${{ !cancelled() }}
@@ -99,6 +105,8 @@ jobs:
         path: |
           mutants/summary.json
           mutants/survivors.txt
+          mutants/survivors.md
+        retention-days: 90
         if-no-files-found: error
 
   summary:
