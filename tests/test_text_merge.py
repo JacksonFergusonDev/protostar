@@ -614,10 +614,10 @@ def test_a_whole_text_conflict_shows_every_side(
 
 def test_a_hunk_conflict_shows_every_line_of_each_side() -> None:
     [conflict] = reconcile_text(
-        b"a\nX\nY\nc\n", "a\nP\nQ\nc\n", "a\nb\nc\n", FILE
+        b"a\nX\nY\nc\n", "a\nP\nQ\nc\n", "a\nb\nB\nc\n", FILE
     ).conflicts
 
-    assert conflict.sides == ConflictSides("b\n", "X\nY\n", "P\nQ\n", line=1)
+    assert conflict.sides == ConflictSides("b\nB\n", "X\nY\n", "P\nQ\n", line=1)
 
 
 def test_mixed_endings_are_compared_exactly() -> None:
