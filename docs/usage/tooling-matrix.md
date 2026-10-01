@@ -1,3 +1,7 @@
+---
+description: "Every tool Protostar can set up, the flag that turns it on, and the files it adds."
+---
+
 # Tooling & Flags Matrix
 
 Protostar provides a modular matrix of tooling modules and built-in templates. Tooling modules inject static analysis, testing frameworks, and continuous integration workflows, safely deep-merging configurations into existing project files like `pyproject.toml`.

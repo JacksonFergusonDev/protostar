@@ -86,13 +86,15 @@
 }
 
 /* Recordings start themselves once in view, so the play button would only
-   flash over them; readers who asked for reduced motion start them by hand. */
-.hs-terminal-screen .ap-overlay-start {
+   flash over them; readers who asked for reduced motion start them by hand.
+   The player's stylesheet loads after this one, so these outrank its
+   `.ap-player .ap-overlay` rule rather than relying on order. */
+.hs-terminal-screen .ap-player .ap-overlay-start {
     display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .hs-terminal-screen .ap-overlay-start {
+    .hs-terminal-screen .ap-player .ap-overlay-start {
         display: flex;
     }
 }

@@ -119,13 +119,27 @@ Full contract: `docs/developer/built-in-templates.md`. Invariants when touching 
 - **All TUI source uses `cli/tui/code.py`.** Render code, structured configuration, and source diffs through its shared renderers and palette. Pass the actual display language when serialization differs from the filename. Language selection is presentation-only; screens never choose their own syntax themes. Keep the Pygments adapter lazy so opening the recipe editor loads no lexers.
 - **Drive TUI tests with `pilot.press`.** Use `pilot.click` only in tests that are about the mouse.
 
-### 10. Documentation Site & House Style
+### 10. Documentation
 
-- **The docs follow house-style's design rules.** Read `docs/house/GUIDELINES.txt` (house-style's `GUIDELINES.md` at the pinned tag) before changing any page's look. It says, among other things, which icon every standalone link takes: `arrow-down` within the page, `arrow-right` to a related page, `arrow-up-right` to another site, and brand icons for GitHub and jacksonferguson.me. Draw icons only with house-style's `.hs-icon` classes or its `icons/` files, never a text arrow.
-- **`docs/house/` is vendored, never edited.** It is a tagged release of [house-style](https://github.com/JacksonFergusonDev/house-style), the palette, fonts, components, and scripts jacksonferguson.me shares with its project sites. Change a shared style there, tag a release, then bump `HOUSE_STYLE_TAG` in `scripts/sync_house_style.py` and run `just sync-house-style`; CI fails when the copy differs from the tag. Never load house-style from another origin at runtime.
-- **The docs restyle house-style; they don't redefine it.** `stylesheets/extra.css` hands the house tokens to Zensical's theme, and `stylesheets/home.css` (loaded only by `overrides/home.html`) lays out the landing page with house components. A style every project site would want belongs in house-style, not here.
-- **Terminal visuals are one window.** Recordings use house-style's `.hs-terminal` markup and `docs/javascripts/casts.js`, which loads the player only when a recording nears the viewport. Generated SVGs draw the same window in `scripts/generate_docs_assets/svg.py`; `test_render_and_write_svg_draws_the_house_terminal_window` checks its colors against the vendored `terminal.css`.
-- **The landing page's first screen is text.** No image, recording, or player loads before the reader scrolls toward it. The hero's attractor (`docs/javascripts/field.js`, three.js from jsDelivr) loads only after the page has, and follows house-style's motion rules: faint, paused off screen, still for reduced motion, with a pause control.
+The docs site (`docs/`, built by Zensical) shares its look and its rules with jacksonferguson.me and the other project sites through [house-style](https://github.com/JacksonFergusonDev/house-style). Its `GUIDELINES.md`, vendored at `docs/house/GUIDELINES.txt` for the pinned tag, is the source of truth for design and documentation rules. Read it before changing any page, and change a rule there rather than here.
+
+#### Writing Pages
+
+- **Every page has a one-sentence `description`** in its front matter.
+- **Only top-level pages carry a navigation icon.** A page listed directly in the `zensical.toml` nav sets `icon:`; a page inside a section sets none, and no two pages share one.
+- **Cards at the top of a page are optional.** Add them only when they genuinely help the reader choose where to go or see the page's main points. When they're used, use two, four, or six, and each card must earn its place: drop to the lower count rather than pad.
+- **Show terminal output, don't paste it.** Use a recording or a generated screenshot in the house terminal window; keep code blocks for what the reader types.
+- **Every standalone link carries a house-style icon** saying where it goes: `arrow-down` within the page, `arrow-right` to a related page, `arrow-up-right` to another site, and brand icons for GitHub and jacksonferguson.me. Draw icons only with house-style's `.hs-icon` classes or its `icons/` files, never a text arrow.
+
+`check_docs_drift.py` enforces the description, navigation-icon, and card-count rules.
+
+#### The Site's Machinery
+
+- **`docs/house/` is vendored, never edited.** It is a tagged house-style release: palette, fonts, icons, components, scripts, and guidelines. Change a shared style there and tag a release. Then bump `HOUSE_STYLE_TAG` in `scripts/sync_house_style.py` and run `just sync-house-style`. CI fails when the copy differs from the tag. Never load house-style from another origin at runtime.
+- **The docs restyle house-style; they don't redefine it.** `stylesheets/extra.css` hands the house tokens to Zensical's theme. `stylesheets/home.css`, loaded only by `overrides/home.html`, lays out the landing page with house components. A style every project site would want belongs in house-style, not here.
+- **Terminal visuals are one window.** Recordings use house-style's `.hs-terminal` markup and `docs/javascripts/casts.js`, which loads the player only when a recording nears the viewport. Generated SVGs draw the same window in `scripts/generate_docs_assets/svg.py`, and `test_render_and_write_svg_draws_the_house_terminal_window` checks its colors against the vendored `terminal.css`.
+- **Script-added files go in `<body>`.** Instant navigation drops any `<head>` element the next page doesn't declare, so a stylesheet or script added at runtime to `<head>` vanishes on the next page. This once broke every recording.
+- **The landing page's first screen is text.** No image, recording, or player loads before the reader scrolls toward it. The hero's Lorenz attractor (`docs/javascripts/field.js`, three.js from jsDelivr) loads only after the page has. It follows house-style's motion rules: faint, paused off screen, still for reduced motion, and with a pause control.
 
 ## Pre-Commit & Pre-Push Hooks (Avoid Redundant Checks)
 

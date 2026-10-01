@@ -48,6 +48,16 @@ A site may add its own rules, but it never contradicts these. When a rule here i
 - **Background motion is texture, not a centerpiece.** An animated field behind a hero stays in the dark cyan family, sits well below the text in contrast, and never competes with it.
 - **Motion can be stopped.** Anything that moves on its own for more than a few seconds has a visible pause control, stops when it's off screen or the tab is hidden, and stays still for readers who asked for reduced motion.
 
+## Documentation sites
+
+Rules for project documentation built on a docs theme (Zensical or Material for MkDocs). The landing page is a house page and follows everything above; the inner pages keep the theme's layout with the house tokens, fonts, and terminal window.
+
+- **Only top-level pages carry a navigation icon.** A page that sits directly in the navigation, outside any section, sets `icon:` in its front matter, and it shows beside the page in the left navigation. A page inside a section sets none. Pick icons that say what the page is for, and never repeat one.
+- **Cards at the top of a page are optional.** Add them only when they genuinely help a reader choose where to go, or see a page's main points before the detail. A page that reads well without them has none.
+- **Cards come in twos, fours, or sixes.** Each card has to earn its place: if only five say something worth saying, use four. Never pad a grid to reach an even count, and never repeat in a card what the heading under it already says.
+- **Every page has a `description`** in its front matter, written as one plain sentence about what the reader gets from the page.
+- **Terminal output is shown, not described.** Use a recording or a generated screenshot in the house terminal window rather than pasting long output into a code block, and keep code blocks for what the reader types.
+
 ## Interaction
 
 - **Focus is always visible:** a 2px `--accent` outline.

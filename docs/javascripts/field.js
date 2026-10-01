@@ -1,6 +1,7 @@
 /**
- * The landing page's background: an Aizawa attractor, a spinning disc with a
- * jet along its axis, drawn as a faint texture behind the hero.
+ * The landing page's background: the Lorenz attractor, drawn as a faint
+ * texture behind the hero and filmed in hard-cut camera shots the way
+ * jacksonferguson.me films its own attractor.
  *
  * docs/index.md imports this only after the page has loaded, so the first
  * screen paints as text. It follows house-style's motion rules: dark cyan,
@@ -15,16 +16,28 @@ const POINTS = 9000;
 const STRANDS = 3;
 const VERTICES = POINTS * STRANDS;
 const STEPS_PER_FRAME = 2;
-const DT = 0.01;
+const DT = 0.004;
 
-// Aizawa's parameters: the classic set, which holds the disc and its jet.
-const a = 0.95, b = 0.7, c = 0.6, d = 3.5, e = 0.25, f = 0.1;
+// Lorenz's classic parameters, which give the two butterfly wings.
+const SIGMA = 10, RHO = 28, BETA = 8 / 3;
+// The wings sit around this height; the scene centres on it.
+const CENTRE_Z = 23.5;
+const SCALE = 0.1;
 
 function derivative(x, y, z, out) {
-  out[0] = (z - b) * x - d * y;
-  out[1] = d * x + (z - b) * y;
-  out[2] = c + a * z - (z * z * z) / 3 - (x * x + y * y) * (1 + e * z) + f * z * x * x * x;
+  out[0] = SIGMA * (y - x);
+  out[1] = x * (RHO - z) - y;
+  out[2] = x * y - BETA * z;
 }
+
+// Camera shots, cut between like jacksonferguson.me's: each holds about ten
+// seconds with a slow drift, then the view jumps to the next.
+const SHOTS = [
+  { duration: 10, yaw: 0.6, yawSpeed: 0.05, pitch: 0.22, nutation: 0.03, distance: 6.4 },
+  { duration: 9.5, yaw: 2.5, yawSpeed: -0.04, pitch: 0.04, nutation: 0.02, distance: 5.2 },
+  { duration: 10.5, yaw: -0.6, yawSpeed: 0.06, pitch: 0.55, nutation: 0.03, distance: 6.8 },
+  { duration: 9.5, yaw: 3.7, yawSpeed: 0.045, pitch: -0.25, nutation: 0.03, distance: 7.4 },
+];
 
 const k1 = [0, 0, 0], k2 = [0, 0, 0], k3 = [0, 0, 0], k4 = [0, 0, 0];
 
@@ -82,9 +95,9 @@ export async function startField(canvas, button) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 
   const states = [
-    [0.1, 0.0, 0.0],
-    [0.12, 0.05, -0.02],
-    [-0.1, 0.02, 0.05],
+    [1.0, 1.0, 1.0],
+    [-1.0, 0.5, 20.0],
+    [0.5, -1.5, 30.0],
   ];
   for (let i = 0; i < 3000; i++) states.forEach(step);
 
@@ -124,10 +137,13 @@ export async function startField(canvas, button) {
     geometry.setDrawRange(s * POINTS, POINTS);
     group.add(new THREE.Line(geometry, material));
   }
-  // The disc lies in x/y with its jet along z; tip it toward the viewer.
-  group.rotation.x = -1.1;
-  group.position.set(0, 0, -0.3);
-  scene.add(group);
+  // Lorenz's z is up: stand the wings upright and centre them.
+  group.position.set(0, 0, -CENTRE_Z);
+  const stage = new THREE.Group();
+  stage.add(group);
+  stage.scale.setScalar(SCALE);
+  stage.rotation.x = -Math.PI / 2;
+  scene.add(stage);
 
   // Dark: cyan added onto the page. Light: a faint teal ink on white.
   const applyScheme = () => {
@@ -150,6 +166,9 @@ export async function startField(canvas, button) {
   let frame = 0;
   let last = 0;
   let time = 0;
+  let shot = 0;
+  let shotTime = 0;
+  let shotYaw = SHOTS[0].yaw;
 
   function resize() {
     const width = canvas.clientWidth || 1;
@@ -161,9 +180,25 @@ export async function startField(canvas, button) {
     renderer.setSize(width, height, false);
   }
 
+  function advance(delta) {
+    shotTime += delta;
+    if (shotTime >= SHOTS[shot].duration) {
+      shotTime = 0;
+      shot = (shot + 1) % SHOTS.length;
+      shotYaw = SHOTS[shot].yaw;
+    } else {
+      shotYaw += SHOTS[shot].yawSpeed * delta;
+    }
+  }
+
   function draw() {
-    const yaw = 0.6 + time * 0.035;
-    camera.position.set(5.6 * Math.sin(yaw), 1.1, 5.6 * Math.cos(yaw));
+    const { pitch, nutation, distance } = SHOTS[shot];
+    const tilt = pitch + Math.sin(time * 0.15) * nutation;
+    camera.position.set(
+      distance * Math.cos(tilt) * Math.sin(shotYaw),
+      distance * Math.sin(tilt),
+      distance * Math.cos(tilt) * Math.cos(shotYaw),
+    );
     camera.lookAt(0, 0, 0);
     material.uniforms.uTime.value = time;
     renderer.render(scene, camera);
@@ -192,6 +227,7 @@ export async function startField(canvas, button) {
     const delta = last ? Math.min((now - last) / 1000, 0.08) : 0;
     last = now;
     time += delta;
+    advance(delta);
     for (let n = 0; n < STEPS_PER_FRAME; n++) {
       for (let s = 0; s < STRANDS; s++) {
         step(states[s]);

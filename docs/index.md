@@ -1,5 +1,6 @@
 ---
 title: Protostar
+icon: material/home
 description: "Simple Python project scaffolding that understands your tools."
 template: home.html
 hide:
