@@ -1030,6 +1030,55 @@ def test_a_key_added_below_several_keys_stays_above_the_closing_comment():
     )
 
 
+def test_an_inline_table_keeps_the_desired_spelling_under_a_dotted_key():
+    desired = tomlkit.parse("tool.x.a = 1\ntool.x.b = {c=1}\n")
+
+    result = reconcile_toml(
+        PLAIN,
+        "tool.x.a = 1\n",
+        desired.unwrap(),
+        {"tool": {"x": {"a": 1}}},
+        PLAIN_LOCATION,
+        desired_ast=desired,
+    )
+
+    assert result.content == "tool.x.a = 1\ntool.x.b = {c=1}\n"
+
+
+@pytest.mark.parametrize(
+    ("original", "desired_text", "content"),
+    [
+        pytest.param(
+            "[tool.b]\nm = 1\n",
+            "[tool.a.x]\nk = 1\n[tool.b]\nm = 1\n[tool.a.y]\nn = 1\n",
+            "[tool.b]\nm = 1\n\n[tool.a.x]\nk = 1\n\n[tool.a.y]\nn = 1\n",
+            id="headers",
+        ),
+        pytest.param(
+            "[tool]\nb = 2\n",
+            "[tool]\na.x = 1\nb = 2\na.y = 3\n",
+            "[tool]\nb = 2\na.x = 1\na.y = 3\n",
+            id="dotted-keys",
+        ),
+    ],
+)
+def test_a_table_the_desired_document_spreads_out_is_added_whole(
+    original, desired_text, content
+):
+    desired = tomlkit.parse(desired_text)
+
+    result = reconcile_toml(
+        PLAIN,
+        original,
+        desired.unwrap(),
+        tomlkit.parse(original).unwrap(),
+        PLAIN_LOCATION,
+        desired_ast=desired,
+    )
+
+    assert result.content == content
+
+
 def test_a_table_added_under_a_dotted_root_key_stays_inline():
     original = "tool.x.a = 1\n"
     desired = tomlkit.parse("tool.x.a = 1\ntool.x.b = { c = 1 }\n")
@@ -1084,3 +1133,38 @@ def test_a_dotted_name_inside_a_namespace_keeps_its_dots():
     content, _ = _flat("[ext]\n", '[ext]\na."b.c" = {}\n')
 
     assert tomllib.loads(content) == {"ext": {"a": {"b.c": {}}}}
+
+
+def test_a_deleted_documents_baseline_keeps_the_desired_spelling():
+    desired = tomlkit.parse('[ext]\n"a.b" = { x = 2 }\n')
+
+    result = reconcile_toml(
+        FLAT,
+        "",
+        desired.unwrap(),
+        {"ext": {"a.b": {"x": 1}}},
+        PLAIN_LOCATION,
+        missing_file=True,
+        desired_ast=desired,
+    )
+
+    assert result.content == ""
+    assert result.baseline == {"ext": {"a.b": {"x": 1}}}
+
+
+def test_a_name_outside_every_namespace_keeps_its_spelling():
+    content, _ = _flat("[ext]\n", "[ext]\n[ext.toc]\nx = 1\n")
+
+    assert content == "[ext]\n[ext.toc]\nx = 1\n"
+
+
+def test_flat_names_under_a_missing_parent_are_skipped():
+    spec = TomlDocumentSpec(
+        flat_names=(FlatNames(("p", "q", "ext"), frozenset({("a",)})),)
+    )
+
+    result = reconcile_toml(
+        spec, "[r]\nx = 1\n", {"r": {"x": 1}}, MISSING, PLAIN_LOCATION
+    )
+
+    assert result.content == "[r]\nx = 1\n"
