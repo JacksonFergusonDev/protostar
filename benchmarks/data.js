@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790896334980,
+  "lastUpdate": 1790898544916,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20541,6 +20541,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1261.08,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a39af21fb09b763cff037c52e3b4bd99d4a2be5a",
+          "message": "feat(docs): refine landing layout, cinematic hero, and demos (#406)\n\n* docs: refine landing page demo layout\n\n* docs: balance landing page grids and link guarantees\n\n* fix(docs): retain demo prompts on first playback\n\n* fix(docs): reveal demos after styles and preview are ready\n\n* fix(docs): keep demo dimensions and background stable\n\n* feat(docs): add cinematic Dadras hero animation\n\n* docs: remove redundant landing page eyebrow",
+          "timestamp": "2026-10-01T16:45:30-07:00",
+          "tree_id": "bf252f820756c0cbd80b368be37efc5f27ab54fe",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a39af21fb09b763cff037c52e3b4bd99d4a2be5a"
+        },
+        "date": 1790898542749,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 276.65,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1283.46,
             "unit": "ms"
           }
         ]
