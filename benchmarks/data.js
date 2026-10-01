@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790819385774,
+  "lastUpdate": 1790828171032,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20133,6 +20133,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1281.65,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "77be17341aaaf3f9c54a4e9d89a48f37e585f943",
+          "message": "fix(docs): publish Pages through one workflow\n\nAssemble a clean site from released docs and benchmark history. Replace\n\nstale root copies with redirects to the latest version, and generate\n\nMarkdown from that release's HTML and tagged navigation.",
+          "timestamp": "2026-09-30T21:11:33-07:00",
+          "tree_id": "772af9110838ca21e79f3bda7ae547ee67cc938f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/77be17341aaaf3f9c54a4e9d89a48f37e585f943"
+        },
+        "date": 1790828169899,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 284.78,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1297.32,
             "unit": "ms"
           }
         ]
