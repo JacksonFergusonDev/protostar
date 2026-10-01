@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790828171032,
+  "lastUpdate": 1790874409931,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20167,6 +20167,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1297.32,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a00b40cbbe72e0b0ade4dd1958a1266b2902fd06",
+          "message": "fix(scripts): isolate fixtures and validate release inputs (#400)",
+          "timestamp": "2026-10-01T10:03:23-07:00",
+          "tree_id": "375fe3b8912fe64b9d4c159983f05d4b229d51d5",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a00b40cbbe72e0b0ade4dd1958a1266b2902fd06"
+        },
+        "date": 1790874407687,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 278.35,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1203.87,
             "unit": "ms"
           }
         ]
