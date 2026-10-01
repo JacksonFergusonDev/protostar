@@ -96,17 +96,11 @@
     font-family: var(--sans);
 }
 
-.ps-home .ps-eyebrow,
 .ps-home .ps-hero__bottom {
     font-family: var(--mono);
     font-size: var(--fs-label);
     letter-spacing: 1.2px;
     line-height: 1.7;
-}
-
-.ps-home .ps-eyebrow {
-    margin: 0 0 22px;
-    color: var(--ps-accent-text);
 }
 
 .ps-home .ps-text-link {
