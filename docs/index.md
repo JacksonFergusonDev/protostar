@@ -63,10 +63,16 @@ hide:
   </nav>
 </section>
 
-<section class="ps-section" id="init" aria-labelledby="ps-init">
-  <div class="hs-section-marker"><span>01 / INIT</span></div>
-  <h2 id="ps-init">Choose your tools in a recipe editor. Review every file before it's written.</h2>
-  <p class="ps-section__lede">Run <code>protostar init</code> in an empty folder, or in a project you already have. Pick a template, switch tools on and off, and watch the file tree change. Nothing touches the disk until you apply the review.</p>
+<section class="ps-section ps-init" id="init" aria-labelledby="ps-init">
+  <div class="ps-init__text">
+    <div class="hs-section-marker"><span>01 / INIT</span></div>
+    <h2 id="ps-init">Choose your tools in a recipe editor. Review every file before it's written.</h2>
+    <p class="ps-section__lede">Run <code>protostar init</code> in an empty folder, or in a project you already have. Pick a template, switch tools on and off, and watch the file tree change. Nothing touches the disk until you apply the review.</p>
+    <ul class="ps-tags" aria-label="Some of the tools Protostar configures">
+      <li>ruff</li><li>mypy</li><li>ty</li><li>pyrefly</li><li>pytest</li><li>prek</li><li>pre-commit</li><li>GitHub Actions</li><li>Renovate</li><li>Codecov</li><li>Zensical</li><li>Read the Docs</li><li>Docker</li><li>just</li><li>direnv</li><li>rumdl</li><li>Commitizen</li><li>AGENTS.md</li>
+    </ul>
+    <p class="ps-note"><a class="ps-text-link" href="usage/tooling-matrix.md">Every tool and its flag<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></p>
+  </div>
   <div class="hs-terminal ps-demo">
     <div class="hs-terminal-bar">
       <div class="hs-terminal-dots" aria-hidden="true">
@@ -80,10 +86,6 @@ hide:
       <noscript><a href="assets/demo_init_interactive.cast">Download the terminal recording</a></noscript>
     </div>
   </div>
-  <ul class="ps-tags" aria-label="Some of the tools Protostar configures">
-    <li>ruff</li><li>mypy</li><li>ty</li><li>pyrefly</li><li>pytest</li><li>prek</li><li>pre-commit</li><li>GitHub Actions</li><li>Renovate</li><li>Codecov</li><li>Zensical</li><li>Read the Docs</li><li>Docker</li><li>just</li><li>direnv</li><li>rumdl</li><li>Commitizen</li><li>AGENTS.md</li>
-  </ul>
-  <p class="ps-note"><a class="ps-text-link" href="usage/tooling-matrix.md">Every tool and its flag<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></p>
 </section>
 
 <section class="ps-section" id="sync" aria-labelledby="ps-sync">
