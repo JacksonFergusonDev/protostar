@@ -139,7 +139,7 @@ The docs site (`docs/`, built by Zensical) shares its look and its rules with ja
 - **The docs restyle house-style; they don't redefine it.** `stylesheets/extra.css` hands the house tokens to Zensical's theme. `stylesheets/home.css`, loaded only by `overrides/home.html`, lays out the landing page with house components. A style every project site would want belongs in house-style, not here.
 - **Terminal visuals are one window.** Recordings use house-style's `.hs-terminal` markup and `docs/javascripts/casts.js`, which loads the player only when a recording nears the viewport. Generated SVGs draw the same window in `scripts/generate_docs_assets/svg.py`, and `test_render_and_write_svg_draws_the_house_terminal_window` checks its colors against the vendored `terminal.css`.
 - **Script-added files go in `<body>`.** Instant navigation drops any `<head>` element the next page doesn't declare, so a stylesheet or script added at runtime to `<head>` vanishes on the next page. This once broke every recording.
-- **The landing page's first screen is text.** No image, recording, or player loads before the reader scrolls toward it. The hero's Lorenz attractor (`docs/javascripts/field.js`, three.js from jsDelivr) loads only after the page has. It follows house-style's motion rules: faint, paused off screen, still for reduced motion, and with a pause control.
+- **The landing page's first screen is text.** No image, recording, or player loads before the reader scrolls toward it. The hero's Dadras attractor (`docs/javascripts/field.js`, three.js from jsDelivr) loads only after the page has. It follows house-style's motion rules: faint, paused off screen, still for reduced motion, and with a pause control.
 
 ## Pre-Commit & Pre-Push Hooks (Avoid Redundant Checks)
 

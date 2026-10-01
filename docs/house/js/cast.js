@@ -49,13 +49,27 @@ export function loadSymbolsFont() {
  * @param {Function} create asciinema-player's `create`.
  * @param {HTMLElement} element The screen holding `data-asciinema`.
  * @param {object} [options] Player options that override `castOptions()`.
+ * The default preview is a seek into the recording rather than a timed
+ * poster: asciinema-player 3.17 clears a poster without replaying an output
+ * event at time zero, losing the prompt on the first play.
  * @returns The player, or undefined if the element has none to mount.
  */
 export function mountCast(create, element, options = {}) {
   const src = element.dataset.asciinema;
   if (!src || element.dataset.castMounted) return undefined;
   element.dataset.castMounted = 'true';
-  return create(src, element, { ...castOptions(), ...options });
+  const settings = { ...castOptions(), ...options };
+  if (settings.poster !== 'npt:0:00.1' || settings.autoPlay) {
+    return create(src, element, settings);
+  }
+  delete settings.poster;
+  const player = create(src, element, settings);
+  const preview = player.seek(0.1);
+  // Keep loading failures handled even when a reduced-motion reader never plays.
+  void preview.catch(() => {});
+  const play = player.play.bind(player);
+  player.play = () => preview.then(play);
+  return player;
 }
 
 /**

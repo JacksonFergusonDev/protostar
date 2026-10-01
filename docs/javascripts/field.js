@@ -1,7 +1,7 @@
 /**
- * The landing page's background: the Lorenz attractor, drawn as a faint
- * texture behind the hero and filmed in hard-cut camera shots the way
- * jacksonferguson.me films its own attractor.
+ * The landing page's background: the Dadras attractor, drawn as a faint
+ * texture behind the hero, with slow orbital shots and close passes through
+ * its curled surfaces.
  *
  * docs/index.md imports this only after the page has loaded, so the first
  * screen paints as text. It follows house-style's motion rules: dark cyan,
@@ -12,32 +12,50 @@
 // The version jacksonferguson.me bundles.
 const THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.186.0/+esm";
 
-const POINTS = 9000;
-const STRANDS = 3;
+const POINTS = 24000;
+const STRANDS = 4;
 const VERTICES = POINTS * STRANDS;
 const STEPS_PER_FRAME = 2;
 const DT = 0.004;
 
-// Lorenz's classic parameters, which give the two butterfly wings.
-const SIGMA = 10, RHO = 28, BETA = 8 / 3;
-// The wings sit around this height; the scene centres on it.
-const CENTRE_Z = 23.5;
-const SCALE = 0.1;
+// Dadras parameters: a = 3, b = 2.7, c = 1.7, d = 2, h = 9.
+const A = 3, B = 2.7, C = 1.7, D = 2, H = 9;
+const SCALE = 0.13;
 
 function derivative(x, y, z, out) {
-  out[0] = SIGMA * (y - x);
-  out[1] = x * (RHO - z) - y;
-  out[2] = x * y - BETA * z;
+  out[0] = y - A * x + B * y * z;
+  out[1] = C * y - x * z + z;
+  out[2] = D * x * y - H * z;
 }
 
-// Camera shots, cut between like jacksonferguson.me's: each holds about ten
-// seconds with a slow drift, then the view jumps to the next.
+// Open above the three curls, then alternate intimate passes and wider
+// reveals. Each move eases in and out, then cuts directly to the next shot.
 const SHOTS = [
-  { duration: 10, yaw: 0.6, yawSpeed: 0.05, pitch: 0.22, nutation: 0.03, distance: 6.4 },
-  { duration: 9.5, yaw: 2.5, yawSpeed: -0.04, pitch: 0.04, nutation: 0.02, distance: 5.2 },
-  { duration: 10.5, yaw: -0.6, yawSpeed: 0.06, pitch: 0.55, nutation: 0.03, distance: 6.8 },
-  { duration: 9.5, yaw: 3.7, yawSpeed: 0.045, pitch: -0.25, nutation: 0.03, distance: 7.4 },
+  {
+    duration: 19, yaw: [0.85, 1.3], pitch: [0.86, 0.62], distance: [4.55, 3.85],
+    focus: [[0, 0, 0], [0.12, 0.15, -0.08]], roll: [-0.03, 0.04],
+  },
+  {
+    duration: 17, yaw: [2.25, 2.7], pitch: [-0.35, -0.55], distance: [3.1, 2.3],
+    focus: [[0.55, 0.1, 0.1], [0.7, 0.2, 0.15]], roll: [0.05, -0.06],
+  },
+  {
+    duration: 18, yaw: [4.55, 5.05], pitch: [0.22, 0.5], distance: [4.4, 3.6],
+    focus: [[0, 0.1, 0], [-0.2, 0.2, 0]], roll: [-0.04, 0.04],
+  },
+  {
+    duration: 17, yaw: [5.55, 5.95], pitch: [0.7, 0.4], distance: [2.85, 2.4],
+    focus: [[0.55, 0.4, 0.2], [0.85, 0.6, 0.15]], roll: [0.06, -0.03],
+  },
+  {
+    duration: 18, yaw: [0.2, 0.66], pitch: [-0.45, -0.1], distance: [4.5, 4.8],
+    focus: [[0.15, 0, 0.15], [0, 0, 0]], roll: [-0.04, 0.02],
+  },
 ];
+
+function interpolate(from, to, progress) {
+  return from + (to - from) * progress;
+}
 
 const k1 = [0, 0, 0], k2 = [0, 0, 0], k3 = [0, 0, 0], k4 = [0, 0, 0];
 
@@ -58,21 +76,25 @@ const VERTEX = `
   void main() {
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     float age = aIndex / ${POINTS.toFixed(1)};
-    float tail = exp(-age * 2.4);
+    float tail = exp(-age * 1.6);
     // A slow pulse travels down each strand.
     float phase = age * 6.0 - uTime * 0.18 + aStrand * 0.33;
     float pulse = pow(0.5 + 0.5 * sin(6.2831853 * phase), 6.0);
-    vGlow = (0.35 + 0.65 * tail) * (0.55 + 0.45 * pulse);
+    vGlow = (0.45 + 0.55 * tail) * (0.7 + 0.3 * pulse);
   }
 `;
 
 const FRAGMENT = `
   uniform vec3 uColor;
   uniform float uStrength;
+  uniform vec2 uViewport;
+  uniform float uTextGuard;
   varying float vGlow;
 
   void main() {
-    gl_FragColor = vec4(uColor, vGlow * uStrength);
+    // Keep the hero's copy quiet while the geometry opens out on the right.
+    float space = 0.2 + 0.8 * smoothstep(0.35, 0.72, gl_FragCoord.x / uViewport.x);
+    gl_FragColor = vec4(uColor, vGlow * uStrength * mix(1.0, space, uTextGuard));
   }
 `;
 
@@ -96,8 +118,9 @@ export async function startField(canvas, button) {
 
   const states = [
     [1.0, 1.0, 1.0],
-    [-1.0, 0.5, 20.0],
-    [0.5, -1.5, 30.0],
+    [1.01, 1.0, 1.0],
+    [1.0, 1.01, 1.0],
+    [1.0, 1.0, 1.01],
   ];
   for (let i = 0; i < 3000; i++) states.forEach(step);
 
@@ -122,6 +145,8 @@ export async function startField(canvas, button) {
       uTime: { value: 0 },
       uColor: { value: new THREE.Color() },
       uStrength: { value: 0 },
+      uViewport: { value: new THREE.Vector2() },
+      uTextGuard: { value: 0 },
     },
     vertexShader: VERTEX,
     fragmentShader: FRAGMENT,
@@ -137,8 +162,8 @@ export async function startField(canvas, button) {
     geometry.setDrawRange(s * POINTS, POINTS);
     group.add(new THREE.Line(geometry, material));
   }
-  // Lorenz's z is up: stand the wings upright and centre them.
-  group.position.set(0, 0, -CENTRE_Z);
+  // Centre the attractor's range in the camera's view.
+  group.position.set(2, 2, -1.5);
   const stage = new THREE.Group();
   stage.add(group);
   stage.scale.setScalar(SCALE);
@@ -146,10 +171,11 @@ export async function startField(canvas, button) {
   scene.add(stage);
 
   // Dark: cyan added onto the page. Light: a faint teal ink on white.
+  let strength = 0;
   const applyScheme = () => {
     const light = document.body.dataset.mdColorScheme === "default";
     material.uniforms.uColor.value.set(light ? "#0e7490" : "#22d3ee");
-    material.uniforms.uStrength.value = light ? 0.16 : 0.22;
+    strength = light ? 0.12 : 0.18;
     material.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
     material.needsUpdate = true;
   };
@@ -168,7 +194,7 @@ export async function startField(canvas, button) {
   let time = 0;
   let shot = 0;
   let shotTime = 0;
-  let shotYaw = SHOTS[0].yaw;
+  const focus = new THREE.Vector3();
 
   function resize() {
     const width = canvas.clientWidth || 1;
@@ -178,28 +204,36 @@ export async function startField(canvas, button) {
     camera.setViewOffset(width, height, width > 900 ? -width * 0.2 : 0, 0, width, height);
     camera.updateProjectionMatrix();
     renderer.setSize(width, height, false);
+    renderer.getDrawingBufferSize(material.uniforms.uViewport.value);
+    material.uniforms.uTextGuard.value = width > 900 ? 1 : 0;
   }
 
   function advance(delta) {
     shotTime += delta;
-    if (shotTime >= SHOTS[shot].duration) {
-      shotTime = 0;
+    while (shotTime >= SHOTS[shot].duration) {
+      shotTime -= SHOTS[shot].duration;
       shot = (shot + 1) % SHOTS.length;
-      shotYaw = SHOTS[shot].yaw;
-    } else {
-      shotYaw += SHOTS[shot].yawSpeed * delta;
     }
   }
 
   function draw() {
-    const { pitch, nutation, distance } = SHOTS[shot];
-    const tilt = pitch + Math.sin(time * 0.15) * nutation;
+    const view = SHOTS[shot];
+    const progress = shotTime / view.duration;
+    const eased = progress * progress * (3 - 2 * progress);
+    const yaw = interpolate(...view.yaw, eased);
+    const tilt = interpolate(...view.pitch, eased);
+    // Leave more breathing room for the text on portrait screens.
+    const portrait = canvas.clientWidth < 700;
+    const distance = interpolate(...view.distance, eased) * (portrait ? 1.25 : 1);
+    focus.set(...view.focus[0].map((value, axis) => interpolate(value, view.focus[1][axis], eased)));
     camera.position.set(
-      distance * Math.cos(tilt) * Math.sin(shotYaw),
+      distance * Math.cos(tilt) * Math.sin(yaw),
       distance * Math.sin(tilt),
-      distance * Math.cos(tilt) * Math.cos(shotYaw),
-    );
-    camera.lookAt(0, 0, 0);
+      distance * Math.cos(tilt) * Math.cos(yaw),
+    ).add(focus);
+    camera.lookAt(focus);
+    camera.rotateZ(interpolate(...view.roll, eased));
+    material.uniforms.uStrength.value = strength * (portrait ? 0.6 : 1);
     material.uniforms.uTime.value = time;
     renderer.render(scene, camera);
   }

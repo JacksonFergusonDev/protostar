@@ -21,31 +21,47 @@ let player;
 // element the next page doesn't declare, and the player needs its stylesheet
 // on every page it plays on.
 function loadPlayer() {
-  player ??= new Promise((resolve, reject) => {
-    const style = document.createElement("link");
-    style.rel = "stylesheet";
-    style.href = `${PLAYER}asciinema-player.css`;
-    document.body.append(style);
-
-    const script = document.createElement("script");
-    script.src = `${PLAYER}asciinema-player.min.js`;
-    script.onload = () => resolve(window.AsciinemaPlayer);
-    script.onerror = () => {
+  player ??= Promise.all([
+    new Promise((resolve, reject) => {
+      const style = document.createElement("link");
+      style.rel = "stylesheet";
+      style.href = `${PLAYER}asciinema-player.css`;
+      style.onload = resolve;
+      style.onerror = reject;
+      document.body.append(style);
+    }),
+    new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = `${PLAYER}asciinema-player.min.js`;
+      script.onload = () => resolve(window.AsciinemaPlayer);
+      script.onerror = reject;
+      document.body.append(script);
+    }),
+  ])
+    .then(([, AsciinemaPlayer]) => AsciinemaPlayer)
+    .catch((error) => {
       player = undefined;
-      reject(new Error("The terminal player failed to load"));
-    };
-    document.body.append(script);
-  });
+      throw error;
+    });
   return player;
 }
 
 function mount(screen) {
-  loadPlayer()
-    .then((AsciinemaPlayer) => {
+  Promise.all([
+    loadPlayer(),
+    loadSymbolsFont(),
+    document.fonts.load("14px 'JetBrains Mono'"),
+  ])
+    .then(([AsciinemaPlayer]) => {
       if (!screen.isConnected) return;
       const recording = mountCast(AsciinemaPlayer.create, screen);
       if (!recording) return;
-      screen.classList.add("is-loaded");
+      recording.addEventListener("seeked", () => {
+        // Let the player apply its terminal dimensions before revealing it.
+        requestAnimationFrame(() => {
+          screen.classList.add("is-loaded");
+        });
+      });
       if (prefersReducedMotion()) return;
       whenVisible(screen, () => loadSymbolsFont().then(() => recording.play()), {
         threshold: 0.5,

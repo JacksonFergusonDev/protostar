@@ -70,7 +70,7 @@
     outline-offset: 6px;
 }
 
-.ps-home :not(.hs-install) > code,
+.ps-home :not(.hs-install)>code,
 .ps-home kbd {
     padding: 0.1em 0.4em;
     border-radius: 3px;
@@ -96,17 +96,11 @@
     font-family: var(--sans);
 }
 
-.ps-home .ps-eyebrow,
 .ps-home .ps-hero__bottom {
     font-family: var(--mono);
     font-size: var(--fs-label);
     letter-spacing: 1.2px;
     line-height: 1.7;
-}
-
-.ps-home .ps-eyebrow {
-    margin: 0 0 22px;
-    color: var(--ps-accent-text);
 }
 
 .ps-home .ps-text-link {
@@ -212,7 +206,7 @@
     height: 18px;
 }
 
-.ps-home .ps-bar__link + .ps-bar__link {
+.ps-home .ps-bar__link+.ps-bar__link {
     padding-left: 18px;
     border-left: 1px solid var(--line);
 }
@@ -369,7 +363,7 @@
     margin-top: 30px;
 }
 
-.ps-home .ps-hero__actions > * {
+.ps-home .ps-hero__actions>* {
     flex-shrink: 0;
     white-space: nowrap;
 }
@@ -460,16 +454,21 @@
     white-space: nowrap;
 }
 
-[data-md-color-scheme="default"] .ps-home .hs-section-marker > span:first-child {
+[data-md-color-scheme="default"] .ps-home .hs-section-marker>span:first-child {
     color: var(--ps-accent-text);
     background: #ecfeff;
     border-color: #a5f3fc;
 }
 
 /* --- 01 init --- */
+.ps-home .ps-init {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    gap: 48px;
+}
+
 .ps-home .ps-demo {
-    max-width: 820px;
-    margin-top: 40px;
+    max-width: 650px;
 }
 
 /* :not([hidden]) and [dir] outrank the theme's list layout. */
@@ -628,7 +627,7 @@
     border-top: 1px solid var(--line);
 }
 
-.ps-home .ps-commands > div {
+.ps-home .ps-commands>div {
     display: grid;
     grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
     gap: 8px 40px;
@@ -665,6 +664,7 @@
 .ps-home .ps-principles:not([hidden]) {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
     gap: 30px;
     margin: 40px 0 0;
     padding: 0;
@@ -672,6 +672,8 @@
 }
 
 [dir] .ps-home .ps-principles li {
+    display: flex;
+    flex-direction: column;
     margin: 0;
     padding-top: 25px;
     border-top: 1px solid #28414b;
@@ -698,13 +700,16 @@
 }
 
 .ps-home .ps-principles .ps-text-link {
-    margin-top: 12px;
+    align-self: flex-start;
+    margin-top: auto;
+    padding-top: 12px;
 }
 
 /* --- 05 docs: jacksonferguson.me's resume cards --- */
 .ps-home .ps-index {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
     gap: 16px;
     margin-top: 40px;
 }
@@ -748,7 +753,7 @@
     transform: translateX(2px);
 }
 
-.ps-home .ps-index > a > span {
+.ps-home .ps-index>a>span {
     color: var(--muted);
     font-size: var(--fs-ui);
     line-height: 1.6;
@@ -756,8 +761,8 @@
 
 /* --- Narrower screens, at jacksonferguson.me's breakpoints --- */
 @media (max-width: 1100px) {
-    .ps-home .ps-merge,
-    .ps-home .ps-principles:not([hidden]) {
+
+    .ps-home .ps-merge {
         grid-template-columns: minmax(0, 1fr);
     }
 
@@ -767,11 +772,21 @@
 }
 
 @media (max-width: 800px) {
+    .ps-home .ps-index,
+    .ps-home .ps-principles:not([hidden]) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ps-home .ps-init {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 40px;
+    }
+
     .ps-home .ps-bar .ps-wide {
         display: none;
     }
 
-    .ps-home .ps-commands > div {
+    .ps-home .ps-commands>div {
         grid-template-columns: minmax(0, 1fr);
     }
 }
