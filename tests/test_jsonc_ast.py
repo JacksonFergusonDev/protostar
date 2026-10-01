@@ -560,6 +560,14 @@ def test_random_edit_sequences_match_a_model_and_keep_comments(seed):
         ('{"a": 1e}', "line 1, column 7", "invalid number"),
         ('{"a": 1.5e+}', "line 1, column 7", "invalid number"),
         ('{"a": 1e999}', "line 1, column 7", "number out of range"),
+        ('{"a": ' + "9" * 5000 + "}", "line 1, column 7", "number out of range"),
+        ('{"a": -A}', "line 1, column 7", "invalid number"),
+        ('{"a": 1X}', "line 1, column 8", "expected ',' or '}'"),
+        ('{"a": 1eX}', "line 1, column 7", "invalid number"),
+        ('{"a": 1eX5}', "line 1, column 7", "invalid number"),
+        ('{X"a": 1}', "line 1, column 2", "expected a string key"),
+        ('{"a":', "line 1, column 6", "unexpected end of input"),
+        ('{"a": "\\n', "line 1, column 7", "unterminated string"),
         # Input that ends inside a token.
         ('{"a": 1', "line 1, column 8", "expected ',' or '}'"),
         ('{"a": 0', "line 1, column 8", "expected ',' or '}'"),
@@ -607,6 +615,7 @@ def test_a_rejection_names_the_reason_and_where(text, where, reason):
         ('{"a": 1,}', "line 1, column 8", "trailing commas are not allowed"),
         ('{"a": 1} // c', "line 1, column 10", "comments are not allowed"),
         ('{/* c */"a": 1}', "line 1, column 2", "comments are not allowed"),
+        ('{ /* c */"a": 1}', "line 1, column 3", "comments are not allowed"),
     ],
 )
 def test_strict_json_names_what_jsonc_allows(text, where, reason):
@@ -622,7 +631,9 @@ def test_numbers_decode_to_their_types():
     assert [type(v) for v in value.values()] == [float, int, int, float, int]
 
 
-@pytest.mark.parametrize("text", ['{/*/ c */"a": 1}', '{/**/"a": 1}'])
+@pytest.mark.parametrize(
+    "text", ['{/*/ c */"a": 1}', '{/**/"a": 1}', '{"a": 1 // X\n}']
+)
 def test_block_comments_end_at_their_own_close(text):
     assert decode_jsonc(text) == {"a": 1}
 
@@ -637,6 +648,7 @@ def test_the_node_limit_is_exact(monkeypatch):
     assert str(error.value) == (
         "JSONC configuration exceeds supported limits or is unsupported."
     )
+    assert error.value.hint == jsonc_ast._HINT
 
 
 def test_the_size_limit_is_exact(monkeypatch):
@@ -716,6 +728,41 @@ def test_a_scalar_appended_to_an_empty_array_stays_on_its_line():
             2,
             '{\n  "a": 1, /* c */\n  "b": 2\n}',
             id="after-a-block-comment",
+        ),
+        pytest.param(
+            '{\n  "a": 1 // X\n}',
+            ("b",),
+            2,
+            '{\n  "a": 1, // X\n  "b": 2\n}',
+            id="after-a-line-comment",
+        ),
+        pytest.param(
+            '{\n  /* x */ "a": 1 /* c */\n}',
+            ("b",),
+            2,
+            '{\n  /* x */ "a": 1, /* c */\n  "b": 2\n}',
+            id="after-a-second-block-comment",
+        ),
+        pytest.param(
+            '{\n  "a": 1 /* c */\n  /* d */\n}',
+            ("b",),
+            2,
+            '{\n  "a": 1, /* c */\n  "b": 2\n  /* d */\n}',
+            id="before-a-later-block-comment",
+        ),
+        pytest.param(
+            '{\n  "a": 1 /**/\n}',
+            ("b",),
+            2,
+            '{\n  "a": 1, /**/\n  "b": 2\n}',
+            id="after-an-empty-block-comment",
+        ),
+        pytest.param(
+            '{"a"\n: 1}',
+            ("b",),
+            2,
+            '{"a"\n: 1, "b": 2}',
+            id="colon-on-the-next-line",
         ),
         pytest.param(
             '/* h */\n{\n  "a": 1\n}',
@@ -837,3 +884,16 @@ def test_a_value_json_cannot_hold_is_rejected(value, message, hint):
 
 def test_a_new_document_keeps_non_ascii_keys():
     assert dumps_jsonc({"é": 1}) == '{\n  "é": 1\n}\n'
+
+
+def test_a_cyclic_value_is_rejected():
+    cyclic: list[Any] = []
+    cyclic.append(cyclic)
+
+    with pytest.raises(ConfigurationError, match=r"^Cyclic semantic configuration\.$"):
+        editable("{}").set(("a",), cyclic)
+
+
+def test_an_appended_value_must_be_json():
+    with pytest.raises(ConfigurationError, match=r"^Unsupported JSON number\.$"):
+        editable('{"a": []}').append(("a",), float("nan"))

@@ -329,7 +329,10 @@ def test_overwrite_keeps_owning_values_it_no_longer_declares():
 
 def test_a_deleted_owned_file_reports_how_its_conflict_was_settled():
     [conflict] = merge("", '{"a": 2}', {"a": 1}, missing_file=True).conflicts
-    assert conflict.reason is ConflictReason.DELETED_ANCESTOR
+    assert (conflict.reason, conflict.location) == (
+        ConflictReason.DELETED_ANCESTOR,
+        LOCATION,
+    )
 
     kept = merge(
         "",
