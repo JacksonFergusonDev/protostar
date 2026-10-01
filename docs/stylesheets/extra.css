@@ -78,11 +78,16 @@
     margin: 1.5rem 0;
 }
 
-/* Hold a 78x32 recording's shape until docs/javascripts/casts.js loads the
-   player, so loading it moves nothing on the page. */
+/* Hold a 78x32 recording's shape until its preview is ready, so loading
+   the player moves nothing on the page. */
 .hs-terminal-screen:not(.is-loaded) {
     min-height: 0;
     aspect-ratio: 1.09;
+    contain: size;
+}
+
+.hs-terminal-screen:not(.is-loaded) > * {
+    visibility: hidden;
 }
 
 /* Recordings start themselves once in view, so the play button would only
