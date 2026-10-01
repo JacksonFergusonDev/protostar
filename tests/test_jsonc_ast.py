@@ -2,10 +2,12 @@
 
 import json
 import random
+from datetime import date
 from typing import Any
 
 import pytest
 
+from protostar import jsonc_ast
 from protostar.errors import ConfigurationError
 from protostar.jsonc_ast import (
     NodeKind,
@@ -545,3 +547,353 @@ def test_random_edit_sequences_match_a_model_and_keep_comments(seed):
     for marker in markers:
         assert marker in doc.text
     assert "// tail" in doc.text
+
+
+# --- exactly what a rejection says ---------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "where", "reason"),
+    [
+        ('{"a": -}', "line 1, column 7", "invalid number"),
+        ('{"a": 1.}', "line 1, column 7", "invalid number"),
+        ('{"a": 1e}', "line 1, column 7", "invalid number"),
+        ('{"a": 1.5e+}', "line 1, column 7", "invalid number"),
+        ('{"a": 1e999}', "line 1, column 7", "number out of range"),
+        ('{"a": ' + "9" * 5000 + "}", "line 1, column 7", "number out of range"),
+        ('{"a": -A}', "line 1, column 7", "invalid number"),
+        ('{"a": 1X}', "line 1, column 8", "expected ',' or '}'"),
+        ('{"a": 1eX}', "line 1, column 7", "invalid number"),
+        ('{"a": 1eX5}', "line 1, column 7", "invalid number"),
+        ('{X"a": 1}', "line 1, column 2", "expected a string key"),
+        ('{"a":', "line 1, column 6", "unexpected end of input"),
+        ('{"a": "\\n', "line 1, column 7", "unterminated string"),
+        # Input that ends inside a token.
+        ('{"a": 1', "line 1, column 8", "expected ',' or '}'"),
+        ('{"a": 0', "line 1, column 8", "expected ',' or '}'"),
+        ('{"a": 1.', "line 1, column 7", "invalid number"),
+        ('{"a": 1e', "line 1, column 7", "invalid number"),
+        ('{"a": -', "line 1, column 7", "invalid number"),
+        ('{"a": "x', "line 1, column 7", "unterminated string"),
+        ('{"a": "\\', "line 1, column 8", "invalid escape sequence"),
+        ('{"a"', "line 1, column 5", "expected ':' after key"),
+        ('{"a": {', "line 1, column 7", "unterminated object"),
+        ('{"a": [', "line 1, column 7", "unterminated array"),
+        ('{"a": 1 /* x', "line 1, column 9", "unterminated block comment"),
+        ('{"a": 1 // c', "line 1, column 13", "expected ',' or '}'"),
+        # Strings.
+        ('{"a": "\x01"}', "line 1, column 8", "control character in string"),
+        ('{"a": "\\q"}', "line 1, column 8", "invalid escape sequence"),
+        ('{"a": "\\u12"}', "line 1, column 8", "invalid unicode escape"),
+        ('{"a": "\\u12zz"}', "line 1, column 8", "invalid unicode escape"),
+        ('{"a": "\\ud800"}', "line 1, column 7", "invalid string escape"),
+        # Structure.
+        ('{"a": [1, 2}', "line 1, column 12", "expected ',' or ']'"),
+        ('{"a" 1}', "line 1, column 6", "expected ':' after key"),
+        ('{"a": 1 "b": 2}', "line 1, column 9", "expected ',' or '}'"),
+        ("{1: 2}", "line 1, column 2", "expected a string key"),
+        ('{"a": 1, "a": 2}', "line 1, column 10", "duplicate key 'a'"),
+        ('{"a": tru}', "line 1, column 7", "unexpected character 't'"),
+        ('{"a": 1} x', "line 1, column 10", "unexpected content after the root object"),
+        ("[1]", "line 1, column 1", "the document root must be an object"),
+        ("", "line 1, column 1", "expected a JSON object"),
+        # A line break at the very start still counts.
+        ('\n{"a": @}', "line 2, column 7", "unexpected character '@'"),
+        ('\n  {"a": @}', "line 2, column 9", "unexpected character '@'"),
+    ],
+)
+def test_a_rejection_names_the_reason_and_where(text, where, reason):
+    with pytest.raises(ConfigurationError) as error:
+        parse_jsonc(text)
+    assert str(error.value) == f"Invalid JSONC at {where}: {reason}."
+    assert error.value.hint == jsonc_ast._HINT
+
+
+@pytest.mark.parametrize(
+    ("text", "where", "reason"),
+    [
+        ('{"a": 1,}', "line 1, column 8", "trailing commas are not allowed"),
+        ('{"a": 1} // c', "line 1, column 10", "comments are not allowed"),
+        ('{/* c */"a": 1}', "line 1, column 2", "comments are not allowed"),
+        ('{ /* c */"a": 1}', "line 1, column 3", "comments are not allowed"),
+    ],
+)
+def test_strict_json_names_what_jsonc_allows(text, where, reason):
+    with pytest.raises(ConfigurationError) as error:
+        parse_jsonc(text, strict=True)
+    assert str(error.value) == f"Invalid JSONC at {where}: {reason}."
+
+
+def test_numbers_decode_to_their_types():
+    value = decode_jsonc('{"a": -0.5e-3, "b": 0, "c": 10, "d": 1E2, "e": -7}')
+
+    assert value == {"a": -0.0005, "b": 0, "c": 10, "d": 100.0, "e": -7}
+    assert [type(v) for v in value.values()] == [float, int, int, float, int]
+
+
+@pytest.mark.parametrize(
+    "text", ['{/*/ c */"a": 1}', '{/**/"a": 1}', '{"a": 1 // X\n}']
+)
+def test_block_comments_end_at_their_own_close(text):
+    assert decode_jsonc(text) == {"a": 1}
+
+
+def test_the_node_limit_is_exact(monkeypatch):
+    # The root, then a key and a value per member.
+    monkeypatch.setattr(jsonc_ast, "_MAX_NODES", 5)
+    assert decode_jsonc('{"a": 1, "b": 2}') == {"a": 1, "b": 2}
+
+    with pytest.raises(ConfigurationError) as error:
+        decode_jsonc('{"a": 1, "b": 2, "c": 3}')
+    assert str(error.value) == (
+        "JSONC configuration exceeds supported limits or is unsupported."
+    )
+    assert error.value.hint == jsonc_ast._HINT
+
+
+def test_the_size_limit_is_exact(monkeypatch):
+    monkeypatch.setattr(jsonc_ast, "_MAX_BYTES", len('{"a": 12}'))
+    assert decode_jsonc('{"a": 12}') == {"a": 12}
+
+    with pytest.raises(ConfigurationError):
+        decode_jsonc('{"a": 123}')
+
+
+@pytest.mark.parametrize(
+    ("text", "newline"),
+    [
+        ("{}", "\n"),
+        ('{\n"a": 1\r\n}', "\n"),
+        ('\r\n{"a": 1}', "\r\n"),
+        ('\n{"a": 1}\r', "\n"),
+    ],
+    ids=["none", "first-break-wins", "crlf-at-the-start", "lf-at-the-start"],
+)
+def test_the_first_line_break_sets_the_newline(text, newline):
+    assert parse_jsonc(text).newline == newline
+
+
+# --- editing --------------------------------------------------------------------------
+
+
+def editable(text: str) -> jsonc_ast.JsoncDocument:
+    return parse_jsonc(text, allow_empty=True)
+
+
+def test_a_scalar_appended_to_an_empty_array_stays_on_its_line():
+    assert editable('{"a": []}').append(("a",), 1).text == '{"a": [1]}'
+
+
+@pytest.mark.parametrize(
+    ("text", "path", "value", "expected"),
+    [
+        pytest.param(
+            '{\n  "a": {\n  }\n}',
+            ("a", "k"),
+            {"x": 1},
+            '{\n  "a": {\n    "k": {\n      "x": 1\n    }\n  }\n}',
+            id="into-empty-object-closing-on-its-own-line",
+        ),
+        pytest.param(
+            '{\n  "a": {},\n  "b": 1\n}',
+            ("a", "k"),
+            1,
+            '{\n  "a": {\n    "k": 1\n  },\n  "b": 1\n}',
+            id="into-empty-object-on-an-indented-line",
+        ),
+        pytest.param(
+            '\n  {"a": {}}',
+            ("a", "k"),
+            1,
+            '\n  {"a": {\n    "k": 1\n  }}',
+            id="into-empty-object-on-an-indented-first-line",
+        ),
+        pytest.param(
+            '{"a": 1,}',
+            ("b",),
+            {"x": 1},
+            '{"a": 1, "b": {"x": 1},}',
+            id="table-after-a-trailing-comma-on-one-line",
+        ),
+        pytest.param(
+            '{"a": 1,\n  "b": 2\n}',
+            ("c",),
+            3,
+            '{"a": 1,\n  "b": 2, "c": 3\n}',
+            id="first-member-beside-the-brace",
+        ),
+        pytest.param(
+            '{\n  "a": 1 /* c */\n}',
+            ("b",),
+            2,
+            '{\n  "a": 1, /* c */\n  "b": 2\n}',
+            id="after-a-block-comment",
+        ),
+        pytest.param(
+            '{\n  "a": 1 // X\n}',
+            ("b",),
+            2,
+            '{\n  "a": 1, // X\n  "b": 2\n}',
+            id="after-a-line-comment",
+        ),
+        pytest.param(
+            '{\n  /* x */ "a": 1 /* c */\n}',
+            ("b",),
+            2,
+            '{\n  /* x */ "a": 1, /* c */\n  "b": 2\n}',
+            id="after-a-second-block-comment",
+        ),
+        pytest.param(
+            '{\n  "a": 1 /* c */\n  /* d */\n}',
+            ("b",),
+            2,
+            '{\n  "a": 1, /* c */\n  "b": 2\n  /* d */\n}',
+            id="before-a-later-block-comment",
+        ),
+        pytest.param(
+            '{\n  "a": 1 /**/\n}',
+            ("b",),
+            2,
+            '{\n  "a": 1, /**/\n  "b": 2\n}',
+            id="after-an-empty-block-comment",
+        ),
+        pytest.param(
+            '{"a"\n: 1}',
+            ("b",),
+            2,
+            '{"a"\n: 1, "b": 2}',
+            id="colon-on-the-next-line",
+        ),
+        pytest.param(
+            '/* h */\n{\n  "a": 1\n}',
+            ("b",),
+            2,
+            '/* h */\n{\n  "a": 1,\n  "b": 2\n}',
+            id="below-a-leading-block-comment",
+        ),
+        pytest.param('{"a": 1}', ("é",), "ü", '{"a": 1, "é": "ü"}', id="non-ascii"),
+        pytest.param(
+            '{"a": 1}', ("a",), {"x": 1}, '{"a": {"x": 1}}', id="replace-inline"
+        ),
+        pytest.param(
+            '{"a": ["\\u00e9", 2]}',
+            ("a",),
+            ["é", 3],
+            '{"a": ["\\u00e9", 3]}',
+            id="array-keeps-the-spelling-of-unchanged-elements",
+        ),
+        pytest.param(
+            "{\n }",
+            ("a",),
+            1,
+            '{\n  "a": 1\n }',
+            id="into-an-empty-object-with-an-indented-brace",
+        ),
+        pytest.param(
+            '{"a": [1 /* one */, 2]}',
+            ("a",),
+            [1, 3],
+            '{"a": [1 /* one */, 3]}',
+            id="array-keeps-unchanged-elements",
+        ),
+    ],
+)
+def test_an_edit_lands_where_the_document_would_put_it(text, path, value, expected):
+    assert editable(text).set(path, value).text == expected
+
+
+def test_deleting_a_member_beside_the_brace_keeps_the_brace():
+    assert editable('{"a": 1,\n  "b": 2\n}').delete(("a",)).text == '{\n  "b": 2\n}'
+
+
+@pytest.mark.parametrize(
+    ("operation", "message"),
+    [
+        (lambda doc: doc.append(("a",), 1), "Cannot edit JSONC path a."),
+        (lambda doc: doc.append(("x",), 1), "Cannot edit JSONC path x."),
+        (lambda doc: doc.append((), 1), "Cannot edit JSONC path <root>."),
+        (lambda doc: doc.append(("o", "b"), 1), "Cannot edit JSONC path o/b."),
+        (lambda doc: doc.append(("l", "x"), 1), "Cannot edit JSONC path l/x."),
+        (lambda doc: doc.delete(()), "Cannot edit JSONC path <root>."),
+        (lambda doc: doc.delete(("a", "b")), "Cannot edit JSONC path a/b."),
+        (lambda doc: doc.delete(("x",)), "Cannot edit JSONC path x."),
+        (lambda doc: doc.set(("l", 0, "x"), 1), "Cannot edit JSONC path l/0/x."),
+    ],
+    ids=[
+        "append-to-a-value",
+        "append-to-nothing",
+        "append-to-the-root",
+        "append-under-a-missing-key",
+        "append-past-an-array",
+        "delete-the-root",
+        "delete-under-a-value",
+        "delete-nothing",
+        "create-under-an-element",
+    ],
+)
+def test_an_impossible_edit_names_its_path(operation, message):
+    with pytest.raises(ConfigurationError) as error:
+        operation(editable('{"a": 1, "o": {}, "l": [1]}'))
+    assert str(error.value) == message
+    assert error.value.hint == (
+        "Use existing object keys and array indexes; objects can be created."
+    )
+
+
+def test_an_index_past_the_end_is_missing():
+    assert editable('{"a": [1, 2]}').get(("a", 2)) is MISSING
+
+
+@pytest.mark.parametrize(
+    ("value", "message", "hint"),
+    [
+        (
+            float("nan"),
+            "Unsupported JSON number.",
+            "Use finite numbers; NaN and infinity are not valid JSON.",
+        ),
+        (
+            "\ud800",
+            "Unsupported JSON string.",
+            "Remove lone UTF-16 surrogate characters.",
+        ),
+        (
+            MISSING,
+            "Unsupported JSON value.",
+            "Use strings, numbers, booleans, null, arrays, and objects.",
+        ),
+        (
+            [float("inf")],
+            "Unsupported JSON number.",
+            "Use finite numbers; NaN and infinity are not valid JSON.",
+        ),
+        (
+            date(2026, 1, 1),
+            "Unsupported JSON value.",
+            "Use strings, numbers, booleans, null, arrays, and objects.",
+        ),
+    ],
+    ids=["nan", "surrogate", "missing", "nested", "date"],
+)
+def test_a_value_json_cannot_hold_is_rejected(value, message, hint):
+    with pytest.raises(ConfigurationError) as error:
+        editable("{}").set(("a",), value)
+    assert str(error.value) == message
+    assert error.value.hint == hint
+
+
+def test_a_new_document_keeps_non_ascii_keys():
+    assert dumps_jsonc({"é": 1}) == '{\n  "é": 1\n}\n'
+
+
+def test_a_cyclic_value_is_rejected():
+    cyclic: list[Any] = []
+    cyclic.append(cyclic)
+
+    with pytest.raises(ConfigurationError, match=r"^Cyclic semantic configuration\.$"):
+        editable("{}").set(("a",), cyclic)
+
+
+def test_an_appended_value_must_be_json():
+    with pytest.raises(ConfigurationError, match=r"^Unsupported JSON number\.$"):
+        editable('{"a": []}').append(("a",), float("nan"))

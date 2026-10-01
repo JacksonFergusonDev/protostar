@@ -4,7 +4,7 @@ import pytest
 
 from protostar.errors import ConfigurationError
 from protostar.jsonc_ast import decode_jsonc, reconcile_jsonc
-from protostar.merge import MISSING, ConflictReason, MergeLocation
+from protostar.merge import MISSING, ConflictReason, MergeLocation, ResolutionChoice
 
 LOCATION = MergeLocation(".github/renovate.json")
 
@@ -285,3 +285,85 @@ def test_complete_declaration_keeps_an_edited_owned_key_as_retracted():
     assert result.content == local
     assert result.baseline == {"extends": ["config:best-practices"]}
     assert [c.reason for c in result.conflicts] == [ConflictReason.RETRACTED]
+
+
+def test_an_unchanged_value_keeps_its_own_spelling():
+    result = merge('{"a": "\\u00e9", "b": 1}', '{"a": "é", "b": 2}', {"a": "é", "b": 1})
+
+    assert result.content == '{"a": "\\u00e9", "b": 2}'
+
+
+def test_a_missing_file_ignores_whatever_text_was_passed():
+    assert merge("not json", '{"a": 1}', missing_file=True).content == '{"a": 1}'
+
+
+def test_a_proposed_new_file_is_written_and_reported():
+    result = merge("", '{"a": 1}', missing_file=True, proposing=True)
+
+    assert result.content == '{"a": 1}'
+    assert [proposal.reason for proposal in result.proposals] == [
+        ConflictReason.PROPOSED
+    ]
+
+
+def test_an_unowned_document_takes_changes_without_proposals_by_default():
+    result = merge('{"b": 1}', '{"a": 2}')
+
+    assert result.content == '{"b": 1, "a": 2}'
+    assert not result.proposals
+
+
+def test_owned_keys_are_not_retracted_by_default():
+    result = merge('{"a": 1, "old": 1}', '{"a": 1}', {"a": 1, "old": 1})
+
+    assert result.content == '{"a": 1, "old": 1}'
+    assert result.baseline == {"a": 1, "old": 1}
+
+
+def test_overwrite_keeps_owning_values_it_no_longer_declares():
+    result = merge('{"a": 1, "old": 1}', '{"a": 2}', {"a": 1, "old": 1}, overwrite=True)
+
+    assert result.content == '{"a": 2, "old": 1}'
+    assert result.baseline == {"a": 2, "old": 1}
+
+
+def test_a_deleted_owned_file_reports_how_its_conflict_was_settled():
+    [conflict] = merge("", '{"a": 2}', {"a": 1}, missing_file=True).conflicts
+    assert (conflict.reason, conflict.location) == (
+        ConflictReason.DELETED_ANCESTOR,
+        LOCATION,
+    )
+
+    kept = merge(
+        "",
+        '{"a": 2}',
+        {"a": 1},
+        missing_file=True,
+        resolutions={conflict.id: ResolutionChoice.LOCAL},
+    )
+
+    assert (kept.content, kept.baseline, kept.conflicts) == ("", {"a": 2}, ())
+    assert [settled.resolution for settled in kept.resolved] == [ResolutionChoice.LOCAL]
+
+
+def test_an_owned_empty_object_stays_owned():
+    result = merge('{"a": {}, "b": 1}', '{"a": {}, "b": 2}', {"a": {}, "b": 1})
+
+    assert result.baseline == {"a": {}, "b": 2}
+
+
+def test_a_new_nested_object_is_owned_from_nothing():
+    result = merge("{}", '{"a": {"b": 1}}')
+
+    assert result.content == '{\n  "a": {\n    "b": 1\n  }\n}'
+    assert result.baseline == {"a": {"b": 1}}
+
+
+def test_a_table_filled_in_an_unowned_document_is_owned():
+    result = merge('{"a": {}}', '{"a": {"b": 1}}')
+
+    assert result.baseline == {"a": {"b": 1}}
+
+
+def test_owning_nothing_records_no_baseline():
+    assert merge('{"a": 1}', '{"a": 1}').baseline is MISSING
