@@ -6,7 +6,6 @@ home directory or Protostar configuration.
 """
 
 import argparse
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -17,7 +16,7 @@ _repo_root = Path(__file__).resolve().parent.parent
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
-from scripts._common import OutputStyle, report
+from scripts._common import OutputStyle, fixture_environment, report
 
 CONFIG_ENV_VAR = "PROTOSTAR_CONFIG"
 
@@ -35,9 +34,7 @@ def write_file(root: Path, name: str, content: str) -> None:
 
 def run(*args: str, cwd: Path, config: Path | None = None) -> None:
     """Run a fixture setup command, optionally against the scenario's own configuration."""
-    env = os.environ.copy()
-    if config is not None:
-        env[CONFIG_ENV_VAR] = str(config)
+    env = fixture_environment(config=config)
     subprocess.run(args, cwd=cwd, env=env, check=True)
 
 

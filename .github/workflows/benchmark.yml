@@ -58,3 +58,13 @@ jobs:
         alert-threshold: '200%'
         comment-on-alert: true
         auto-push: ${{ github.event_name == 'push' }}
+
+  publish-pages:
+    name: Publish updated benchmarks
+    needs: benchmark
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml

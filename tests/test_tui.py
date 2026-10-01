@@ -1,5 +1,6 @@
 """Recipe decisions, lazy CLI boundary, and terminal presentation."""
 
+import asyncio
 import contextlib
 import importlib.resources
 import io
@@ -69,6 +70,17 @@ def workspace(tmp_path, monkeypatch):
     return project
 
 
+@pytest.fixture(params=[False, True])
+def early_idle(request, mocker):
+    """Also exercise event propagation when CPU idleness is reported at once."""
+    if request.param:
+
+        async def idle(*args, **kwargs):
+            await asyncio.sleep(0)
+
+        mocker.patch("textual.pilot.wait_for_idle", side_effect=idle)
+
+
 def make_app(draft=None, config=None):
     config = config or UserConfig()
     return DecisionApp(
@@ -96,6 +108,18 @@ async def settle(pilot):
                 await worker.wait()
         await pilot.pause()
     await pilot.pause()
+
+
+async def wait_until(pilot, predicate):
+    """Wait for an observable UI result, failing if it never arrives.
+
+    A pilot pause only drains messages already queued on each widget. A
+    handler can post to its parent after that parent's barrier has passed,
+    so neither a pause nor an empty worker list proves an update arrived.
+    """
+    async with asyncio.timeout(10):
+        while not predicate():
+            await pilot.pause(0)
 
 
 async def apply(pilot, *, trust=False):
@@ -944,7 +968,9 @@ async def test_remote_template_loads_in_a_worker(tmp_path, mocker):
 
 
 @pytest.mark.asyncio
-async def test_reselecting_the_current_template_abandons_a_load(tmp_path, mocker):
+async def test_reselecting_the_current_template_abandons_a_load(
+    tmp_path, mocker, early_idle
+):
     local = tmp_path / "remote.toml"
     local.write_text('name = "Remote"\ndocker = true\n')
     release = threading.Event()
@@ -965,9 +991,13 @@ async def test_reselecting_the_current_template_abandons_a_load(tmp_path, mocker
         select.value = next(
             item for item in app.decision_screen.catalog if item.alias == "remote"
         )
-        await pilot.pause()
+        await wait_until(
+            pilot, lambda: app.screen.query_one("#continue", Button).disabled
+        )
         select.value = _TemplateChoice.NONE
-        await pilot.pause()
+        await wait_until(
+            pilot, lambda: not app.screen.query_one("#continue", Button).disabled
+        )
         assert not app.screen.query_one("#continue", Button).disabled
         release.set()
         await settle(pilot)
@@ -1433,7 +1463,7 @@ async def test_any_python_3_minimum_or_none_is_accepted():
 
 
 @pytest.mark.asyncio
-async def test_invalid_github_username_shows_actionable_preview_error():
+async def test_invalid_github_username_shows_actionable_preview_error(early_idle):
     app = make_app()
     async with app.run_test(size=(110, 45)) as pilot:
         await settle(pilot)
@@ -1441,7 +1471,12 @@ async def test_invalid_github_username_shows_actionable_preview_error():
         field.focus()
         field.value = "@octocat"
         await pilot.press("enter")
-        await settle(pilot)
+        await wait_until(
+            pilot,
+            lambda: (
+                "Invalid GitHub username: '@octocat'." in plain(app, "#preview-summary")
+            ),
+        )
         summary = plain(app, "#preview-summary")
         assert "Invalid GitHub username: '@octocat'." in summary
         assert "Drop the leading '@': use 'octocat'." in summary
@@ -2006,7 +2041,9 @@ async def test_the_chosen_strategy_reaches_execution(collisions, mocker, strateg
 
 
 @pytest.mark.asyncio
-async def test_trust_gate_blocks_until_the_commands_are_confirmed(tmp_path, mocker):
+async def test_trust_gate_blocks_until_the_commands_are_confirmed(
+    tmp_path, mocker, early_idle
+):
     app = make_review(untrusted_draft(tmp_path / "t.toml"))
     async with app.run_test(size=(120, 50)) as pilot:
         await settle(pilot)
@@ -2015,14 +2052,17 @@ async def test_trust_gate_blocks_until_the_commands_are_confirmed(tmp_path, mock
         assert "\n  uv run nbdime config-git --enable" in note
         apply_button = app.screen.query_one("#apply", Button)
         assert apply_button.disabled
-        await pilot.click("#trust")
+        await pilot.press("t")
+        await wait_until(pilot, lambda: not apply_button.disabled)
         assert not apply_button.disabled
-        await pilot.click("#trust")
+        await pilot.press("t")
+        await wait_until(pilot, lambda: apply_button.disabled)
         assert apply_button.disabled
-        await pilot.click("#apply")
+        await pilot.press("a")
         assert app.is_running
-        await pilot.click("#trust")
-        await pilot.click("#apply")
+        await pilot.press("t")
+        await wait_until(pilot, lambda: not apply_button.disabled)
+        await pilot.press("a")
     decision = app.return_value
     commands = decision.confirmed_commands
     assert commands[0] == ("git", "init")

@@ -1,6 +1,5 @@
 """Tests for centralized template discovery engine."""
 
-import time
 from typing import Any
 
 from protostar.config import TemplateAliasConfig, UserConfig
@@ -111,14 +110,19 @@ def test_discover_templates_to_dict() -> None:
     }
 
 
-def test_discover_templates_execution_speed() -> None:
-    """Discovery stays under 250ms, allowing for shared CI runner variability."""
-    start = time.perf_counter()
-    templates = discover_templates(config=UserConfig())
-    elapsed = time.perf_counter() - start
+def test_discovery_never_acquires_remote_templates(mocker) -> None:
+    """Listing templates never fetches sources, regardless of runner speed."""
+    acquire = mocker.patch("protostar.config.TemplateSource.load")
+    config = UserConfig(
+        templates={
+            "remote": TemplateAliasConfig(source="https://example.com/template.git")
+        }
+    )
 
-    assert len(templates) >= 5
-    assert elapsed < 0.25, f"Discovery took too long: {elapsed:.4f}s"
+    templates = discover_templates(config=config)
+
+    assert any(template.alias == "remote" for template in templates)
+    acquire.assert_not_called()
 
 
 def test_discovered_aliases_are_unique() -> None:

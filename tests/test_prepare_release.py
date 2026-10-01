@@ -1,5 +1,6 @@
 """Release preparation refreshes inputs before allowing a version bump."""
 
+import ast
 import io
 import json
 import subprocess
@@ -12,6 +13,8 @@ from pytest_mock import MockerFixture
 from protostar._fallbacks import DEFAULT_REVISIONS
 from scripts import prepare_release, sync_registry_fallbacks
 from scripts._common import SCRIPTS_DIR
+
+INVALID_REVISIONS: tuple[object, ...] = (None, 1, [], {}, "", " \t\n")
 
 
 @pytest.mark.parametrize(
@@ -110,3 +113,62 @@ def test_fallback_refresh_writes_successfully_while_check_only_reports_drift(
         assert target.read_text(
             encoding="utf-8"
         ) == sync_registry_fallbacks.generate_fallbacks_content(revisions)
+
+
+@pytest.mark.parametrize("check", [False, True])
+@pytest.mark.parametrize(
+    "hooks",
+    [
+        None,
+        [],
+        "not a mapping",
+        {},
+        {next(iter(DEFAULT_REVISIONS)): "v1.0.0"},
+        *[
+            {**DEFAULT_REVISIONS, next(iter(DEFAULT_REVISIONS)): revision}
+            for revision in INVALID_REVISIONS
+        ],
+    ],
+)
+def test_invalid_registry_cannot_replace_release_fallbacks(
+    check: bool,
+    hooks: object,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    target = tmp_path / "_fallbacks.py"
+    target.write_bytes(b"original fallback bytes\n")
+    monkeypatch.setattr(sync_registry_fallbacks, "FALLBACKS_FILE", target)
+    monkeypatch.setattr(
+        sys, "argv", ["sync_registry_fallbacks.py", *(["--check"] if check else [])]
+    )
+    mocker.patch.object(
+        sync_registry_fallbacks,
+        "fetch_bytes",
+        return_value=json.dumps({"schema_version": 1, "hooks": hooks}).encode(),
+    )
+
+    with pytest.raises(SystemExit) as error:
+        sync_registry_fallbacks.main()
+
+    assert error.value.code == 1
+    assert target.read_bytes() == b"original fallback bytes\n"
+    assert "registry" in capsys.readouterr().err
+
+
+def test_fallback_generator_escapes_revisions_and_sorts_entries() -> None:
+    revisions = {
+        "https://example.invalid/z": 'tag"with\\escapes\nand newline',
+        "https://example.invalid/a": "v1.0.0",
+    }
+
+    source = sync_registry_fallbacks.generate_fallbacks_content(revisions)
+    assignment = ast.parse(source).body[1]
+    assert isinstance(assignment, ast.AnnAssign)
+    assert assignment.value is not None
+    restored = ast.literal_eval(assignment.value)
+
+    assert restored == revisions
+    assert list(restored) == sorted(revisions)
