@@ -185,8 +185,6 @@ paths_to_mutate = [
     "src/protostar/yaml_ast.py",
 ]
 pytest_add_cli_args_test_selection = ["tests/"]
-# Temporary: prints the pytest error behind a failed "clean tests" step.
-debug = true
 also_copy = [
     ".github/",
     "AGENTS.md",

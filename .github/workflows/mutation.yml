@@ -31,7 +31,7 @@ jobs:
     - name: Select modules
       id: matrix
       env:
-        REQUESTED: ${{ inputs.modules || 'fs_transaction' }}
+        REQUESTED: ${{ inputs.modules || 'fs_transaction,merge' }}
       run: |
         python3 - <<'EOF'
         import json, os, sys
@@ -119,8 +119,9 @@ jobs:
 
     - name: Combine
       run: |
+        mapfile -t summaries < <(find results -name summary.json | sort)
         {
           echo "### All modules at ${GITHUB_SHA::7}"
           echo
-          python3 scripts/mutation_report.py combine results/*/summary.json
+          python3 scripts/mutation_report.py combine "${summaries[@]}"
         } >> "$GITHUB_STEP_SUMMARY"
