@@ -91,11 +91,16 @@ def _nested(depth: int) -> str:
     return "a: " + "{a: " * (depth - 1) + "0" + "}" * (depth - 1) + "\n"
 
 
-def test_the_depth_limit_is_exactly_one_hundred_levels():
-    assert decode_yaml_baseline(_nested(100))
+def _nested_lists(depth: int) -> str:
+    return "a: " + "[" * (depth - 1) + "0" + "]" * (depth - 1) + "\n"
+
+
+@pytest.mark.parametrize("nested", [_nested, _nested_lists], ids=["mappings", "lists"])
+def test_the_depth_limit_is_exactly_one_hundred_levels(nested):
+    assert decode_yaml_baseline(nested(100))
 
     with pytest.raises(ConfigurationError) as error:
-        decode_yaml_baseline(_nested(101))
+        decode_yaml_baseline(nested(101))
     # The loader's own limit, before the kernel's would apply.
     assert str(error.value) == "Invalid or unsupported YAML configuration."
 
