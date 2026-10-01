@@ -175,7 +175,7 @@ fail_under = 85
 # Mutation testing: `just mutate` locally, or the manual Mutation Testing workflow.
 # `also_copy` lists what the suite reads from disk; mutmut runs it from a copy.
 [tool.mutmut]
-paths_to_mutate = [
+source_paths = [
     "src/protostar/fs_transaction.py",
     "src/protostar/journal.py",
     "src/protostar/jsonc_ast.py",
