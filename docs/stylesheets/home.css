@@ -670,6 +670,7 @@
 .ps-home .ps-principles:not([hidden]) {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
     gap: 30px;
     margin: 40px 0 0;
     padding: 0;
@@ -677,6 +678,8 @@
 }
 
 [dir] .ps-home .ps-principles li {
+    display: flex;
+    flex-direction: column;
     margin: 0;
     padding-top: 25px;
     border-top: 1px solid #28414b;
@@ -703,13 +706,16 @@
 }
 
 .ps-home .ps-principles .ps-text-link {
-    margin-top: 12px;
+    align-self: flex-start;
+    margin-top: auto;
+    padding-top: 12px;
 }
 
 /* --- 05 docs: jacksonferguson.me's resume cards --- */
 .ps-home .ps-index {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
     gap: 16px;
     margin-top: 40px;
 }
@@ -762,8 +768,7 @@
 /* --- Narrower screens, at jacksonferguson.me's breakpoints --- */
 @media (max-width: 1100px) {
 
-    .ps-home .ps-merge,
-    .ps-home .ps-principles:not([hidden]) {
+    .ps-home .ps-merge {
         grid-template-columns: minmax(0, 1fr);
     }
 
@@ -773,6 +778,11 @@
 }
 
 @media (max-width: 800px) {
+    .ps-home .ps-index,
+    .ps-home .ps-principles:not([hidden]) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
     .ps-home .ps-init {
         grid-template-columns: minmax(0, 1fr);
         gap: 40px;

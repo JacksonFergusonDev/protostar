@@ -149,17 +149,17 @@ hide:
   <h2 id="ps-guarantees">Nothing changes that you didn't see, and nothing stops halfway.</h2>
   <ul class="ps-principles">
     <li><h3>Rolls back on failure</h3><p>If a run fails or you press <kbd>Ctrl</kbd>+<kbd>C</kbd>, every file Protostar wrote goes back to its original bytes.</p><a class="ps-text-link" href="usage/rollback.md">How rollback works<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></li>
-    <li><h3>Merges, never overwrites</h3><p>Existing files are merged, not replaced. Where your content and the template disagree, yours stays until you choose.</p></li>
-    <li><h3>Adopts existing projects</h3><p>Point it at a repository you already have. It reads the tools you use, proposes each change, and lets you keep all of yours.</p></li>
-    <li><h3>Asks before running commands</h3><p>A template you haven't trusted runs no command until you confirm it, on <code>init</code> and on <code>sync</code>.</p></li>
-    <li><h3>Previews are read-only</h3><p><code>--dry-run</code>, <code>status</code>, and <code>diff</code> never write a file or run a command.</p></li>
+    <li><h3>Merges, never overwrites</h3><p>Existing files are merged, not replaced. Where your content and the template disagree, yours stays until you choose.</p><a class="ps-text-link" href="usage/lifecycle.md#resolve-conflicts">How conflicts are resolved<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></li>
+    <li><h3>Adopts existing projects</h3><p>Point it at a repository you already have. It reads the tools you use, proposes each change, and lets you keep all of yours.</p><a class="ps-text-link" href="usage/init.md#existing-projects">Set up an existing project<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></li>
+    <li><h3>Asks before running commands</h3><p>A template you haven't trusted runs no command until you confirm it, on <code>init</code> and on <code>sync</code>.</p><a class="ps-text-link" href="usage/templates.md#security-model-the-remote-trust-dialog">How template trust works<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></li>
+    <li><h3>Previews are read-only</h3><p><code>--dry-run</code>, <code>status</code>, and <code>diff</code> never write a file or run a command.</p><a class="ps-text-link" href="usage/lifecycle.md#review-apply-repeat">Preview project changes<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></li>
     <li><h3>Built for automation</h3><p><code>--json</code> puts one payload on stdout and never prompts, so scripts, CI, and coding agents can drive every command.</p><a class="ps-text-link" href="usage/agent-interface.md">The machine interface<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></li>
   </ul>
 </section>
 
 <section class="ps-section" id="docs" aria-labelledby="ps-docs">
   <div class="hs-section-marker"><span>05 / DOCS</span></div>
-  <h2 id="ps-docs">Read on.</h2>
+  <h2 id="ps-docs">Explore the docs.</h2>
   <nav class="ps-index" aria-label="Documentation">
     <a href="installation.md"><strong>Installation<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></strong><span>Protostar, uv, and git on macOS, Linux, or Windows.</span></a>
     <a href="first-project.md"><strong>Your first project<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></strong><span>From nothing installed to a project you've run, changed, and checked.</span></a>
