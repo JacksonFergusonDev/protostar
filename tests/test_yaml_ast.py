@@ -40,6 +40,12 @@ from protostar.yaml_ast import (
 LOCATION = MergeLocation(".github/codecov.yml")
 
 
+@pytest.fixture(autouse=True)
+def _fresh_decode_cache():
+    """Decoding is cached per text; a test must never see another's result."""
+    yaml_ast._decode_yaml_baseline.cache_clear()
+
+
 def merge(local, remote, base=MISSING, **kwargs):
     return reconcile_yaml(CODECOV_SPEC, local, remote, base, LOCATION, **kwargs)
 
@@ -414,35 +420,45 @@ def test_a_yaml_12_directive_is_accepted():
 
 
 @pytest.mark.parametrize(
-    ("value", "message"),
+    ("value", "message", "hint"),
     [
         pytest.param(
-            {"repos": "x"}, "Invalid pre-commit record sequence.", id="not-a-list"
+            {"repos": "x"},
+            "Invalid pre-commit record sequence.",
+            "Use a list of mappings with non-empty 'repo' strings.",
+            id="not-a-list",
         ),
         pytest.param(
-            {"repos": [{"hooks": []}]}, "Invalid pre-commit identity.", id="no-identity"
+            {"repos": [{"hooks": []}]},
+            "Invalid pre-commit identity.",
+            "Give every record a non-empty 'repo' string.",
+            id="no-identity",
         ),
         pytest.param(
             {"repos": [{"repo": "a", "rev": ""}]},
             "Invalid pre-commit field 'rev'.",
+            "Quote 'rev' values as non-empty strings.",
             id="empty-field",
         ),
         pytest.param(
             {"repos": [{"repo": "a", "rev": 1}]},
             "Invalid pre-commit field 'rev'.",
+            "Quote 'rev' values as non-empty strings.",
             id="non-string-field",
         ),
         pytest.param(
             {"repos": [{"repo": "a"}, {"repo": "a"}]},
             "Duplicate desired or owned pre-commit identity.",
+            "Declare each 'repo' once.",
             id="duplicate",
         ),
     ],
 )
-def test_keyed_records_are_validated(value, message):
+def test_keyed_records_are_validated(value, message, hint):
     with pytest.raises(ConfigurationError) as error:
         validate_yaml_baseline(PRE_COMMIT_SPEC, value)
     assert str(error.value) == message
+    assert error.value.hint == hint
 
 
 def test_an_owned_record_without_an_identity_is_rejected():
@@ -521,6 +537,13 @@ def test_a_declined_proposal_for_a_missing_document_is_reported():
     ]
 
 
+def test_a_deleted_document_reports_its_preserved_deletion():
+    result = plain("", "a: 1\n", {"a": 1}, missing_file=True)
+
+    assert result.content == ""
+    assert [preserved.location for preserved in result.preserved] == [HERE]
+
+
 def test_a_kept_edit_is_reported_beside_an_applied_change():
     result = plain("a: 1\nb: 9\n", "a: 2\nb: 1\n", {"a": 1, "b": 1})
 
@@ -590,6 +613,58 @@ def test_an_edit_beside_an_aliased_sibling_is_safe():
 
     assert result.content == local.replace("plain: 1", "plain: 2")
     assert not result.conflicts
+
+
+def test_an_anchor_used_only_through_a_merge_key_is_shared():
+    local = "d: &d {a: 1}\njob:\n  <<: *d\n  b: 1\n"
+
+    result = plain(local, "d: {a: 2}\n", {"d": {"a": 1}})
+
+    assert result.content == local
+    assert result.conflicts == (
+        MergeConflict(
+            MergeLocation(HERE.file, ("d",)), ConflictReason.SHARED_STRUCTURE
+        ),
+    )
+
+
+def test_editing_an_aliased_mapping_conflicts_on_the_mapping():
+    local = "coverage: &shared {target: 80%}\nforeign: *shared\n"
+
+    result = plain(local, "coverage: {target: 85%}\n", {"coverage": {"target": "80%"}})
+
+    assert result.conflicts == (
+        MergeConflict(
+            MergeLocation(HERE.file, ("coverage",)), ConflictReason.SHARED_STRUCTURE
+        ),
+    )
+
+
+def test_retracting_a_value_that_holds_an_aliased_node_is_a_conflict():
+    local = "wrap: {inner: &i {a: 1}}\nother: *i\n"
+
+    result = plain(local, "{}\n", {"wrap": {"inner": {"a": 1}}}, spec=COMPLETE)
+
+    assert result.content == local
+    assert result.conflicts == (
+        MergeConflict(
+            MergeLocation(HERE.file, ("wrap",)), ConflictReason.SHARED_STRUCTURE
+        ),
+    )
+
+
+def test_retracting_beside_a_root_merge_key_is_a_conflict():
+    local = "base: &b {a: 1}\n<<: *b\nc: 1\nold: 1\n"
+
+    result = plain(local, "c: 1\n", {"c": 1, "old": 1}, spec=COMPLETE)
+
+    assert result.content == local
+    assert result.baseline == {"c": 1, "old": 1}
+    assert result.conflicts == (
+        MergeConflict(
+            MergeLocation(HERE.file, ("old",)), ConflictReason.SHARED_STRUCTURE
+        ),
+    )
 
 
 def test_a_key_added_beside_a_merge_key_is_a_conflict():
@@ -690,3 +765,21 @@ def test_a_hold_on_an_undeclared_path_changes_nothing(held):
     )
 
     assert result.content == "a: {x: 2}\n"
+
+
+def test_a_guard_conflict_three_keys_deep_settles():
+    deep = ("a", "b", "c")
+    found = MergeConflict(
+        MergeLocation(HERE.file, deep), ConflictReason.DIVERGED, ConflictSides(1, 9, 2)
+    )
+
+    result = plain(
+        "a: {b: {c: 9}}\n",
+        "a: {b: {c: 2}}\n",
+        {"a": {"b": {"c": 1}}},
+        guard=YamlGuard((deep,), (found,)),
+        resolutions={found.id: ResolutionChoice.DESIRED},
+    )
+
+    assert result.content == "a: {b: {c: 2}}\n"
+    assert result.baseline == {"a": {"b": {"c": 2}}}
