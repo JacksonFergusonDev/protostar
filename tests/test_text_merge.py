@@ -14,6 +14,7 @@ from protostar.merge import (
     MergeConflict,
     MergeLocation,
     ResolutionChoice,
+    Value,
 )
 from protostar.text_merge import (
     TextConflict,
@@ -567,7 +568,7 @@ def test_an_unedited_unchanged_text_keeps_its_ownership() -> None:
 @pytest.mark.parametrize(
     ("local", "side"), [(b"x\n", "x\n"), (None, MISSING)], ids=["edited", "deleted"]
 )
-def test_a_preserved_edit_shows_both_texts(local: bytes | None, side: object) -> None:
+def test_a_preserved_edit_shows_both_texts(local: bytes | None, side: Value) -> None:
     result = reconcile_text(local, "a\n", "a\n", FILE)
 
     assert result.preserved == (
