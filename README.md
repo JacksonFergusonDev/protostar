@@ -183,6 +183,8 @@ protostar init --from https://github.com/your-org/service-template
 
 Tag its releases, and every project made from it can move to the newest one with `protostar sync --to latest`. The [authoring guide](https://protostar.jacksonferguson.me/usage/authoring-templates/) covers starter files, options, tiers, and checking a template in CI.
 
+To see it all working, [protostar-example-templates](https://github.com/JacksonFergusonDev/protostar-example-templates) holds two templates, a one-file one and a fuller service, and [protostar-example-project](https://github.com/JacksonFergusonDev/protostar-example-project) was made from one. When the template tagged a new release, a scheduled workflow in the project opened [this update pull request](https://github.com/JacksonFergusonDev/protostar-example-project/pull/1) on its own.
+
 ---
 
 ## Go Deeper

@@ -221,7 +221,7 @@ Every change it would then make to a file you wrote is a proposal you can keep o
 
 ### Template Releases You Control
 
-A repository template starts new projects on its newest release tag. `protostar status` says when a newer release exists, and `protostar sync --to v1.3.0` moves the project there with the same review as any update. Each project records the exact commit it applied, so a moved tag or a pushed branch changes nothing until you move the project yourself.
+A repository template starts new projects on its newest release tag. `protostar status` says when a newer release exists, and `protostar sync --to v1.3.0` moves the project there with the same review as any update. Each project records the exact commit it applied, so a moved tag or a pushed branch changes nothing until you move the project yourself. You can watch this happen in [protostar-example-project](https://github.com/JacksonFergusonDev/protostar-example-project): when [its template](https://github.com/JacksonFergusonDev/protostar-example-templates) tagged v1.1.0, a scheduled workflow opened [this update pull request](https://github.com/JacksonFergusonDev/protostar-example-project/pull/1).
 
 Declarative [migrations](usage/authoring-templates.md#migrations) handle what a merge can't, such as a renamed or retired starter file, or a renamed variable. They never run commands, so a dry run lists them and a failed run rolls them back.
 
