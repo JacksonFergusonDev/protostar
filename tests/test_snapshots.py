@@ -111,6 +111,27 @@ def test_render_and_write_svg_shrinkwraps(tmp_path, monkeypatch):
     assert float(rect_match.group(1)) == pytest.approx(504, abs=1)
 
 
+def test_render_and_write_svg_draws_the_house_terminal_window(tmp_path, monkeypatch):
+    """Terminal SVGs use house-style's window, which frames the docs' recordings."""
+    monkeypatch.setattr(svg, "DOCS_TERMINALS_DIR", tmp_path)
+
+    console = Console(record=True, width=100, file=io.StringIO())
+    console.print("output")
+    _render_and_write_svg(console, title="protostar <init>", filename="window.svg")
+
+    content = (tmp_path / "window.svg").read_text()
+    ET.fromstring(content)
+    terminal_css = (
+        Path(__file__).parents[1] / "docs/house/css/terminal.css"
+    ).read_text()
+    for color in ("#090e11", "#11171c", "#2d3c43", "#ff5f56", "#ffbd2e", "#27c93f"):
+        assert color in content
+        assert color in terminal_css
+    assert "rgba(255,255,255,0.35)" not in content
+    assert content.count("<circle") == 3
+    assert ">protostar &lt;init&gt;</text>" in content
+
+
 def test_render_and_write_svg_deterministic(tmp_path, monkeypatch):
     """Verify that SVG generation produces byte-for-byte identical output across runs."""
     monkeypatch.setattr(svg, "DOCS_TERMINALS_DIR", tmp_path)

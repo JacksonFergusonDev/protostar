@@ -46,6 +46,7 @@ exclude = [
     "/.vscode",
     "/demo",
     "/docs",
+    "/overrides",
     "/scripts",
     "/zensical.toml",
 ]

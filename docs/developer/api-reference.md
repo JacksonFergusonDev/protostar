@@ -1,3 +1,7 @@
+---
+description: "The engine's Python API: the manifest, the modules that fill it, and the orchestrator and executor that act on it."
+---
+
 # API Reference
 
 The engine strictly isolates state definition from imperative execution. Rather than executing disjointed setup scripts, the Orchestrator evaluates a polymorphic array of `BootstrapModule` objects interacting exclusively with a centralized state object: the `EnvironmentManifest`.

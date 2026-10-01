@@ -1,3 +1,7 @@
+---
+description: "How Protostar writes files and runs commands as one transaction it can roll back."
+---
+
 # The System Executor & Modular Execution Engine
 
 While the Orchestrator plans the environment, the execution engine carries it out—writing files, updating configurations, and running shell commands under transactional rollback guarantees.

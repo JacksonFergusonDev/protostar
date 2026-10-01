@@ -55,18 +55,18 @@ Content Protostar stops producing is retracted: a tool you turn off, a [template
 
 A conflict stays open, and `sync --check` keeps failing, until you settle it. In an interactive terminal, `protostar sync` opens a screen that shows both sides of each conflict and what the file will look like, before anything is written:
 
-<div class="protostar-demo-shell">
-  <div class="panel-top">
-    <span class="terminal-dots" aria-hidden="true">
+<div class="hs-terminal">
+  <div class="hs-terminal-bar">
+    <div class="hs-terminal-dots" aria-hidden="true">
       <span class="dot dot-close"></span>
       <span class="dot dot-minimize"></span>
       <span class="dot dot-maximize"></span>
-    </span>
-    <span class="terminal-title">PROTOSTAR / SYNC / CONFLICTS</span>
+    </div>
+    <span class="hs-terminal-title">protostar sync</span>
   </div>
-  <div class="protostar-asciinema" data-asciinema="../../assets/demo_sync.cast">
+  <div class="hs-terminal-screen" data-asciinema="../../assets/demo_sync.cast">
     <noscript>
-      <a href="../assets/demo_sync.cast">Download the Protostar terminal recording</a>
+      <a href="../../assets/demo_sync.cast">Download the Protostar terminal recording</a>
     </noscript>
   </div>
 </div>

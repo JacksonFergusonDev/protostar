@@ -1,3 +1,7 @@
+---
+description: "How Protostar reports a failed run, which exit code it returns, and why a failure never leaves a project half-configured."
+---
+
 # Error Handling Architecture
 
 Protostar handles errors predictably so that failed runs never leave your workspace broken or half-configured.

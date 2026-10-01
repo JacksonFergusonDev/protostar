@@ -1,3 +1,7 @@
+---
+description: "How tool modules turn your choices into configuration, and which one wins when two touch the same setting."
+---
+
 # The Module Architecture
 
 Protostar is built around modular plugins. When you run a command, Protostar turns your CLI flags into an ordered list of tool modules.

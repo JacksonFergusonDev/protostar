@@ -61,12 +61,7 @@
             </clipPath>
     </defs>
 
-    <rect fill="#0a0a0a" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="956" height="194.4" rx="8"/><text class="diagnostic_panel-title" fill="#e2e8f0" text-anchor="middle" x="478" y="27">Diagnostic&#160;Summary</text>
-            <g transform="translate(26,22)">
-            <circle cx="0" cy="0" r="7" fill="#ff5f57"/>
-            <circle cx="22" cy="0" r="7" fill="#febc2e"/>
-            <circle cx="44" cy="0" r="7" fill="#28c840"/>
-            </g>
+    <rect fill="#090e11" x="0.5" y="0.5" width="957" height="195.4" rx="8"/><path fill="#11171c" d="M0.5 32V8.5a8 8 0 0 1 8 -8H949a8 8 0 0 1 8 8V32Z"/><path stroke="#243138" d="M0.5 32.5H957"/><circle cx="20" cy="16.5" r="5.5" fill="#ff5f56" stroke="#e0443e"/><circle cx="38" cy="16.5" r="5.5" fill="#ffbd2e" stroke="#dea123"/><circle cx="56" cy="16.5" r="5.5" fill="#27c93f" stroke="#1aab29"/><text fill="#7a909c" x="479" y="21" text-anchor="middle" font-family="JetBrains Mono, Fira Code, monospace" font-size="11" letter-spacing="0.6">Diagnostic Summary</text><rect fill="none" stroke="#2d3c43" x="0.5" y="0.5" width="957" height="195.4" rx="8"/>
 
     <g transform="translate(9, 41)" clip-path="url(#diagnostic_panel-clip-terminal)">
 

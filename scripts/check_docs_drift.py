@@ -408,6 +408,71 @@ def check_navigation() -> list[str]:
     return problems
 
 
+def _top_level_pages(nav: list[Any]) -> set[str]:
+    """Pages listed directly in the navigation, outside any section."""
+    return {
+        value
+        for entry in nav
+        for value in (entry.values() if isinstance(entry, dict) else [entry])
+        if isinstance(value, str)
+    }
+
+
+def _front_matter(page: Path) -> str:
+    match = re.match(r"---\n(.*?)\n---\n", page.read_text(encoding="utf-8"), re.DOTALL)
+    return match.group(1) if match else ""
+
+
+def check_page_front_matter() -> list[str]:
+    """Every page has a description, and only top-level pages have a nav icon (house-style)."""
+    config = tomllib.loads((REPO_ROOT / "zensical.toml").read_text(encoding="utf-8"))
+    top_level = _top_level_pages(config["project"]["nav"])
+    problems: list[str] = []
+    icons: dict[str, str] = {}
+    for page in _hand_written_pages():
+        if DOCS_DIR not in page.parents:
+            continue
+        name = page.relative_to(DOCS_DIR).as_posix()
+        meta = _front_matter(page)
+        if not re.search(r"^description: \S", meta, re.MULTILINE):
+            problems.append(
+                f"docs/{name}: front matter needs a one-sentence description"
+            )
+        icon = re.search(r"^icon: (\S+)", meta, re.MULTILINE)
+        if name in top_level and not icon:
+            problems.append(
+                f"docs/{name}: a top-level page needs an icon in its front matter"
+            )
+        elif icon and name not in top_level:
+            problems.append(
+                f"docs/{name}: only top-level pages carry a nav icon; remove it"
+            )
+        elif icon:
+            if icon.group(1) in icons:
+                problems.append(
+                    f"docs/{name}: shares the icon {icon.group(1)} with docs/{icons[icon.group(1)]}"
+                )
+            icons[icon.group(1)] = name
+    return problems
+
+
+def check_card_grids() -> list[str]:
+    """Every card grid has two, four, or six cards (house-style)."""
+    problems: list[str] = []
+    for page in _hand_written_pages():
+        text = page.read_text(encoding="utf-8")
+        for grid in re.finditer(
+            r'<div class="grid cards" markdown>(.*?)</div>', text, re.DOTALL
+        ):
+            cards = len(re.findall(r"^- ", grid.group(1), re.MULTILINE))
+            if cards not in (2, 4, 6):
+                line = text.count("\n", 0, grid.start()) + 1
+                problems.append(
+                    f"{_rel(page)}:{line}: a card grid has {cards} cards. Use 2, 4, or 6, keeping only the ones that earn their place"
+                )
+    return problems
+
+
 def check_site_links() -> list[str]:
     """Links to the published site resolve to a page, and an anchor that exists."""
     config = tomllib.loads((REPO_ROOT / "zensical.toml").read_text(encoding="utf-8"))
@@ -665,6 +730,8 @@ CHECKS: tuple[Callable[[], list[str]], ...] = (
     check_test_names,
     check_just_recipes,
     check_navigation,
+    check_page_front_matter,
+    check_card_grids,
     check_site_links,
     check_documented_commands,
     check_walkthrough_output,

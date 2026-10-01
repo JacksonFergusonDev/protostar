@@ -26,16 +26,16 @@ cd orbital-mechanics-sim
 protostar init
 ```
 
-<div class="protostar-demo-shell">
-  <div class="panel-top">
-    <span class="terminal-dots" aria-hidden="true">
+<div class="hs-terminal">
+  <div class="hs-terminal-bar">
+    <div class="hs-terminal-dots" aria-hidden="true">
       <span class="dot dot-close"></span>
       <span class="dot dot-minimize"></span>
       <span class="dot dot-maximize"></span>
-    </span>
-    <span class="terminal-title">PROTOSTAR / INIT / INTERACTIVE</span>
+    </div>
+    <span class="hs-terminal-title">protostar init</span>
   </div>
-  <div class="protostar-asciinema" data-asciinema="../assets/demo_init_interactive.cast">
+  <div class="hs-terminal-screen" data-asciinema="../assets/demo_init_interactive.cast">
     <noscript>
       <a href="../assets/demo_init_interactive.cast">Download the Protostar terminal recording</a>
     </noscript>
@@ -61,16 +61,16 @@ protostar init --template cli
 - **Provisioned CI/CD & Documentation**: Scaffolded GitHub Actions workflows (`.github/workflows/ci.yml`, `release.yml`, `codecov.yml`, `renovate.json`) alongside a ready-to-publish Zensical documentation site (`zensical.toml`, `docs/index.md`, `.readthedocs.yaml`).
 - **Applied Universal Workspace Hygiene**: Evaluated the virtual environment via `.envrc` (direnv), locked dependencies with `uv.lock`, and safely deduplicated `.gitignore` without overwriting existing entries.
 
-<div class="protostar-demo-shell">
-  <div class="panel-top">
-    <span class="terminal-dots" aria-hidden="true">
+<div class="hs-terminal">
+  <div class="hs-terminal-bar">
+    <div class="hs-terminal-dots" aria-hidden="true">
       <span class="dot dot-close"></span>
       <span class="dot dot-minimize"></span>
       <span class="dot dot-maximize"></span>
-    </span>
-    <span class="terminal-title">PROTOSTAR / INIT / HEADLESS</span>
+    </div>
+    <span class="hs-terminal-title">protostar init --template cli</span>
   </div>
-  <div class="protostar-asciinema" data-asciinema="../assets/demo_init_headless.cast">
+  <div class="hs-terminal-screen" data-asciinema="../assets/demo_init_headless.cast">
     <noscript>
       <a href="../assets/demo_init_headless.cast">Download the Protostar terminal recording</a>
     </noscript>

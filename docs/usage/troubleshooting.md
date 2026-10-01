@@ -1,3 +1,7 @@
+---
+description: "Fixes for missing programs, editor setup, and the other problems people run into most."
+---
+
 # Troubleshooting & FAQ
 
 This guide provides remediation steps for common operational errors, environment constraints, and editor integrations when using Protostar.

@@ -1,3 +1,7 @@
+---
+description: "How Protostar's tests stay isolated from your machine, and the rules a contributor's tests follow."
+---
+
 # Testing Architecture & Philosophy
 
 Protostar enforces a strict separation between state definition (the `EnvironmentManifest`) and state execution (the `SystemExecutor`). This decoupling allows the test suite to validate complex environment configurations rapidly without incurring the I/O penalty of actual disk writes or network requests.
