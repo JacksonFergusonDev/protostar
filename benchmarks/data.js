@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790874409931,
+  "lastUpdate": 1790880611398,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20201,6 +20201,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1203.87,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "6b01615fbc752f83f6a009b9fea6c0c791eff9af",
+          "message": "test(ci): wait for TUI outcomes instead of runner timing\n\nWait for preview and button states after asynchronous message\npropagation. Exercise the affected tests with immediate CPU-idle\nreporting, which reproduces the cancellation race.\n\nUse keyboard controls for the trust gate and replace the discovery\nwall-clock assertion with a remote-acquisition guard.",
+          "timestamp": "2026-10-01T11:46:26-07:00",
+          "tree_id": "c46b4789fe201df1fa3e4504ee268b3739087103",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/6b01615fbc752f83f6a009b9fea6c0c791eff9af"
+        },
+        "date": 1790880610121,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 227.53,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 981.88,
             "unit": "ms"
           }
         ]
