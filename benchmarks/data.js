@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790887378941,
+  "lastUpdate": 1790888042150,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20371,6 +20371,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 815.32,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "af326088b8e0580461635344708b23c5041c630e",
+          "message": "test(tui): synchronize UI tests without CPU-idle guesses\n\nThe Windows failure on b03ec06 checked scrolling before its deferred\nupdate landed. An audit with immediate CPU-idle reporting exposed 16\nmore failures across template loading, previews, and review decisions.\n\nShare a pilot pause that drains cascading messages and scheduled\nrendering and animations. Exercise immediate idleness in all editor,\nreview, conflict, configuration, and trust-screen tests so incidental\nsleep cannot hide missing synchronization. Leave background workers\nunder each test's control to preserve responsiveness checks.\n\nBound worker-settling waits instead of silently stopping after ten\npasses. Release blocked template acquisitions on test failure, and\nnever let a five-second delay silently complete the simulated fetch.\n\nValidation: 176 UI and trust tests passed, including 14 snapshots.",
+          "timestamp": "2026-10-01T13:50:39-07:00",
+          "tree_id": "5d5a8f0a458501d647f244d7835c3de83669334c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/af326088b8e0580461635344708b23c5041c630e"
+        },
+        "date": 1790888040840,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 216.26,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 952.98,
             "unit": "ms"
           }
         ]
