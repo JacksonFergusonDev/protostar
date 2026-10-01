@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790896186896,
+  "lastUpdate": 1790896217125,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20439,6 +20439,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1193.05,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a59049041f70eb4f2f10fe2a3bb8b05f43931dc3",
+          "message": "test(toml): catch the mutants that survived in toml_ast (#407)\n\n* test(toml): catch the mutants that survived in toml_ast\n\nThe first mutation run left 125 survivors in toml_ast. Real gaps:\n\n- aggregate_toml_document had no direct test: a later module overriding\n  an earlier one at depth, a template overriding every module, merging\n  past a nested table, and the blank line that keeps a contribution's\n  own keys apart from one it repeats.\n- reconcile_toml's missing-document branch (a whole-file conflict, kept\n  or settled) and a declined proposal for a missing document, which must\n  still report what was settled.\n- No proposals by default, super tables, overwrite keeping ownership of\n  values it stops declaring, the invalid-document hint, and a fallen-back\n  layout reporting why.\n- Line endings: no final newline, CRLF, and the last line kept exactly.\n- A key added under several keys stays above the closing comment, and a\n  table added under a dotted root key stays inline.\n- Flat names: a new name follows the document's spelling of its own\n  namespace, else the desired one, and dotted members keep their dots.\n\nThe rest are equivalent: casts, MISSING-or-None defaults where TOML has\nno None, the unchanged-document shortcut (tomlkit round-trips it), and\nthe Ambiguous TOML producers branch, which no producer pair can reach\nwhile producers are only modules and templates.\n\n* test(toml): cover spread-out tables, inline spelling, and flat-names edges\n\nThe follow-up mutation run left eight real survivors: a table the\ndesired document spreads over interleaved headers or dotted keys\n(OutOfOrderTableProxy) was never placed, an inline table under a dotted\nkey kept its spelling only by coincidence, a deleted document's baseline\nspelling and a new name outside every namespace were unchecked, and no\nflat-names table sat under a missing parent.",
+          "timestamp": "2026-10-01T16:07:35-07:00",
+          "tree_id": "8d2b4656abe860e033169d6dae37a58f7926bc77",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a59049041f70eb4f2f10fe2a3bb8b05f43931dc3"
+        },
+        "date": 1790896215233,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 215.02,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 938.19,
             "unit": "ms"
           }
         ]
