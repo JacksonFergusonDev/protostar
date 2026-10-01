@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790880611398,
+  "lastUpdate": 1790882621274,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20235,6 +20235,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 981.88,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "106581a2c7046f9c37926fb7abc2c3ef88528574",
+          "message": "ci: add manually triggered mutation testing (#401)\n\n* ci: add a manually triggered mutation testing workflow\n\nLine coverage shows the suite runs the code, not that it would notice a\nbug. Mutation testing makes small deliberate bugs and reruns the suite\nagainst each, so the share it catches measures the tests themselves.\n\nA full run takes hours, so it never runs on a commit: workflow_dispatch\nonly, one parallel job per module (journal, fs_transaction, merge,\ntext_merge and the three format engines), each reported in the run\nsummary and uploaded as an artifact. `just mutate <module>` runs one\nmodule locally with two workers by default.\n\nmutmut sits in its own dependency group so the normal install and CI\njobs do not pull it in. The report script parses mutmut's result files\nwith the standard library alone, so the combine job needs no install.\nmypy and ruff skip the generated mutants/ copy.\n\ndebug is on for now to surface why mutmut's clean-tests step fails to\nreselect some parametrized tests; remove it once that is understood.\n\n* ci(mutation): run on pushes to this branch while it is being debugged\n\nGitHub cannot dispatch a workflow that is not on the default branch yet.\nBoth the trigger and the module fallback are temporary.\n\n* test(jsonc): give the invalid-renovate cases stable IDs\n\nids=str on bytes makes pytest escape the backslash in b'\\xff' again on\nevery collection in the same process: the ID grows from two backslashes\nto four. mutmut collects repeatedly in one process, so it could never\nreselect that test and aborted before mutating anything. It was the only\nunstable ID in the suite.\n\n* ci(mutation): find result files wherever the download puts them\n\nOne matched artifact is extracted without its own folder, so the combine\nglob matched nothing. Also drops the temporary debug flag now that the\nunstable test ID behind the clean-tests failure is fixed.\n\n* ci(mutation): rename mutmut's deprecated config key and run every module\n\nsource_paths replaces paths_to_mutate, which mutmut now warns about. The\ntemporary push trigger now runs all seven modules, to queue a full run.\n\n* ci(mutation): report exactly what each surviving mutant changes\n\nA survivor's name does not say what to test. The report now lists the\nfunctions with the most survivors in the run summary, and each module's\nartifact carries survivors.md: every survivor's change as a diff, grouped\nby function and ordered by how many it has. Artifacts are kept 90 days;\nthe runner's disk is gone when the job ends.\n\n* ci(mutation): cap per-process memory so a runaway mutant cannot kill the runner\n\ntext_merge died the same way twice, about 19 minutes in, with the runner\nreporting a shutdown signal. mutmut's time limit does not bound memory, so\na mutant that makes a diff loop allocate without end can take the whole\nrunner down. A virtual memory cap turns that into a MemoryError the suite\ncatches. The temporary push trigger runs only text_merge for now; the\nother six modules finished in the previous run.\n\n* ci(mutation): drop the temporary push trigger before merging\n\nThe push trigger and the `|| 'text_merge'` fallback existed only because\nGitHub cannot dispatch a workflow that is not yet on the default branch.\nOnce merged, runs are manual through workflow_dispatch, which always\nsupplies `modules` (default `all`).",
+          "timestamp": "2026-10-01T12:21:08-07:00",
+          "tree_id": "ccbd0e15656db57e7f987b3133dc566af24cf9b6",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/106581a2c7046f9c37926fb7abc2c3ef88528574"
+        },
+        "date": 1790882619462,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 199.51,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 904.86,
             "unit": "ms"
           }
         ]
