@@ -316,7 +316,7 @@ To check a template in its own repository's CI, add a step such as:
 
 ```yaml
 - uses: actions/checkout@v7
-- uses: astral-sh/setup-uv@v10
+- uses: astral-sh/setup-uv@v10.2.0
 - run: uvx protostar check-template --strict --output-format github
 ```
 

@@ -137,30 +137,32 @@ The error names the variable and the [gitleaks](https://github.com/gitleaks/gitl
 
 Protostar templates are pure TOML files validated against a JSON Schema. Configuring your editor provides instant autocompletion, hover tooltips, and real-time schema validation.
 
+Export the schema from the Protostar you use, and keep it beside your template:
+
+```bash
+protostar export-schema --json > protostar-template.schema.json
+```
+
+Export it again after upgrading Protostar, so the schema matches the template format that release reads.
+
 ### VS Code & Cursor
 
 1. Install the **Even Better TOML** extension (`tamasfe.even-better-toml`).
-1. Add the schema modeline at the top of your custom `protostar.toml` file:
+1. Add the schema modeline at the top of your `protostar.toml`, pointing at the exported file:
 
 ```toml
-#:schema https://raw.githubusercontent.com/jacksonfergusondev/protostar/main/schemas/template.schema.json
+#:schema ./protostar-template.schema.json
 
 name = "my-custom-template"
 dependencies = ["fastapi", "uvicorn"]
 ruff = true
 ```
 
-Alternatively, export the schema locally for offline validation:
-
-```bash
-protostar export-schema --json > protostar-template.schema.json
-```
-
 ### JetBrains (PyCharm / IntelliJ)
 
 1. Open **Settings / Preferences** $\to$ **Languages & Frameworks** $\to$ **Schemas and DTDs** $\to$ **JSON Schema Mappings**.
 1. Add a new mapping named `Protostar Template`.
-1. Set the schema URL to `https://raw.githubusercontent.com/jacksonfergusondev/protostar/main/schemas/template.schema.json`.
+1. Set the schema file to the exported `protostar-template.schema.json`.
 1. Add the file pattern `*protostar*.toml`.
 
 ## Execution Interruptions & Rollback
