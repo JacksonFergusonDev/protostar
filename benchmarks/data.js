@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790896224568,
+  "lastUpdate": 1790896334980,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20507,6 +20507,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 779.63,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "46d3bc21ffe1bc1d095b989b8ae8d784a9b61ba4",
+          "message": "test(yaml): catch the mutants that survived in yaml_ast (#409)\n\n* test(yaml): catch the mutants that survived in yaml_ast\n\nThe first mutation run left 178 survivors in yaml_ast. Real gaps:\n\n- Loader limits at their exact boundaries (depth 100, node count, byte\n  size), the YAML 1.2 directive being accepted, and the rejection's\n  message and hint. Floats and anchored booleans keep their types.\n- detect_style for one-space mappings, a sibling at the same indent, a\n  key after a dash, an indented comment, and the first sequence winning.\n- Keyed records: every validation message, empty and non-string fields,\n  a strictly checked owned baseline, and where a duplicate is held.\n- Guard conflicts: open, settled either way (owning the update),\n  ignored under overwrite, and settled one by one; holds on undeclared\n  paths.\n- Shared structure: retracting an aliased value, replacing a list that\n  holds an aliased member, adding beside a merge key, and an edit beside\n  an aliased sibling staying safe.\n- What a deleted document and a declined proposal report, preserved\n  edits beside an applied change, no proposals by default, key placement\n  before the next desired sibling, overwrite retracting only for a\n  complete document, and the document's ending.\n\ndetect_style's fallback for a sequence whose content sat less than two\ncolumns past its dash could never run: the dash and at least one space\nalways put it two columns on, and the default is exactly two. It is\ndeleted rather than tested.\n\n* test(yaml): clear the decode cache between tests and cover shared anchors\n\nThe follow-up mutation run left the loader-limit, float, and anchored-\nboolean mutants alive although these tests catch them in a fresh\nprocess. _decode_yaml_baseline is lru_cached, and mutmut forks each\nmutant from a process that already decoded the same texts, so the\nmutated loader never ran. The cache also let a monkeypatched limit be\nskipped by an earlier decode of the same text in one test session. An\nautouse fixture now clears it before every test in this module.\n\nAlso covered: an anchor used only through a << merge key, a conflict on\nan aliased mapping located at the mapping, retracting a value that holds\nan aliased node and retracting beside a root merge key, a deleted\ndocument's preserved deletion, keyed-record hints, and a guard conflict\nthree keys deep.\n\n* test(yaml): hold the depth limit for nested lists too\n\nThe second mutation run left a sequence child's depth unchecked: only\nnested mappings tested the limit at exactly 100 levels.",
+          "timestamp": "2026-10-01T16:08:50-07:00",
+          "tree_id": "b11ef2127b2ffb5766c54a4dd8bfb1f200cf447b",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/46d3bc21ffe1bc1d095b989b8ae8d784a9b61ba4"
+        },
+        "date": 1790896334054,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 276.94,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1261.08,
             "unit": "ms"
           }
         ]
