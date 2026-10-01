@@ -96,9 +96,7 @@ We utilize `just` to standardize test execution, abstracting the underlying `uv`
 
 ### Manual Sandbox Scenarios (macOS)
 
-Each recipe builds the current Protostar source in a temporary virtual environment,
-uses a separate HOME, and opens a shell in a disposable Git repository. Exit the
-shell to remove the entire sandbox.
+Each recipe builds the current Protostar source in a temporary virtual environment, uses a separate HOME, and opens a shell in a disposable Git repository. Exit the shell to remove the entire sandbox.
 
 ```bash
 just sandbox                # Empty workspace
@@ -107,27 +105,11 @@ just sandbox-sync           # Tracked project with a pending local template upda
 just sandbox-sync-conflict  # Tracked project with a conflicting template update
 ```
 
-In `sandbox-existing`, try `protostar init --dry-run` to inspect how Protostar
-handles user-owned `pyproject.toml`, source files, and a justfile. In
-`sandbox-sync`, try `protostar status`, `protostar diff`, and `protostar sync` in
-that order. The scenario starts with a committed Protostar initialization and a
-committed local edit. Its template then updates managed TOML in `pyproject.toml`
-and adds a setup document; the project's local notes should remain intact.
-The template and its trusted alias exist only inside the sandbox.
+In `sandbox-existing`, try `protostar init --dry-run` to inspect how Protostar handles user-owned `pyproject.toml`, source files, and a justfile. In `sandbox-sync`, try `protostar status`, `protostar diff`, and `protostar sync` in that order. The scenario starts with a committed Protostar initialization and a committed local edit. Its template then updates managed TOML in `pyproject.toml` and adds a setup document; the project's local notes should remain intact. The template and its trusted alias exist only inside the sandbox.
 
-Use `just sandbox-sync-conflict` to practice the interactive sync screen. The
-project's committed coverage threshold differs from both its recorded baseline
-and the updated template. The team also edited a setup instruction that the
-template changed on the same line. `protostar sync` opens the TUI for those two
-decisions, while the template's new setup document and updated coverage reporting
-setting can apply safely. A project note outside the managed instructions stays
-in place.
-Run bare `protostar sync` inside the sandbox shell; `--json`, `--dry-run`,
-`--check`, and `--resolve` skip the TUI.
+Use `just sandbox-sync-conflict` to practice the interactive sync screen. The project's committed coverage threshold differs from both its recorded baseline and the updated template. The team also edited a setup instruction that the template changed on the same line. `protostar sync` opens the TUI for those two decisions, while the template's new setup document and updated coverage reporting setting can apply safely. A project note outside the managed instructions stays in place. Run bare `protostar sync` inside the sandbox shell; `--json`, `--dry-run`, `--check`, and `--resolve` skip the TUI.
 
-Pass Protostar arguments to run one command without entering a shell, such as
-`just sandbox-sync status`. Each recipe invocation creates a new sandbox, so use
-the interactive shell when testing a sequence of commands against one project.
+Pass Protostar arguments to run one command without entering a shell, such as `just sandbox-sync status`. Each recipe invocation creates a new sandbox, so use the interactive shell when testing a sequence of commands against one project.
 
 === "Pre-Push CI Emulation"
     Runs the exact pipeline executed by GitHub Actions, sequentially triggering `lint`, `typecheck`, and `test-cov`. Run this before opening a pull request.
@@ -228,22 +210,8 @@ The `justfile` includes predefined recipes leveraging [hyperfine](https://github
 
 ## TUI source presentation
 
-All TUI code and structured configuration use `src/protostar/cli/tui/code.py`.
-Use `source_text(CodeSource(...))` for a source pane, `diff_text` for two sources,
-and `edit_text` for a prepared edit. These renderers share Protostar's palette;
-screens must not select independent syntax themes. Pass a Pygments language alias
-when the displayed serialization differs from the filename (for example, a TOML
-conflict value displayed as JSON). Unknown languages remain plain text.
-The Pygments adapter and token theme in `syntax.py` load on the first source
-render; keep that import lazy so opening the recipe editor loads no Pygments.
+All TUI code and structured configuration use `src/protostar/cli/tui/code.py`. Use `source_text(CodeSource(...))` for a source pane, `diff_text` for two sources, and `edit_text` for a prepared edit. These renderers share Protostar's palette; screens must not select independent syntax themes. Pass a Pygments language alias when the displayed serialization differs from the filename (for example, a TOML conflict value displayed as JSON). Unknown languages remain plain text. The Pygments adapter and token theme in `syntax.py` load on the first source render; keep that import lazy so opening the recipe editor loads no Pygments.
 
-Highlighting is presentation-only: it never reads project files, changes merge
-policy, or modifies prepared bytes. Source display normalizes CRLF and CR to LF,
-preserves indentation and literal markup-like text, and highlights complete
-sources before selecting diff hunks. Added and removed lines retain syntax colors;
-their markers and subtle backgrounds communicate the change.
+Highlighting is presentation-only: it never reads project files, changes merge policy, or modifies prepared bytes. Source display normalizes CRLF and CR to LF, preserves indentation and literal markup-like text, and highlights complete sources before selecting diff hunks. Added and removed lines retain syntax colors; their markers and subtle backgrounds communicate the change.
 
-Run `uv run pytest tests/test_tui_code.py tests/test_conflict_tui.py tests/test_tui.py`
-when changing these renderers. Review the Textual snapshots as well as the text
-assertions, including the narrow conflict screen. Use `--snapshot-update` only
-when accepting an intentional visual change.
+Run `uv run pytest tests/test_tui_code.py tests/test_conflict_tui.py tests/test_tui.py` when changing these renderers. Review the Textual snapshots as well as the text assertions, including the narrow conflict screen. Use `--snapshot-update` only when accepting an intentional visual change.

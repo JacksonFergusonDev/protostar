@@ -52,8 +52,7 @@ cd hyperdrive-cli
 protostar init --template cli
 ```
 
-**What just happened?**
-In a fraction of a second, Protostar:
+**What just happened?** In a fraction of a second, Protostar:
 
 - **Scaffolded Application & Test Suites**: Created a modular package architecture with an executable Typer and Rich CLI application (`src/hyperdrive_cli/cli.py`, `__init__.py`) alongside a unit test suite (`tests/test_cli.py`).
 - **Resolved Dependencies & Registered Entrypoints**: Injected runtime dependencies (`rich`, `typer`), wired the console script entrypoint in `pyproject.toml` (`[project.scripts]`), and populated development dependency groups.

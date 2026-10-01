@@ -198,6 +198,7 @@ Use these commands when targeted verification or debugging is necessary:
 1. **Dependency Management:**
    - **Do NOT manually edit dependencies in `pyproject.toml`:** Always use `uv add <package>` (or `uv add --dev <package>`) to add, update, or remove workspace dependencies so that `uv.lock` remains synchronized.
 1. **Markdown Standards (`rumdl`):**
+   - **Never hard-wrap Markdown prose.** Write each paragraph and each list item's prose on one physical line, regardless of length; use editor soft wrapping for readability. Preserve structural newlines in code blocks, tables, HTML, front matter, directives, and nested lists, and keep intentional Markdown hard line breaks only where the rendered content requires them. This applies to all Markdown files, including documentation, agent instructions, templates, and generated Markdown.
    - ATX headings only (`# Heading`, never underlined).
    - Dash markers (`-`) for unordered lists.
    - `1.` numbering for all ordered list items.

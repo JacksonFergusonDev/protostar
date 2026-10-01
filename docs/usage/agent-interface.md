@@ -112,60 +112,31 @@ The resulting payload exposes all directories, injected file contents, dependenc
 
 #### Collision Handling & Recovery
 
-If the target workspace already contains files (such as an existing `pyproject.toml` or `README.md`), Protostar will not prompt interactively in JSON mode. Instead, it exits with the `WorkspaceCollisionError` payload shown under
-[Protocol States](#protocol-states). The agent can parse `error.paths` and choose
-how to proceed:
+If the target workspace already contains files (such as an existing `pyproject.toml` or `README.md`), Protostar will not prompt interactively in JSON mode. Instead, it exits with the `WorkspaceCollisionError` payload shown under [Protocol States](#protocol-states). The agent can parse `error.paths` and choose how to proceed:
 
-- Pass `--force-merge` to reconcile previously managed configuration without
-  adopting existing content, and append missing ignore rules.
+- Pass `--force-merge` to reconcile previously managed configuration without adopting existing content, and append missing ignore rules.
 - Pass `--force-replace` to overwrite existing configuration files.
 
 #### Settling Conflicts and Proposals
 
-A headless run keeps your version for every open conflict and applies every
-proposal. To choose otherwise, take the ids from the dry-run's `review` (or each
-entry's `conflicts` and `proposals`) and pass one `--resolve SELECTOR=CHOICE` per
-decision, as `sync --resolve` takes them:
+A headless run keeps your version for every open conflict and applies every proposal. To choose otherwise, take the ids from the dry-run's `review` (or each entry's `conflicts` and `proposals`) and pass one `--resolve SELECTOR=CHOICE` per decision, as `sync --resolve` takes them:
 
 ```bash
 protostar init --template astro --dry-run --json
 protostar init --template astro --force-merge --resolve 89cd01278762=desired --json
 ```
 
-`desired` takes the update, `local` keeps your version (or keeps a proposal out),
-and `both` keeps both sides of a text hunk. A file path settles every conflict and
-proposal in that file. Add `--dry-run` to check the outcome first: the settled
-conflicts move to `review.resolved`, and a proposal kept out carries its
-`resolution`. `--resolve` chooses no collision strategy, so a project with
-existing files still needs `--force-merge`. A selector that names no decision
-returns an `UnmatchedResolutionError` payload listing it in
-`unmatched_resolutions`; ids cover content, so plan again after the files change.
+`desired` takes the update, `local` keeps your version (or keeps a proposal out), and `both` keeps both sides of a text hunk. A file path settles every conflict and proposal in that file. Add `--dry-run` to check the outcome first: the settled conflicts move to `review.resolved`, and a proposal kept out carries its `resolution`. `--resolve` chooses no collision strategy, so a project with existing files still needs `--force-merge`. A selector that names no decision returns an `UnmatchedResolutionError` payload listing it in `unmatched_resolutions`; ids cover content, so plan again after the files change.
 
 #### Template Variables
 
-A template's custom variables are supplied with `--var NAME=VALUE`, once per
-variable. JSON mode never prompts, so a missing value returns a
-`MissingTemplateVariablesError` payload whose `missing_variables` array names every
-variable still needed; retry with a `--var` for each. Values are saved in the
-project recipe and must not be secrets: a credential-shaped value returns a
-`SecretDetectedError` whose `findings` name the variable and matching rule. If the
-value isn't a secret, retry with `--allow-secret NAME` for that variable.
+A template's custom variables are supplied with `--var NAME=VALUE`, once per variable. JSON mode never prompts, so a missing value returns a `MissingTemplateVariablesError` payload whose `missing_variables` array names every variable still needed; retry with a `--var` for each. Values are saved in the project recipe and must not be secrets: a credential-shaped value returns a `SecretDetectedError` whose `findings` name the variable and matching rule. If the value isn't a secret, retry with `--allow-secret NAME` for that variable.
 
 #### Missing Tools
 
-Only `uv` and `git` block a run. Without either, `init` and `sync` exit with
-code `69` before planning, and the `MissingDependencyError` payload names them
-in `missing_executables`, with `install_commands` when a package manager was
-found. A binary that only a selected tool runs, such as `direnv` or `just`,
-never fails a run: the tool's files are still written, the steps that run it
-are skipped, and the success payload's `result.missing_tools` lists each one
-with its tool. Top-level `install_commands` holds the commands that install
-them, when a package manager was found; run them in order.
+Only `uv` and `git` block a run. Without either, `init` and `sync` exit with code `69` before planning, and the `MissingDependencyError` payload names them in `missing_executables`, with `install_commands` when a package manager was found. A binary that only a selected tool runs, such as `direnv` or `just`, never fails a run: the tool's files are still written, the steps that run it are skipped, and the success payload's `result.missing_tools` lists each one with its tool. Top-level `install_commands` holds the commands that install them, when a package manager was found; run them in order.
 
-A template's options are chosen with `--option NAME=VALUE`, on `init` and `sync`.
-Every option has a default, so none is ever missing. A value the option doesn't
-offer returns an `InvalidOptionValueError` payload whose `option` and `values` name
-the option and every value it offers.
+A template's options are chosen with `--option NAME=VALUE`, on `init` and `sync`. Every option has a default, so none is ever missing. A value the option doesn't offer returns an `InvalidOptionValueError` payload whose `option` and `values` name the option and every value it offers.
 
 ### 3. Headless Execution
 
@@ -175,11 +146,9 @@ Once the plan is verified, the agent executes initialization:
 protostar init --template astro --force-merge --json
 ```
 
-Add a `--resolve` for each decision the dry-run showed that the agent settles
-differently from the default.
+Add a `--resolve` for each decision the dry-run showed that the agent settles differently from the default.
 
-Upon completion, the agent receives deterministic `created_paths` and `mutated_paths`
-lists. The `touched_paths` list is their derived union.
+Upon completion, the agent receives deterministic `created_paths` and `mutated_paths` lists. The `touched_paths` list is their derived union.
 
 If execution is interrupted or fails, Protostar automatically rolls back all tracked workspace changes. See [Automatic Rollback](./rollback.md) for the full guarantee model.
 
@@ -209,17 +178,7 @@ The schema checks structure only. `protostar check-template <file> --json` also 
 
 ## Project review envelopes
 
-`protostar status --json` and `protostar diff --json` return the same deterministic
-review envelope with `status: "reviewed"`, `pending`, `template`, `review`, and
-accepted `diffs`. For a repository template, `template` holds the applied `ref` and
-`revision` (commit), the ref's `kind` (`tag`, `branch`, or `commit`, or `null` when
-the repository no longer has it), the `newer` release when one exists, the commit a
-`moved` tag or branch names now, and whether the repository was `reachable`. It is
-`null` for built-in, local, and plain-URL templates. A newer release is not pending
-work: move to it with `sync --to <ref>`.
-Discover its JSON Schema through `protostar help status --json` in
-`capabilities.review_schema`. Every property in it carries a `description`, and
-the tables below are generated from those.
+`protostar status --json` and `protostar diff --json` return the same deterministic review envelope with `status: "reviewed"`, `pending`, `template`, `review`, and accepted `diffs`. For a repository template, `template` holds the applied `ref` and `revision` (commit), the ref's `kind` (`tag`, `branch`, or `commit`, or `null` when the repository no longer has it), the `newer` release when one exists, the commit a `moved` tag or branch names now, and whether the repository was `reachable`. It is `null` for built-in, local, and plain-URL templates. A newer release is not pending work: move to it with `sync --to <ref>`. Discover its JSON Schema through `protostar help status --json` in `capabilities.review_schema`. Every property in it carries a `description`, and the tables below are generated from those.
 
 --8<-- "table_schema_review_envelope.md"
 
@@ -231,28 +190,15 @@ the tables below are generated from those.
 
 --8<-- "table_schema_review.md"
 
-Both commands exit `0` for a valid review, including conflicts. Domain failures use
-the existing error envelope and domain exit code. Resolver output is explicitly
-unknown; review never runs package managers. Diffs contain project content and
-are not a secret-redaction system.
+Both commands exit `0` for a valid review, including conflicts. Domain failures use the existing error envelope and domain exit code. Resolver output is explicitly unknown; review never runs package managers. Diffs contain project content and are not a secret-redaction system.
 
 ## Lifecycle review and check examples
 
-These examples are generated by the shared preparation path. Safe file creation
-appears in `diffs`; conflicting local content appears separately in
-`review.conflicts`. Resolver output is never simulated.
+These examples are generated by the shared preparation path. Safe file creation appears in `diffs`; conflicting local content appears separately in `review.conflicts`. Resolver output is never simulated.
 
-Each conflict carries an `id`, the `choices` that can settle it, and its `sides`
-(`base`, `local`, and `desired`, each `null` when absent). An agent settles it
-with `sync --resolve <id>=<choice>`, which moves it to `review.resolved` with its
-`resolution`. An `id` covers the conflict's content, so a resolution for content
-that changed since the review fails with `UnmatchedResolutionError` instead of
-applying elsewhere; a choice the conflict does not offer fails with
-`UnsupportedResolutionError` and lists the ones it does. See
-[resolve conflicts](lifecycle.md#resolve-conflicts).
+Each conflict carries an `id`, the `choices` that can settle it, and its `sides` (`base`, `local`, and `desired`, each `null` when absent). An agent settles it with `sync --resolve <id>=<choice>`, which moves it to `review.resolved` with its `resolution`. An `id` covers the conflict's content, so a resolution for content that changed since the review fails with `UnmatchedResolutionError` instead of applying elsewhere; a choice the conflict does not offer fails with `UnsupportedResolutionError` and lists the ones it does. See [resolve conflicts](lifecycle.md#resolve-conflicts).
 
-Conflicts, resolved conflicts, proposals, and preserved edits are all decisions
-with one shape, and each list adds at most one key:
+Conflicts, resolved conflicts, proposals, and preserved edits are all decisions with one shape, and each list adds at most one key:
 
 --8<-- "table_schema_decision.md"
 
@@ -260,36 +206,21 @@ A decision's `reason` is one of:
 
 --8<-- "table_schema_reasons.md"
 
-An edit whose `after` is `null` removes the file. `review.migrations` lists what
-each template [migration](authoring-templates.md#migrations) does to one file:
-its `version`, `path`, the rename `target` (`null` for a removal), and the
-`outcome`: `moved`, `target-exists`, `removed`, `retired` (kept with local edits
-as a `retracted` conflict), `forgotten` (already deleted), or `not-owned`.
+An edit whose `after` is `null` removes the file. `review.migrations` lists what each template [migration](authoring-templates.md#migrations) does to one file: its `version`, `path`, the rename `target` (`null` for a removal), and the `outcome`: `moved`, `target-exists`, `removed`, `retired` (kept with local edits as a `retracted` conflict), `forgotten` (already deleted), or `not-owned`.
 
-Two more kinds of decision share that shape and the same `--resolve`. Entries in
-`review.proposals` are changes into files Protostar never owned; each applies
-unless resolved with `local`, and its `resolution` is `null` until one is chosen.
-Entries in `review.preserved` are your kept edits and deletions, each with an
-`id`, its sides, and `deleted`; resolving one with `desired` takes Protostar's
-version there. A file selector names conflicts and proposals, never a preserved
-edit.
+Two more kinds of decision share that shape and the same `--resolve`. Entries in `review.proposals` are changes into files Protostar never owned; each applies unless resolved with `local`, and its `resolution` is `null` until one is chosen. Entries in `review.preserved` are your kept edits and deletions, each with an `id`, its sides, and `deleted`; resolving one with `desired` takes Protostar's version there. A file selector names conflicts and proposals, never a preserved edit.
 
 ```json
 --8<-- "agent_payload_reviewed.json"
 ```
 
-`sync --check --json` uses the same review and adds `check_passed`. This pending
-example exits `1` without applying anything:
+`sync --check --json` uses the same review and adds `check_passed`. This pending example exits `1` without applying anything:
 
 ```json
 --8<-- "agent_payload_check.json"
 ```
 
-`sync --json` returns `status: "success"` or `"partial"`, `template`, `review`, and
-`result`.
-Partial application exits `1` after committing safe updates; fatal failures use
-the error envelope with rollback context when available. Discover the application
-schema through `protostar help sync --json` in `capabilities.application_schema`.
+`sync --json` returns `status: "success"` or `"partial"`, `template`, `review`, and `result`. Partial application exits `1` after committing safe updates; fatal failures use the error envelope with rollback context when available. Discover the application schema through `protostar help sync --json` in `capabilities.application_schema`.
 
 --8<-- "table_schema_application_envelope.md"
 
@@ -297,6 +228,4 @@ schema through `protostar help sync --json` in `capabilities.application_schema`
 
 --8<-- "table_schema_result.md"
 
-See [Automating Updates](automating-updates.md#use-checks-in-ci) for check outcomes
-and exit codes, and the [lifecycle walkthrough](lifecycle.md) for recipe edits,
-enrollment, and security and rollback boundaries.
+See [Automating Updates](automating-updates.md#use-checks-in-ci) for check outcomes and exit codes, and the [lifecycle walkthrough](lifecycle.md) for recipe edits, enrollment, and security and rollback boundaries.

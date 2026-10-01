@@ -30,10 +30,7 @@ protostar init [OPTIONS] [DYNAMIC_VARS...]
 
 --8<-- "table_cli_init_core.md"
 
-`--one-shot` scaffolds without writing `[tool.protostar]` or `protostar.lock`.
-It still generates `uv.lock` when dependencies are resolved. It requires a
-project that is not already tracked by Protostar. See
-[one time scaffolding](init.md#one-time-scaffolding).
+`--one-shot` scaffolds without writing `[tool.protostar]` or `protostar.lock`. It still generates `uv.lock` when dependencies are resolved. It requires a project that is not already tracked by Protostar. See [one time scaffolding](init.md#one-time-scaffolding).
 
 #### Tooling Tri-State Flags
 
@@ -92,32 +89,13 @@ protostar diff --json
 
 ![Diff command help](../assets/terminals/cli_diff_help.svg)
 
-`status` shows the files with pending work as a tree labelled like `init`'s
-preview. Below it, each conflict, proposal, and kept edit says what happened and
-gives the `sync --resolve` command for each choice, followed by the packages uv
-will add and any git hook changes. `diff` also displays unified diffs of accepted
-direct edits after the tree. Conflicting content is preserved; conflict details give
-the file, semantic keys or region identity, and reason. Resolver output is unknown
-until application; no predicted dependency or lockfile diff is shown.
+`status` shows the files with pending work as a tree labelled like `init`'s preview. Below it, each conflict, proposal, and kept edit says what happened and gives the `sync --resolve` command for each choice, followed by the packages uv will add and any git hook changes. `diff` also displays unified diffs of accepted direct edits after the tree. Conflicting content is preserved; conflict details give the file, semantic keys or region identity, and reason. Resolver output is unknown until application; no predicted dependency or lockfile diff is shown.
 
-Both commands support `--json`, `--verbose`, and help. They never prompt, execute
-subprocesses, write workspace files, or populate disk caches. Remote template
-acquisition may use the network and reads archive data entirely in memory.
-They say when setup that only `init` does, like `git init`, is skipped. For a
-repository template, the first line names the applied ref and commit, and any newer
-release or moved ref the repository offers; see
-[template versions](templates.md#template-versions).
+Both commands support `--json`, `--verbose`, and help. They never prompt, execute subprocesses, write workspace files, or populate disk caches. Remote template acquisition may use the network and reads archive data entirely in memory. They say when setup that only `init` does, like `git init`, is skipped. For a repository template, the first line names the applied ref and commit, and any newer release or moved ref the repository offers; see [template versions](templates.md#template-versions).
 
-The explicit current directory must contain `[tool.protostar]` in `pyproject.toml`
-and `protostar.lock`. For a Stage 1 project, rerun the original explicit
-selection with `init --force-merge` to enroll it. Edit the recipe deliberately to
-change tool selections; global defaults are never consulted during review.
-Template variable values come from `[tool.protostar.variables]`; these commands never prompt.
-Recorded template identity changes are rejected.
+The explicit current directory must contain `[tool.protostar]` in `pyproject.toml` and `protostar.lock`. For a Stage 1 project, rerun the original explicit selection with `init --force-merge` to enroll it. Edit the recipe deliberately to change tool selections; global defaults are never consulted during review. Template variable values come from `[tool.protostar.variables]`; these commands never prompt. Recorded template identity changes are rejected.
 
-Valid reviews exit `0`, even with conflicts or pending work. Fatal errors use the
-existing domain-specific exit codes. These commands only inspect; `init --dry-run`
-continues to show the creation manifest rather than accepted lifecycle changes.
+Valid reviews exit `0`, even with conflicts or pending work. Fatal errors use the existing domain-specific exit codes. These commands only inspect; `init --dry-run` continues to show the creation manifest rather than accepted lifecycle changes.
 
 ### `protostar sync`
 
@@ -131,44 +109,15 @@ protostar sync --json
 
 ![Sync command help](../assets/terminals/cli_sync_help.svg)
 
-`sync` applies safe updates and advances ownership state in one transaction.
-Conflicting local content and its applied baselines are retained while safe sibling
-updates commit. Deleted tracked files stay deleted. Removing a tool, or choosing a
-template option that drops content, retracts what it added: unedited files,
-dependencies, configuration tables, and regions are removed, and edited ones are
-kept as `retracted` conflicts.
-Initialization tasks, arbitrary template tasks, and IDE probes never run. Only
-accepted dependency requests and required metadata lock refreshes invoke the
-resolver, and a missing git hook is installed; unchanged repeats write nothing and
-run no subprocesses. For a template you haven't trusted, those commands need your
-confirmation first: a screen in an interactive terminal, or `--trust` for one run;
-otherwise `sync` stops with exit code `77` before writing anything.
+`sync` applies safe updates and advances ownership state in one transaction. Conflicting local content and its applied baselines are retained while safe sibling updates commit. Deleted tracked files stay deleted. Removing a tool, or choosing a template option that drops content, retracts what it added: unedited files, dependencies, configuration tables, and regions are removed, and edited ones are kept as `retracted` conflicts. Initialization tasks, arbitrary template tasks, and IDE probes never run. Only accepted dependency requests and required metadata lock refreshes invoke the resolver, and a missing git hook is installed; unchanged repeats write nothing and run no subprocesses. For a template you haven't trusted, those commands need your confirmation first: a screen in an interactive terminal, or `--trust` for one run; otherwise `sync` stops with exit code `77` before writing anything.
 
-`--to REF` moves a repository template to a tag, branch, full commit SHA, or
-`latest` (the newest release), records the ref in the recipe, and reviews the new
-revision like any other update; it combines with `--dry-run`, `--check`, and
-`--resolve`. `--var NAME=VALUE` supplies a variable the new revision adds,
-`--allow-secret NAME` keeps a value the secret guard flags, and
-`--option NAME=VALUE` chooses a [template option](authoring-templates.md#template-options). Without `--to`, `sync`
-applies the commit `protostar.lock` records, however the ref has moved since.
+`--to REF` moves a repository template to a tag, branch, full commit SHA, or `latest` (the newest release), records the ref in the recipe, and reviews the new revision like any other update; it combines with `--dry-run`, `--check`, and `--resolve`. `--var NAME=VALUE` supplies a variable the new revision adds, `--allow-secret NAME` keeps a value the secret guard flags, and `--option NAME=VALUE` chooses a [template option](authoring-templates.md#template-options). Without `--to`, `sync` applies the commit `protostar.lock` records, however the ref has moved since.
 
-`--dry-run` presents the same accepted diffs as `diff`. `--check` is read-only and
-exits `1` for accepted work, baseline advancement, or conflicts; preserved local
-edits and deletions alone pass. The two modes are mutually exclusive.
+`--dry-run` presents the same accepted diffs as `diff`. `--check` is read-only and exits `1` for accepted work, baseline advancement, or conflicts; preserved local edits and deletions alone pass. The two modes are mutually exclusive.
 
-Application exits `0` on success and `1` after committing safe changes with retained
-conflicts. JSON application envelopes have `status: "success"` or `"partial"`, the
-captured `review`, and an actual `result` with sorted created, mutated, and touched
-paths. Inspection uses `status: "reviewed"`; check adds `check_passed`.
-Schema discovery publishes both review and application schemas.
+Application exits `0` on success and `1` after committing safe changes with retained conflicts. JSON application envelopes have `status: "success"` or `"partial"`, the captured `review`, and an actual `result` with sorted created, mutated, and touched paths. Inspection uses `status: "reviewed"`; check adds `check_passed`. Schema discovery publishes both review and application schemas.
 
-One source revision and hook registry snapshot are captured per invocation. Inputs
-are revalidated before mutation; stale inputs abort. Resolver failures, timeouts,
-interrupts, and late state-write failures roll back journaled bytes and POSIX modes.
-Fatal JSON errors report rollback context when available. Resolver `pyproject.toml`
-and `uv.lock` writes are journaled; `.venv` and global caches remain outside the
-rollback boundary. Review output contains project content, including any secrets
-rendered into files.
+One source revision and hook registry snapshot are captured per invocation. Inputs are revalidated before mutation; stale inputs abort. Resolver failures, timeouts, interrupts, and late state-write failures roll back journaled bytes and POSIX modes. Fatal JSON errors report rollback context when available. Resolver `pyproject.toml` and `uv.lock` writes are journaled; `.venv` and global caches remain outside the rollback boundary. Review output contains project content, including any secrets rendered into files.
 
 ### `protostar config`
 

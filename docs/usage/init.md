@@ -6,16 +6,7 @@ description: "Learn how to use protostar init to safely construct and manage you
 
 The `init` command is Protostar's primary command. It sets up folder structures, wires together tools, and configures dependencies in seconds.
 
-Protostar is designed to be run on Day 1 to build your repository foundation. On
-an already initialized workspace, `--force-merge` safely reconciles contributions
-that Protostar previously recorded. It can apply unchanged-local template updates
-and additive tooling, while preserving user edits, deletions, and unowned content.
-It skips the change review, so a conflict it meets keeps your version; `init`
-ends by counting those you can still settle, and `protostar sync` lets you choose
-a side.
-It does not adopt existing configuration or switch templates, and like `sync` it
-retracts content Protostar no longer produces. After tracked initialization, use the [project lifecycle](lifecycle.md) commands
-`status`, `diff`, and `sync` to review and apply the recorded recipe.
+Protostar is designed to be run on Day 1 to build your repository foundation. On an already initialized workspace, `--force-merge` safely reconciles contributions that Protostar previously recorded. It can apply unchanged-local template updates and additive tooling, while preserving user edits, deletions, and unowned content. It skips the change review, so a conflict it meets keeps your version; `init` ends by counting those you can still settle, and `protostar sync` lets you choose a side. It does not adopt existing configuration or switch templates, and like `sync` it retracts content Protostar no longer produces. After tracked initialization, use the [project lifecycle](lifecycle.md) commands `status`, `diff`, and `sync` to review and apply the recorded recipe.
 
 <div class="grid cards" markdown>
 
@@ -257,22 +248,13 @@ The following metadata fields appear in the editor, pre-filled from your global 
 
 ## Execution Progress
 
-Once planning succeeds, Protostar writes the project files and runs each subprocess
-(`git init`, `uv init`, one `uv add` per dependency group, hook installation) as a
-separate step. The running step animates in a spinner; each finished step leaves a
-permanent `✔` line, so the completed work stays on screen:
+Once planning succeeds, Protostar writes the project files and runs each subprocess (`git init`, `uv init`, one `uv add` per dependency group, hook installation) as a separate step. The running step animates in a spinner; each finished step leaves a permanent `✔` line, so the completed work stays on screen:
 
 ![Protostar Init](../assets/terminals/cli_init.svg)
 
-If a step fails or you interrupt it, that step is marked `✖`, every tracked change
-is rolled back, and the error report follows. Piped output omits the spinner but
-keeps the checklist lines; `--json` suppresses the checklist entirely.
+If a step fails or you interrupt it, that step is marked `✖`, every tracked change is rolled back, and the error report follows. Piped output omits the spinner but keeps the checklist lines; `--json` suppresses the checklist entirely.
 
-A successful run ends with what to do next: the command that runs the app, when
-the project installs one, and `protostar guide`, which shows how to test, check,
-and document the project. If a selected tool's binary is missing, the output ends
-with the one command that installs it; see
-[Tool Binaries](troubleshooting.md#tool-binaries-direnv-just).
+A successful run ends with what to do next: the command that runs the app, when the project installs one, and `protostar guide`, which shows how to test, check, and document the project. If a selected tool's binary is missing, the output ends with the one command that installs it; see [Tool Binaries](troubleshooting.md#tool-binaries-direnv-just).
 
 ## Existing Projects
 
@@ -294,32 +276,13 @@ When Protostar detects existing configuration files (like `pyproject.toml`), the
 
 Choosing either re-prepares the review with its diffs. Press __Cancel__ to exit without modifying the environment.
 
-Under __Merge__, a file Protostar can't merge into is kept as it is and marked
-`conflict`, such as an existing `justfile` it has never managed. Highlight it to
-see your version beside Protostar's and settle it under __Conflicts__: __Keep
-mine__ (`k`) leaves the file untouched and adopts it, so later updates merge into
-it three ways; __Take update__ (`u`) replaces it. __Keep both__ (`b`) is offered
-for overlapping lines, and __Leave open__ (`x`) keeps today's behavior.
+Under __Merge__, a file Protostar can't merge into is kept as it is and marked `conflict`, such as an existing `justfile` it has never managed. Highlight it to see your version beside Protostar's and settle it under __Conflicts__: __Keep mine__ (`k`) leaves the file untouched and adopts it, so later updates merge into it three ways; __Take update__ (`u`) replaces it. __Keep both__ (`b`) is offered for overlapping lines, and __Leave open__ (`x`) keeps today's behavior.
 
-Everything else Merge would change in a file you already have is listed too, as
-__Changes to your file__: each key, table, list member, or dependency it adds.
-Each applies unless you keep it out with `k`; keeping it out records Protostar's
-version without writing it, so `protostar sync` can take it later.
-__Keep all mine__ (`K`) keeps your side of every conflict and change at once,
-which adopts the project exactly as it is. The review shows the result before
-anything runs. It covers the files written before setup commands, and the
-configuration merges and dependencies after them whenever no command creates
-their files; anything later is listed after setup, and `protostar sync` settles
-it the same way (see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have)).
+Everything else Merge would change in a file you already have is listed too, as __Changes to your file__: each key, table, list member, or dependency it adds. Each applies unless you keep it out with `k`; keeping it out records Protostar's version without writing it, so `protostar sync` can take it later. __Keep all mine__ (`K`) keeps your side of every conflict and change at once, which adopts the project exactly as it is. The review shows the result before anything runs. It covers the files written before setup commands, and the configuration merges and dependencies after them whenever no command creates their files; anything later is listed after setup, and `protostar sync` settles it the same way (see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have)).
 
-Selecting __Merge__ reconciles declared TOML configuration against
-`protostar.lock`. A tracked project requires the same explicitly selected
-template source; switching templates or adding a template to tracked tooling-only
-state is unsupported.
+Selecting __Merge__ reconciles declared TOML configuration against `protostar.lock`. A tracked project requires the same explicitly selected template source; switching templates or adding a template to tracked tooling-only state is unsupported.
 
-The example below starts from a tracked ML workspace, adds representative
-astronomy dependencies, ignore rules, and data directories as foreign local
-content, then repeats the ML template with `--mypy --docker --force-merge`:
+The example below starts from a tracked ML workspace, adds representative astronomy dependencies, ignore rules, and data directories as foreign local content, then repeats the ML template with `--mypy --docker --force-merge`:
 
 - Leaves the existing foreign dependencies, ignores, and directories untouched.
 - Adds accepted new dependencies through `uv add`.
@@ -337,8 +300,7 @@ content, then repeats the ML template with `--mypy --docker --force-merge`:
 
 ## Advanced Flags
 
-- __Dry-Run Simulation__: Append `--dry-run` to see what a run would do without writing files or running shell commands (e.g., `protostar init --template cli --dry-run`). It shows the same review as the recipe editor: each file labelled `new`, `modified`, or `conflict`, the commands and packages, and every conflict and proposal with its id.
-    ![Protostar Dry Run](../assets/terminals/cli_dry_run.svg)
+- __Dry-Run Simulation__: Append `--dry-run` to see what a run would do without writing files or running shell commands (e.g., `protostar init --template cli --dry-run`). It shows the same review as the recipe editor: each file labelled `new`, `modified`, or `conflict`, the commands and packages, and every conflict and proposal with its id. ![Protostar Dry Run](../assets/terminals/cli_dry_run.svg)
 - __Settling Decisions Headlessly__: Pass `--resolve SELECTOR=CHOICE`, once per decision, to settle the conflicts and proposals `--dry-run` lists without the change review (e.g., `protostar init --template cli --force-merge --resolve 89cd01278762=desired`). `CHOICE` is `desired` (take the update), `local` (keep yours, or keep a proposal out), or `both` (text lines only); a file path settles every decision in that file. Without it, a run keeps your version of every conflict and applies every proposal. `--resolve` chooses no collision strategy, so existing files still need `--force-merge`. Combine it with `--dry-run` to see the settled outcome first. It works like [`sync --resolve`](lifecycle.md#resolve-conflicts).
 - __Machine-Readable Output__: Pass the position-independent `--json` flag to emit structured JSON envelopes to `stdout` and route logs to `stderr` (e.g., `protostar init --template cli --json`). See the __[Agent & Machine Interface](./agent-interface.md)__ for the full protocol specification.
 - __Template Shorthand__: Use `-t` as shorthand for `--template` (e.g., `protostar init -t cli`).
@@ -363,28 +325,16 @@ To view all supported subcommands and flags in your terminal, run `protostar hel
 
 ## Persisted project intent
 
-By default, successful initialization records `[tool.protostar]` in `pyproject.toml` alongside
-the separate ownership ledger. Unspecified flags preserve recorded diversions on
-reinitialization. See [project recipes](project-recipes.md) for
-enrollment, selection precedence, and template variables.
+By default, successful initialization records `[tool.protostar]` in `pyproject.toml` alongside the separate ownership ledger. Unspecified flags preserve recorded diversions on reinitialization. See [project recipes](project-recipes.md) for enrollment, selection precedence, and template variables.
 
 ## One time scaffolding
 
-Use `--one-shot` when you want the generated environment without Protostar
-managing future updates:
+Use `--one-shot` when you want the generated environment without Protostar managing future updates:
 
 ```bash
 protostar init --template cli --one-shot
 ```
 
-Protostar scaffolds the same project files and resolves dependencies, including
-`uv.lock`, but does not add `[tool.protostar]` to `pyproject.toml` or write
-`protostar.lock`. Generated agent guidance describes the resulting project
-without referring to a recorded recipe or `protostar sync`. The run retains
-normal conflict handling and rollback.
+Protostar scaffolds the same project files and resolves dependencies, including `uv.lock`, but does not add `[tool.protostar]` to `pyproject.toml` or write `protostar.lock`. Generated agent guidance describes the resulting project without referring to a recorded recipe or `protostar sync`. The run retains normal conflict handling and rollback.
 
-The flag requires a project with neither a recorded recipe nor a
-`protostar.lock`. Without those files, `protostar status`, `diff`, and `sync`
-cannot manage the scaffold afterward. A later tracked `init --force-merge`
-can establish a recipe and ownership state, but existing files remain subject
-to the normal rules for foreign content.
+The flag requires a project with neither a recorded recipe nor a `protostar.lock`. Without those files, `protostar status`, `diff`, and `sync` cannot manage the scaffold afterward. A later tracked `init --force-merge` can establish a recipe and ownership state, but existing files remain subject to the normal rules for foreign content.
