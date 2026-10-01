@@ -8,7 +8,7 @@ from typing import Any, cast
 import tomlkit
 import tomlkit.items
 from tomlkit.container import Container, OutOfOrderTableProxy
-from tomlkit.items import AoT, InlineTable, Item, Table
+from tomlkit.items import AoT, Comment, InlineTable, Item, Table, Whitespace
 from tomlkit.toml_document import TOMLDocument
 
 from .errors import ConfigurationError
@@ -425,6 +425,51 @@ def respell_names(
     return spelled
 
 
+def _trailing_comments(table: Table) -> int | None:
+    """Returns where a table's closing comment block starts, if it has one.
+
+    tomlkit keeps the comments and blank lines between a table's last value and
+    the next header in the table's own body, so a header comment such as
+    ``# ---- Mypy ---- #`` reads as the end of the table before it.
+    """
+    body = table.value.body
+    start = len(body)
+    while start and body[start - 1][0] is None:
+        if not isinstance(body[start - 1][1], (Comment, Whitespace)):
+            break
+        start -= 1
+    if any(isinstance(item, Comment) for _, item in body[start:]):
+        return start
+    return None
+
+
+def _above_trailing_comments(table: Table, key: str, start: int) -> None:
+    """Moves a value just added to a table above its closing comment block.
+
+    Otherwise the value lands below a comment that introduces the next
+    section, and the document's layout reads it as that section's.
+    """
+    body = table.value.body
+    found = next(
+        (
+            (i, k, item)
+            for i, (k, item) in enumerate(body)
+            if k is not None and k.key == key
+        ),
+        None,
+    )
+    if found is None:
+        return
+    index, name, item = found
+    if index < start or name.is_dotted():
+        return
+    if isinstance(item, (Table, AoT)):
+        return
+    table.value.remove(key)
+    # tomlkit has no public way to add a key at a position.
+    table.value._insert_at(start, key, item)
+
+
 def reconcile_toml(
     spec: TomlDocumentSpec,
     original: str,
@@ -555,10 +600,12 @@ def reconcile_toml(
         # A complete policy retracts owned keys the producers stop declaring.
         for key in [key for key in before if key not in after]:
             del ast[key]
+        closing = _trailing_comments(ast) if isinstance(ast, Table) else None
         for key, value in after.items():
             previous = before.get(key, MISSING)
             if semantic_equal(previous, value):
                 continue
+            added = closing is not None and key not in ast
             path = (*keys, key)
             styled = desired_node(path)
             styled_value: Value = MISSING
@@ -598,6 +645,9 @@ def reconcile_toml(
                 place_styled(ast, keys, key, styled, value)
             else:
                 ast[key] = tomlkit.item(value)
+            if added and closing is not None and isinstance(ast, Table):
+                _above_trailing_comments(ast, key, closing)
+                closing += 1
 
     # The baseline is compared by name too, but kept in the document's spelling
     # so a lockfile never changes for a spelling alone.
