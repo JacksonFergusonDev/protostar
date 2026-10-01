@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790882621274,
+  "lastUpdate": 1790887141036,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20269,6 +20269,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 904.86,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b03ec062adfd27438b2453089271056348cacc46",
+          "message": "feat(docs): rebuild the landing page on the shared house style (#402)\n\n* feat(docs): rebuild the landing page on the shared house style\n\nThe landing page is rebuilt from scratch: a text-only first screen, the\ninit recording on scroll, and sections on sync, the commands, the\nguarantees, and the docs. The docs take jacksonferguson.me's look through\nhouse-style, vendored into docs/house/ from a pinned tag by\nscripts/sync_house_style.py, so the sites share one palette, one set of\nfonts, and the same install box, terminal window, and recording player.\n\nRecordings load their player only when they near the viewport, and the\ngenerated terminal SVGs draw the same window as the recordings.\n\n* feat(docs): attractor hero, house icons, and a recording fix\n\nRecordings broke after navigating between pages: the player's stylesheet\nwent in <head>, which instant navigation prunes, so it now goes in <body>.\nThe play button no longer covers a recording before it starts.\n\nThe landing hero drops its glow for a faint Aizawa attractor, loaded after\nthe page is up with a pause control. Links take house-style's icons by its\nnew guidelines (house-style 1.1.0): arrows instead of text arrows, the\nGitHub and jacksonferguson.me marks in the header, and jump buttons with\ndown arrows. .claude/ is ignored.\n\n* feat(docs): Lorenz hero, documentation rules, and a Home icon\n\nThe hero's attractor is now Lorenz's, filmed in hard-cut camera shots\nlike jacksonferguson.me's. The play button no longer shows over a\nrecording before it starts: the player's stylesheet now loads after ours,\nso the rule that hides it outranks the player's instead of relying on\norder.\n\nhouse-style 1.2.0 adds rules for documentation sites. AGENTS.md gains a\ndocumentation section built on them, check_docs_drift enforces them (a\ndescription on every page, nav icons only on top-level pages, card grids\nof two, four, or six), and the seven pages without a description get one.\nHome gets its navigation icon back.",
+          "timestamp": "2026-10-01T13:35:38-07:00",
+          "tree_id": "77f24c880f74f1b74db48c2a0cf9856f1321fad2",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b03ec062adfd27438b2453089271056348cacc46"
+        },
+        "date": 1790887139117,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 279.55,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1224.99,
             "unit": "ms"
           }
         ]
