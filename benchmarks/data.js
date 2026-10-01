@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790814586823,
+  "lastUpdate": 1790818038821,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19997,6 +19997,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1270.76,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "868aa8c3775c1cf9671a35ef9c4f7c85a4fc9867",
+          "message": "fix(toml): add a key above the comment that opens the next section (#397)\n\ntomlkit keeps the comments and blank lines between a table's last value\nand the next header in that table's body. A key an update added to an\nexisting table, such as extend-select in [tool.ruff.lint], was appended\nafter them: below \"# ---- Mypy ---- #\", where it read as the next\nsection's, and the pyproject layout then wrote that header a second time.\n\nA value added to a table with a closing comment block now goes above it,\nin the order the update declares. Sub-tables and dotted keys keep their\nown placement, and a table without a closing comment is unchanged.",
+          "timestamp": "2026-09-30T18:24:40-07:00",
+          "tree_id": "f6d0fdf16e4837727fb6039bbddaabb36afa122b",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/868aa8c3775c1cf9671a35ef9c4f7c85a4fc9867"
+        },
+        "date": 1790818037896,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 219.91,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 956.44,
             "unit": "ms"
           }
         ]
