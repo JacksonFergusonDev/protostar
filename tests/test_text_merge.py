@@ -1,3 +1,4 @@
+from dataclasses import replace
 from itertools import pairwise
 
 import pytest
@@ -6,11 +7,14 @@ from hypothesis import strategies as st
 
 from protostar import text_merge
 from protostar.merge import (
+    MISSING,
     ConflictReason,
     ConflictSides,
     LineSpan,
+    MergeConflict,
     MergeLocation,
     ResolutionChoice,
+    Value,
 )
 from protostar.text_merge import (
     TextConflict,
@@ -166,6 +170,103 @@ def test_aligns_repeated_lines_within_a_bounded_cost(
     # Past the cost bound nothing aligns: both sides rewrote the whole text.
     monkeypatch.setattr(text_merge, "_FALLBACK_CELLS", 0)
     assert not merge_text(*case).clean
+
+
+def test_the_alignment_cost_bound_is_exact(monkeypatch: pytest.MonkeyPatch) -> None:
+    # After the shared first line, the stretch to align is 3 by 5 lines.
+    case = ("h\nx\ny\nx\n", "h\nx\nx\ny\nx\n", "h\ny\nx\ny\nx\ny\n")
+
+    monkeypatch.setattr(text_merge, "_FALLBACK_CELLS", 15)
+    assert merge_text(*case).content == "h\ny\nx\nx\ny\nx\ny\n"
+    monkeypatch.setattr(text_merge, "_FALLBACK_CELLS", 14)
+    assert not merge_text(*case).clean
+
+
+# Each case below once merged differently under a small change to the alignment
+# (patience anchors, the longest increasing run, the difflib fallback) or to how a
+# conflict is narrowed, found by searching random edits of short texts.
+@pytest.mark.parametrize(
+    ("base", "local", "remote", "choice", "content", "conflicts"),
+    [
+        ("\na\n", "\n", "}\na\n\n\n", "local", "\n", []),
+        ("\n\n", "}\n\nc\n", "\nb\n", None, None, [(2, ("\n",), ("c\n",), ("b\n",))]),
+        ("\na\n", "\nc\n", "{\n\n\n", None, None, [(1, ("a\n",), ("c\n",), ("\n",))]),
+        ("x\nb\n", "x\n", "b\nx\nx\n", "local", "x\n", []),
+        ("x\nx\n\n", "\n}\n", "\nx\n", None, None, [(1, (), ("}\n",), ("x\n",))]),
+        ("b\nx\n", "b\n", "x\nb\nb\n", "local", "b\n", []),
+        (
+            "\n\nx\n",
+            "\n\ny\r\n",
+            "x\n\n\n",
+            None,
+            None,
+            [(0, ("\n", "\n", "x\n"), ("\n", "\n", "y\r\n"), ("x\n", "\n", "\n"))],
+        ),
+        (
+            "{\n\n}\n\nb\n",
+            "\n{\nb\n}\n\n",
+            "\n}\n\nb\n",
+            "both",
+            "\n{\nb\n}\n\n",
+            [],
+        ),
+        (
+            "}\n{\n\n{\nb\n",
+            "a\n}\n{\n{\n\nb\n",
+            "b\n{\n\n{\nb\n",
+            "both",
+            "a\n}\nb\n{\n{\n\nb\n",
+            [],
+        ),
+        (
+            "}\nx\n{\na\n",
+            "b\nx\n}\n{\nx\na\n",
+            "}\n}\n{\na\n",
+            "both",
+            "b\nx\n}\n}\n{\nx\na\n",
+            [],
+        ),
+        (
+            "\nb\na\n",
+            "\nzb\n\n",
+            "a\n\nb\n\n",
+            None,
+            None,
+            [(1, ("b\n", "a\n"), ("zb\n",), ("b\n",))],
+        ),
+        (
+            "a\na\nx\n",
+            "a\nb\nb\na\nx\nx\n",
+            "b\nb\na\nx\n",
+            None,
+            None,
+            [(0, ("a\n",), ("a\n",), ())],
+        ),
+        (
+            "x\n",
+            "x\ny\r\nz",
+            "zx\ny\r\nz",
+            None,
+            None,
+            [(0, ("x\n",), ("x\n",), ("zx\n",))],
+        ),
+        ("", "z", "\nz", "desired", "\nz", []),
+        ("\n", "", "y\r\n", "desired", "y\r\n", []),
+    ],
+)
+def test_alignment_edge_cases(
+    base: str,
+    local: str,
+    remote: str,
+    choice: str | None,
+    content: str | None,
+    conflicts: list[tuple[int, tuple[str, ...], tuple[str, ...], tuple[str, ...]]],
+) -> None:
+    chosen = ResolutionChoice(choice) if choice else None
+    result = merge_text(base, local, remote, (lambda _: chosen) if chosen else None)
+
+    assert result.content == content
+    assert [(c.start, c.base, c.local, c.remote) for c in result.conflicts] == conflicts
 
 
 FILE = MergeLocation("justfile")
@@ -458,3 +559,66 @@ def test_keeping_local_mirrors_taking_the_update(
     backward = merge_text(base, remote, local, always(DESIRED))
 
     assert forward.content == backward.content
+
+
+def test_an_unedited_unchanged_text_keeps_its_ownership() -> None:
+    assert reconcile_text(b"a\n", "a\n", "a\n", FILE) == TextReconciliation(None, "a\n")
+
+
+@pytest.mark.parametrize(
+    ("local", "side"), [(b"x\n", "x\n"), (None, MISSING)], ids=["edited", "deleted"]
+)
+def test_a_preserved_edit_shows_both_texts(local: bytes | None, side: Value) -> None:
+    result = reconcile_text(local, "a\n", "a\n", FILE)
+
+    assert result.preserved == (
+        MergeConflict(
+            FILE, ConflictReason.PRESERVED, ConflictSides("a\n", side, "a\n", line=0)
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    ("choice", "content"),
+    [(ResolutionChoice.LOCAL, None), (ResolutionChoice.DESIRED, "a\n")],
+)
+def test_settling_a_preserved_edit(
+    choice: ResolutionChoice, content: str | None
+) -> None:
+    [preserved] = reconcile_text(b"x\n", "a\n", "a\n", FILE).preserved
+
+    result = reconcile_text(
+        b"x\n", "a\n", "a\n", FILE, resolutions={preserved.id: choice}
+    )
+
+    assert result == TextReconciliation(
+        content, "a\n", resolved=(replace(preserved, resolution=choice),)
+    )
+
+
+@pytest.mark.parametrize(
+    ("local", "baseline", "sides"),
+    [
+        (b"b\n", None, ConflictSides(MISSING, "b\n", "a\n", line=0)),
+        (None, "c\n", ConflictSides("c\n", MISSING, "a\n", line=0)),
+    ],
+    ids=["unowned", "deleted"],
+)
+def test_a_whole_text_conflict_shows_every_side(
+    local: bytes | None, baseline: str | None, sides: ConflictSides
+) -> None:
+    [conflict] = reconcile_text(local, "a\n", baseline, FILE).conflicts
+
+    assert conflict.sides == sides
+
+
+def test_a_hunk_conflict_shows_every_line_of_each_side() -> None:
+    [conflict] = reconcile_text(
+        b"a\nX\nY\nc\n", "a\nP\nQ\nc\n", "a\nb\nB\nc\n", FILE
+    ).conflicts
+
+    assert conflict.sides == ConflictSides("b\nB\n", "X\nY\n", "P\nQ\n", line=1)
+
+
+def test_mixed_endings_are_compared_exactly() -> None:
+    assert is_edited(b"a\nb\r\n", "a\nb\n")
