@@ -367,3 +367,12 @@ def test_a_table_filled_in_an_unowned_document_is_owned():
 
 def test_owning_nothing_records_no_baseline():
     assert merge('{"a": 1}', '{"a": 1}').baseline is MISSING
+
+
+def test_overwriting_with_an_empty_update_owns_nothing():
+    local = '{"c": {}, "a": 0}'
+
+    result = merge(local, "{}", overwrite=True)
+
+    assert result.content == local
+    assert result.baseline is MISSING

@@ -243,13 +243,45 @@ def test_aggregation_precedence_and_ambiguity():
         StructuredContribution("module:Ruff", "[tool.ruff]\nline-length = 88\n"),
     ]
     assert aggregate_toml(contributions) == {"tool": {"ruff": {"line-length": 100}}}
-    with pytest.raises(ConfigurationError, match="Ambiguous"):
+    with pytest.raises(ConfigurationError) as error:
         aggregate_toml(
             [
-                StructuredContribution("one", "key = 1"),
-                StructuredContribution("two", "key = 2"),
+                StructuredContribution("one", "[tool.x]\nkey = 1\n"),
+                StructuredContribution("two", "[tool.x]\nkey = 2\n"),
             ]
         )
+    assert str(error.value) == "Ambiguous TOML producers at tool.x.key."
+    assert error.value.hint == (
+        "Use documented module sequence/template precedence or remove conflicting"
+        " declarations."
+    )
+
+
+@pytest.mark.parametrize(
+    "producers",
+    [("one", "module:a"), ("module:a", "one")],
+    ids=["unknown-then-module", "module-then-unknown"],
+)
+def test_only_modules_and_templates_may_override_each_other(producers):
+    first, second = producers
+    with pytest.raises(
+        ConfigurationError, match=r"^Ambiguous TOML producers at key\.$"
+    ):
+        aggregate_toml(
+            [
+                StructuredContribution(first, "key = 1"),
+                StructuredContribution(second, "key = 2"),
+            ]
+        )
+
+
+def test_producers_that_agree_never_conflict():
+    assert aggregate_toml(
+        [
+            StructuredContribution("one", "key = 1"),
+            StructuredContribution("two", "key = 1"),
+        ]
+    ) == {"key": 1}
 
 
 def test_atomic_arrays_and_noop_representation():
