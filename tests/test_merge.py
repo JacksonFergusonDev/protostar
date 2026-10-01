@@ -19,6 +19,7 @@ from protostar.merge import (
     ResolutionChoice,
     Value,
     describe_location,
+    hold,
     overlay_declared,
     prune_unapplied,
     reconcile,
@@ -146,12 +147,20 @@ def test_missing_state_fills_only_absent_keys_recursively():
     assert result.baseline == {"nested": {"new": 2}}
 
 
-@pytest.mark.parametrize("local", [MISSING, "user scalar", []])
-def test_deleted_or_incompatible_owned_table_protects_new_children(local):
+@pytest.mark.parametrize(
+    ("local", "reason"),
+    [
+        (MISSING, ConflictReason.DELETED_ANCESTOR),
+        ("user scalar", ConflictReason.TYPE_MISMATCH),
+        ([], ConflictReason.TYPE_MISMATCH),
+    ],
+)
+def test_deleted_or_incompatible_owned_table_protects_new_children(local, reason):
     result = reconcile({"old": 1}, local, {"old": 1, "new": 2}, LOC)
     assert semantic_equal(result.value, local)
     assert result.baseline == {"old": 1}
-    assert len(result.conflicts) == 1
+    [conflict] = result.conflicts
+    assert conflict.reason is reason
 
 
 def test_deleted_ancestor_blocks_unowned_descendant():
@@ -211,8 +220,12 @@ def test_set_policy_convergence_does_not_adopt_members():
 
 @pytest.mark.parametrize("sequence", [["duplicate", "duplicate"], [{"id": 1}], [[1]]])
 def test_set_policy_rejects_ambiguous_members(sequence):
-    with pytest.raises(ConfigurationError):
+    with pytest.raises(ConfigurationError) as error:
         reconcile(MISSING, MISSING, sequence, LOC, MergePolicy(frozenset({LOC.keys})))
+    assert str(error.value) == "Ambiguous set-like sequence."
+    assert error.value.hint == (
+        "Use unique scalar members or an atomic/file-specific sequence policy."
+    )
 
 
 def test_unowned_existing_set_records_only_newly_added_members():
@@ -235,12 +248,71 @@ def test_empty_or_equal_unowned_collections_are_not_adopted(base, local, remote)
     assert result.baseline is MISSING
 
 
-def test_kernel_rejects_cycles_and_unsupported_values():
+def _cyclic() -> list[Value]:
     cyclic: list[Value] = []
     cyclic.append(cyclic)
-    for value in (cyclic, {"bad": object()}, {"bad": MISSING}, [MISSING]):
-        with pytest.raises(ConfigurationError):
-            reconcile(MISSING, MISSING, cast(Value, value), LOC)
+    return cyclic
+
+
+@pytest.mark.parametrize(
+    ("value", "message", "hint"),
+    [
+        pytest.param(
+            _cyclic(),
+            "Cyclic semantic configuration.",
+            "Remove cyclic aliases before reconciliation.",
+            id="cycle",
+        ),
+        pytest.param(
+            {"bad": object()},
+            "Unsupported semantic value type.",
+            "Pass decoded scalar, mapping, or sequence values to reconciliation.",
+            id="unsupported-type",
+        ),
+        pytest.param(
+            {"bad": MISSING},
+            "Invalid semantic mapping entry.",
+            "Use string keys and omit missing entries.",
+            id="missing-entry",
+        ),
+        pytest.param(
+            {1: "non-string key"},
+            "Invalid semantic mapping entry.",
+            "Use string keys and omit missing entries.",
+            id="non-string-key",
+        ),
+        pytest.param(
+            [MISSING],
+            "Missing sequence member.",
+            "Use absence only for entire values.",
+            id="missing-member",
+        ),
+    ],
+)
+def test_kernel_rejects_cycles_and_unsupported_values(value, message, hint):
+    with pytest.raises(ConfigurationError) as error:
+        reconcile(MISSING, MISSING, cast(Value, value), LOC)
+    assert str(error.value) == message
+    assert error.value.hint == hint
+
+
+def _nested(depth: int, container: type) -> Value:
+    value: Value = "leaf"
+    for _ in range(depth):
+        value = {"k": value} if container is dict else [value]
+    return value
+
+
+@pytest.mark.parametrize("container", [dict, list])
+def test_kernel_accepts_exactly_one_hundred_levels_of_nesting(container):
+    value = _nested(100, container)
+
+    assert reconcile(MISSING, MISSING, value, LOC).value == value
+
+    with pytest.raises(ConfigurationError) as error:
+        reconcile(MISSING, MISSING, _nested(101, container), LOC)
+    assert str(error.value) == "Semantic value is too deeply nested."
+    assert error.value.hint == "Limit configuration nesting to 100 levels."
 
 
 @pytest.mark.parametrize(
@@ -541,7 +613,14 @@ def test_conflict_identity_follows_content_not_line_numbers():
 
 @pytest.mark.parametrize(
     ("left", "right"),
-    [(1, True), (1, 1.0), (1, "1"), (None, MISSING), (date(2024, 1, 1), "2024-01-01")],
+    [
+        (1, True),
+        (1, 1.0),
+        (1.0, 2.0),
+        (1, "1"),
+        (None, MISSING),
+        (date(2024, 1, 1), "2024-01-01"),
+    ],
 )
 def test_conflict_identity_distinguishes_types(left, right):
     def conflict(value: Value) -> MergeConflict:
@@ -592,3 +671,265 @@ def test_a_retained_path_is_never_retracted():
     assert result.value == base
     assert result.baseline == base
     assert not result.conflicts
+
+
+# --- what each decision carries -------------------------------------------------
+
+SET_LIKE = MergePolicy(frozenset({LOC.keys}))
+PROPOSING_SET = MergePolicy(frozenset({LOC.keys}), proposing=True)
+NESTED = MergeLocation(LOC.file, (*LOC.keys, "a", "b"), LOC.identity)
+
+
+@pytest.mark.parametrize(
+    ("base", "local", "remote", "reason"),
+    [
+        (1, 2, 3, ConflictReason.DIVERGED),
+        (MISSING, 2, 1, ConflictReason.UNOWNED),
+        (1, MISSING, 2, ConflictReason.DELETED_ANCESTOR),
+        (True, 1, False, ConflictReason.TYPE_MISMATCH),
+        ("old", "old", {"new": 1}, ConflictReason.TYPE_MISMATCH),
+        ("old", {"x": 1}, {"new": 1}, ConflictReason.TYPE_MISMATCH),
+    ],
+)
+def test_a_conflict_carries_every_side(base, local, remote, reason):
+    [conflict] = reconcile(base, local, remote, LOC).conflicts
+
+    assert conflict == MergeConflict(LOC, reason, ConflictSides(base, local, remote))
+
+
+def test_a_nested_conflict_keeps_its_location_and_marks_the_whole_merge():
+    result = reconcile({"a": {"b": 1}}, {"a": {"b": 2}}, {"a": {"b": 3}}, LOC)
+
+    assert result.decision is MergeDecision.CONFLICT
+    assert result.conflicts == (
+        MergeConflict(NESTED, ConflictReason.DIVERGED, ConflictSides(1, 2, 3)),
+    )
+
+
+def test_a_kept_edit_under_an_unchanged_update_is_preserved_where_it_is():
+    base: Value = {"a": {"b": 1, "c": 1}}
+    local: Value = {"a": {"b": 2, "c": 1}}
+
+    result = reconcile(base, local, deepcopy(base), LOC)
+
+    assert (result.value, result.baseline) == (local, base)
+    assert result.decision is MergeDecision.KEEP_LOCAL
+    assert not result.conflicts
+    assert result.preserved == (
+        MergeConflict(NESTED, ConflictReason.PRESERVED, ConflictSides(1, 2, 1)),
+    )
+
+
+@pytest.mark.parametrize(
+    ("choice", "value", "decision"),
+    [
+        (ResolutionChoice.LOCAL, {"a": {"b": 2}}, MergeDecision.KEEP_LOCAL),
+        (ResolutionChoice.DESIRED, {"a": {"b": 1}}, MergeDecision.APPLY_REMOTE),
+    ],
+)
+def test_settling_a_preserved_edit(choice, value, decision):
+    base: Value = {"a": {"b": 1}}
+    [preserved] = reconcile(base, {"a": {"b": 2}}, base, LOC).preserved
+
+    result = reconcile(
+        base, {"a": {"b": 2}}, base, LOC, resolutions={preserved.id: choice}
+    )
+
+    assert (result.value, result.baseline) == (value, base)
+    assert result.decision is decision
+    assert not result.preserved
+    assert result.resolved == (replace(preserved, resolution=choice),)
+
+
+def test_an_edited_atomic_list_under_an_unchanged_update_is_preserved():
+    result = reconcile([1], [1, 2], [1], LOC)
+
+    assert result.value == [1, 2]
+    assert not result.conflicts
+    assert result.preserved == (
+        MergeConflict(LOC, ConflictReason.PRESERVED, ConflictSides([1], [1, 2], [1])),
+    )
+
+
+def test_a_removed_owned_set_member_is_preserved_and_can_be_restored():
+    first = reconcile(["a", "b"], ["a"], ["a", "b"], LOC, SET_LIKE)
+
+    assert first.value == ["a"]
+    [preserved] = first.preserved
+    assert preserved.sides == ConflictSides(["a", "b"], ["a"], ["a", "b"])
+
+    restored = reconcile(
+        ["a", "b"],
+        ["a"],
+        ["a", "b"],
+        LOC,
+        SET_LIKE,
+        {preserved.id: ResolutionChoice.DESIRED},
+    )
+    assert restored.value == ["a", "b"]
+
+
+def test_a_changed_set_keeps_a_removed_member_out_until_restored():
+    first = reconcile(["a", "b"], ["a"], ["a", "b", "c"], LOC, SET_LIKE)
+
+    assert first.value == ["a", "c"]
+    assert first.baseline == ["a", "b", "c"]
+    assert first.decision is MergeDecision.APPLY_REMOTE
+    [preserved] = first.preserved
+
+    restored = reconcile(
+        ["a", "b"],
+        ["a"],
+        ["a", "b", "c"],
+        LOC,
+        SET_LIKE,
+        {preserved.id: ResolutionChoice.DESIRED},
+    )
+    assert restored.value == ["a", "c", "b"]
+
+
+def test_a_set_with_nothing_removed_preserves_nothing():
+    result = reconcile(["a"], ["a"], ["a", "c"], LOC, SET_LIKE)
+
+    assert result.value == ["a", "c"]
+    assert result.decision is MergeDecision.APPLY_REMOTE
+    assert not result.preserved
+
+
+@pytest.mark.parametrize(
+    ("base", "local"), [(["a"], "a"), ("a", ["a"])], ids=["local", "baseline"]
+)
+def test_a_set_that_is_not_a_list_is_a_type_mismatch(base, local):
+    [conflict] = reconcile(base, local, ["a", "b"], LOC, SET_LIKE).conflicts
+
+    assert conflict.reason is ConflictReason.TYPE_MISMATCH
+
+
+def test_an_empty_set_establishes_ownership():
+    assert reconcile(MISSING, MISSING, [], LOC, SET_LIKE).baseline == []
+
+
+@pytest.mark.parametrize("base", [MISSING, ["a"]], ids=["unowned", "owned"])
+def test_only_a_proposing_policy_proposes_set_members(base):
+    result = reconcile(base, ["a"], ["a", "b"], LOC, SET_LIKE)
+
+    assert result.value == ["a", "b"]
+    assert not result.proposals
+
+
+def test_a_proposed_set_member_can_be_declined():
+    [proposal] = reconcile(MISSING, ["a"], ["a", "b"], LOC, PROPOSING_SET).proposals
+    assert proposal == MergeConflict(
+        LOC, ConflictReason.PROPOSED, ConflictSides(MISSING, ["a"], ["a", "b"])
+    )
+
+    declined = reconcile(
+        MISSING,
+        ["a"],
+        ["a", "b"],
+        LOC,
+        PROPOSING_SET,
+        {proposal.id: ResolutionChoice.LOCAL},
+    )
+
+    assert (declined.value, declined.baseline) == (["a"], ["b"])
+    assert declined.decision is MergeDecision.KEEP_LOCAL
+
+
+def test_a_set_that_already_holds_every_member_proposes_nothing():
+    result = reconcile(MISSING, ["a", "b"], ["a", "b"], LOC, PROPOSING_SET)
+
+    assert not result.proposals
+
+
+def test_an_unchanged_update_under_a_deleted_ancestor_is_quiet():
+    result = reconcile(1, MISSING, 1, LOC, MergePolicy(protected_ancestor=True))
+
+    assert result.value is MISSING
+    assert not result.conflicts
+
+
+def test_a_retraction_conflict_keeps_its_location():
+    [conflict] = reconcile(
+        {"a": 1, "b": 2}, {"a": 1, "b": 3}, {"a": 1}, LOC, COMPLETE
+    ).conflicts
+
+    assert conflict.location == MergeLocation(LOC.file, (*LOC.keys, "b"), LOC.identity)
+
+
+def test_a_namespace_retraction_keeps_its_location():
+    policy = MergePolicy(complete=True, namespace_paths=frozenset({(*LOC.keys, "ns")}))
+    base: Value = {"ns": {"x": {"a": 1}, "y": {"a": 1}}}
+
+    [conflict] = reconcile(
+        base, {"ns": {"x": {"a": 1}, "y": {"a": 2}}}, {}, LOC, policy
+    ).conflicts
+
+    assert conflict.location == MergeLocation(
+        LOC.file, (*LOC.keys, "ns", "y"), LOC.identity
+    )
+
+
+def test_a_fully_retracted_namespace_is_removed():
+    policy = MergePolicy(complete=True, namespace_paths=frozenset({("tool",)}))
+    base: Value = {"tool": {"example": {"a": 1}, "deleted": {"a": 1}}, "kept": 1}
+    # The user already removed one owned key; the rest is unedited.
+    local: Value = {"tool": {"example": {"a": 1}}, "kept": 1}
+
+    result = reconcile(
+        base, local, {"kept": 1}, MergeLocation("pyproject.toml"), policy
+    )
+
+    assert result.value == {"kept": 1}
+    assert result.baseline == {"kept": 1}
+    assert not result.conflicts
+
+
+# --- helpers ---------------------------------------------------------------------
+
+
+def test_hold_restores_the_baseline_at_a_deep_path():
+    remote: dict[str, Value] = {"a": {"b": {"c": 2, "d": 2}}}
+
+    hold(remote, {"a": {"b": {"c": 1}}}, ("a", "b", "c"))
+
+    assert remote == {"a": {"b": {"c": 1, "d": 2}}}
+
+
+def test_hold_drops_a_value_that_was_never_owned():
+    remote: dict[str, Value] = {"a": {"b": {"c": 2}}, "x": {}}
+
+    hold(remote, MISSING, ("a", "b", "c"))
+    hold(remote, MISSING, ("x", "absent"))
+
+    assert remote == {"a": {"b": {}}, "x": {}}
+
+
+def test_without_paths_prunes_every_table_it_empties():
+    assert without_paths({"a": {"b": {"c": 1}}}, frozenset({("a", "b", "c")})) == {}
+
+
+def test_retract_undeclared_tolerates_a_key_the_user_removed():
+    target: dict[str, Value] = {}
+    owned: dict[str, Value] = {"gone": 1}
+
+    retract_undeclared(target, owned, {})
+
+    assert (target, owned) == ({}, {})
+
+
+def test_retract_undeclared_leaves_a_table_turned_into_a_value():
+    target: dict[str, Value] = {"a": {"x": 1}}
+    owned: dict[str, Value] = {"a": {"x": 1}}
+
+    retract_undeclared(target, owned, {"a": 1})
+
+    assert (target, owned) == ({"a": {"x": 1}}, {"a": {"x": 1}})
+
+
+def test_prune_unapplied_ignores_a_previous_value_that_was_not_a_table():
+    owned: dict[str, Value] = {"a": {"b": {}}}
+
+    prune_unapplied(owned, {"a": 1}, {"a": {"b": {}}})
+
+    assert owned == {"a": {}}
