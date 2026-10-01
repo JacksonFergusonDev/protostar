@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790887141036,
+  "lastUpdate": 1790887358620,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20303,6 +20303,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1224.99,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7f50c30cabe64c48f7af39dc400881193f6bf2c9",
+          "message": "test(journal): catch the mutants that survived in journal and fs_transaction (#403)\n\n* test(journal): catch the mutants that survived in journal and fs_transaction\n\nThe first mutation run left 78 survivors in journal and 30 in\nfs_transaction. Most were real gaps:\n\n- Rollback restoring a directory's mode, recreating a directory under a\n  deleted parent, and replacing a file that took a directory's place.\n- What a failed rollback reports in `errors`.\n- Directories listed with a trailing slash in touched_paths.\n- ensure_directory on an existing directory, a file, or a symlink, and\n  remove_file on a missing path; no test reached either.\n- A write under a partly existing parent journaling only the missing part.\n- The fields of every error the two modules raise, which tests checked\n  only by type.\n\n_format_display_path's ValueError fallback could never run: every path\nit formats went through normalize_path, which keeps it inside the root.\nIt is deleted rather than tested.\n\n* fix(journal): report what rolling back a created tree could not remove\n\nRollback removed a created tree (such as .git/ from git init) with\nrmtree(ignore_errors=True), so a partial removal still reported success\nand left files behind. It now removes everything it can and records what\nit could not as a RollbackFailure, so RollbackFailedError lists it like\nany other path rollback could not restore.\n\n* test(journal): pin exactly what a partly removed tree reports\n\nThe follow-up mutation run left six survivors in the new leftover\nmessage: the test only checked that it mentioned more. It now pins one\nleftover reported alone and two reported as the first and one more.",
+          "timestamp": "2026-10-01T13:39:55-07:00",
+          "tree_id": "64bd25bfe3e998060d59fbe43d81982c94dc6309",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/7f50c30cabe64c48f7af39dc400881193f6bf2c9"
+        },
+        "date": 1790887356601,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 215.6,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 937.9,
             "unit": "ms"
           }
         ]
