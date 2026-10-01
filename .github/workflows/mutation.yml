@@ -3,11 +3,6 @@ name: Mutation Testing
 # Manual only: a full run mutates thousands of lines and takes hours, so it never
 # runs on a commit. Each module gets its own runner, in parallel.
 on:
-  # Temporary: GitHub cannot dispatch a workflow that is not yet on the default
-  # branch, so pushes to this branch run it for one module. Remove with the
-  # `|| 'text_merge'` fallback below before merging.
-  push:
-    branches: [ "ci/mutation-testing" ]
   workflow_dispatch:
     inputs:
       modules:
@@ -31,7 +26,7 @@ jobs:
     - name: Select modules
       id: matrix
       env:
-        REQUESTED: ${{ inputs.modules || 'text_merge' }}
+        REQUESTED: ${{ inputs.modules }}
       run: |
         python3 - <<'EOF'
         import json, os, sys
