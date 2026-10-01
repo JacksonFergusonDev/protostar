@@ -4,7 +4,7 @@ from pathlib import Path
 import tomlkit
 
 from protostar.documents.pyproject_layout import format_document
-from protostar.merge import MISSING, MergeLocation, MergePolicy
+from protostar.merge import MISSING, MergeLocation, MergePolicy, Value
 from protostar.toml_ast import TomlDocumentSpec, reconcile_toml
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -704,3 +704,74 @@ def test_a_baseline_keeps_the_document_spelling():
     repeated = zensical_reconcile(written.content, written.baseline)
     assert repeated.content == written.content
     assert repeated.baseline == written.baseline
+
+
+_SECTIONED = """[project]
+name = "app"
+
+# ---- Ruff ---- #
+
+[tool.ruff.lint]
+select = ["E"]
+
+# ---- Mypy ---- #
+
+[tool.mypy]
+strict = true
+"""
+_SECTIONED_BASE: dict[str, Value] = {
+    "project": {"name": "app"},
+    "tool": {"ruff": {"lint": {"select": ["E"]}}, "mypy": {"strict": True}},
+}
+
+
+def test_a_key_added_to_a_table_stays_above_the_next_sections_header():
+    """The header comment opens the next section, so new values go above it."""
+    from protostar.documents import toml_spec
+
+    desired: dict[str, Value] = {
+        "project": {"name": "app"},
+        "tool": {
+            "ruff": {"lint": {"select": ["E"], "extend-select": ["SIM"], "fix": True}},
+            "mypy": {"strict": True},
+        },
+    }
+    result = reconcile_toml(
+        toml_spec("pyproject.toml"),
+        _SECTIONED,
+        desired,
+        _SECTIONED_BASE,
+        MergeLocation("pyproject.toml"),
+    )
+
+    assert result.content == _SECTIONED.replace(
+        'select = ["E"]\n',
+        'select = ["E"]\nextend-select = ["SIM"]\nfix = true\n',
+    )
+    assert result.content.count("# ---- Mypy ---- #") == 1
+
+
+def test_a_key_added_to_a_table_without_a_closing_comment_is_appended():
+    from protostar.documents import toml_spec
+
+    original = '[tool.ruff.lint]\nselect = ["E"]\n\n[tool.mypy]\nstrict = true\n'
+    base: dict[str, Value] = {
+        "tool": {"ruff": {"lint": {"select": ["E"]}}, "mypy": {"strict": True}}
+    }
+    desired: dict[str, Value] = {
+        "tool": {
+            "ruff": {"lint": {"select": ["E"], "extend-select": ["SIM"]}},
+            "mypy": {"strict": True},
+        }
+    }
+    result = reconcile_toml(
+        toml_spec("pyproject.toml"),
+        original,
+        desired,
+        base,
+        MergeLocation("pyproject.toml"),
+    )
+
+    assert result.content == original.replace(
+        'select = ["E"]\n', 'select = ["E"]\nextend-select = ["SIM"]\n'
+    )
