@@ -1,0 +1,61 @@
+name: Publish GitHub Pages
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+# Serialize the entire assembly and deployment, fetching current data only
+# after acquiring this slot. An older artifact must never deploy afterward.
+concurrency:
+  group: pages-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Read current published versions and benchmarks
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: gh-pages
+          path: pages-source
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+          python-version: "3.14"
+
+      - name: Install documentation dependencies
+        run: uv sync --only-group docs --locked
+
+      - name: Assemble documentation, redirects, and benchmarks
+        run: |
+          latest_version="$(uv run --only-group docs python scripts/prepare_pages.py pages-source --print-latest)"
+          git show "refs/tags/v${latest_version}:zensical.toml" > latest-zensical.toml
+          uv run --only-group docs python scripts/prepare_pages.py pages-source \
+            --output published --config latest-zensical.toml
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: published
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -194,6 +194,14 @@ To execute the standard test matrix:
 just test
 ```
 
+### Documentation Publishing
+
+GitHub Pages must use **GitHub Actions** as its source (Settings → Pages → Build and deployment). The `gh-pages` branch stores released documentation and benchmark data; it is not itself the published site. Releases and benchmark updates invoke `.github/workflows/pages.yml`, which serializes site assembly and deployment together and reads the current branch contents after acquiring its publishing slot.
+
+The publisher creates a clean artifact with `scripts/prepare_pages.py`. Versioned pages retain their release content; bare documentation URLs and version aliases redirect to the corresponding versioned pages, preserving query parameters and anchors. The root redirects follow the release carrying `latest` in `versions.json`. Old root copies are excluded. Markdown and `llms.txt` come from the latest release's HTML and tagged navigation, with links to that release's Markdown files. Benchmark history is included in every deployment.
+
+To republish the current documentation and benchmark data without rebuilding a release or publishing to PyPI, run `gh workflow run pages.yml --ref main`. To rebuild a released documentation version, run `gh workflow run release.yml --ref main -f tag=vX.Y.Z`; this moves `latest` to that version and invokes the same publisher. Keep Pages in Actions mode so branch updates cannot replace the assembled artifact.
+
 ### Isolated Manual Testing (Sandboxes)
 
 To manually test Protostar in an isolated workspace without modifying your global `~/.config/protostar` or host git configuration:
