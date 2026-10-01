@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790810466650,
+  "lastUpdate": 1790814586823,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19963,6 +19963,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1282.96,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "87c497aef7967d178ea798b69d8468fcd28430b7",
+          "message": "docs: remove Markdown prose hard wrapping",
+          "timestamp": "2026-09-30T17:26:09-07:00",
+          "tree_id": "c46ac5aa0a41a3853125cc47a01913cd6780b60a",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/87c497aef7967d178ea798b69d8468fcd28430b7"
+        },
+        "date": 1790814585309,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 284.93,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1270.76,
             "unit": "ms"
           }
         ]
