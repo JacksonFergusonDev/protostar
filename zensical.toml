@@ -52,17 +52,21 @@ nav = [
     ] },
 ]
 
+# house-style (docs/house/, vendored by scripts/sync_house_style.py) comes first.
 extra_css = [
+    "house/css/fonts.css",
+    "house/css/fonts-extended.css",
+    "house/css/tokens.css",
+    "house/css/terminal.css",
     "stylesheets/extra.css",
-    "https://cdn.jsdelivr.net/npm/asciinema-player@3.8.1/dist/bundle/asciinema-player.css",
 ]
-extra_javascript = [
-    { path = "https://cdn.jsdelivr.net/npm/asciinema-player@3.8.1/dist/bundle/asciinema-player.min.js", defer = true },
-    { path = "javascripts/asciinema-init.js", defer = true },
-]
+extra_javascript = [{ path = "javascripts/casts.js", type = "module" }]
 
 [project.theme]
 name = "material"
+custom_dir = "overrides"
+# house-style self-hosts the fonts; extra.css hands them to the theme.
+font = false
 logo = "assets/favicon.svg"
 favicon = "assets/favicon.png"
 
@@ -79,9 +83,6 @@ features = [
     "search.highlight",
 ]
 
-[project.theme.font]
-text = "Inter"
-code = "JetBrains Mono"
 
 [[project.theme.palette]]
 scheme = "slate"

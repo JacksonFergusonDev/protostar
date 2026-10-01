@@ -16,6 +16,7 @@ from protostar.fs import atomic_write_text
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
 from scripts.generate_docs_assets.cli_terminals import _demo_project, _stub_which
 from scripts.generate_docs_assets.common import DOCS_TERMINALS_DIR
+from scripts.generate_docs_assets.svg import frame_terminal_svg
 
 
 async def _settle(pilot: Any) -> None:
@@ -39,8 +40,9 @@ async def _settle(pilot: Any) -> None:
 def _write_tui_svg(app: Any, filename: str, title: str = "protostar init") -> None:
     """Writes the app's current screen to DOCS_TERMINALS_DIR."""
     svg_content = app.export_screenshot(title=title)
-    clean_svg = "\n".join(line.rstrip() for line in svg_content.splitlines()) + "\n"
-    atomic_write_text(DOCS_TERMINALS_DIR / filename, clean_svg)
+    atomic_write_text(
+        DOCS_TERMINALS_DIR / filename, frame_terminal_svg(svg_content, title)
+    )
 
 
 async def _capture_tui_screens() -> None:

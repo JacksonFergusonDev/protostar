@@ -18,11 +18,12 @@ repos:
       - id: check-case-conflict
       - id: check-symlinks
       - id: check-executables-have-shebangs
-      # Textual snapshots preserve the SVG serializer output byte-for-byte.
+      # Textual snapshots preserve the SVG serializer output byte-for-byte,
+      # and docs/house/ must match its house-style release byte-for-byte.
       - id: trailing-whitespace
-        exclude: \.py$|^tests/__snapshots__/
+        exclude: \.py$|^tests/__snapshots__/|^docs/house/
       - id: end-of-file-fixer
-        exclude: \.py$|^tests/__snapshots__/
+        exclude: \.py$|^tests/__snapshots__/|^docs/house/
       - id: check-yaml
       - id: check-json
       - id: check-toml

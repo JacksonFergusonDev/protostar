@@ -193,16 +193,16 @@ pyproject.toml tool.ruff.line-length: You and the update both changed it.
 - An edit you keep stays kept, and `sync --check` still passes. You can take the update later, one edit at a time.
 - Execution is transactional. If a step fails or you press Ctrl+C, every file Protostar wrote, including `pyproject.toml` and `uv.lock`, is restored to its exact original bytes.
 
-<div class="protostar-demo-shell">
-  <div class="panel-top">
-    <span class="terminal-dots" aria-hidden="true">
+<div class="hs-terminal">
+  <div class="hs-terminal-bar">
+    <div class="hs-terminal-dots" aria-hidden="true">
       <span class="dot dot-close"></span>
       <span class="dot dot-minimize"></span>
       <span class="dot dot-maximize"></span>
-    </span>
-    <span class="terminal-title">PROTOSTAR / SYNC</span>
+    </div>
+    <span class="hs-terminal-title">protostar sync</span>
   </div>
-  <div class="protostar-asciinema" data-asciinema="../assets/demo_sync.cast">
+  <div class="hs-terminal-screen" data-asciinema="../assets/demo_sync.cast">
     <noscript>
       <a href="../assets/demo_sync.cast">Download the Protostar terminal recording</a>
     </noscript>

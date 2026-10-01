@@ -1,0 +1,10 @@
+{#- The landing page: house-style's components and install box, and its own
+    stylesheet, which no other page loads. -#}
+{% extends "main.html" %}
+
+{% block extrahead %}
+  {{ super() }}
+  <link rel="stylesheet" href="{{ 'house/css/components.css' | url }}">
+  <link rel="stylesheet" href="{{ 'house/css/install.css' | url }}">
+  <link rel="stylesheet" href="{{ 'stylesheets/home.css' | url }}">
+{% endblock %}

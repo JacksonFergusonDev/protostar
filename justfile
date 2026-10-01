@@ -140,6 +140,11 @@ sync-secret-rules: sync
     @printf "\n{{ blue }}=== Regenerating Secret-Detection Rules ==={{ nc }}\n"
     uv run python scripts/sync_secret_rules.py
 
+# Vendor the house-style release pinned in scripts/sync_house_style.py into docs/house/
+sync-house-style: sync
+    @printf "\n{{ blue }}=== Vendoring house-style ==={{ nc }}\n"
+    uv run python scripts/sync_house_style.py
+
 # Pre-warm environment and caches for demo generation
 demo-prewarm: sync
     @printf "\n{{ blue }}=== Pre-warming Demo Environment & Caches ==={{ nc }}\n"

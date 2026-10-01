@@ -1,301 +1,61 @@
-@font-face {
-    font-family: "Symbols Nerd Font";
-    src: url("../assets/fonts/SymbolsNerdFontMono-Regular.woff2") format("woff2");
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
+/* ====================================================================
+   The documentation theme, fitted to house-style.
+
+   docs/house/ (vendored by scripts/sync_house_style.py) supplies the
+   palette, the fonts, and the terminal window. This file hands those to
+   Zensical's theme. The landing page adds stylesheets/home.css.
+   ==================================================================== */
 
 :root {
-    --protostar-cyan: #22d3ee;
-    --protostar-radius: 8px;
-    --protostar-code-bg: #f8fafc;
-    --protostar-code-fg: #1e293b;
-    --protostar-code-border: #e2e8f0;
-    --protostar-term-prompt: #16a34a;
-
-    --md-code-bg-color: var(--protostar-code-bg);
-    --md-code-fg-color: var(--protostar-code-fg);
+    --md-text-font: "DM Sans";
+    --md-code-font: "JetBrains Mono";
 }
 
-/* ====================================================================
-    1. UNIVERSAL LAYOUT (Always On)
-    Structure: Grids, flex, padding, margins, base typography.
-==================================================================== */
-
-/* --- Base Typography & Elements --- */
-.md-typeset h1 {
-    letter-spacing: 0.02em;
+/* --- Type: medium-weight headings with the house's tight tracking --- */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3 {
+    font-weight: 500;
+    letter-spacing: -0.02em;
 }
 
 .md-typeset h2 {
-    border-bottom: 1px solid var(--md-default-fg-color--lightest);
-    padding-bottom: 0.35rem;
     margin-top: 2.2rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--md-default-fg-color--lightest);
 }
 
 .md-typeset code {
-    border-radius: 0.35rem;
-}
-
-/* --- Homepage Navigation --- */
-.protostar-home-nav {
-    display: flex;
-    min-height: 48px;
-    align-items: center;
-    gap: 0.25rem;
-    border-bottom: 1px solid var(--md-default-fg-color--lightest);
-    margin-bottom: 3rem;
-}
-
-.md-typeset .protostar-home-nav a {
-    display: inline-flex;
-    min-height: 44px;
-    align-items: center;
-    padding: 0.55rem 0.8rem;
-    border-radius: var(--protostar-radius);
-    color: var(--md-default-fg-color--light);
-    font-size: 0.78rem;
-    font-weight: 700;
-    text-decoration: none;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.md-typeset .protostar-home-nav a:hover {
-    color: var(--protostar-cyan);
-    background: rgba(34, 211, 238, 0.05);
-}
-
-.md-typeset .protostar-home-nav .protostar-home-nav__docs {
-    color: var(--md-default-fg-color);
-}
-
-.md-typeset .protostar-home-nav .protostar-home-nav__docs::after {
-    width: 5px;
-    height: 5px;
-    margin-left: 0.6rem;
-    border-radius: 50%;
-    background: var(--protostar-cyan);
-    content: "";
-}
-
-/* --- Hero Install Box & Copy Button --- */
-.protostar-install-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    max-width: 32rem;
-    margin: 2rem 0 0.5rem;
-}
-
-.protostar-command-label {
-    margin: 0;
-    color: var(--md-default-fg-color);
-    font-size: 0.75rem;
-    font-weight: 700;
-}
-
-.protostar-pm-toggle {
-    display: inline-flex;
-    gap: 3px;
-    background: #e2e8f0;
-    border: 1px solid var(--protostar-code-border);
     border-radius: 4px;
-    padding: 2px;
 }
 
-.pm-tab {
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 3px;
-    color: var(--md-default-fg-color--light);
-    font-family: var(--md-code-font-family, monospace);
-    font-size: 0.72rem;
-    font-weight: 500;
-    padding: 3px 9px;
-    line-height: 1;
-    cursor: pointer;
-    transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
-}
-
-.pm-tab:hover {
-    color: var(--md-default-fg-color);
-}
-
-.pm-tab.is-active {
-    background: #ffffff;
-    border-color: #cbd5e1;
-    color: #0f172a;
-    font-weight: 600;
-}
-
-.pm-tab:focus-visible {
-    outline: 2px solid var(--protostar-cyan);
-    outline-offset: 1px;
-}
-
-.protostar-install {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    max-width: 32rem;
-    min-height: 48px;
-    overflow: hidden;
-    border: 1px solid var(--protostar-code-border);
-    border-radius: var(--protostar-radius);
-    background: var(--protostar-code-bg);
-    transition: background-color 0.25s ease, border-color 0.25s ease;
-}
-
-.protostar-install code {
-    padding: 0.75rem 0.9rem;
-    color: var(--protostar-code-fg);
-    background: transparent;
-    font-size: 0.78rem;
-    transition: color 0.25s ease;
-    white-space: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent 100%);
-    mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent 100%);
-}
-
-.protostar-install code::-webkit-scrollbar {
-    display: none;
-}
-
-.protostar-install code::before {
-    margin-right: 0.6rem;
-    color: var(--protostar-term-prompt);
-    /* Terminal green */
-    content: "$";
-    transition: color 0.25s ease;
-}
-
-.protostar-copy {
-    align-self: stretch;
-    min-width: 7.25rem;
-    border: 0;
-    border-left: 1px solid var(--protostar-code-border);
-    color: #000;
-    background: var(--protostar-cyan);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 0.75rem;
-    font-weight: 600;
-    transition: background-color 0.2s ease, border-color 0.25s ease;
-}
-
-.protostar-copy:hover {
-    background: #00e5ff;
-}
-
-/* --- Left Nav Visual Hierarchy --- */
-
-/* Top-level page titles – bold & accented */
-.md-sidebar .md-nav--primary>.md-nav__list>.md-nav__item--nested>.md-nav__link {
-    font-weight: 700;
-    color: var(--protostar-cyan);
+/* --- Navigation: section titles in the accent --- */
+.md-sidebar .md-nav--primary > .md-nav__list > .md-nav__item--nested > .md-nav__link {
     padding-left: 0.75rem;
+    color: var(--accent);
+    font-weight: 600;
 }
 
-/* --- Hero Section --- */
-.protostar-hero {
-    position: relative;
-    padding: 1rem 0 2rem;
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 2.5rem;
-    align-items: center;
-}
-
-@media (min-width: 960px) {
-    .protostar-hero {
-        grid-template-columns: 1fr 1fr;
-        gap: 3.5rem;
-    }
-}
-
-.hero-content {
-    display: flex;
-    flex-direction: column;
-}
-
-/* Fluid, massive typography */
-.md-typeset .hero-content h1 {
-    max-width: 18ch;
-    margin: 0 0 1.5rem;
-    font-size: clamp(2.2rem, 3.8vw, 3.4rem);
-    font-weight: 800;
-    letter-spacing: -0.04em;
-    line-height: 1.05;
-    text-wrap: balance;
-    color: #0f172a;
-}
-
-.protostar-lede {
-    max-width: 54ch;
-    margin: 0;
-    font-size: clamp(1.05rem, 1.6vw, 1.25rem);
-    line-height: 1.65;
-    color: var(--md-default-fg-color--light);
-}
-
-/* --- Hero Graphic Preview --- */
-.hero-preview {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-}
-
-.hero-preview__link {
-    display: block;
-    width: 100%;
-    text-decoration: none;
-}
-
-.hero-preview__link:hover {
-    text-decoration: none;
-}
-
-.hero-preview__img {
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-    display: block;
-    border-radius: var(--protostar-radius);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.06);
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-.hero-preview__link:hover .hero-preview__img,
-.hero-preview__img:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 14px 38px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0, 0, 0, 0.08);
-}
-
-/* --- Card Grids --- */
+/* --- Cards: house panels, outlined, never lifted --- */
 .md-typeset .grid.cards {
     margin: 1.8rem 0;
 }
 
-.md-typeset .grid.cards>ul>li,
-.md-typeset .grid.cards>ol>li {
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid.cards > ol > li {
     padding: 1rem;
-    border-radius: 0.9rem;
-    border: 1px solid transparent;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-    transition: all 0.2s ease-in-out;
+    border: 1px solid var(--md-default-fg-color--lightest);
+    border-radius: 5px;
+    box-shadow: none;
+    transition: border-color 0.25s ease;
 }
 
-/* --- Code Blocks --- */
+/* --- Code blocks --- */
 .md-typeset .highlight {
     margin: 1.2rem 0;
-    border: 1px solid var(--protostar-code-border);
-    border-radius: var(--protostar-radius);
+    border: 1px solid var(--md-default-fg-color--lightest);
+    border-radius: var(--code-radius);
     overflow: hidden;
-    transition: border-color 0.25s ease;
 }
 
 .md-typeset .highlight pre {
@@ -307,139 +67,22 @@
     padding: 0.75rem 0.9rem;
 }
 
-/* Tab and Admonition Nested Code Block Spacing */
 .md-typeset .tabbed-content .highlight,
 .md-typeset .admonition .highlight {
     margin: 0.8rem 0;
 }
 
-/* --- Terminal Demo Shell Frame --- */
-.protostar-demo-shell {
-    width: 100%;
+/* --- Terminal recordings (house-style's .hs-terminal) --- */
+.md-typeset .hs-terminal {
     max-width: 820px;
     margin: 1.5rem 0;
-    border: 1px solid var(--protostar-code-border);
-    border-radius: var(--protostar-radius);
-    background: var(--protostar-code-bg);
-    overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
-.panel-top {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    position: relative;
-    border-bottom: 1px solid var(--protostar-code-border);
-    padding: 8px 14px;
-    background: #f1f5f9;
-    min-height: 28px;
-    box-sizing: border-box;
-}
-
-.terminal-dots {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    z-index: 1;
-}
-
-.terminal-dots .dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    display: inline-block;
-    box-sizing: border-box;
-}
-
-.terminal-dots .dot-close {
-    background: #ff5f56;
-    border: 1px solid #e0443e;
-}
-
-.terminal-dots .dot-minimize {
-    background: #ffbd2e;
-    border: 1px solid #dea123;
-}
-
-.terminal-dots .dot-maximize {
-    background: #27c93f;
-    border: 1px solid #1aab29;
-}
-
-.terminal-title {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    font-family: var(--md-code-font-family, monospace);
-    font-size: 0.65rem;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    color: var(--md-default-fg-color--light);
-    max-width: calc(100% - 90px);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    pointer-events: none;
-    text-align: center;
-}
-
-.protostar-asciinema {
-    width: 100%;
-    max-width: 820px;
-    margin: 0;
-    border-radius: 0;
-    overflow: hidden;
-    position: relative;
-    font-family: "JetBrains Mono", "Symbols Nerd Font", "Fira Code", monospace;
-}
-
-.protostar-asciinema .ap-wrapper {
-    border-radius: 0;
-    box-shadow: none;
-}
-
-/* The player sizes itself inline to the terminal plus its control bar; the
-   bar overlays the recording's bottom rows instead, so no strip stays empty
-   while it is hidden. */
-.protostar-asciinema .ap-player {
-    position: relative;
-    height: auto !important;
-    background: #0a0a0a;
-}
-
-.protostar-asciinema .ap-control-bar {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-}
-
-.protostar-asciinema .ap-control-bar,
-.protostar-asciinema .ap-wrapper.ap-hud .ap-control-bar {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s ease;
-    background: rgba(10, 10, 10, 0.92);
-    backdrop-filter: blur(4px);
-}
-
-.protostar-demo-shell:hover .ap-control-bar,
-.protostar-demo-shell:hover .ap-wrapper.ap-hud .ap-control-bar,
-.protostar-demo-shell:focus-within .ap-control-bar,
-.protostar-demo-shell:focus-within .ap-wrapper.ap-hud .ap-control-bar {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .protostar-asciinema .ap-control-bar {
-        transition: none;
-    }
-}
-
-.protostar-home .highlight {
-    max-width: 820px;
+/* Hold a 78x32 recording's shape until docs/javascripts/casts.js loads the
+   player, so loading it moves nothing on the page. */
+.hs-terminal-screen:not(.is-loaded) {
+    min-height: 0;
+    aspect-ratio: 1.09;
 }
 
 /* --- Footers --- */
@@ -454,131 +97,6 @@
     padding-bottom: 0.4rem;
 }
 
-
-/* ====================================================================
-   2. DARK MODE THEMING (Slate Only)
-   Paint: Colors, shadows, gradients, opacity.
-   ==================================================================== */
-
-[data-md-color-scheme="slate"] {
-
-    /* Custom Variables */
-    --protostar-bg-base: #0a0a0a;
-    --protostar-text-soft: #a9b7d0;
-    --protostar-border: rgba(34, 211, 238, 0.14);
-    --protostar-card-bg: rgba(255, 255, 255, 0.025);
-    --protostar-code-bg: #0a0f1f;
-    --protostar-code-fg: #cdd6f4;
-    --protostar-code-border: var(--protostar-border);
-    --protostar-term-prompt: #a6e3a1;
-
-    /* MkDocs Overrides */
-    --md-default-bg-color: var(--protostar-bg-base);
-    --md-default-fg-color--light: var(--protostar-text-soft);
-    --md-typeset-a-color: var(--protostar-cyan);
-    --md-footer-bg-color: var(--protostar-bg-base);
-    --md-footer-bg-color--dark: var(--protostar-bg-base);
-    --md-code-bg-color: var(--protostar-code-bg);
-    --md-code-fg-color: var(--protostar-code-fg);
-
-    /* --- Hero Install Toggle --- */
-    .protostar-pm-toggle {
-        background: #090e11;
-        border-color: var(--protostar-border);
-    }
-
-    .pm-tab {
-        color: var(--protostar-text-soft);
-    }
-
-    .pm-tab:hover {
-        color: #ffffff;
-    }
-
-    .pm-tab.is-active {
-        background: #151d24;
-        border-color: rgba(34, 211, 238, 0.3);
-        color: var(--protostar-cyan);
-    }
-
-    /* --- Navigation & Headers --- */
-    .md-nav__link--active,
-    .md-typeset a:hover {
-        text-shadow: 0 0 10px rgba(34, 211, 238, 0.35);
-    }
-
-    .md-typeset .hero-content h1 {
-        color: #ffffff;
-        text-shadow: 0 0 30px rgba(255, 255, 255, 0.12);
-    }
-
-
-    /* --- Cards & Grids --- */
-    .md-typeset .grid.cards>ul>li,
-    .md-typeset .grid.cards>ol>li {
-        background: var(--protostar-card-bg);
-        border: 1px solid rgba(34, 211, 238, 0.08);
-        backdrop-filter: blur(4px);
-    }
-
-    .md-typeset .grid.cards>ul>li:hover,
-    .md-typeset .grid.cards>ol>li:hover {
-        border-color: rgba(34, 211, 238, 0.15);
-        box-shadow: 0 0 30px rgba(34, 211, 238, 0.12);
-        transform: translateY(-2px);
-    }
-
-    .protostar-demo-shell {
-        border-color: #2d3c43;
-        background: #090e11;
-        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45), 0 0 45px rgba(34, 211, 238, 0.06);
-    }
-
-    .panel-top {
-        border-bottom-color: #243138;
-        background: #11171c;
-    }
-
-    .terminal-title {
-        color: #7a909c;
-    }
-
-    .protostar-asciinema {
-        border: none;
-        box-shadow: none;
-    }
-
-    .hero-preview__img {
-        box-shadow: 0 0 35px rgba(34, 211, 238, 0.1), 0 12px 30px rgba(0, 0, 0, 0.4);
-    }
-
-    .hero-preview__link:hover .hero-preview__img,
-    .hero-preview__img:hover {
-        box-shadow: 0 0 45px rgba(34, 211, 238, 0.18), 0 16px 36px rgba(0, 0, 0, 0.5);
-    }
-
-    /* --- Tables --- */
-    .md-typeset table tr:nth-child(even) td {
-        background-color: rgba(40, 8, 130, 0.06);
-    }
-
-    .md-typeset table tr:nth-child(odd) td {
-        background-color: #00000005;
-    }
-
-    .md-typeset table thead tr th {
-        border-bottom: 1px solid var(--protostar-border);
-        color: white;
-        letter-spacing: 0.03em;
-    }
-
-    /* --- Footers --- */
-    .md-footer,
-    .md-footer-meta {
-        background-color: var(--protostar-bg-base);
-    }
-}
-
 .mermaid {
     overflow: auto;
     max-width: 100%;
@@ -591,4 +109,37 @@
     display: block;
     max-width: 100%;
     height: auto;
+}
+
+/* ====================================================================
+   The dark scheme the site opens in: house-style's palette.
+   ==================================================================== */
+[data-md-color-scheme="slate"] {
+    --md-default-bg-color: var(--bg);
+    --md-default-fg-color: var(--text);
+    --md-default-fg-color--light: var(--muted);
+    --md-default-fg-color--lighter: #5f6b73;
+    --md-default-fg-color--lightest: var(--line);
+    --md-typeset-color: var(--text);
+    --md-typeset-a-color: var(--accent);
+    --md-accent-fg-color: var(--accent);
+    --md-code-bg-color: var(--panel);
+    --md-code-fg-color: var(--code-fg);
+    --md-footer-bg-color: var(--bg);
+    --md-footer-bg-color--dark: var(--bg);
+
+    .md-typeset .grid.cards > ul > li,
+    .md-typeset .grid.cards > ol > li {
+        background: var(--panel);
+    }
+
+    .md-typeset .grid.cards > ul > li:hover,
+    .md-typeset .grid.cards > ol > li:hover {
+        border-color: #3d5862;
+    }
+
+    .md-typeset table:not([class]) th {
+        color: var(--text);
+        letter-spacing: 0.03em;
+    }
 }

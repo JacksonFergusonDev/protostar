@@ -71,6 +71,9 @@ jobs:
     - name: Check documentation against the code
       run: uv run python scripts/check_docs_drift.py
 
+    - name: Check docs/house matches its house-style release
+      run: uv run python scripts/sync_house_style.py --check
+
     - name: Build documentation (strict)
       run: uv run zensical build --strict
 
