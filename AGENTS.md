@@ -121,10 +121,11 @@ Full contract: `docs/developer/built-in-templates.md`. Invariants when touching 
 
 ### 10. Documentation Site & House Style
 
+- **The docs follow house-style's design rules.** Read `docs/house/GUIDELINES.txt` (house-style's `GUIDELINES.md` at the pinned tag) before changing any page's look. It says, among other things, which icon every standalone link takes: `arrow-down` within the page, `arrow-right` to a related page, `arrow-up-right` to another site, and brand icons for GitHub and jacksonferguson.me. Draw icons only with house-style's `.hs-icon` classes or its `icons/` files, never a text arrow.
 - **`docs/house/` is vendored, never edited.** It is a tagged release of [house-style](https://github.com/JacksonFergusonDev/house-style), the palette, fonts, components, and scripts jacksonferguson.me shares with its project sites. Change a shared style there, tag a release, then bump `HOUSE_STYLE_TAG` in `scripts/sync_house_style.py` and run `just sync-house-style`; CI fails when the copy differs from the tag. Never load house-style from another origin at runtime.
 - **The docs restyle house-style; they don't redefine it.** `stylesheets/extra.css` hands the house tokens to Zensical's theme, and `stylesheets/home.css` (loaded only by `overrides/home.html`) lays out the landing page with house components. A style every project site would want belongs in house-style, not here.
 - **Terminal visuals are one window.** Recordings use house-style's `.hs-terminal` markup and `docs/javascripts/casts.js`, which loads the player only when a recording nears the viewport. Generated SVGs draw the same window in `scripts/generate_docs_assets/svg.py`; `test_render_and_write_svg_draws_the_house_terminal_window` checks its colors against the vendored `terminal.css`.
-- **The landing page's first screen is text.** No image, recording, or player loads before the reader scrolls toward it.
+- **The landing page's first screen is text.** No image, recording, or player loads before the reader scrolls toward it. The hero's attractor (`docs/javascripts/field.js`, three.js from jsDelivr) loads only after the page has, and follows house-style's motion rules: faint, paused off screen, still for reduced motion, with a pause control.
 
 ## Pre-Commit & Pre-Push Hooks (Avoid Redundant Checks)
 

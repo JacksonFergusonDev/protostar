@@ -37,6 +37,10 @@ RELEASE = {
     "fonts/dm-sans.woff2": b"font",
     "fonts/OFL.txt": b"license",
     "fonts/README.md": b"# Fonts",
+    "icons/arrow-right.svg": b"<svg/>",
+    "icons/README.md": b"# Icons",
+    "GUIDELINES.md": b"# Guidelines",
+    "AGENTS.md": b"# Agents",
 }
 
 
@@ -51,8 +55,12 @@ def test_release_files_keep_what_the_docs_serve():
         "fonts/dm-sans.woff2",
         "fonts/OFL.txt",
         "fonts/README.txt",
+        "icons/arrow-right.svg",
+        "icons/README.txt",
+        "GUIDELINES.txt",
     }
     assert files["fonts/README.txt"] == b"# Fonts"
+    assert files["GUIDELINES.txt"] == b"# Guidelines"
     assert b"house-style v9.9.9" in files["README.txt"]
 
 
@@ -106,6 +114,6 @@ def test_the_docs_load_only_vendored_house_files():
     for referenced in ("css/fonts.css", "css/tokens.css", "css/terminal.css"):
         assert f'"house/{referenced}"' in config
         assert referenced in vendored
-    for referenced in ("css/components.css", "css/install.css"):
+    for referenced in ("css/components.css", "css/install.css", "css/icons.css"):
         assert f"'house/{referenced}'" in template
         assert referenced in vendored

@@ -1,0 +1,55 @@
+# House style guidelines
+
+The rules every site in the family follows: [jacksonferguson.me](https://jacksonferguson.me) and the project sites on its subdomains. The CSS and scripts here implement most of them. The rest are judgment calls a stylesheet can't make, so they're written down here, and each site's `AGENTS.md` points at this file.
+
+A site may add its own rules, but it never contradicts these. When a rule here is wrong, change it here and release a new version, rather than working around it in one site.
+
+## Color and type
+
+- **Read the tokens, never raw values.** Colors, typefaces, and sizes come from `css/tokens.css`. A value a site needs that no token covers is a sign the token is missing.
+- **Cyan is the only accent.** `--accent` marks what the reader can act on and what's current. Green, amber, and red only report an outcome. The `--prompt` green belongs to the terminal.
+- **Dark first.** The palette is dark. A site may offer a light scheme by redefining the tokens it reads, but terminals, recordings, and install boxes stay dark in both.
+- **Two typefaces.** DM Sans for prose and headings, JetBrains Mono for code, commands, labels, and section markers. Headings are weight 500 with tight tracking, never bold.
+- **One type scale.** Each tier has one token (`--fs-h1` to `--fs-label`), and the tiers shrink together on phones. Components never set their own sizes.
+
+## Page anatomy
+
+- **Sections open with a numbered marker.** `<div class="hs-section-marker"><span>01 / ABOUT</span></div>`, then an H2 that says something the marker doesn't. Only top-level sections are numbered.
+- **Card eyebrows are unnumbered labels** (`FEATURED PROJECT`), in mono at `--fs-label`.
+- **Cards are panels with a line border** (`--panel`, `--line`, 5px radius), and are never nested inside cards. A card that links lightens its border on hover; it never lifts, glows, or casts a shadow.
+- **A page that scrolls far has a grid behind its sections**: 80px lines in the line color, faint enough to read as texture.
+
+## Navigation and icons
+
+- **Every link that stands on its own carries an icon that says where it goes.** That covers buttons, text links outside a sentence, cards, and jump links. The icon comes after the label, in the text's color:
+
+  | Icon | Where the link goes |
+  | --- | --- |
+  | `arrow-down` | Further down the same page |
+  | `arrow-up` | Back up the same page |
+  | `arrow-right` | The next page, or a closely related page on the same site |
+  | `arrow-left` | The previous page, or back to where the reader came from |
+  | `arrow-up-right` | Another site, or a page only loosely related to this one |
+
+- **Brand links carry their brand.** A link to GitHub, LinkedIn, or email shows its `brand-*` icon before the label instead of an arrow. A link to jacksonferguson.me from a project site shows `icons/jacksonferguson.svg`.
+- **A link inside a sentence takes no icon.** It reads as part of the prose.
+- **Use only the icons in `icons/`.** Never a text arrow (`→`), an emoji, or another icon set. A site that can inline SVG inlines these files; any other site uses `css/icons.css`. A missing icon is added here first.
+- **Icons are decoration.** Mark them `aria-hidden="true"`; the label carries the meaning.
+
+## Terminals and recordings
+
+- **Every terminal is an `.hs-terminal` window**, whether it holds a recording or a screenshot. A screenshot generated as an image draws the same window: the same bar, border, title color, and traffic-light dots.
+- **A recording starts itself once most of it is in view**, loops, and never shows a play button over it first. Readers who asked for reduced motion get a still first frame and the play button instead.
+- **The player loads only when a recording nears the viewport.** A page without a recording loads none of it.
+
+## Motion and loading
+
+- **The first screen is text.** Nothing heavy (an image, a recording, a canvas, a library) holds up the first paint. Load it after the page is up, or when the reader scrolls toward it.
+- **Background motion is texture, not a centerpiece.** An animated field behind a hero stays in the dark cyan family, sits well below the text in contrast, and never competes with it.
+- **Motion can be stopped.** Anything that moves on its own for more than a few seconds has a visible pause control, stops when it's off screen or the tab is hidden, and stays still for readers who asked for reduced motion.
+
+## Interaction
+
+- **Focus is always visible:** a 2px `--accent` outline.
+- **One install box per product**, with uv first.
+- **Copy buttons confirm.** They say `Copied!` or `Failed` for a moment, then show their label again (`js/copy-command.js` does this).

@@ -26,3 +26,6 @@ site/
 
 # Explicitly track .envrc in test snapshots (prevent host ~/.gitignore_global masking)
 !tests/snapshots/**/.envrc
+
+# Local Claude Code settings
+.claude/

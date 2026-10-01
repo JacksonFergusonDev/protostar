@@ -17,12 +17,15 @@ import {
 const PLAYER = "https://cdn.jsdelivr.net/npm/asciinema-player@3.17.0/dist/bundle/";
 let player;
 
+// The player's files go in <body>: instant navigation drops any <head>
+// element the next page doesn't declare, and the player needs its stylesheet
+// on every page it plays on.
 function loadPlayer() {
   player ??= new Promise((resolve, reject) => {
     const style = document.createElement("link");
     style.rel = "stylesheet";
     style.href = `${PLAYER}asciinema-player.css`;
-    document.head.append(style);
+    document.body.append(style);
 
     const script = document.createElement("script");
     script.src = `${PLAYER}asciinema-player.min.js`;
@@ -31,7 +34,7 @@ function loadPlayer() {
       player = undefined;
       reject(new Error("The terminal player failed to load"));
     };
-    document.head.append(script);
+    document.body.append(script);
   });
   return player;
 }

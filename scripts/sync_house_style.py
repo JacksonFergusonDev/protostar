@@ -26,15 +26,19 @@ if str(_repo_root) not in sys.path:
 
 from scripts._common import DOCS_DIR, REPO_ROOT, OutputStyle, fetch_bytes, report
 
-HOUSE_STYLE_TAG = "v1.0.1"
+HOUSE_STYLE_TAG = "v1.1.0"
 REPOSITORY = "https://github.com/JacksonFergusonDev/house-style"
 ARCHIVE_URL = (
     "https://codeload.github.com/JacksonFergusonDev/house-style/tar.gz/refs/tags/{tag}"
 )
 VENDOR_DIR = DOCS_DIR / "house"
 
-# A Markdown file under docs/ would build as a page, so notices land as text.
-_RENAMES = {"fonts/README.md": "fonts/README.txt"}
+# A Markdown file under docs/ would build as a page, so these land as text.
+_RENAMES = {
+    "GUIDELINES.md": "GUIDELINES.txt",
+    "fonts/README.md": "fonts/README.txt",
+    "icons/README.md": "icons/README.txt",
+}
 
 
 def _vendored(path: PurePosixPath) -> bool:
@@ -45,6 +49,8 @@ def _vendored(path: PurePosixPath) -> bool:
         return path.suffix == ".css"
     if path.parts[0] == "js":
         return path.suffix == ".js"
+    if path.parts[0] == "icons":
+        return path.suffix == ".svg"
     return path.parts[0] == "fonts" and path.suffix in {".woff2", ".txt"}
 
 

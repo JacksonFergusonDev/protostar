@@ -195,6 +195,23 @@
     white-space: nowrap;
 }
 
+.ps-home .ps-bar__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ps-home .ps-bar__link .hs-icon {
+    width: 14px;
+    height: 14px;
+    color: var(--muted);
+}
+
+.ps-home .ps-bar__link img {
+    width: 18px;
+    height: 18px;
+}
+
 .ps-home .ps-bar__link + .ps-bar__link {
     padding-left: 18px;
     border-left: 1px solid var(--line);
@@ -269,12 +286,59 @@
     padding: 36px 0 115px;
 }
 
+/* The hero has no grid: docs/javascripts/field.js draws an attractor behind
+   it instead, faint enough to read as texture. */
 .ps-home .ps-hero::before {
-    background-image: radial-gradient(ellipse at 75% 40%, #0c333c4d, transparent 62%);
+    background-image: none;
 }
 
-[data-md-color-scheme="default"] .ps-home .ps-hero::before {
-    background-image: radial-gradient(ellipse at 75% 40%, #cffafe66, transparent 62%);
+.ps-home .ps-field {
+    position: absolute;
+    top: 0;
+    left: calc(50% - 50vw);
+    z-index: -1;
+    width: 100vw;
+    height: 100%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.2s ease;
+    -webkit-mask-image: linear-gradient(180deg, #000 60%, transparent);
+    mask-image: linear-gradient(180deg, #000 60%, transparent);
+}
+
+.ps-home .ps-field.is-ready {
+    opacity: 1;
+}
+
+/* jacksonferguson.me's motion toggle. */
+.ps-home .ps-motion {
+    position: absolute;
+    top: 24px;
+    right: 0;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    color: #a1adb5;
+    background: none;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+}
+
+.ps-home .ps-motion[hidden] {
+    display: none;
+}
+
+.ps-home .ps-motion:hover {
+    color: var(--text);
+}
+
+[data-md-color-scheme="default"] .ps-home .ps-motion {
+    color: var(--muted);
 }
 
 .ps-home .ps-hero h1 {
@@ -299,16 +363,29 @@
 
 .ps-home .ps-hero__actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 28px;
     margin-top: 30px;
+}
+
+.ps-home .ps-hero__actions > * {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* Arrows beside a label sit at the UI text size, as on jacksonferguson.me. */
+.ps-home .hs-button .hs-icon,
+.ps-home .ps-text-link .hs-icon {
+    width: 16px;
+    height: 16px;
 }
 
 [data-md-color-scheme] .ps-home .hs-button--primary:hover {
     color: #081014;
 }
 
+/* Jump links: each one a small outlined button pointing down the page. */
 .ps-home .ps-hero__bottom {
     position: absolute;
     right: 0;
@@ -316,12 +393,29 @@
     left: 0;
     display: flex;
     flex-wrap: wrap;
-    gap: 8px 25px;
-    font-size: 10px;
+    gap: 8px;
 }
 
 .ps-home .ps-hero__bottom a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
     color: #a1abb3;
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+}
+
+[data-md-color-scheme] .ps-home .ps-hero__bottom a:hover {
+    border-color: rgba(34, 211, 238, 0.4);
+    color: var(--ps-accent-text);
+}
+
+.ps-home .ps-hero__bottom .hs-icon {
+    width: 12px;
+    height: 12px;
+    color: var(--ps-accent-text);
 }
 
 [data-md-color-scheme="default"] .ps-home .ps-hero__bottom a {
@@ -603,9 +697,8 @@
     line-height: 1.75;
 }
 
-.ps-home .ps-principles p a {
-    color: var(--text);
-    border-bottom: 1px solid #3b484e;
+.ps-home .ps-principles .ps-text-link {
+    margin-top: 12px;
 }
 
 /* --- 05 docs: jacksonferguson.me's resume cards --- */
@@ -633,13 +726,29 @@
 }
 
 .ps-home .ps-index strong {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     color: var(--text);
     font-size: var(--fs-h4);
     font-weight: 500;
     letter-spacing: -0.01em;
 }
 
-.ps-home .ps-index span {
+.ps-home .ps-index strong .hs-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--muted);
+    transition: color 0.2s, transform 0.2s;
+}
+
+.ps-home .ps-index a:hover strong .hs-icon {
+    color: var(--ps-accent-text);
+    transform: translateX(2px);
+}
+
+.ps-home .ps-index > a > span {
     color: var(--muted);
     font-size: var(--fs-ui);
     line-height: 1.6;
@@ -700,7 +809,26 @@
     }
 
     .ps-home .ps-hero {
-        padding-bottom: 90px;
+        padding-bottom: 150px;
+    }
+
+    .ps-home .ps-hero__actions {
+        gap: 18px;
+    }
+
+    .ps-home .ps-hero__actions .hs-button {
+        gap: 12px;
+        padding: 13px 15px;
+        font-size: 13px;
+    }
+
+    .ps-home .ps-hero__actions .ps-text-link {
+        gap: 8px;
+        font-size: 13px;
+    }
+
+    .ps-home .ps-motion {
+        top: 16px;
     }
 
     .ps-home .ps-hero h1 {

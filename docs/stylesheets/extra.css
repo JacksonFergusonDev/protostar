@@ -85,6 +85,18 @@
     aspect-ratio: 1.09;
 }
 
+/* Recordings start themselves once in view, so the play button would only
+   flash over them; readers who asked for reduced motion start them by hand. */
+.hs-terminal-screen .ap-overlay-start {
+    display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hs-terminal-screen .ap-overlay-start {
+        display: flex;
+    }
+}
+
 /* --- Footers --- */
 .md-footer,
 .md-footer-meta {
