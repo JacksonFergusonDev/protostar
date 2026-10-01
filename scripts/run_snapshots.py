@@ -35,6 +35,7 @@ from scripts._common import (
 from scripts._common import (
     CodeLanguage,
     OutputStyle,
+    fixture_environment,
     report,
     report_code,
     run_repo_cmd,
@@ -434,8 +435,7 @@ def _build_fixture_scenario(
 
 def build_snapshots(scenario_name: str | None = None) -> None:
     """Iterates through predefined scenarios concurrently and extracts snapshot artifacts."""
-    clean_env = os.environ.copy()
-    clean_env.pop("VIRTUAL_ENV", None)
+    clean_env = fixture_environment()
 
     cache_path = _get_host_uv_cache_dir()
     cache_path.mkdir(parents=True, exist_ok=True)
@@ -693,10 +693,7 @@ def main() -> None:
 
     import protostar.config
 
-    protostar.config.CONFIG_FILE = (
-        Path(tempfile.gettempdir()) / "non_existent_protostar_config.toml"
-    )
-    protostar.config.clear_user_config_cache()
+    protostar.config.select_config_source(None, disabled=True)
 
     try:
         SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)

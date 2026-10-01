@@ -34,8 +34,8 @@ def generate_fallbacks_content(new_revisions: dict[str, str]) -> str:
         "# Formatted as string keys to avoid circular imports.",
         "DEFAULT_REVISIONS: dict[str, str] = {",
     ]
-    for url, rev in new_revisions.items():
-        lines.append(f'    "{url}": "{rev}",')
+    for url, rev in sorted(new_revisions.items()):
+        lines.append(f"    {json.dumps(url)}: {json.dumps(rev)},")
     lines.append("}")
     lines.append("")
     return "\n".join(lines)
@@ -61,18 +61,35 @@ def main() -> None:
         report("Invalid registry schema.", style=OutputStyle.ERROR, stderr=True)
         sys.exit(1)
 
-    raw_remote_hooks = data.get("hooks", {})
+    raw_remote_hooks = data.get("hooks")
+    if not isinstance(raw_remote_hooks, dict):
+        report("Invalid registry hooks mapping.", style=OutputStyle.ERROR, stderr=True)
+        sys.exit(1)
     supported_hook_urls = {hook.value for hook in RemoteHook}
-    remote_hooks = {
-        k: v for k, v in raw_remote_hooks.items() if k in supported_hook_urls
-    }
-    if not remote_hooks:
+    missing = supported_hook_urls - raw_remote_hooks.keys()
+    if missing:
         report(
-            "Remote registry has no supported hooks.",
+            f"Remote registry is missing supported hooks: {', '.join(sorted(missing))}.",
             style=OutputStyle.ERROR,
             stderr=True,
         )
         sys.exit(1)
+    invalid = [
+        url
+        for url in sorted(supported_hook_urls)
+        if not isinstance(raw_remote_hooks[url], str)
+        or not raw_remote_hooks[url].strip()
+    ]
+    if invalid:
+        report(
+            f"Remote registry has invalid revisions for: {', '.join(invalid)}.",
+            style=OutputStyle.ERROR,
+            stderr=True,
+        )
+        sys.exit(1)
+    remote_hooks = {
+        k: v for k, v in raw_remote_hooks.items() if k in supported_hook_urls
+    }
 
     # Compare
     is_out_of_date = dict(remote_hooks) != dict(DEFAULT_REVISIONS)

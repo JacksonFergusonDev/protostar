@@ -12,10 +12,42 @@ from pytest_mock import MockerFixture
 
 from scripts._common import DOCS_GENERATED_DIR, SNAPSHOTS_DIR
 from scripts.run_snapshots import (
+    RegressionScenario,
+    TreePaths,
     _extract_and_write_targets,
+    build_snapshots,
     check_snapshot_drift,
     main,
 )
+
+
+def test_snapshot_children_ignore_host_configuration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
+) -> None:
+    monkeypatch.setenv("PROTOSTAR_CONFIG", str(tmp_path / "host.toml"))
+    monkeypatch.setenv("GIT_DIR", str(tmp_path / "host.git"))
+    monkeypatch.setattr("scripts.run_snapshots.tempfile.tempdir", str(tmp_path))
+    mocker.patch(
+        "scripts.run_snapshots._get_host_uv_cache_dir", return_value=tmp_path / "cache"
+    )
+    scenario = RegressionScenario(
+        "fixture", (("--template", "cli"),), "An isolated fixture."
+    )
+    mocker.patch("scripts.run_snapshots.SCENARIOS", {"fixture": scenario})
+    empty = TreePaths(frozenset(), frozenset())
+    execute = mocker.patch(
+        "scripts.run_snapshots._execute_fixture_scenario", return_value=(empty, empty)
+    )
+    mocker.patch("scripts.run_snapshots._extract_and_write_targets")
+    mocker.patch("scripts.run_snapshots.check_planned_tree")
+
+    build_snapshots("fixture")
+
+    env = execute.call_args.args[2]
+    assert env["PROTOSTAR_CONFIG"] == ""
+    assert "GIT_DIR" not in env
+    assert Path(env["HOME"]).is_relative_to(tmp_path)
+    assert env["XDG_CONFIG_HOME"] == env["HOME"]
 
 
 def _mock_subprocess_run_factory(
@@ -503,6 +535,14 @@ def test_harness_main_filtered_scenario_scope(
     mocker: MockerFixture,
 ) -> None:
     """Verifies that running the main entrypoint with --scenario targets only that scenario."""
+    from protostar.config import (
+        ConfigOrigin,
+        active_config_source,
+        select_config_source,
+    )
+
+    monkeypatch.setenv("PROTOSTAR_CONFIG", "host.toml")
+    select_config_source("selected.toml")
     monkeypatch.setattr("sys.argv", ["run_snapshots.py", "--scenario", "cli"])
     mock_build = mocker.patch("scripts.run_snapshots.build_snapshots")
     mock_docs = mocker.patch("scripts.run_snapshots.generate_docs_assets")
@@ -513,6 +553,7 @@ def test_harness_main_filtered_scenario_scope(
 
     main()
 
+    assert active_config_source().origin is ConfigOrigin.DISABLED
     mock_build.assert_called_once_with(scenario_name="cli")
     mock_docs.assert_not_called()
     mock_diff.assert_not_called()
