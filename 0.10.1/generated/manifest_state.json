@@ -1,0 +1,152 @@
+{
+    "one_shot": false,
+    "template_reference": {
+        "origin": "built-in",
+        "locator": "astro",
+        "digest": "42c3bd341e140b185bad7155f8c47c9f405667048166337e81e0be6c12f65159",
+        "display_name": null,
+        "version": null,
+        "path": "",
+        "ref": null,
+        "revision": null,
+        "migrated": null
+    },
+    "migrations": [],
+    "dependencies": {
+        "dependencies": [
+            "numpy",
+            "scipy",
+            "pandas",
+            "matplotlib",
+            "astropy",
+            "astroquery",
+            "specutils"
+        ],
+        "dev_dependencies": [
+            "ruff",
+            "nbdime"
+        ],
+        "docs_dependencies": [],
+        "includes": [],
+        "resolver_footprint": {
+            "paths": [
+                "pyproject.toml",
+                "uv.lock"
+            ]
+        }
+    },
+    "filesystem": {
+        "directories": [
+            "data/catalogs",
+            "data/fits",
+            "notebooks",
+            "src"
+        ],
+        "file_injections": {
+            "README.md": "# <% PROJECT_NAME %>\n\nAstrophysics analysis for <% PROJECT_NAME %>, with Astropy.\n",
+            ".gitattributes": "# Astrophysics binary safety\n*.fits binary\n*.fit  binary\n*.fts  binary\n\n# Improve Jupyter Notebook diffs\n*.ipynb text eol=lf\n"
+        },
+        "structured": {
+            "pyproject.toml": [
+                {
+                    "producer": "module:PythonCore",
+                    "content": "[project]\ndescription = \"Add your description here.\"\nauthors = [{ name = \"your-name\", email = \"your-email@example.com\" }]\n",
+                    "resolver_footprint": null,
+                    "format": "toml"
+                },
+                {
+                    "producer": "module:RuffModule",
+                    "content": "[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nselect = [\n    \"A\",   # flake8-builtins\n    \"B\",   # flake8-bugbear\n    \"C4\",  # flake8-comprehensions\n    \"E\",   # pycodestyle errors\n    \"F\",   # Pyflakes\n    \"I\",   # isort\n    \"RUF\", # Ruff-specific\n    \"UP\",  # pyupgrade\n]\nignore = [\n    \"E501\", # Line too long - handled automatically by `ruff format`\n]\n",
+                    "resolver_footprint": null,
+                    "format": "toml"
+                },
+                {
+                    "producer": "template:e7602f867c2c0e0437b62e809cb4c64a65838a6c865742a1a164fe7c6c420335:data_science_linting",
+                    "content": "[tool.ruff.lint]\nextend-select = [\"PD\", \"NPY\"]\n",
+                    "resolver_footprint": null,
+                    "format": "toml"
+                }
+            ]
+        },
+        "regions": {},
+        "vcs_ignores": [
+            "*.csv",
+            "*.fit",
+            "*.fits",
+            "*.fts",
+            "*.parquet",
+            ".cache/",
+            ".ipynb_checkpoints/",
+            ".ruff_cache/",
+            ".venv/",
+            "__pycache__/"
+        ],
+        "workspace_hides": [
+            ".cache/",
+            ".ruff_cache/",
+            ".venv/",
+            "__pycache__/"
+        ]
+    },
+    "tooling": {
+        "hook_runner": "none",
+        "pre_commit_hooks": [],
+        "pre_commit_local_hooks": [
+            "      - id: ruff-check\n        name: ruff check\n        entry: uv run ruff check --fix\n        language: system\n        types: [python]\n        require_serial: true\n\n      - id: ruff-format\n        name: ruff format\n        entry: uv run ruff format\n        language: system\n        types: [python]\n        require_serial: true"
+        ],
+        "pre_commit_install_hook_types": [],
+        "wants_ci": false,
+        "wants_release": false,
+        "wants_docker": false,
+        "ci_flags": [],
+        "ci_steps": [
+            "      - name: Run Ruff Linter\n        run: uv run ruff check --output-format=github .\n\n      - name: Run Ruff Formatter\n        run: uv run ruff format --check --output-format=github ."
+        ],
+        "wants_just": false,
+        "just_format_commands": [
+            "uv run ruff check --fix .",
+            "uv run ruff format ."
+        ],
+        "just_lint_commands": [
+            "uv run ruff check .",
+            "uv run ruff format --check ."
+        ],
+        "just_typecheck_commands": [],
+        "just_clean_paths": [
+            ".ruff_cache"
+        ],
+        "wants_agents": false,
+        "wants_community": false,
+        "conventional_commits": false,
+        "ide_extensions": [
+            "charliermarsh.ruff"
+        ]
+    },
+    "tasks": {
+        "system_tasks": [],
+        "post_install_tasks": [
+            {
+                "command": [
+                    "uv",
+                    "run",
+                    "nbdime",
+                    "config-git",
+                    "--enable"
+                ],
+                "description": null,
+                "timeout": 30,
+                "owned_files": [],
+                "owned_trees": []
+            }
+        ]
+    },
+    "metadata": {},
+    "ide_settings": {
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+        "python.terminal.activateEnvironment": true
+    },
+    "collision_strategy": "merge",
+    "collisions": [],
+    "missing_tools": [],
+    "diagnostics": []
+}
