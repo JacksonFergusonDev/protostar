@@ -75,6 +75,13 @@ test-benchmark-slower: sync
         'PROTOSTAR_BENCHMARK_RECIPE_EDITOR=1 .venv/bin/protostar init'
     @printf "{{ green }}✔ Benchmark complete{{ nc }}\n"
 
+# Run mutation testing on one module, e.g. `just mutate journal` (slow; the full set runs in the Mutation Testing workflow)
+mutate module workers="2":
+    @printf "\n{{ blue }}=== Mutation Testing: {{ module }} ==={{ nc }}\n"
+    uv run --group mutation mutmut run --max-children {{ workers }} "protostar.{{ module }}.*"
+    uv run python scripts/mutation_report.py report --json mutants/summary.json --survivors mutants/survivors.txt
+    @printf "{{ green }}✔ Mutation run complete (survivors in mutants/survivors.txt){{ nc }}\n"
+
 # Run the fast local CI pipeline executed before pushing
 ci: lint typecheck test docs check-snapshots check-doc-links check-docs-drift check-schemas secrets
     @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
@@ -96,6 +103,7 @@ clean:
         tmp_gen \
         site \
         .benchmarks \
+        mutants \
         .cache
     rm -f \
         benchmark.json \

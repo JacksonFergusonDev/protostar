@@ -19,6 +19,7 @@ coverage.lcov
 tmp*/
 site/
 .benchmarks/
+mutants/
 .cache/
 .ruff_cache/
 .venv/

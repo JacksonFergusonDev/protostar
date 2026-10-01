@@ -80,6 +80,9 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "pytest-textual-snapshot>=1.0.0",
 ]
+mutation = [
+    "mutmut>=3.8.0",
+]
 
 # ==================================================
 # Tool Configuration
@@ -90,7 +93,7 @@ dev = [
 [tool.ruff]
 target-version = "py312"
 # _secret_rules.py is generated; its --check compares bytes, so formatters stay off it.
-extend-exclude = ["docs", "site", "tests/snapshots", "src/protostar/_secret_rules.py"]
+extend-exclude = ["docs", "site", "mutants", "tests/snapshots", "src/protostar/_secret_rules.py"]
 
 [tool.ruff.lint]
 select = [
@@ -139,7 +142,7 @@ pretty = true
 show_error_codes = true
 show_error_context = true
 explicit_package_bases = true
-exclude = ["^docs/", "^site/", "^tests/snapshots/"]
+exclude = ["^docs/", "^site/", "^mutants/", "^tests/snapshots/"]
 
 [[tool.mypy.overrides]]
 module = ["tests.*", "scripts.*"]
@@ -166,6 +169,39 @@ omit = ["src/protostar/**/__init__.py"]
 show_missing = true
 skip_covered = true
 fail_under = 85
+
+# ---- mutmut ---- #
+
+# Mutation testing: `just mutate` locally, or the manual Mutation Testing workflow.
+# `also_copy` lists what the suite reads from disk; mutmut runs it from a copy.
+[tool.mutmut]
+paths_to_mutate = [
+    "src/protostar/fs_transaction.py",
+    "src/protostar/journal.py",
+    "src/protostar/jsonc_ast.py",
+    "src/protostar/merge.py",
+    "src/protostar/text_merge.py",
+    "src/protostar/toml_ast.py",
+    "src/protostar/yaml_ast.py",
+]
+pytest_add_cli_args_test_selection = ["tests/"]
+# Temporary: prints the pytest error behind a failed "clean tests" step.
+debug = true
+also_copy = [
+    ".github/",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "README.md",
+    "SECURITY.md",
+    "docs/",
+    "justfile",
+    "scripts/",
+    "src/",
+    "zensical.toml",
+]
 
 # ---- rumdl  ---- #
 
