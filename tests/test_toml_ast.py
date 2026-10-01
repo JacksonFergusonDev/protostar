@@ -1,11 +1,27 @@
 import tomllib
 from pathlib import Path
 
+import pytest
 import tomlkit
+from pytest_mock import MockerFixture
 
 from protostar.documents.pyproject_layout import format_document
-from protostar.merge import MISSING, MergeLocation, MergePolicy, Value
-from protostar.toml_ast import TomlDocumentSpec, reconcile_toml
+from protostar.errors import ConfigurationError
+from protostar.intent import StructuredContribution
+from protostar.merge import (
+    MISSING,
+    ConflictReason,
+    MergeLocation,
+    MergePolicy,
+    ResolutionChoice,
+    Value,
+)
+from protostar.toml_ast import (
+    FlatNames,
+    TomlDocumentSpec,
+    aggregate_toml_document,
+    reconcile_toml,
+)
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -775,3 +791,380 @@ def test_a_key_added_to_a_table_without_a_closing_comment_is_appended():
     assert result.content == original.replace(
         'select = ["E"]\n', 'select = ["E"]\nextend-select = ["SIM"]\n'
     )
+
+
+# --- aggregation -----------------------------------------------------------------
+
+
+def _aggregate(*contributions: tuple[str, str]):
+    return aggregate_toml_document(
+        [
+            StructuredContribution(producer, content)
+            for producer, content in contributions
+        ]
+    )
+
+
+def test_a_later_module_overrides_an_earlier_one_at_any_depth():
+    result = _aggregate(
+        ("module:a", "[tool.x]\na = 1\n"),
+        ("module:b", "[tool.x]\na = 2\n"),
+    )
+
+    assert result.value == {"tool": {"x": {"a": 2}}}
+    assert tomlkit.dumps(result.document) == "[tool.x]\na = 2\n"
+
+
+def test_a_template_overrides_every_module_whatever_its_order():
+    result = _aggregate(
+        ("template:t", "[tool.x]\na = 9\n"),
+        ("module:a", "[tool.x]\na = 1\n"),
+    )
+
+    assert result.value == {"tool": {"x": {"a": 9}}}
+
+
+def test_aggregation_continues_past_a_merged_table():
+    result = _aggregate(
+        ("module:a", "[t.x]\na = 1\n"),
+        ("module:b", "[t.x]\nb = 2\n[t.y]\nc = 3\n"),
+    )
+
+    assert result.value == {"t": {"x": {"a": 1, "b": 2}, "y": {"c": 3}}}
+    assert tomlkit.dumps(result.document) == "[t.x]\na = 1\nb = 2\n\n[t.y]\nc = 3\n"
+
+
+def test_keys_a_contribution_adds_after_repeating_one_are_set_apart():
+    """A blank line keeps each contribution's own keys together."""
+    result = _aggregate(
+        ("module:a", "[tool.x]\na = 1\n"),
+        ("module:b", "[tool.x]\na = 1\nb = 2\nc = 3\n"),
+    )
+
+    assert tomlkit.dumps(result.document) == "[tool.x]\na = 1\n\nb = 2\nc = 3\n"
+
+
+def test_keys_a_contribution_only_adds_are_not_set_apart():
+    result = _aggregate(
+        ("module:a", "[tool.x]\na = 1\n"),
+        ("module:b", "[tool.x]\nb = 2\n"),
+    )
+
+    assert tomlkit.dumps(result.document) == "[tool.x]\na = 1\nb = 2\n"
+
+
+# --- reconciliation edges ----------------------------------------------------------
+
+PLAIN = TomlDocumentSpec()
+PLAIN_LOCATION = MergeLocation("settings.toml")
+
+
+def test_an_invalid_document_is_reported_with_a_hint():
+    with pytest.raises(ConfigurationError) as error:
+        reconcile_toml(PLAIN, "a = = 1", {}, MISSING, PLAIN_LOCATION)
+
+    assert str(error.value) == "Invalid structured TOML file."
+    assert error.value.hint == "Correct the target TOML syntax before retrying."
+
+
+def test_an_unowned_document_takes_changes_without_proposals_by_default():
+    result = reconcile_toml(PLAIN, "b = 1\n", {"a": 2}, MISSING, PLAIN_LOCATION)
+
+    assert result.content == "b = 1\na = 2\n"
+    assert not result.proposals
+
+
+def test_a_deleted_owned_document_is_a_conflict_on_the_whole_file():
+    result = reconcile_toml(
+        PLAIN, "", {"a": 2}, {"a": 1}, PLAIN_LOCATION, missing_file=True
+    )
+
+    assert result.content == ""
+    assert result.baseline == {"a": 1}
+    [conflict] = result.conflicts
+    assert (conflict.reason, conflict.location) == (
+        ConflictReason.DELETED_ANCESTOR,
+        PLAIN_LOCATION,
+    )
+
+    kept = reconcile_toml(
+        PLAIN,
+        "",
+        {"a": 2},
+        {"a": 1},
+        PLAIN_LOCATION,
+        missing_file=True,
+        resolutions={conflict.id: ResolutionChoice.LOCAL},
+    )
+    assert (kept.content, kept.baseline, kept.conflicts) == ("", {"a": 2}, ())
+    assert [settled.resolution for settled in kept.resolved] == [ResolutionChoice.LOCAL]
+
+
+def test_a_declined_proposal_for_a_missing_document_is_reported():
+    [proposal] = reconcile_toml(
+        PLAIN, "", {"a": 2}, MISSING, PLAIN_LOCATION, missing_file=True, proposing=True
+    ).proposals
+
+    declined = reconcile_toml(
+        PLAIN,
+        "",
+        {"a": 2},
+        MISSING,
+        PLAIN_LOCATION,
+        missing_file=True,
+        proposing=True,
+        resolutions={proposal.id: ResolutionChoice.LOCAL},
+    )
+
+    assert declined.content == ""
+    assert [settled.resolution for settled in declined.proposals] == [
+        ResolutionChoice.LOCAL
+    ]
+
+
+def test_a_new_super_table_writes_only_its_childrens_headers():
+    spec = TomlDocumentSpec(super_tables=frozenset({("tool",)}))
+
+    result = reconcile_toml(
+        spec,
+        "[project]\nname = 'x'\n",
+        {"project": {"name": "x"}, "tool": {"ruff": {"a": 1}}},
+        MISSING,
+        PLAIN_LOCATION,
+    )
+
+    assert result.content == "[project]\nname = 'x'\n\n[tool.ruff]\na = 1\n"
+
+
+def test_overwrite_keeps_owning_values_it_no_longer_declares():
+    result = reconcile_toml(
+        PLAIN,
+        "a = 1\nold = 1\n",
+        {"a": 2},
+        {"a": 1, "old": 1},
+        PLAIN_LOCATION,
+        overwrite=True,
+    )
+
+    assert result.content == "a = 2\nold = 1\n"
+    assert result.baseline == {"a": 2, "old": 1}
+
+
+@pytest.mark.parametrize(
+    ("original", "content"),
+    [
+        pytest.param("a = 1", "a = 1\nb = 2", id="no-final-newline"),
+        pytest.param("a = 1\r\n", "a = 1\r\nb = 2\r\n", id="crlf"),
+        pytest.param(
+            "a = 1\n[u]\nc = 1 # X  \n",
+            "a = 1\nb = 2\n\n[u]\nc = 1 # X  \n",
+            id="last-line-kept-exactly",
+        ),
+        pytest.param(
+            "a = 1\n[u]\nc = 1 # X\n",
+            "a = 1\nb = 2\n\n[u]\nc = 1 # X\n",
+            id="last-character-kept",
+        ),
+    ],
+)
+def test_a_changed_document_keeps_its_own_ending(original, content):
+    desired = tomlkit.parse(original).unwrap() | {"b": 2}
+
+    result = reconcile_toml(
+        PLAIN, original, desired, tomlkit.parse(original).unwrap(), PLAIN_LOCATION
+    )
+
+    assert result.content == content
+
+
+def test_a_layout_that_falls_back_says_why(mocker: MockerFixture):
+    from protostar.documents import toml_spec
+
+    mocker.patch(
+        "protostar.documents.pyproject_layout.join_sections", return_value="= broken"
+    )
+    original = "[project]\nname = 'x'\n"
+
+    result = reconcile_toml(
+        toml_spec("pyproject.toml"),
+        original,
+        {"project": {"name": "x"}, "tool": {"mypy": {"strict": True}}},
+        {"project": {"name": "x"}},
+        MergeLocation("pyproject.toml"),
+    )
+
+    [note] = result.layout_notes
+    assert note.startswith("Validation error while placing new pyproject.toml sections")
+    assert tomllib.loads(result.content)["tool"] == {"mypy": {"strict": True}}
+
+
+def test_a_key_added_below_several_keys_stays_above_the_closing_comment():
+    from protostar.documents import toml_spec
+
+    original = _SECTIONED.replace('select = ["E"]\n', 'select = ["E"]\nfix = true\n')
+    base: dict[str, Value] = {
+        "project": {"name": "app"},
+        "tool": {
+            "ruff": {"lint": {"select": ["E"], "fix": True}},
+            "mypy": {"strict": True},
+        },
+    }
+    desired: dict[str, Value] = {
+        "project": {"name": "app"},
+        "tool": {
+            "ruff": {"lint": {"select": ["E"], "fix": True, "preview": True}},
+            "mypy": {"strict": True},
+        },
+    }
+
+    result = reconcile_toml(
+        toml_spec("pyproject.toml"),
+        original,
+        desired,
+        base,
+        MergeLocation("pyproject.toml"),
+    )
+
+    assert result.content == original.replace(
+        "fix = true\n", "fix = true\npreview = true\n"
+    )
+
+
+def test_an_inline_table_keeps_the_desired_spelling_under_a_dotted_key():
+    desired = tomlkit.parse("tool.x.a = 1\ntool.x.b = {c=1}\n")
+
+    result = reconcile_toml(
+        PLAIN,
+        "tool.x.a = 1\n",
+        desired.unwrap(),
+        {"tool": {"x": {"a": 1}}},
+        PLAIN_LOCATION,
+        desired_ast=desired,
+    )
+
+    assert result.content == "tool.x.a = 1\ntool.x.b = {c=1}\n"
+
+
+@pytest.mark.parametrize(
+    ("original", "desired_text", "content"),
+    [
+        pytest.param(
+            "[tool.b]\nm = 1\n",
+            "[tool.a.x]\nk = 1\n[tool.b]\nm = 1\n[tool.a.y]\nn = 1\n",
+            "[tool.b]\nm = 1\n\n[tool.a.x]\nk = 1\n\n[tool.a.y]\nn = 1\n",
+            id="headers",
+        ),
+        pytest.param(
+            "[tool]\nb = 2\n",
+            "[tool]\na.x = 1\nb = 2\na.y = 3\n",
+            "[tool]\nb = 2\na.x = 1\na.y = 3\n",
+            id="dotted-keys",
+        ),
+    ],
+)
+def test_a_table_the_desired_document_spreads_out_is_added_whole(
+    original, desired_text, content
+):
+    desired = tomlkit.parse(desired_text)
+
+    result = reconcile_toml(
+        PLAIN,
+        original,
+        desired.unwrap(),
+        tomlkit.parse(original).unwrap(),
+        PLAIN_LOCATION,
+        desired_ast=desired,
+    )
+
+    assert result.content == content
+
+
+def test_a_table_added_under_a_dotted_root_key_stays_inline():
+    original = "tool.x.a = 1\n"
+    desired = tomlkit.parse("tool.x.a = 1\ntool.x.b = { c = 1 }\n")
+
+    result = reconcile_toml(
+        PLAIN,
+        original,
+        desired.unwrap(),
+        {"tool": {"x": {"a": 1}}},
+        PLAIN_LOCATION,
+        desired_ast=desired,
+    )
+
+    assert result.content == "tool.x.a = 1\ntool.x.b = { c = 1 }\n"
+
+
+# --- flat names --------------------------------------------------------------------
+
+FLAT = TomlDocumentSpec(flat_names=(FlatNames(("ext",), frozenset({("a",), ("z",)})),))
+
+
+def _flat(original: str, desired_text: str) -> tuple[str, Value]:
+    desired = tomlkit.parse(desired_text)
+    result = reconcile_toml(
+        FLAT, original, desired.unwrap(), MISSING, PLAIN_LOCATION, desired_ast=desired
+    )
+    return result.content, result.baseline
+
+
+def test_a_new_name_keeps_the_desired_spelling_when_the_document_has_none():
+    content, baseline = _flat("[ext]\n", '[ext]\n"a.b" = {}\n')
+
+    assert content == '[ext]\n"a.b" = {}\n'
+    assert baseline == {"ext": {"a.b": {}}}
+
+
+def test_a_new_name_follows_the_documents_nested_spelling():
+    content, baseline = _flat("[ext]\na.x = {}\n", '[ext]\n"a.b" = {}\n')
+
+    assert content == "[ext]\na.x = {}\na.b = {}\n"
+    assert baseline == {"ext": {"a": {"b": {}}}}
+
+
+def test_a_new_name_follows_its_own_namespaces_quoted_spelling():
+    """Another namespace being nested says nothing about this one."""
+    content, _ = _flat('[ext]\nz.q = {}\n"a.y" = {}\n', "[ext]\na.b = {}\n")
+
+    assert content == '[ext]\nz.q = {}\n"a.y" = {}\n"a.b" = {}\n'
+
+
+def test_a_dotted_name_inside_a_namespace_keeps_its_dots():
+    content, _ = _flat("[ext]\n", '[ext]\na."b.c" = {}\n')
+
+    assert tomllib.loads(content) == {"ext": {"a": {"b.c": {}}}}
+
+
+def test_a_deleted_documents_baseline_keeps_the_desired_spelling():
+    desired = tomlkit.parse('[ext]\n"a.b" = { x = 2 }\n')
+
+    result = reconcile_toml(
+        FLAT,
+        "",
+        desired.unwrap(),
+        {"ext": {"a.b": {"x": 1}}},
+        PLAIN_LOCATION,
+        missing_file=True,
+        desired_ast=desired,
+    )
+
+    assert result.content == ""
+    assert result.baseline == {"ext": {"a.b": {"x": 1}}}
+
+
+def test_a_name_outside_every_namespace_keeps_its_spelling():
+    content, _ = _flat("[ext]\n", "[ext]\n[ext.toc]\nx = 1\n")
+
+    assert content == "[ext]\n[ext.toc]\nx = 1\n"
+
+
+def test_flat_names_under_a_missing_parent_are_skipped():
+    spec = TomlDocumentSpec(
+        flat_names=(FlatNames(("p", "q", "ext"), frozenset({("a",)})),)
+    )
+
+    result = reconcile_toml(
+        spec, "[r]\nx = 1\n", {"r": {"x": 1}}, MISSING, PLAIN_LOCATION
+    )
+
+    assert result.content == "[r]\nx = 1\n"
