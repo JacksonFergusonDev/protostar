@@ -229,7 +229,9 @@ def test_invalid_generated_renovate_fails_before_mutation(
 
 
 @pytest.mark.parametrize(
-    "content", [b'{"a": 1, "a": 2}', b"{", b"[]", b"\xff"], ids=str
+    "content",
+    [b'{"a": 1, "a": 2}', b"{", b"[]", b"\xff"],
+    ids=["duplicate-key", "truncated", "array", "invalid-utf8"],
 )
 def test_invalid_existing_renovate_fails_before_mutation(
     tmp_path, monkeypatch, mocker, content

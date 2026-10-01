@@ -1,0 +1,135 @@
+name: Mutation Testing
+
+# Manual only: a full run mutates thousands of lines and takes hours, so it never
+# runs on a commit. Each module gets its own runner, in parallel.
+on:
+  workflow_dispatch:
+    inputs:
+      modules:
+        description: "Comma-separated modules to mutate (journal, merge, text_merge, ...), or 'all'"
+        required: true
+        default: all
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+
+    steps:
+    - name: Select modules
+      id: matrix
+      env:
+        REQUESTED: ${{ inputs.modules }}
+      run: |
+        python3 - <<'EOF'
+        import json, os, sys
+
+        known = [
+            "fs_transaction",
+            "journal",
+            "jsonc_ast",
+            "merge",
+            "text_merge",
+            "toml_ast",
+            "yaml_ast",
+        ]
+        requested = os.environ["REQUESTED"].replace(" ", "")
+        chosen = known if requested == "all" else requested.split(",")
+        unknown = sorted(set(chosen) - set(known))
+        if unknown:
+            sys.exit(f"Unknown modules {unknown}; choose from {known} or 'all'.")
+        with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+            out.write(f"matrix={json.dumps({'module': chosen})}\n")
+        EOF
+
+  mutate:
+    name: Mutate ${{ matrix.module }}
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+      with:
+        enable-cache: true
+        python-version: "3.14"
+
+    - name: Install dependencies
+      run: uv sync --group mutation --locked
+
+    - name: Mock direnv
+      uses: ./.github/actions/mock-direnv
+
+    - name: Mutate ${{ matrix.module }}
+      run: |
+        # A mutant can turn a loop into runaway allocation, which takes the whole
+        # runner down ("received a shutdown signal"). Capping each process makes
+        # that a MemoryError the suite catches instead.
+        ulimit -v 4194304
+        uv run --no-sync mutmut run "protostar.${{ matrix.module }}.*"
+
+    - name: Summarize
+      if: ${{ !cancelled() }}
+      run: |
+        {
+          echo "### ${{ matrix.module }} at ${GITHUB_SHA::7}"
+          echo
+          uv run --no-sync python scripts/mutation_report.py report \
+            --json mutants/summary.json --survivors mutants/survivors.txt
+          echo
+          echo "Every survivor's change is in the \`mutation-${{ matrix.module }}\` artifact, as survivors.md."
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Write survivor diffs
+      if: ${{ !cancelled() }}
+      run: uv run --no-sync python scripts/mutation_report.py diffs --out mutants/survivors.md
+
+    - name: Upload results
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: mutation-${{ matrix.module }}
+        path: |
+          mutants/summary.json
+          mutants/survivors.txt
+          mutants/survivors.md
+        retention-days: 90
+        if-no-files-found: error
+
+  summary:
+    name: Combine results
+    needs: mutate
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Download results
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        pattern: mutation-*
+        path: results
+
+    - name: Combine
+      run: |
+        mapfile -t summaries < <(find results -name summary.json | sort)
+        {
+          echo "### All modules at ${GITHUB_SHA::7}"
+          echo
+          python3 scripts/mutation_report.py combine "${summaries[@]}"
+        } >> "$GITHUB_STEP_SUMMARY"
