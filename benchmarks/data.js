@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790818038821,
+  "lastUpdate": 1790818101285,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20031,6 +20031,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 956.44,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e9d08af3e8ceb414bbacd4f5bbfd92e0d4e5eabe",
+          "message": "docs: fix two references that don't resolve (#398)\n\nastral-sh/setup-uv publishes only full release tags, so the setup-uv@v10\nin the scheduled sync workflow and the check-template CI snippet fails to\nresolve; both now name v10.2.0, as generated workflows already do.\n\nThe editor setup pointed at a hosted template schema that returns 404.\nIt now exports the schema with protostar export-schema and points the\neditor at that file.",
+          "timestamp": "2026-09-30T18:25:03-07:00",
+          "tree_id": "02863c6c63675b1b664f5ae4645a9a21bb0c4ac5",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/e9d08af3e8ceb414bbacd4f5bbfd92e0d4e5eabe"
+        },
+        "date": 1790818100309,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 267.55,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1209.95,
             "unit": "ms"
           }
         ]
