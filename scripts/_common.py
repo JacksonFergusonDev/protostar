@@ -136,6 +136,25 @@ def get_repo_env(extra: dict[str, str] | None = None) -> dict[str, str]:
     return env
 
 
+def fixture_environment(*, config: Path | None = None) -> dict[str, str]:
+    """Builds a fixture environment with only its explicitly chosen configuration.
+
+    Drops the caller's Python environment and repository-local Git variables.
+    Callers that need a disposable home directory set it separately.
+
+    Args:
+        config: The fixture's configuration file; None disables configuration.
+
+    Returns:
+        A fresh environment for commands operating on disposable projects.
+    """
+    from protostar.system import subprocess_environment
+
+    env = subprocess_environment()
+    env["PROTOSTAR_CONFIG"] = str(config) if config is not None else ""
+    return env
+
+
 def run_repo_cmd(
     cmd: Sequence[str],
     *,

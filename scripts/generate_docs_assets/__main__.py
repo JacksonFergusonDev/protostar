@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-import tempfile
 from pathlib import Path
 
 _repo_root = Path(__file__).resolve().parent.parent.parent
@@ -33,10 +32,7 @@ def main() -> None:
     # Isolate in-process configuration
     import protostar.config
 
-    protostar.config.CONFIG_FILE = (
-        Path(tempfile.gettempdir()) / "non_existent_protostar_config.toml"
-    )
-    protostar.config.clear_user_config_cache()
+    protostar.config.select_config_source(None, disabled=True)
 
     generate_docs_assets()
     if args.diffs:

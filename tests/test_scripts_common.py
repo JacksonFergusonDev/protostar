@@ -18,9 +18,37 @@ from scripts._common import (
     CodeLanguage,
     OutputStyle,
     fetch_bytes,
+    fixture_environment,
     report,
     report_code,
 )
+
+
+@pytest.mark.parametrize("explicit_config", [False, True])
+def test_fixture_environment_drops_caller_state_and_selects_configuration(
+    explicit_config: bool, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from protostar.config import ConfigOrigin, active_config_source
+    from protostar.system import GIT_REPOSITORY_VARIABLES
+
+    for name in GIT_REPOSITORY_VARIABLES | {"VIRTUAL_ENV", "PYTHONHOME"}:
+        monkeypatch.setenv(name, "caller-state")
+    monkeypatch.setenv("PROTOSTAR_CONFIG", str(tmp_path / "host.toml"))
+    monkeypatch.setenv("PATH", "fixture-tools")
+    config = tmp_path / "fixture.toml" if explicit_config else None
+
+    env = fixture_environment(config=config)
+
+    assert not (GIT_REPOSITORY_VARIABLES | {"VIRTUAL_ENV", "PYTHONHOME"}) & env.keys()
+    assert env["PATH"] == "fixture-tools"
+    assert os.environ["GIT_DIR"] == "caller-state"
+    assert os.environ["PROTOSTAR_CONFIG"] == str(tmp_path / "host.toml")
+    monkeypatch.setenv("PROTOSTAR_CONFIG", env["PROTOSTAR_CONFIG"])
+    source = active_config_source()
+    assert source.origin is (
+        ConfigOrigin.EXPLICIT if explicit_config else ConfigOrigin.DISABLED
+    )
+    assert source.path == config
 
 
 @pytest.mark.parametrize("terminal", [False, True])

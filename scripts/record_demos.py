@@ -38,6 +38,7 @@ from scripts._common import (
     VENV_BIN,
     CodeLanguage,
     OutputStyle,
+    fixture_environment,
     report,
     report_code,
 )
@@ -126,6 +127,14 @@ class PTYSession:
 
     def start(self) -> None:
         """Spawns the background shell inside a pseudo-terminal."""
+        try:
+            self._start()
+        except BaseException:
+            self.close()
+            raise
+
+    def _start(self) -> None:
+        """Allocates the session's resources and captures the initial frame."""
         # Ensure fresh clean workspace
         shutil.rmtree(self.workspace, ignore_errors=True)
         os.makedirs(self.workspace, exist_ok=True)
@@ -139,7 +148,7 @@ class PTYSession:
         set_winsize(self.master_fd, self.rows, self.cols)
         set_winsize(self.slave_fd, self.rows, self.cols)
 
-        env = os.environ.copy()
+        env = fixture_environment()
         # Record the product palette and an interactive pager regardless of the
         # invoking agent or shell's output preferences.
         env.pop("NO_COLOR", None)
@@ -390,6 +399,11 @@ class PTYSession:
             with contextlib.suppress(OSError):
                 os.close(self.master_fd)
             self.master_fd = -1
+
+        if self.slave_fd >= 0:
+            with contextlib.suppress(OSError):
+                os.close(self.slave_fd)
+            self.slave_fd = -1
 
         if self._direnv_config is not None:
             self._direnv_config.cleanup()

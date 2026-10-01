@@ -16,7 +16,6 @@ import ast
 import contextlib
 import io
 import json
-import os
 import re
 import shlex
 import subprocess
@@ -31,7 +30,13 @@ _repo_root = Path(__file__).resolve().parent.parent
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
-from scripts._common import DOCS_DIR, REPO_ROOT, OutputStyle, report
+from scripts._common import (
+    DOCS_DIR,
+    REPO_ROOT,
+    OutputStyle,
+    fixture_environment,
+    report,
+)
 from scripts.check_doc_links import docs_path_to_file, extract_anchors
 
 FIRST_PROJECT = DOCS_DIR / "first-project.md"
@@ -501,7 +506,7 @@ def _walkthrough_steps() -> list[str]:
 
     with tempfile.TemporaryDirectory() as home:
         env = {
-            **os.environ,
+            **fixture_environment(),
             "HOME": home,
             "USERPROFILE": home,
             "XDG_CONFIG_HOME": home,
