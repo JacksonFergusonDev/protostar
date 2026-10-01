@@ -81,6 +81,23 @@ class RollbackResult:
     errors: tuple[RollbackFailure, ...] = ()
 
 
+def _remove_tree(path: Path) -> str | None:
+    """Removes as much of a created tree as it can.
+
+    Args:
+        path: The root of the tree.
+
+    Returns:
+        What could not be removed, or None when the whole tree is gone.
+    """
+    problems: list[BaseException] = []
+    shutil.rmtree(path, onexc=lambda _function, _path, error: problems.append(error))
+    if not problems:
+        return None
+    more = f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""
+    return f"{problems[0]}{more}"
+
+
 class MutationJournal:
     """Tracks file mutations to enable rollback."""
 
@@ -219,7 +236,9 @@ class MutationJournal:
                 if state.kind is NodeKind.ABSENT:
                     if path.exists() or path.is_symlink():
                         if state.created_as_tree:
-                            shutil.rmtree(path, ignore_errors=True)
+                            leftover = _remove_tree(path)
+                            if leftover is not None:
+                                failures.append(RollbackFailure(path, leftover))
                         elif path.is_dir() and not path.is_symlink():
                             path.rmdir()
                         else:

@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -240,6 +241,36 @@ def test_record_tree_creation_absent(tmp_path: Path) -> None:
 
     # The entire tree should be removed
     assert not target.exists()
+
+
+def test_record_tree_creation_reports_what_it_could_not_remove(
+    tmp_path: Path, mocker: MockerFixture
+) -> None:
+    target = tmp_path / ".git"
+    journal = MutationJournal(tmp_path)
+    journal.record_tree_creation(target)
+    (target / "hooks").mkdir(parents=True)
+    (target / "hooks" / "pre-commit").write_text("echo test")
+    (target / "HEAD").write_text("ref: refs/heads/main")
+    real_unlink = os.unlink
+
+    def unlink(name: str | Path, *args: object, **kwargs: object) -> None:
+        if Path(name).name == "pre-commit":
+            raise PermissionError(13, "Permission denied", str(name))
+        real_unlink(name, *args, **kwargs)  # type: ignore[arg-type]
+
+    mocker.patch("os.unlink", side_effect=unlink)
+
+    result = journal.rollback()
+
+    assert not result.succeeded
+    [failure] = result.errors
+    assert failure.path == target
+    assert "Permission denied" in failure.detail
+    assert "more" in failure.detail  # hooks/ stays too: it still holds the hook.
+    # Everything removable is still removed.
+    assert not (target / "HEAD").exists()
+    assert (target / "hooks" / "pre-commit").exists()
 
 
 def test_record_tree_creation_lists_the_tree_as_a_directory(tmp_path: Path) -> None:
