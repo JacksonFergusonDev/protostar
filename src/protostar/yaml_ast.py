@@ -111,8 +111,6 @@ def detect_style(content: str) -> YamlStyle:
     if sequence is None:
         # Keep the default dash placement relative to whatever mapping indent was found.
         sequence = (mapping + 2, mapping)
-    if sequence[0] - sequence[1] < 2:
-        return YamlStyle(mapping, DEFAULT_STYLE.sequence, DEFAULT_STYLE.offset)
     return YamlStyle(mapping, *sequence)
 
 
