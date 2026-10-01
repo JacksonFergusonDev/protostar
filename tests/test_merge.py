@@ -746,9 +746,31 @@ def test_an_edited_atomic_list_under_an_unchanged_update_is_preserved():
 
     assert result.value == [1, 2]
     assert not result.conflicts
-    assert result.preserved == (
-        MergeConflict(LOC, ConflictReason.PRESERVED, ConflictSides([1], [1, 2], [1])),
+    [preserved] = result.preserved
+    assert preserved == MergeConflict(
+        LOC, ConflictReason.PRESERVED, ConflictSides([1], [1, 2], [1])
     )
+
+    restored = reconcile(
+        [1], [1, 2], [1], LOC, resolutions={preserved.id: ResolutionChoice.DESIRED}
+    )
+    assert (restored.value, restored.baseline) == ([1], [1])
+    assert restored.decision is MergeDecision.APPLY_REMOTE
+
+
+@pytest.mark.parametrize(
+    ("choice", "value", "decision"),
+    [
+        (ResolutionChoice.LOCAL, 2, MergeDecision.KEEP_LOCAL),
+        (ResolutionChoice.DESIRED, 3, MergeDecision.APPLY_REMOTE),
+    ],
+)
+def test_settling_a_conflict_at_the_root(choice, value, decision):
+    [conflict] = reconcile(1, 2, 3, LOC).conflicts
+
+    result = reconcile(1, 2, 3, LOC, resolutions={conflict.id: choice})
+
+    assert (result.value, result.baseline, result.decision) == (value, 3, decision)
 
 
 def test_a_removed_owned_set_member_is_preserved_and_can_be_restored():
@@ -818,7 +840,12 @@ def test_only_a_proposing_policy_proposes_set_members(base):
 
 
 def test_a_proposed_set_member_can_be_declined():
-    [proposal] = reconcile(MISSING, ["a"], ["a", "b"], LOC, PROPOSING_SET).proposals
+    proposed = reconcile(MISSING, ["a"], ["a", "b"], LOC, PROPOSING_SET)
+    assert (proposed.value, proposed.decision) == (
+        ["a", "b"],
+        MergeDecision.APPLY_REMOTE,
+    )
+    [proposal] = proposed.proposals
     assert proposal == MergeConflict(
         LOC, ConflictReason.PROPOSED, ConflictSides(MISSING, ["a"], ["a", "b"])
     )
