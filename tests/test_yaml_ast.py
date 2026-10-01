@@ -1,13 +1,23 @@
 """YAML codec safety, trivia, and Codecov semantic acceptance tests."""
 
 import difflib
+from dataclasses import replace
 
 import pytest
 
+from protostar import yaml_ast
 from protostar.documents.codecov import SPEC as CODECOV_SPEC
 from protostar.documents.pre_commit import SPEC as PRE_COMMIT_SPEC
 from protostar.errors import ConfigurationError
-from protostar.merge import MISSING, ConflictReason, MergeLocation
+from protostar.merge import (
+    MISSING,
+    ConflictReason,
+    ConflictSides,
+    MergeConflict,
+    MergeLocation,
+    MergePolicy,
+    ResolutionChoice,
+)
 from protostar.sync_state import (
     FilePolicy,
     FileState,
@@ -17,11 +27,14 @@ from protostar.sync_state import (
 )
 from protostar.yaml_ast import (
     DEFAULT_STYLE,
+    YamlDocumentSpec,
+    YamlGuard,
     YamlStyle,
     decode_yaml_baseline,
     detect_style,
     encode_yaml_baseline,
     reconcile_yaml,
+    validate_yaml_baseline,
 )
 
 LOCATION = MergeLocation(".github/codecov.yml")
@@ -58,8 +71,57 @@ def merge(local, remote, base=MISSING, **kwargs):
     ],
 )
 def test_rejects_unsupported_or_unbounded_input(content):
-    with pytest.raises(ConfigurationError):
+    with pytest.raises(ConfigurationError) as error:
         decode_yaml_baseline(content)
+    assert str(error.value) == "Invalid or unsupported YAML configuration."
+    assert error.value.hint == (
+        "Use one YAML 1.2 mapping with unique string keys, standard JSON-like"
+        " values, no cyclic aliases, and at most 100 levels/10000 nodes/1 MB."
+    )
+
+
+def _nested(depth: int) -> str:
+    """A document whose innermost value sits ``depth`` levels below the root."""
+    return "a: " + "{a: " * (depth - 1) + "0" + "}" * (depth - 1) + "\n"
+
+
+def test_the_depth_limit_is_exactly_one_hundred_levels():
+    assert decode_yaml_baseline(_nested(100))
+
+    with pytest.raises(ConfigurationError) as error:
+        decode_yaml_baseline(_nested(101))
+    # The loader's own limit, before the kernel's would apply.
+    assert str(error.value) == "Invalid or unsupported YAML configuration."
+
+
+def test_the_node_limit_is_exact(monkeypatch):
+    # The root, then a key and a value per entry.
+    monkeypatch.setattr(yaml_ast, "_MAX_NODES", 5)
+    assert decode_yaml_baseline("a: 1\nb: 2\n") == {"a": 1, "b": 2}
+
+    with pytest.raises(ConfigurationError):
+        decode_yaml_baseline("a: 1\nb: 2\nc: 3\n")
+
+
+def test_the_size_limit_is_exact(monkeypatch):
+    monkeypatch.setattr(yaml_ast, "_MAX_BYTES", len("a: 12\n"))
+    assert decode_yaml_baseline("a: 12\n") == {"a": 12}
+
+    with pytest.raises(ConfigurationError):
+        decode_yaml_baseline("a: 123\n")
+
+
+def test_decoded_floats_and_anchored_booleans_keep_their_types():
+    data = decode_yaml_baseline("a: 1.5\nb: &t true\nc: *t\n")
+
+    assert data == {"a": 1.5, "b": True, "c": True}
+    assert [type(value) for value in data.values()] == [float, bool, bool]
+
+
+def test_encoding_rejects_a_missing_value():
+    with pytest.raises(ConfigurationError) as error:
+        encode_yaml_baseline({"a": MISSING})
+    assert str(error.value) == "Invalid semantic mapping entry."
 
 
 def test_yaml_12_types_and_canonical_state():
@@ -268,6 +330,17 @@ def changed_lines(before: str, after: str) -> list[str]:
         pytest.param(
             "a:\n  - - x\n", YamlStyle(2, 4, 2), id="nested-sequence-dash-key"
         ),
+        pytest.param("a:\n b: 1\n", YamlStyle(1, 3, 1), id="one-space-mapping"),
+        pytest.param(
+            "a:\nb: 1\nc:\n   d: 1\n", YamlStyle(3, 5, 3), id="sibling-is-not-nesting"
+        ),
+        pytest.param("- a:\n    b: 1\n", YamlStyle(2, 4, 2), id="key-after-a-dash"),
+        pytest.param(
+            "a:\n  # note\n    b: 1\n", YamlStyle(4, 6, 4), id="indented-comment"
+        ),
+        pytest.param(
+            "a:\n  - x\nb:\n- y\n", YamlStyle(2, 4, 2), id="first-sequence-wins"
+        ),
     ],
 )
 def test_detect_style(content, style):
@@ -323,3 +396,297 @@ def test_pre_commit_hook_edit_changes_one_line():
     )
     assert not result.conflicts
     assert result.content == desired
+
+
+# --- versions, specs, and reports ---------------------------------------------------
+
+PLAIN = YamlDocumentSpec("plain")
+COMPLETE = YamlDocumentSpec("complete", policy=MergePolicy(complete=True))
+HERE = MergeLocation("settings.yml")
+
+
+def plain(local, remote, base=MISSING, spec=PLAIN, **kwargs):
+    return reconcile_yaml(spec, local, remote, base, HERE, **kwargs)
+
+
+def test_a_yaml_12_directive_is_accepted():
+    assert decode_yaml_baseline("%YAML 1.2\n---\na: 1\n") == {"a": 1}
+
+
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [
+        pytest.param(
+            {"repos": "x"}, "Invalid pre-commit record sequence.", id="not-a-list"
+        ),
+        pytest.param(
+            {"repos": [{"hooks": []}]}, "Invalid pre-commit identity.", id="no-identity"
+        ),
+        pytest.param(
+            {"repos": [{"repo": "a", "rev": ""}]},
+            "Invalid pre-commit field 'rev'.",
+            id="empty-field",
+        ),
+        pytest.param(
+            {"repos": [{"repo": "a", "rev": 1}]},
+            "Invalid pre-commit field 'rev'.",
+            id="non-string-field",
+        ),
+        pytest.param(
+            {"repos": [{"repo": "a"}, {"repo": "a"}]},
+            "Duplicate desired or owned pre-commit identity.",
+            id="duplicate",
+        ),
+    ],
+)
+def test_keyed_records_are_validated(value, message):
+    with pytest.raises(ConfigurationError) as error:
+        validate_yaml_baseline(PRE_COMMIT_SPEC, value)
+    assert str(error.value) == message
+
+
+def test_an_owned_record_without_an_identity_is_rejected():
+    with pytest.raises(ConfigurationError, match=r"Invalid pre-commit identity\."):
+        reconcile_yaml(
+            PRE_COMMIT_SPEC,
+            "repos: []\n",
+            "repos: []\n",
+            {"repos": [{"hooks": []}]},
+            MergeLocation(".pre-commit-config.yaml"),
+        )
+
+
+def test_a_duplicate_identity_is_held_where_it_is():
+    result = reconcile_yaml(
+        PRE_COMMIT_SPEC,
+        "repos:\n- repo: x\n- repo: x\n",
+        "repos:\n- repo: x\n  rev: v1\n",
+        MISSING,
+        MergeLocation(".pre-commit-config.yaml"),
+    )
+
+    assert result.content == "repos:\n- repo: x\n- repo: x\n"
+    assert result.conflicts == (
+        MergeConflict(
+            MergeLocation(".pre-commit-config.yaml", ("repos", "x"), "x"),
+            ConflictReason.DUPLICATE_IDENTITY,
+        ),
+    )
+
+
+def test_an_unowned_document_takes_changes_without_proposals_by_default():
+    result = plain("b: 1\n", "a: 2\n")
+
+    assert result.content == "b: 1\na: 2\n"
+    assert not result.proposals
+
+
+def test_a_new_key_goes_before_its_next_desired_sibling():
+    assert plain("b: 1\nc: 1\n", "a: 1\nb: 1\nc: 1\n").content == "a: 1\nb: 1\nc: 1\n"
+
+
+def test_a_deleted_owned_document_reports_how_its_conflict_was_settled():
+    [conflict] = plain("", "a: 2\n", {"a": 1}, missing_file=True).conflicts
+    assert (conflict.reason, conflict.location) == (
+        ConflictReason.DELETED_ANCESTOR,
+        HERE,
+    )
+
+    kept = plain(
+        "",
+        "a: 2\n",
+        {"a": 1},
+        missing_file=True,
+        resolutions={conflict.id: ResolutionChoice.LOCAL},
+    )
+
+    assert (kept.content, kept.baseline, kept.conflicts) == ("", {"a": 2}, ())
+    assert [settled.resolution for settled in kept.resolved] == [ResolutionChoice.LOCAL]
+
+
+def test_a_declined_proposal_for_a_missing_document_is_reported():
+    [proposal] = plain("", "a: 2\n", missing_file=True, proposing=True).proposals
+
+    declined = plain(
+        "",
+        "a: 2\n",
+        missing_file=True,
+        proposing=True,
+        resolutions={proposal.id: ResolutionChoice.LOCAL},
+    )
+
+    assert declined.content == ""
+    assert [settled.resolution for settled in declined.proposals] == [
+        ResolutionChoice.LOCAL
+    ]
+
+
+def test_a_kept_edit_is_reported_beside_an_applied_change():
+    result = plain("a: 1\nb: 9\n", "a: 2\nb: 1\n", {"a": 1, "b": 1})
+
+    assert result.content == "a: 2\nb: 9\n"
+    [preserved] = result.preserved
+    assert preserved.location.keys == ("b",)
+
+
+def test_a_removed_last_key_takes_its_blank_line_with_it():
+    assert plain(
+        "a: 1\n\nb: 1\n", "a: 1\n", {"a": 1, "b": 1}, spec=COMPLETE
+    ).content == ("a: 1\n")
+
+
+def test_the_last_value_is_kept_exactly():
+    assert plain("a: 1\nb: X\n", "a: 2\nb: X\n", {"a": 1, "b": "X"}).content == (
+        "a: 2\nb: X\n"
+    )
+
+
+def test_overwrite_retracts_nothing_unless_the_document_is_complete():
+    result = plain("a: 1\nold: 1\n", "a: 2\n", {"a": 1, "old": 1}, overwrite=True)
+
+    assert result.content == "a: 2\nold: 1\n"
+    assert result.baseline == {"a": 2, "old": 1}
+
+
+def test_a_document_ending_in_a_blank_line_keeps_it():
+    assert plain("a: 1\n\n", "a: 2\n", {"a": 1}).content == "a: 2\n\n"
+
+
+# --- shared structure ---------------------------------------------------------------
+
+
+def test_retracting_an_aliased_value_is_a_shared_structure_conflict():
+    local = "old: &o {a: 1}\nkeep: *o\n"
+
+    result = plain(local, "{}\n", {"old": {"a": 1}}, spec=COMPLETE)
+
+    assert result.content == local
+    assert result.baseline == {"old": {"a": 1}}
+    assert result.conflicts == (
+        MergeConflict(
+            MergeLocation(HERE.file, ("old",)), ConflictReason.SHARED_STRUCTURE
+        ),
+    )
+
+
+def test_replacing_a_list_holding_an_aliased_member_is_a_conflict():
+    local = "wrap:\n  - &i {a: 1}\nother: *i\n"
+
+    result = plain(local, "wrap: []\n", {"wrap": [{"a": 1}]})
+
+    assert result.content == local
+    assert result.baseline == {"wrap": [{"a": 1}]}
+    assert result.conflicts == (
+        MergeConflict(
+            MergeLocation(HERE.file, ("wrap",)), ConflictReason.SHARED_STRUCTURE
+        ),
+    )
+
+
+def test_an_edit_beside_an_aliased_sibling_is_safe():
+    local = "a:\n  shared: &s {x: 1}\n  plain: 1\nb: *s\n"
+
+    result = plain(local, "a: {plain: 2}\n", {"a": {"plain": 1}})
+
+    assert result.content == local.replace("plain: 1", "plain: 2")
+    assert not result.conflicts
+
+
+def test_a_key_added_beside_a_merge_key_is_a_conflict():
+    local = "base: &b {a: 1}\n<<: *b\nc: 1\n"
+
+    result = plain(local, "c: 1\nnew: 2\n", {"c": 1})
+
+    assert result.content == local
+    assert result.baseline == {"c": 1}
+    assert result.conflicts == (
+        MergeConflict(
+            MergeLocation(HERE.file, ("new",)), ConflictReason.SHARED_STRUCTURE
+        ),
+    )
+
+
+# --- guards ---------------------------------------------------------------------------
+
+TARGET = ("coverage", "target")
+OTHER = ("coverage", "x")
+GUARDED_LOCAL = "coverage: {target: 90%, x: 1}\n"
+GUARDED_DESIRED = "coverage: {target: 85%, x: 2}\n"
+GUARDED_BASE = {"coverage": {"target": "80%", "x": 1}}
+ON_TARGET = MergeConflict(
+    MergeLocation(HERE.file, TARGET),
+    ConflictReason.DIVERGED,
+    ConflictSides("80%", "90%", "85%"),
+)
+ON_OTHER = MergeConflict(
+    MergeLocation(HERE.file, OTHER), ConflictReason.DIVERGED, ConflictSides(1, 1, 2)
+)
+
+
+def guarded(guard, **kwargs):
+    return plain(GUARDED_LOCAL, GUARDED_DESIRED, GUARDED_BASE, guard=guard, **kwargs)
+
+
+def test_an_open_guard_conflict_holds_its_path():
+    result = guarded(YamlGuard((TARGET,), (ON_TARGET,)))
+
+    assert result.content == "coverage: {target: 90%, x: 2}\n"
+    assert result.conflicts == (ON_TARGET,)
+    assert result.baseline == {"coverage": {"target": "80%", "x": 2}}
+
+
+@pytest.mark.parametrize(
+    ("choice", "content", "preserved"),
+    [
+        (ResolutionChoice.LOCAL, "coverage: {target: 90%, x: 2}\n", 1),
+        (ResolutionChoice.DESIRED, "coverage: {target: 85%, x: 2}\n", 0),
+    ],
+)
+def test_settling_a_guard_conflict_owns_the_update(choice, content, preserved):
+    result = guarded(
+        YamlGuard((TARGET,), (ON_TARGET,)), resolutions={ON_TARGET.id: choice}
+    )
+
+    assert result.content == content
+    assert result.baseline == {"coverage": {"target": "85%", "x": 2}}
+    assert not result.conflicts
+    assert result.resolved == (replace(ON_TARGET, resolution=choice),)
+    assert len(result.preserved) == preserved
+
+
+def test_overwrite_leaves_guard_conflicts_open():
+    result = guarded(
+        YamlGuard((TARGET,), (ON_TARGET,)),
+        resolutions={ON_TARGET.id: ResolutionChoice.DESIRED},
+        overwrite=True,
+    )
+
+    assert result.content == "coverage: {target: 90%, x: 2}\n"
+    assert result.conflicts == (ON_TARGET,)
+    assert not result.resolved
+
+
+@pytest.mark.parametrize(
+    "order",
+    [(ON_TARGET, ON_OTHER), (ON_OTHER, ON_TARGET)],
+    ids=["open-first", "settled-first"],
+)
+def test_each_guard_conflict_is_settled_on_its_own(order):
+    holds = tuple(conflict.location.keys for conflict in order)
+
+    result = guarded(
+        YamlGuard(holds, order), resolutions={ON_OTHER.id: ResolutionChoice.DESIRED}
+    )
+
+    assert result.content == "coverage: {target: 90%, x: 2}\n"
+    assert result.conflicts == (ON_TARGET,)
+    assert [settled.location.keys for settled in result.resolved] == [OTHER]
+
+
+@pytest.mark.parametrize("held", [("b", "c"), ("a", "absent")], ids=["parent", "key"])
+def test_a_hold_on_an_undeclared_path_changes_nothing(held):
+    result = plain(
+        "a: {x: 1}\n", "a: {x: 2}\n", {"a": {"x": 1}}, guard=YamlGuard((held,))
+    )
+
+    assert result.content == "a: {x: 2}\n"
