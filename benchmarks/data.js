@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790887358620,
+  "lastUpdate": 1790887378941,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20337,6 +20337,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 937.9,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cac35944273c5ce17d1270772beb2fb09a388213",
+          "message": "test(merge): catch the mutants that survived in the reconciliation kernel (#404)\n\n* test(merge): catch the mutants that survived in the reconciliation kernel\n\nThe first mutation run left 152 survivors in merge. Tests checked the\nmerged value but rarely the decision itself, so most were real gaps:\n\n- Every conflict, proposal, and preserved edit is now compared whole:\n  reason, all three sides, and a nested location that keeps the\n  identity of the location it was reached from.\n- Preserved edits: kept, settled either way, and reported for an edited\n  atomic list and a removed set-like member.\n- Set-like lists: type mismatch on either side, an empty set owning [],\n  and proposals only under a proposing policy and only for a change.\n- A merge holding a nested conflict is a CONFLICT; an unchanged update\n  under a deleted ancestor is quiet; a namespace whose owned keys are\n  all gone is removed.\n- validate_value: exactly 100 levels pass and 101 fail, for mappings\n  and lists, and every rejection's message and hint.\n- hold, without_paths, retract_undeclared, and prune_unapplied at the\n  depths and shapes they had not been called with.\n\nThe remaining survivors are equivalent. semantic_equal checks\n`type(left) is type(right)` first, so its paired isinstance checks and\nzip(strict=) cannot change a result, and _canonical's type tags matter\nonly for telling conflicts apart, which they still do.\n\n* test(merge): check decisions made at the root of a merge\n\nThe follow-up mutation run left three real survivors: a parent table\nrecomputes its children's decisions, so only a decision at the root\nshows an applied proposal's decision, a restored edit's baseline, and a\nconflict settled locally.",
+          "timestamp": "2026-10-01T13:40:37-07:00",
+          "tree_id": "486697490b78ccace8f2b7cdbe555e82d832b214",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/cac35944273c5ce17d1270772beb2fb09a388213"
+        },
+        "date": 1790887377426,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 192.16,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 815.32,
             "unit": "ms"
           }
         ]
