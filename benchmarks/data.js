@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790968179796,
+  "lastUpdate": 1790969755097,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20949,6 +20949,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1277.44,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bfadd5acaa84234c81430ef19753b1e6cb194d43",
+          "message": "test(mutation): mutate appends and toml_lines (#415)\n\n* chore(mutation): mutate appends and toml_lines\n\n* fix(mutation): copy benchmarks/ into mutmut's sandbox\n\n* test(toml): catch the mutants that survived in toml_lines\n\nThe tests shared one TomlLineIndex built at import. mutmut forks each\nmutant from a process that already imported the module, so most tests\nnever ran the mutated scanner. Each test now builds its own.\n\nAlso covered: a needle bounded by its value, each parent of a dotted key,\nbrackets in values and comments, extra closing quotes, empty and compact\nmulti-line strings, escapes in strings and quoted keys, and text ending\nwithout a newline.\n\nTwo branches could never change a line and are deleted: trimming the\nnewline after a multi-line string's opening quotes (the body's lines are\ncounted from the opening line either way) and skipping comments in\n_skip_blank (a comment line already fails as a key). A multi-line\nstring's span is one field, so it can't be half set.\n\n* test(appends): catch the mutants that survived in appends\n\nCutting a region is now checked exactly at the start, middle, and end of\na file, under LF, CRLF, and mixed line endings, and attaching one under\neach kind of file and block.\n\nTwo endswith alternatives were dead: anything ending in \"\\r\\n\\r\\n\" also\nends in \"\\n\\r\\n\", and likewise \"\\r\\n\\n\" in \"\\n\\n\". The four lookups of\na region's span are one helper, since every marker occurs once in\nwell-formed text and which way a search runs can't matter.\n\n* test(toml): cover an unclosed multi-line string and a parent's empty value\n\nThe second mutation run left four: an unclosed multi-line string, a\ndotted key's parent searched from the start of the file, and an\nunterminated string ending in a bracket.\n\n* test(appends): cover region validation, deleted files, and retraction\n\nOn Linux the first run left 156 more survivors in append_marker_blocks\nand get_comment_markers than a macOS run showed: forked workers there\ncrashed on those mutants, which read as suspicious instead of surviving.\n\nNow covered: every boundary error and its hint, colliding region tags,\ncontent that already ends in a newline, a deleted owned file (changed\nregions refused, unchanged ones preserved, kept, or restored), a\nretracted region's conflict sides, and several retractions decided one\nby one. Every extension with its own comment syntax is checked.\n\nDead code removed: the '#' extension list (the fallback is '#'), a\ncheck for \"endregion: protostar\" (it contains \"region: protostar\"),\n_marker's conditional suffix (strip drops the space), and the None\nchecks on a deleted region's decision, which always exists. Conflicts\ncarry their region's tag instead of a placeholder contribution.\n\n* test(appends): settle the last survivors\n\nA retraction after a region that is already gone, and cutting a region\nwith a blank line after it but none before. Numbering a conflict reads\nonly where its region begins, so it searches for the begin marker alone.\n\n* refactor(appends): number only conflicts whose region the file holds\n\nA conflict with lines is always a hunk of a region still in the file, so\nthe check that its marker was found could never fail.",
+          "timestamp": "2026-10-02T12:32:45-07:00",
+          "tree_id": "e65739e7cd1885d6838b92a0479fe33b0453da54",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/bfadd5acaa84234c81430ef19753b1e6cb194d43"
+        },
+        "date": 1790969752870,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 176.65,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1214.82,
             "unit": "ms"
           }
         ]
