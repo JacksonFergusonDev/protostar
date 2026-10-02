@@ -3,19 +3,28 @@
 from __future__ import annotations
 
 import argparse
+import io
 import sys
 import tempfile
 import webbrowser
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import BinaryIO
 
 _repo_root = Path(__file__).resolve().parent.parent
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
 from scripts._common import DOCS_DIR, OutputStyle, fetch_bytes, report
-from scripts.prepare_pages import BENCHMARK_ASSETS, BENCHMARK_DIR, HEADER_CSS, HOUSE_DIR
+from scripts.prepare_pages import (
+    BENCHMARK_ASSETS,
+    BENCHMARK_DIR,
+    FOOTER_CSS,
+    HEADER_CSS,
+    HOUSE_DIR,
+    render_benchmark_index,
+)
 
 DEFAULT_PORT = 8765
 DATA_URL = "https://protostar.jacksonferguson.me/benchmarks/data.js"
@@ -35,11 +44,25 @@ class PreviewHandler(SimpleHTTPRequestHandler):
         if relative.parent == Path("benchmarks"):
             if relative.name == "site-header.css":
                 return str(HEADER_CSS)
+            if relative.name == "site-footer.css":
+                return str(FOOTER_CSS)
             if relative.name in BENCHMARK_ASSETS:
                 return str(BENCHMARK_DIR / relative.name)
             if relative.name in ("favicon.svg", "favicon.png"):
                 return str(DOCS_DIR / "assets" / relative.name)
         return translated
+
+    def send_head(self) -> BinaryIO | None:
+        """Render the live dashboard with the same footer the docs include."""
+        path = Path(self.translate_path(self.path))
+        if path in (BENCHMARK_DIR, BENCHMARK_DIR / "index.html"):
+            content = render_benchmark_index().encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(content)))
+            self.end_headers()
+            return io.BytesIO(content)
+        return super().send_head()
 
     def end_headers(self) -> None:
         """Ensure browser refreshes always pick up source edits."""

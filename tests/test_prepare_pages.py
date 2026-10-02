@@ -13,6 +13,7 @@ from scripts.prepare_pages import (
     HOUSE_DIR,
     assemble_pages,
     read_versions,
+    render_benchmark_index,
 )
 
 
@@ -99,6 +100,11 @@ def test_latest_content_redirects_and_benchmarks_share_one_clean_artifact(
         source / "benchmarks" / "data.js"
     ).read_bytes()
     for filename in BENCHMARK_ASSETS:
+        if filename == "index.html":
+            assert (
+                output / "benchmarks" / filename
+            ).read_text() == render_benchmark_index()
+            continue
         assert (output / "benchmarks" / filename).read_bytes() == (
             BENCHMARK_DIR / filename
         ).read_bytes()
