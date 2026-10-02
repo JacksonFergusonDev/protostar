@@ -178,10 +178,12 @@ fail_under = 85
 [tool.mutmut]
 source_paths = [
     "src/protostar/appends.py",
+    "src/protostar/dependencies.py",
     "src/protostar/fs_transaction.py",
     "src/protostar/journal.py",
     "src/protostar/jsonc_ast.py",
     "src/protostar/merge.py",
+    "src/protostar/sync_state.py",
     "src/protostar/text_merge.py",
     "src/protostar/toml_ast.py",
     "src/protostar/toml_lines.py",
