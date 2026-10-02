@@ -1,8 +1,11 @@
 from pathlib import Path
 
+import pytest
+
 from protostar.appends import (
     append_marker_blocks,
     attach_regions,
+    cut_regions,
     detach_regions,
     get_comment_markers,
 )
@@ -227,3 +230,80 @@ def test_an_omitted_region_retracts_cleanly_under_crlf():
     result = append_marker_blocks(content, [], Path(".envrc"), baselines=baselines)
     assert result.content == "export A=1\r\n"
     assert result.baselines == {}
+
+
+TAG = region_tag("cut")
+
+
+def _region(newline: str) -> str:
+    return f"# region: protostar {TAG}{newline}x{newline}# endregion: protostar {TAG}"
+
+
+@pytest.mark.parametrize(
+    ("before", "after", "expected"),
+    [
+        # Between lines, with and without the blank lines appending adds.
+        ("a\n{R}\nb\n", "LF", "a\nb\n"),
+        ("a\r\n{R}\r\nb\r\n", "CRLF", "a\r\nb\r\n"),
+        ("a\n\n{R}\n\nb\n", "LF", "a\n\nb\n"),
+        ("a\r\n\r\n{R}\r\n\r\nb\r\n", "CRLF", "a\r\n\r\nb\r\n"),
+        ("a\n\n{R}\nb\n", "LF", "a\n\nb\n"),
+        # Last in the file.
+        ("a\n{R}\n", "LF", "a\n"),
+        ("a\n\n{R}\n", "LF", "a\n"),
+        ("a\r\n\r\n{R}\r\n", "CRLF", "a\r\n"),
+        ("a\n\n{R}", "LF", "a\n"),
+        # First in the file.
+        ("{R}\n", "LF", ""),
+        ("{R}\n\nb\n", "LF", "b\n"),
+        ("{R}\r\n\r\nb\r\n", "CRLF", "b\r\n"),
+        # Mixed line endings around the region.
+        ("a\r\n\r\n{R}\n\nb\n", "LF", "a\r\n\nb\n"),
+        ("a\n\n{R}\r\n\r\nb\r\n", "CRLF", "a\n\r\nb\r\n"),
+    ],
+)
+def test_cutting_a_region_takes_its_line_break_and_one_blank_line(
+    before, after, expected
+):
+    region = _region("\r\n" if after == "CRLF" else "\n")
+    text = before.replace("{R}", region)
+
+    assert cut_regions(text, ["cut"], Path(".envrc")) == expected
+    assert detach_regions(text, ["cut"], Path(".envrc")) == (expected, (region,))
+
+
+def test_cutting_an_absent_region_changes_nothing():
+    assert cut_regions("a\n", ["cut"], Path(".envrc")) == "a\n"
+    assert detach_regions("a\n", ["cut"], Path(".envrc")) == ("a\n", ())
+
+
+def test_detached_regions_keep_their_order_in_the_file():
+    first, second = region_tag("first"), region_tag("second")
+    text = (
+        f"# region: protostar {second}\n2\n# endregion: protostar {second}\n\n"
+        f"# region: protostar {first}\n1\n# endregion: protostar {first}\n"
+    )
+
+    _, blocks = detach_regions(text, ["first", "second"], Path(".envrc"))
+
+    assert blocks == (
+        f"# region: protostar {second}\n2\n# endregion: protostar {second}",
+        f"# region: protostar {first}\n1\n# endregion: protostar {first}",
+    )
+
+
+@pytest.mark.parametrize(
+    ("text", "block", "expected"),
+    [
+        ("", "B", "B\n"),
+        ("a", "B", "a\n\nB\n"),
+        ("a\n", "B", "a\n\nB\n"),
+        ("a\r\n", "B", "a\r\n\r\nB\r\n"),
+        ("a\n", "B\r\nC", "a\n\r\nB\r\nC\r\n"),
+        ("a", "B\r\nC", "a\r\n\r\nB\r\nC\r\n"),
+    ],
+)
+def test_attaching_a_region_follows_a_blank_line_and_the_file_s_newlines(
+    text, block, expected
+):
+    assert attach_regions(text, [block]) == expected

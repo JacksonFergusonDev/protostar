@@ -117,6 +117,17 @@ def _marker(filepath: Path, tag: str, end: bool = False) -> str:
     return f"{c_start} {prefix}: protostar {tag}{suffix}".strip()
 
 
+def _span(text: str, begin: str, end: str) -> tuple[int, int] | None:
+    """Returns where a region's framed text starts and stops, or None if absent."""
+    # Each marker occurs once in well-formed text, so which end a search
+    # comes from, and where it starts, can't change what it finds.
+    start = text.find(begin)  # pragma: no mutate
+    if start == -1:
+        return None
+    stop = text.index(end, start)  # pragma: no mutate
+    return start, stop + len(end)
+
+
 def cut_regions(text: str, identities: Iterable[str], filepath: Path) -> str:
     """Removes regions from a text whatever they hold, such as a recorded baseline.
 
@@ -130,10 +141,9 @@ def cut_regions(text: str, identities: Iterable[str], filepath: Path) -> str:
     """
     for identity in identities:
         tag = region_tag(identity)
-        begin, end = _marker(filepath, tag), _marker(filepath, tag, True)
-        if begin in text:
-            start = text.index(begin)
-            text = _cut(text, start, text.index(end, start) + len(end))
+        span = _span(text, _marker(filepath, tag), _marker(filepath, tag, True))
+        if span is not None:
+            text = _cut(text, *span)
     return text
 
 
@@ -153,10 +163,10 @@ def detach_regions(
     blocks: list[tuple[int, str]] = []
     for identity in identities:
         tag = region_tag(identity)
-        begin, end = _marker(filepath, tag), _marker(filepath, tag, True)
-        if begin in text:
-            start = text.index(begin)
-            blocks.append((start, text[start : text.index(end, start) + len(end)]))
+        span = _span(text, _marker(filepath, tag), _marker(filepath, tag, True))
+        if span is not None:
+            start, stop = span
+            blocks.append((start, text[start:stop]))
     detached = cut_regions(text, identities, filepath)
     return detached, tuple(block for _, block in sorted(blocks))
 
@@ -174,9 +184,7 @@ def attach_regions(text: str, blocks: Iterable[str]) -> str:
     for block in blocks:
         newline = "\r\n" if "\r\n" in text or "\r\n" in block else "\n"
         separator = (
-            ""
-            if not text
-            else (newline if text.endswith(("\r\n", "\n")) else newline + newline)
+            "" if not text else (newline if text.endswith("\n") else newline + newline)
         )
         text += separator + block + newline
     return text
@@ -190,13 +198,9 @@ def _cut(text: str, start: int, stop: int) -> str:
         stop += 1
     head, tail = text[:start], text[stop:]
     # Appending put one blank line before the region; one is enough.
-    if head.endswith(("\r\n\r\n", "\n\r\n")) and (
-        not tail or tail.startswith(("\r\n", "\n"))
-    ):
+    if head.endswith("\n\r\n") and (not tail or tail.startswith(("\r\n", "\n"))):
         head = head[:-2]
-    elif head.endswith(("\r\n\n", "\n\n")) and (
-        not tail or tail.startswith(("\r\n", "\n"))
-    ):
+    elif head.endswith("\n\n") and (not tail or tail.startswith(("\r\n", "\n"))):
         head = head[:-1]
     elif not head and tail.startswith("\r\n"):
         tail = tail[2:]
@@ -297,9 +301,8 @@ def append_marker_blocks(
         framed += end
         local = None
         start = stop = 0
-        if tag in seen:
-            start = result.index(begin)
-            stop = result.index(end, start) + len(end)
+        if (span := _span(result, begin, end)) is not None:
+            start, stop = span
             local = result[start:stop].encode("utf-8")
         baseline = applied.get(contribution.id)
         location = MergeLocation(filepath.as_posix(), identity=contribution.id)
@@ -344,18 +347,16 @@ def append_marker_blocks(
                 "" if not result else ("\n" if result.endswith("\n") else "\n\n")
             )
             result += separator + framed + "\n"
-            seen.add(tag)
     declared = set(identities)
     for identity in [i for i in applied if i not in declared]:
         # A region nothing declares any more is retracted: removed when
         # unedited, a decision when edited, and forgotten when already gone.
         tag = region_tag(identity)
-        begin, end = marker(tag), marker(tag, True)
-        if begin not in result:
+        span = _span(result, marker(tag), marker(tag, True))
+        if span is None:
             del applied[identity]
             continue
-        start = result.index(begin)
-        stop = result.index(end, start) + len(end)
+        start, stop = span
         local_text = result[start:stop]
         if is_edited(local_text.encode("utf-8"), applied[identity]):
             found = MergeConflict(
