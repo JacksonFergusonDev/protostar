@@ -10,6 +10,7 @@ import pytest
 from protostar.config import UserConfig
 from protostar.documents import pyproject_layout
 from protostar.errors import FileSystemError
+from protostar.intent import StructuredFormat
 from protostar.manifest import (
     DiagnosticEvent,
     DiagnosticPhase,
@@ -313,3 +314,102 @@ def test_filesystem_failures_preserve_operation_path_and_cause(
     assert caught.value.path == str(Path(path))
     assert caught.value.original is error
     assert caught.value.__cause__ is error
+
+
+def test_invalid_ide_settings_remain_untouched_with_a_structured_warning(
+    reconciliation,
+):
+    Path(".vscode").mkdir()
+    original = b'{"duplicate": 1, "duplicate": 2}\n'
+    Path(".vscode/settings.json").write_bytes(original)
+    reconciliation.manifest.ide_settings = {"python.terminal.activateEnvironment": True}
+
+    reconciliation._write_ide_settings()
+
+    assert Path(".vscode/settings.json").read_bytes() == original
+    assert reconciliation.fs.contents == {}
+    assert reconciliation.candidate_state.files == ()
+    assert reconciliation.diagnostics == [
+        DiagnosticEvent(
+            DiagnosticPhase.EXECUTOR,
+            "Existing settings.json is not a valid JSONC object (syntax error or "
+            "duplicate keys). Skipping IDE settings injection to prevent data loss.",
+            Severity.WARNING,
+        )
+    ]
+
+
+@pytest.mark.parametrize(
+    "error",
+    [OSError("denied"), UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid")],
+)
+def test_unreadable_ide_settings_preserve_operation_path_and_cause(
+    reconciliation, monkeypatch, error
+):
+    Path(".vscode").mkdir()
+    Path(".vscode/settings.json").write_bytes(b"{}\n")
+    reconciliation.manifest.ide_settings = {"python.terminal.activateEnvironment": True}
+
+    def fail(*args, **kwargs):
+        raise error
+
+    monkeypatch.setattr(reconciliation.workspace, "read_bytes", fail)
+    with pytest.raises(FileSystemError) as caught:
+        reconciliation._write_ide_settings()
+
+    assert caught.value.operation == "inspect active IDE settings files"
+    assert caught.value.path == ".vscode/settings.json"
+    assert caught.value.original is error
+    assert caught.value.__cause__ is error
+    assert reconciliation.fs.contents == {}
+
+
+@pytest.mark.parametrize(
+    ("method", "operation", "path"),
+    [
+        ("_validate_targets", "read JSONC configuration", ".github/renovate.json"),
+        ("_validate_targets", "read YAML configuration", ".readthedocs.yaml"),
+        ("_append_files", "read structured configuration", "custom.toml"),
+        ("_append_files", "read target append context", "notes.txt"),
+        (
+            "_release_undeclared_documents",
+            "read retracted configuration",
+            "custom.toml",
+        ),
+    ],
+)
+def test_configuration_read_failures_preserve_operation_path_and_cause(
+    reconciliation, monkeypatch, method, operation, path
+):
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(b"{}\n" if target.suffix in (".json", ".yaml") else b"# local\n")
+    filesystem = reconciliation.manifest.filesystem
+    if target.suffix == ".json":
+        filesystem.add_file_injection(path, "{}")
+    elif target.suffix == ".yaml":
+        filesystem.add_structured(
+            path, "{}\n", producer="test", document_format=StructuredFormat.YAML
+        )
+    elif method == "_release_undeclared_documents":
+        reconciliation.candidate_state = reconciliation.candidate_state.with_file(
+            FileState(path, FilePolicy.TOML, "[owned]\nanswer = 42\n")
+        )
+    elif target.suffix == ".toml":
+        filesystem.add_structured(path, "[owned]\nanswer = 42\n", producer="test")
+    else:
+        filesystem.add_region(path, "desired\n", identity="template:notes")
+    error = OSError("denied")
+
+    def fail(*args, **kwargs):
+        raise error
+
+    monkeypatch.setattr(reconciliation.workspace, "read_bytes", fail)
+    with pytest.raises(FileSystemError) as caught:
+        getattr(reconciliation, method)()
+
+    assert caught.value.operation == operation
+    assert caught.value.path == str(target)
+    assert caught.value.original is error
+    assert caught.value.__cause__ is error
+    assert reconciliation.fs.contents == {}
