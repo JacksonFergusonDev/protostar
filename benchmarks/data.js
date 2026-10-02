@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790969755097,
+  "lastUpdate": 1790970138423,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20983,6 +20983,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1214.82,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "68d5c0eb5dfed3ceee08273900c96cfcd794fef1",
+          "message": "docs(mutation): plan with post-survivor runtimes and avoid hidden mutants",
+          "timestamp": "2026-10-02T12:39:38-07:00",
+          "tree_id": "653a9d3cc2bce4dedde9fa1a6280d07b9752f130",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/68d5c0eb5dfed3ceee08273900c96cfcd794fef1"
+        },
+        "date": 1790970136118,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 140.42,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 954.22,
             "unit": "ms"
           }
         ]
