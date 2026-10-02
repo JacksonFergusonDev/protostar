@@ -1,0 +1,200 @@
+<svg class="rich-terminal" viewBox="0 0 1238 952.8" xmlns="http://www.w3.org/2000/svg">
+    <!-- Generated with Rich https://www.textualize.io -->
+    <style>
+
+    @font-face {
+        font-family: "Fira Code";
+        src: local("FiraCode-Regular"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Regular.woff2") format("woff2"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Regular.woff") format("woff");
+        font-style: normal;
+        font-weight: 400;
+    }
+    @font-face {
+        font-family: "Fira Code";
+        src: local("FiraCode-Bold"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Bold.woff2") format("woff2"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Bold.woff") format("woff");
+        font-style: bold;
+        font-weight: 700;
+    }
+
+    .cli_sync_help-matrix {
+        font-family: Fira Code, monospace;
+        font-size: 20px;
+        line-height: 24.4px;
+        font-variant-east-asian: full-width;
+    }
+
+    .cli_sync_help-title {
+        font-size: 18px;
+        font-weight: bold;
+        font-family: arial;
+    }
+
+    .cli_sync_help-r1 { fill: #4b5b64 }
+.cli_sync_help-r2 { fill: #22d3ee;font-weight: bold }
+.cli_sync_help-r3 { fill: #e2e8f0 }
+.cli_sync_help-r4 { fill: #22d3ee }
+    </style>
+
+    <defs>
+    <clipPath id="cli_sync_help-clip-terminal">
+      <rect x="0" y="0" width="1219.0" height="901.8" />
+    </clipPath>
+    <clipPath id="cli_sync_help-line-0">
+    <rect x="0" y="1.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-1">
+    <rect x="0" y="25.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-2">
+    <rect x="0" y="50.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-3">
+    <rect x="0" y="74.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-4">
+    <rect x="0" y="99.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-5">
+    <rect x="0" y="123.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-6">
+    <rect x="0" y="147.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-7">
+    <rect x="0" y="172.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-8">
+    <rect x="0" y="196.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-9">
+    <rect x="0" y="221.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-10">
+    <rect x="0" y="245.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-11">
+    <rect x="0" y="269.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-12">
+    <rect x="0" y="294.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-13">
+    <rect x="0" y="318.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-14">
+    <rect x="0" y="343.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-15">
+    <rect x="0" y="367.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-16">
+    <rect x="0" y="391.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-17">
+    <rect x="0" y="416.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-18">
+    <rect x="0" y="440.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-19">
+    <rect x="0" y="465.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-20">
+    <rect x="0" y="489.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-21">
+    <rect x="0" y="513.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-22">
+    <rect x="0" y="538.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-23">
+    <rect x="0" y="562.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-24">
+    <rect x="0" y="587.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-25">
+    <rect x="0" y="611.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-26">
+    <rect x="0" y="635.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-27">
+    <rect x="0" y="660.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-28">
+    <rect x="0" y="684.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-29">
+    <rect x="0" y="709.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-30">
+    <rect x="0" y="733.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-31">
+    <rect x="0" y="757.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-32">
+    <rect x="0" y="782.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-33">
+    <rect x="0" y="806.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-34">
+    <rect x="0" y="831.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_sync_help-line-35">
+    <rect x="0" y="855.5" width="1220" height="24.65"/>
+            </clipPath>
+    </defs>
+
+    <rect fill="#090e11" x="0.5" y="0.5" width="1237" height="951.8" rx="8"/><path fill="#11171c" d="M0.5 32V8.5a8 8 0 0 1 8 -8H1229a8 8 0 0 1 8 8V32Z"/><path stroke="#243138" d="M0.5 32.5H1237"/><circle cx="20" cy="16.5" r="5.5" fill="#ff5f56" stroke="#e0443e"/><circle cx="38" cy="16.5" r="5.5" fill="#ffbd2e" stroke="#dea123"/><circle cx="56" cy="16.5" r="5.5" fill="#27c93f" stroke="#1aab29"/><text fill="#7a909c" x="619" y="21" text-anchor="middle" font-family="JetBrains Mono, Fira Code, monospace" font-size="11" letter-spacing="0.6">zsh</text><rect fill="none" stroke="#2d3c43" x="0.5" y="0.5" width="1237" height="951.8" rx="8"/>
+
+    <g transform="translate(9, 41)" clip-path="url(#cli_sync_help-clip-terminal)">
+
+    <g class="cli_sync_help-matrix">
+    <text class="cli_sync_help-r1" x="0" y="20" textLength="24.4" clip-path="url(#cli_sync_help-line-0)">❯&#160;</text><text class="cli_sync_help-r2" x="24.4" y="20" textLength="122" clip-path="url(#cli_sync_help-line-0)">protostar&#160;</text><text class="cli_sync_help-r3" x="146.4" y="20" textLength="109.8" clip-path="url(#cli_sync_help-line-0)">help&#160;sync</text><text class="cli_sync_help-r3" x="1220" y="20" textLength="12.2" clip-path="url(#cli_sync_help-line-0)">
+</text><text class="cli_sync_help-r3" x="1220" y="44.4" textLength="12.2" clip-path="url(#cli_sync_help-line-1)">
+</text><text class="cli_sync_help-r3" x="0" y="68.8" textLength="902.8" clip-path="url(#cli_sync_help-line-2)">Apply&#160;accepted&#160;lifecycle&#160;updates&#160;transactionally&#160;in&#160;the&#160;current&#160;directory.</text><text class="cli_sync_help-r3" x="1220" y="68.8" textLength="12.2" clip-path="url(#cli_sync_help-line-2)">
+</text><text class="cli_sync_help-r3" x="1220" y="93.2" textLength="12.2" clip-path="url(#cli_sync_help-line-3)">
+</text><text class="cli_sync_help-r2" x="0" y="117.6" textLength="85.4" clip-path="url(#cli_sync_help-line-4)">OPTIONS</text><text class="cli_sync_help-r1" x="97.6" y="117.6" textLength="1122.4" clip-path="url(#cli_sync_help-line-4)">────────────────────────────────────────────────────────────────────────────────────────────</text><text class="cli_sync_help-r3" x="1220" y="117.6" textLength="12.2" clip-path="url(#cli_sync_help-line-4)">
+</text><text class="cli_sync_help-r4" x="24.4" y="142" textLength="305" clip-path="url(#cli_sync_help-line-5)">-v,&#160;--verbose&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="366" y="142" textLength="817.4" clip-path="url(#cli_sync_help-line-5)">Enable&#160;verbose&#160;debug&#160;output&#160;and&#160;rich&#160;tracebacks.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="142" textLength="12.2" clip-path="url(#cli_sync_help-line-5)">
+</text><text class="cli_sync_help-r4" x="24.4" y="166.4" textLength="305" clip-path="url(#cli_sync_help-line-6)">--config&#160;&lt;path&gt;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="366" y="166.4" textLength="817.4" clip-path="url(#cli_sync_help-line-6)">Read&#160;global&#160;configuration&#160;from&#160;this&#160;file&#160;instead&#160;of&#160;the&#160;default&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="166.4" textLength="12.2" clip-path="url(#cli_sync_help-line-6)">
+</text><text class="cli_sync_help-r3" x="366" y="190.8" textLength="817.4" clip-path="url(#cli_sync_help-line-7)">location.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="190.8" textLength="12.2" clip-path="url(#cli_sync_help-line-7)">
+</text><text class="cli_sync_help-r4" x="24.4" y="215.2" textLength="305" clip-path="url(#cli_sync_help-line-8)">--no-config&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="366" y="215.2" textLength="817.4" clip-path="url(#cli_sync_help-line-8)">Ignore&#160;global&#160;configuration&#160;entirely&#160;and&#160;use&#160;built-in&#160;defaults.&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="215.2" textLength="12.2" clip-path="url(#cli_sync_help-line-8)">
+</text><text class="cli_sync_help-r4" x="24.4" y="239.6" textLength="305" clip-path="url(#cli_sync_help-line-9)">--resolve&#160;SELECTOR=CHOICE</text><text class="cli_sync_help-r3" x="366" y="239.6" textLength="817.4" clip-path="url(#cli_sync_help-line-9)">Settle&#160;conflicts&#160;by&#160;id,&#160;or&#160;every&#160;conflict&#160;in&#160;a&#160;file&#160;by&#160;path.&#160;CHOICE</text><text class="cli_sync_help-r3" x="1220" y="239.6" textLength="12.2" clip-path="url(#cli_sync_help-line-9)">
+</text><text class="cli_sync_help-r3" x="366" y="264" textLength="817.4" clip-path="url(#cli_sync_help-line-10)">is&#160;local&#160;(keep&#160;yours),&#160;desired&#160;(take&#160;the&#160;update),&#160;or&#160;both&#160;(text&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="264" textLength="12.2" clip-path="url(#cli_sync_help-line-10)">
+</text><text class="cli_sync_help-r3" x="366" y="288.4" textLength="817.4" clip-path="url(#cli_sync_help-line-11)">lines&#160;only).&#160;Repeatable.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="288.4" textLength="12.2" clip-path="url(#cli_sync_help-line-11)">
+</text><text class="cli_sync_help-r4" x="24.4" y="312.8" textLength="305" clip-path="url(#cli_sync_help-line-12)">--to&#160;REF&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="366" y="312.8" textLength="817.4" clip-path="url(#cli_sync_help-line-12)">Move&#160;a&#160;repository&#160;template&#160;to&#160;a&#160;tag,&#160;branch,&#160;or&#160;full&#160;commit&#160;SHA,&#160;or</text><text class="cli_sync_help-r3" x="1220" y="312.8" textLength="12.2" clip-path="url(#cli_sync_help-line-12)">
+</text><text class="cli_sync_help-r3" x="366" y="337.2" textLength="817.4" clip-path="url(#cli_sync_help-line-13)">to&#160;the&#160;newest&#160;release&#160;with&#160;&#x27;latest&#x27;.&#160;Records&#160;the&#160;ref&#160;in&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="337.2" textLength="12.2" clip-path="url(#cli_sync_help-line-13)">
+</text><text class="cli_sync_help-r3" x="366" y="361.6" textLength="817.4" clip-path="url(#cli_sync_help-line-14)">pyproject.toml.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="361.6" textLength="12.2" clip-path="url(#cli_sync_help-line-14)">
+</text><text class="cli_sync_help-r4" x="24.4" y="386" textLength="305" clip-path="url(#cli_sync_help-line-15)">--var&#160;NAME=VALUE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="366" y="386" textLength="817.4" clip-path="url(#cli_sync_help-line-15)">Set&#160;a&#160;template&#160;variable,&#160;such&#160;as&#160;one&#160;a&#160;new&#160;template&#160;version&#160;adds;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="386" textLength="12.2" clip-path="url(#cli_sync_help-line-15)">
+</text><text class="cli_sync_help-r3" x="366" y="410.4" textLength="817.4" clip-path="url(#cli_sync_help-line-16)">repeat&#160;for&#160;each.&#160;Values&#160;are&#160;saved&#160;to&#160;pyproject.toml,&#160;so&#160;never&#160;pass&#160;</text><text class="cli_sync_help-r3" x="1220" y="410.4" textLength="12.2" clip-path="url(#cli_sync_help-line-16)">
+</text><text class="cli_sync_help-r3" x="366" y="434.8" textLength="817.4" clip-path="url(#cli_sync_help-line-17)">secrets.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="434.8" textLength="12.2" clip-path="url(#cli_sync_help-line-17)">
+</text><text class="cli_sync_help-r4" x="24.4" y="459.2" textLength="305" clip-path="url(#cli_sync_help-line-18)">--option&#160;NAME=VALUE&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="366" y="459.2" textLength="817.4" clip-path="url(#cli_sync_help-line-18)">Choose&#160;a&#160;template&#160;option:&#160;true&#160;or&#160;false,&#160;or&#160;one&#160;of&#160;its&#160;choices;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="459.2" textLength="12.2" clip-path="url(#cli_sync_help-line-18)">
+</text><text class="cli_sync_help-r3" x="366" y="483.6" textLength="817.4" clip-path="url(#cli_sync_help-line-19)">repeat&#160;for&#160;each.&#160;Choices&#160;are&#160;saved&#160;to&#160;pyproject.toml.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="483.6" textLength="12.2" clip-path="url(#cli_sync_help-line-19)">
+</text><text class="cli_sync_help-r4" x="24.4" y="508" textLength="305" clip-path="url(#cli_sync_help-line-20)">--tier&#160;TIER&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="366" y="508" textLength="817.4" clip-path="url(#cli_sync_help-line-20)">Follow&#160;the&#160;template&#x27;s&#160;workbench&#160;tier&#160;(lean:&#160;exploring&#160;and&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="508" textLength="12.2" clip-path="url(#cli_sync_help-line-20)">
+</text><text class="cli_sync_help-r3" x="366" y="532.4" textLength="817.4" clip-path="url(#cli_sync_help-line-21)">analyzing)&#160;or&#160;production&#160;tier&#160;(the&#160;full&#160;quality&#160;gate:&#160;building&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="532.4" textLength="12.2" clip-path="url(#cli_sync_help-line-21)">
+</text><text class="cli_sync_help-r3" x="366" y="556.8" textLength="817.4" clip-path="url(#cli_sync_help-line-22)">something&#160;to&#160;publish).&#160;Only&#160;for&#160;templates&#160;that&#160;declare&#160;tiers;&#160;the&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="556.8" textLength="12.2" clip-path="url(#cli_sync_help-line-22)">
+</text><text class="cli_sync_help-r3" x="366" y="581.2" textLength="817.4" clip-path="url(#cli_sync_help-line-23)">choice&#160;is&#160;saved&#160;to&#160;pyproject.toml.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="581.2" textLength="12.2" clip-path="url(#cli_sync_help-line-23)">
+</text><text class="cli_sync_help-r4" x="24.4" y="605.6" textLength="305" clip-path="url(#cli_sync_help-line-24)">--allow-secret&#160;NAME&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="366" y="605.6" textLength="817.4" clip-path="url(#cli_sync_help-line-24)">Keep&#160;a&#160;variable&#x27;s&#160;value&#160;even&#160;though&#160;it&#160;looks&#160;like&#160;a&#160;credential;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="605.6" textLength="12.2" clip-path="url(#cli_sync_help-line-24)">
+</text><text class="cli_sync_help-r3" x="366" y="630" textLength="817.4" clip-path="url(#cli_sync_help-line-25)">repeat&#160;for&#160;each.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="630" textLength="12.2" clip-path="url(#cli_sync_help-line-25)">
+</text><text class="cli_sync_help-r4" x="24.4" y="654.4" textLength="305" clip-path="url(#cli_sync_help-line-26)">--trust&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="366" y="654.4" textLength="817.4" clip-path="url(#cli_sync_help-line-26)">Run&#160;the&#160;commands&#160;an&#160;untrusted&#160;template&#160;needs&#160;without&#160;asking,&#160;for&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="654.4" textLength="12.2" clip-path="url(#cli_sync_help-line-26)">
+</text><text class="cli_sync_help-r3" x="366" y="678.8" textLength="817.4" clip-path="url(#cli_sync_help-line-27)">this&#160;run&#160;only.&#160;They&#160;are&#160;still&#160;listed.&#160;Never&#160;saved;&#160;to&#160;trust&#160;a&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="678.8" textLength="12.2" clip-path="url(#cli_sync_help-line-27)">
+</text><text class="cli_sync_help-r3" x="366" y="703.2" textLength="817.4" clip-path="url(#cli_sync_help-line-28)">template&#160;every&#160;time,&#160;configure&#160;it&#160;as&#160;an&#160;alias&#160;with&#160;trusted&#160;=&#160;true.&#160;</text><text class="cli_sync_help-r3" x="1220" y="703.2" textLength="12.2" clip-path="url(#cli_sync_help-line-28)">
+</text><text class="cli_sync_help-r4" x="24.4" y="727.6" textLength="305" clip-path="url(#cli_sync_help-line-29)">--dry-run&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="366" y="727.6" textLength="817.4" clip-path="url(#cli_sync_help-line-29)">Review&#160;accepted&#160;diffs&#160;without&#160;writing&#160;files&#160;or&#160;running&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="727.6" textLength="12.2" clip-path="url(#cli_sync_help-line-29)">
+</text><text class="cli_sync_help-r3" x="366" y="752" textLength="817.4" clip-path="url(#cli_sync_help-line-30)">subprocesses.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="752" textLength="12.2" clip-path="url(#cli_sync_help-line-30)">
+</text><text class="cli_sync_help-r4" x="24.4" y="776.4" textLength="305" clip-path="url(#cli_sync_help-line-31)">--check&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="366" y="776.4" textLength="817.4" clip-path="url(#cli_sync_help-line-31)">Read-only&#160;check;&#160;exit&#160;1&#160;when&#160;accepted&#160;work,&#160;state&#160;advancement,&#160;or&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="776.4" textLength="12.2" clip-path="url(#cli_sync_help-line-31)">
+</text><text class="cli_sync_help-r3" x="366" y="800.8" textLength="817.4" clip-path="url(#cli_sync_help-line-32)">conflicts&#160;remain.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_sync_help-r3" x="1220" y="800.8" textLength="12.2" clip-path="url(#cli_sync_help-line-32)">
+</text><text class="cli_sync_help-r3" x="1220" y="825.2" textLength="12.2" clip-path="url(#cli_sync_help-line-33)">
+</text><text class="cli_sync_help-r3" x="0" y="849.6" textLength="1220" clip-path="url(#cli_sync_help-line-34)">Requires&#160;the&#160;project&#160;recipe&#160;in&#160;pyproject.toml&#160;and&#160;protostar.lock.&#160;Never&#160;replays&#160;initialization&#160;tasks</text><text class="cli_sync_help-r3" x="1220" y="849.6" textLength="12.2" clip-path="url(#cli_sync_help-line-34)">
+</text><text class="cli_sync_help-r3" x="0" y="874" textLength="1220" clip-path="url(#cli_sync_help-line-35)">or&#160;IDE&#160;probes.&#160;In&#160;an&#160;interactive&#160;terminal,&#160;conflicts&#160;you&#160;can&#160;settle&#160;open&#160;a&#160;screen&#160;before&#160;anything&#160;is</text><text class="cli_sync_help-r3" x="1220" y="874" textLength="12.2" clip-path="url(#cli_sync_help-line-35)">
+</text><text class="cli_sync_help-r3" x="0" y="898.4" textLength="756.4" clip-path="url(#cli_sync_help-line-36)">applied.&#160;Unresolved&#160;conflicts&#160;commit&#160;safe&#160;changes&#160;with&#160;exit&#160;1.</text><text class="cli_sync_help-r3" x="1220" y="898.4" textLength="12.2" clip-path="url(#cli_sync_help-line-36)">
+</text>
+    </g>
+    </g>
+</svg>

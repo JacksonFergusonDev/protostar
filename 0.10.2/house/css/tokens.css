@@ -1,0 +1,38 @@
+/*
+ * The house palette, typefaces, and type scale. Every other file here, and
+ * each site's own styles, read these instead of raw values.
+ */
+:root {
+  --bg: #0a0c0e;
+  --panel: #0e1114;
+  --text: #e8edef;
+  --muted: #939da6;
+  --accent: #22d3ee;
+  --line: #252c31;
+  --sans: 'DM Sans', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  /* Type scale. Components use these tokens, not raw sizes. */
+  --fs-h1: clamp(40px, 5.5vw, 72px);
+  --fs-h2: clamp(32px, 3.1vw, 45px);
+  --fs-h3: 32px;
+  --fs-lead: 19px;
+  --fs-h4: 18px;
+  --fs-body: 16px;
+  --fs-ui: 14px;
+  --fs-label: 11px;
+  /* Code and terminal surfaces. */
+  --code-bg: #090e11;
+  --code-fg: #cdd6f4;
+  --code-border: #2d3c43;
+  --code-radius: 6px;
+  --prompt: #4ade80;
+}
+/* Smaller tiers shrink together on phones. */
+@media (max-width: 560px) {
+  :root {
+    --fs-h3: 28px;
+    --fs-lead: 17px;
+    --fs-h4: 17px;
+    --fs-ui: 13px;
+  }
+}

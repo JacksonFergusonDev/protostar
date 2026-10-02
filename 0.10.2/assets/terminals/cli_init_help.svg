@@ -1,0 +1,353 @@
+<svg class="rich-terminal" viewBox="0 0 1202 1880.0" xmlns="http://www.w3.org/2000/svg">
+    <!-- Generated with Rich https://www.textualize.io -->
+    <style>
+
+    @font-face {
+        font-family: "Fira Code";
+        src: local("FiraCode-Regular"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Regular.woff2") format("woff2"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Regular.woff") format("woff");
+        font-style: normal;
+        font-weight: 400;
+    }
+    @font-face {
+        font-family: "Fira Code";
+        src: local("FiraCode-Bold"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Bold.woff2") format("woff2"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Bold.woff") format("woff");
+        font-style: bold;
+        font-weight: 700;
+    }
+
+    .cli_init_help-matrix {
+        font-family: Fira Code, monospace;
+        font-size: 20px;
+        line-height: 24.4px;
+        font-variant-east-asian: full-width;
+    }
+
+    .cli_init_help-title {
+        font-size: 18px;
+        font-weight: bold;
+        font-family: arial;
+    }
+
+    .cli_init_help-r1 { fill: #4b5b64 }
+.cli_init_help-r2 { fill: #22d3ee;font-weight: bold }
+.cli_init_help-r3 { fill: #e2e8f0 }
+.cli_init_help-r4 { fill: #22d3ee }
+.cli_init_help-r5 { fill: #e2e8f0;font-weight: bold }
+    </style>
+
+    <defs>
+    <clipPath id="cli_init_help-clip-terminal">
+      <rect x="0" y="0" width="1182.3999999999999" height="1829.0" />
+    </clipPath>
+    <clipPath id="cli_init_help-line-0">
+    <rect x="0" y="1.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-1">
+    <rect x="0" y="25.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-2">
+    <rect x="0" y="50.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-3">
+    <rect x="0" y="74.7" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-4">
+    <rect x="0" y="99.1" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-5">
+    <rect x="0" y="123.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-6">
+    <rect x="0" y="147.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-7">
+    <rect x="0" y="172.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-8">
+    <rect x="0" y="196.7" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-9">
+    <rect x="0" y="221.1" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-10">
+    <rect x="0" y="245.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-11">
+    <rect x="0" y="269.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-12">
+    <rect x="0" y="294.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-13">
+    <rect x="0" y="318.7" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-14">
+    <rect x="0" y="343.1" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-15">
+    <rect x="0" y="367.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-16">
+    <rect x="0" y="391.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-17">
+    <rect x="0" y="416.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-18">
+    <rect x="0" y="440.7" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-19">
+    <rect x="0" y="465.1" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-20">
+    <rect x="0" y="489.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-21">
+    <rect x="0" y="513.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-22">
+    <rect x="0" y="538.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-23">
+    <rect x="0" y="562.7" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-24">
+    <rect x="0" y="587.1" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-25">
+    <rect x="0" y="611.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-26">
+    <rect x="0" y="635.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-27">
+    <rect x="0" y="660.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-28">
+    <rect x="0" y="684.7" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-29">
+    <rect x="0" y="709.1" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-30">
+    <rect x="0" y="733.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-31">
+    <rect x="0" y="757.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-32">
+    <rect x="0" y="782.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-33">
+    <rect x="0" y="806.7" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-34">
+    <rect x="0" y="831.1" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-35">
+    <rect x="0" y="855.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-36">
+    <rect x="0" y="879.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-37">
+    <rect x="0" y="904.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-38">
+    <rect x="0" y="928.7" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-39">
+    <rect x="0" y="953.1" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-40">
+    <rect x="0" y="977.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-41">
+    <rect x="0" y="1001.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-42">
+    <rect x="0" y="1026.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-43">
+    <rect x="0" y="1050.7" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-44">
+    <rect x="0" y="1075.1" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-45">
+    <rect x="0" y="1099.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-46">
+    <rect x="0" y="1123.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-47">
+    <rect x="0" y="1148.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-48">
+    <rect x="0" y="1172.7" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-49">
+    <rect x="0" y="1197.1" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-50">
+    <rect x="0" y="1221.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-51">
+    <rect x="0" y="1245.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-52">
+    <rect x="0" y="1270.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-53">
+    <rect x="0" y="1294.7" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-54">
+    <rect x="0" y="1319.1" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-55">
+    <rect x="0" y="1343.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-56">
+    <rect x="0" y="1367.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-57">
+    <rect x="0" y="1392.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-58">
+    <rect x="0" y="1416.7" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-59">
+    <rect x="0" y="1441.1" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-60">
+    <rect x="0" y="1465.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-61">
+    <rect x="0" y="1489.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-62">
+    <rect x="0" y="1514.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-63">
+    <rect x="0" y="1538.7" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-64">
+    <rect x="0" y="1563.1" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-65">
+    <rect x="0" y="1587.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-66">
+    <rect x="0" y="1611.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-67">
+    <rect x="0" y="1636.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-68">
+    <rect x="0" y="1660.7" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-69">
+    <rect x="0" y="1685.1" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-70">
+    <rect x="0" y="1709.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-71">
+    <rect x="0" y="1733.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-72">
+    <rect x="0" y="1758.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_init_help-line-73">
+    <rect x="0" y="1782.7" width="1183.4" height="24.65"/>
+            </clipPath>
+    </defs>
+
+    <rect fill="#090e11" x="0.5" y="0.5" width="1201" height="1879" rx="8"/><path fill="#11171c" d="M0.5 32V8.5a8 8 0 0 1 8 -8H1193a8 8 0 0 1 8 8V32Z"/><path stroke="#243138" d="M0.5 32.5H1201"/><circle cx="20" cy="16.5" r="5.5" fill="#ff5f56" stroke="#e0443e"/><circle cx="38" cy="16.5" r="5.5" fill="#ffbd2e" stroke="#dea123"/><circle cx="56" cy="16.5" r="5.5" fill="#27c93f" stroke="#1aab29"/><text fill="#7a909c" x="601" y="21" text-anchor="middle" font-family="JetBrains Mono, Fira Code, monospace" font-size="11" letter-spacing="0.6">zsh</text><rect fill="none" stroke="#2d3c43" x="0.5" y="0.5" width="1201" height="1879" rx="8"/>
+
+    <g transform="translate(9, 41)" clip-path="url(#cli_init_help-clip-terminal)">
+
+    <g class="cli_init_help-matrix">
+    <text class="cli_init_help-r1" x="0" y="20" textLength="24.4" clip-path="url(#cli_init_help-line-0)">❯&#160;</text><text class="cli_init_help-r2" x="24.4" y="20" textLength="122" clip-path="url(#cli_init_help-line-0)">protostar&#160;</text><text class="cli_init_help-r3" x="146.4" y="20" textLength="109.8" clip-path="url(#cli_init_help-line-0)">help&#160;init</text><text class="cli_init_help-r3" x="1183.4" y="20" textLength="12.2" clip-path="url(#cli_init_help-line-0)">
+</text><text class="cli_init_help-r3" x="1183.4" y="44.4" textLength="12.2" clip-path="url(#cli_init_help-line-1)">
+</text><text class="cli_init_help-r3" x="0" y="68.8" textLength="902.8" clip-path="url(#cli_init_help-line-2)">Scaffolds&#160;base&#160;Python&#160;configurations,&#160;dependencies,&#160;and&#160;environment&#160;files.</text><text class="cli_init_help-r3" x="1183.4" y="68.8" textLength="12.2" clip-path="url(#cli_init_help-line-2)">
+</text><text class="cli_init_help-r3" x="1183.4" y="93.2" textLength="12.2" clip-path="url(#cli_init_help-line-3)">
+</text><text class="cli_init_help-r2" x="0" y="117.6" textLength="85.4" clip-path="url(#cli_init_help-line-4)">OPTIONS</text><text class="cli_init_help-r1" x="97.6" y="117.6" textLength="1085.8" clip-path="url(#cli_init_help-line-4)">─────────────────────────────────────────────────────────────────────────────────────────</text><text class="cli_init_help-r3" x="1183.4" y="117.6" textLength="12.2" clip-path="url(#cli_init_help-line-4)">
+</text><text class="cli_init_help-r4" x="24.4" y="142" textLength="183" clip-path="url(#cli_init_help-line-5)">-v,&#160;--verbose&#160;&#160;</text><text class="cli_init_help-r3" x="244" y="142" textLength="939.4" clip-path="url(#cli_init_help-line-5)">Enable&#160;verbose&#160;debug&#160;output&#160;and&#160;rich&#160;tracebacks.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="142" textLength="12.2" clip-path="url(#cli_init_help-line-5)">
+</text><text class="cli_init_help-r4" x="24.4" y="166.4" textLength="183" clip-path="url(#cli_init_help-line-6)">--config&#160;&lt;path&gt;</text><text class="cli_init_help-r3" x="244" y="166.4" textLength="939.4" clip-path="url(#cli_init_help-line-6)">Read&#160;global&#160;configuration&#160;from&#160;this&#160;file&#160;instead&#160;of&#160;the&#160;default&#160;location.&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="166.4" textLength="12.2" clip-path="url(#cli_init_help-line-6)">
+</text><text class="cli_init_help-r4" x="24.4" y="190.8" textLength="183" clip-path="url(#cli_init_help-line-7)">--no-config&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="244" y="190.8" textLength="939.4" clip-path="url(#cli_init_help-line-7)">Ignore&#160;global&#160;configuration&#160;entirely&#160;and&#160;use&#160;built-in&#160;defaults.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="190.8" textLength="12.2" clip-path="url(#cli_init_help-line-7)">
+</text><text class="cli_init_help-r4" x="24.4" y="215.2" textLength="183" clip-path="url(#cli_init_help-line-8)">--dry-run&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="244" y="215.2" textLength="939.4" clip-path="url(#cli_init_help-line-8)">Plan&#160;the&#160;execution&#160;and&#160;print&#160;the&#160;resulting&#160;manifest&#160;without&#160;mutating&#160;the&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="215.2" textLength="12.2" clip-path="url(#cli_init_help-line-8)">
+</text><text class="cli_init_help-r3" x="244" y="239.6" textLength="939.4" clip-path="url(#cli_init_help-line-9)">disk.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="239.6" textLength="12.2" clip-path="url(#cli_init_help-line-9)">
+</text><text class="cli_init_help-r3" x="1183.4" y="264" textLength="12.2" clip-path="url(#cli_init_help-line-10)">
+</text><text class="cli_init_help-r2" x="0" y="288.4" textLength="219.6" clip-path="url(#cli_init_help-line-11)">BASE&#160;CONFIGURATION</text><text class="cli_init_help-r1" x="231.8" y="288.4" textLength="951.6" clip-path="url(#cli_init_help-line-11)">──────────────────────────────────────────────────────────────────────────────</text><text class="cli_init_help-r3" x="1183.4" y="288.4" textLength="12.2" clip-path="url(#cli_init_help-line-11)">
+</text><text class="cli_init_help-r4" x="24.4" y="312.8" textLength="292.8" clip-path="url(#cli_init_help-line-12)">-t,&#160;--template&#160;NAME&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="353.8" y="312.8" textLength="829.6" clip-path="url(#cli_init_help-line-12)">Name&#160;of&#160;a&#160;template&#160;to&#160;apply&#160;(run&#160;with&#160;--list-templates&#160;to&#160;view&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="312.8" textLength="12.2" clip-path="url(#cli_init_help-line-12)">
+</text><text class="cli_init_help-r3" x="353.8" y="337.2" textLength="829.6" clip-path="url(#cli_init_help-line-13)">available).&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="337.2" textLength="12.2" clip-path="url(#cli_init_help-line-13)">
+</text><text class="cli_init_help-r4" x="24.4" y="361.6" textLength="292.8" clip-path="url(#cli_init_help-line-14)">--list-templates&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="353.8" y="361.6" textLength="829.6" clip-path="url(#cli_init_help-line-14)">List&#160;all&#160;available&#160;built-in&#160;and&#160;global&#160;alias&#160;templates.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="361.6" textLength="12.2" clip-path="url(#cli_init_help-line-14)">
+</text><text class="cli_init_help-r4" x="24.4" y="386" textLength="292.8" clip-path="url(#cli_init_help-line-15)">--one-shot&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="353.8" y="386" textLength="829.6" clip-path="url(#cli_init_help-line-15)">Scaffold&#160;once&#160;without&#160;recording&#160;a&#160;Protostar&#160;recipe&#160;or&#160;ownership&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="386" textLength="12.2" clip-path="url(#cli_init_help-line-15)">
+</text><text class="cli_init_help-r3" x="353.8" y="410.4" textLength="829.6" clip-path="url(#cli_init_help-line-16)">state;&#160;uv.lock&#160;remains&#160;separate.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="410.4" textLength="12.2" clip-path="url(#cli_init_help-line-16)">
+</text><text class="cli_init_help-r4" x="24.4" y="434.8" textLength="292.8" clip-path="url(#cli_init_help-line-17)">--from&#160;PATH&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="353.8" y="434.8" textLength="829.6" clip-path="url(#cli_init_help-line-17)">Path&#160;or&#160;URL&#160;to&#160;an&#160;external&#160;template&#160;(TOML&#160;file,&#160;directory,&#160;or&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="434.8" textLength="12.2" clip-path="url(#cli_init_help-line-17)">
+</text><text class="cli_init_help-r3" x="353.8" y="459.2" textLength="829.6" clip-path="url(#cli_init_help-line-18)">archive).&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="459.2" textLength="12.2" clip-path="url(#cli_init_help-line-18)">
+</text><text class="cli_init_help-r4" x="24.4" y="483.6" textLength="292.8" clip-path="url(#cli_init_help-line-19)">--var&#160;NAME=VALUE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="353.8" y="483.6" textLength="829.6" clip-path="url(#cli_init_help-line-19)">Set&#160;a&#160;template&#160;variable;&#160;repeat&#160;for&#160;each.&#160;Values&#160;are&#160;saved&#160;to&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="483.6" textLength="12.2" clip-path="url(#cli_init_help-line-19)">
+</text><text class="cli_init_help-r3" x="353.8" y="508" textLength="829.6" clip-path="url(#cli_init_help-line-20)">pyproject.toml,&#160;so&#160;never&#160;pass&#160;secrets.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="508" textLength="12.2" clip-path="url(#cli_init_help-line-20)">
+</text><text class="cli_init_help-r4" x="24.4" y="532.4" textLength="292.8" clip-path="url(#cli_init_help-line-21)">--option&#160;NAME=VALUE&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="353.8" y="532.4" textLength="829.6" clip-path="url(#cli_init_help-line-21)">Choose&#160;a&#160;template&#160;option:&#160;true&#160;or&#160;false,&#160;or&#160;one&#160;of&#160;its&#160;choices;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="532.4" textLength="12.2" clip-path="url(#cli_init_help-line-21)">
+</text><text class="cli_init_help-r3" x="353.8" y="556.8" textLength="829.6" clip-path="url(#cli_init_help-line-22)">repeat&#160;for&#160;each.&#160;Choices&#160;are&#160;saved&#160;to&#160;pyproject.toml.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="556.8" textLength="12.2" clip-path="url(#cli_init_help-line-22)">
+</text><text class="cli_init_help-r4" x="24.4" y="581.2" textLength="292.8" clip-path="url(#cli_init_help-line-23)">--tier&#160;TIER&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="353.8" y="581.2" textLength="829.6" clip-path="url(#cli_init_help-line-23)">Follow&#160;the&#160;template&#x27;s&#160;workbench&#160;tier&#160;(lean:&#160;exploring&#160;and&#160;analyzing)</text><text class="cli_init_help-r3" x="1183.4" y="581.2" textLength="12.2" clip-path="url(#cli_init_help-line-23)">
+</text><text class="cli_init_help-r3" x="353.8" y="605.6" textLength="829.6" clip-path="url(#cli_init_help-line-24)">or&#160;production&#160;tier&#160;(the&#160;full&#160;quality&#160;gate:&#160;building&#160;something&#160;to&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="605.6" textLength="12.2" clip-path="url(#cli_init_help-line-24)">
+</text><text class="cli_init_help-r3" x="353.8" y="630" textLength="829.6" clip-path="url(#cli_init_help-line-25)">publish).&#160;Only&#160;for&#160;templates&#160;that&#160;declare&#160;tiers;&#160;the&#160;choice&#160;is&#160;saved</text><text class="cli_init_help-r3" x="1183.4" y="630" textLength="12.2" clip-path="url(#cli_init_help-line-25)">
+</text><text class="cli_init_help-r3" x="353.8" y="654.4" textLength="829.6" clip-path="url(#cli_init_help-line-26)">to&#160;pyproject.toml.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="654.4" textLength="12.2" clip-path="url(#cli_init_help-line-26)">
+</text><text class="cli_init_help-r4" x="24.4" y="678.8" textLength="292.8" clip-path="url(#cli_init_help-line-27)">--allow-secret&#160;NAME&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="353.8" y="678.8" textLength="829.6" clip-path="url(#cli_init_help-line-27)">Keep&#160;a&#160;variable&#x27;s&#160;value&#160;even&#160;though&#160;it&#160;looks&#160;like&#160;a&#160;credential;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="678.8" textLength="12.2" clip-path="url(#cli_init_help-line-27)">
+</text><text class="cli_init_help-r3" x="353.8" y="703.2" textLength="829.6" clip-path="url(#cli_init_help-line-28)">repeat&#160;for&#160;each.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="703.2" textLength="12.2" clip-path="url(#cli_init_help-line-28)">
+</text><text class="cli_init_help-r4" x="24.4" y="727.6" textLength="292.8" clip-path="url(#cli_init_help-line-29)">--trust&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="353.8" y="727.6" textLength="829.6" clip-path="url(#cli_init_help-line-29)">Run&#160;the&#160;commands&#160;an&#160;untrusted&#160;template&#160;needs&#160;without&#160;asking,&#160;for&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="727.6" textLength="12.2" clip-path="url(#cli_init_help-line-29)">
+</text><text class="cli_init_help-r3" x="353.8" y="752" textLength="829.6" clip-path="url(#cli_init_help-line-30)">this&#160;run&#160;only.&#160;They&#160;are&#160;still&#160;listed.&#160;Never&#160;saved;&#160;to&#160;trust&#160;a&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="752" textLength="12.2" clip-path="url(#cli_init_help-line-30)">
+</text><text class="cli_init_help-r3" x="353.8" y="776.4" textLength="829.6" clip-path="url(#cli_init_help-line-31)">template&#160;every&#160;time,&#160;configure&#160;it&#160;as&#160;an&#160;alias&#160;with&#160;trusted&#160;=&#160;true.&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="776.4" textLength="12.2" clip-path="url(#cli_init_help-line-31)">
+</text><text class="cli_init_help-r4" x="24.4" y="800.8" textLength="292.8" clip-path="url(#cli_init_help-line-32)">--python-version&#160;VERSION</text><text class="cli_init_help-r3" x="353.8" y="800.8" textLength="829.6" clip-path="url(#cli_init_help-line-32)">Specify&#160;the&#160;Python&#160;version&#160;to&#160;scaffold&#160;(e.g.,&#160;3.13).&#160;Overrides&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="800.8" textLength="12.2" clip-path="url(#cli_init_help-line-32)">
+</text><text class="cli_init_help-r3" x="353.8" y="825.2" textLength="829.6" clip-path="url(#cli_init_help-line-33)">global&#160;configuration.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="825.2" textLength="12.2" clip-path="url(#cli_init_help-line-33)">
+</text><text class="cli_init_help-r3" x="1183.4" y="849.6" textLength="12.2" clip-path="url(#cli_init_help-line-34)">
+</text><text class="cli_init_help-r2" x="0" y="874" textLength="207.4" clip-path="url(#cli_init_help-line-35)">TOOLING&#160;&amp;&#160;CONTEXT</text><text class="cli_init_help-r1" x="219.6" y="874" textLength="963.8" clip-path="url(#cli_init_help-line-35)">───────────────────────────────────────────────────────────────────────────────</text><text class="cli_init_help-r3" x="1183.4" y="874" textLength="12.2" clip-path="url(#cli_init_help-line-35)">
+</text><text class="cli_init_help-r4" x="24.4" y="898.4" textLength="402.6" clip-path="url(#cli_init_help-line-36)">--force-merge&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="898.4" textLength="719.8" clip-path="url(#cli_init_help-line-36)">Bypass&#160;interactive&#160;prompts&#160;and&#160;safely&#160;merge&#160;on&#160;file&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="898.4" textLength="12.2" clip-path="url(#cli_init_help-line-36)">
+</text><text class="cli_init_help-r3" x="463.6" y="922.8" textLength="719.8" clip-path="url(#cli_init_help-line-37)">collisions.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="922.8" textLength="12.2" clip-path="url(#cli_init_help-line-37)">
+</text><text class="cli_init_help-r4" x="24.4" y="947.2" textLength="402.6" clip-path="url(#cli_init_help-line-38)">--force-replace&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="947.2" textLength="719.8" clip-path="url(#cli_init_help-line-38)">Bypass&#160;interactive&#160;prompts&#160;and&#160;forcibly&#160;overwrite&#160;file&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="947.2" textLength="12.2" clip-path="url(#cli_init_help-line-38)">
+</text><text class="cli_init_help-r3" x="463.6" y="971.6" textLength="719.8" clip-path="url(#cli_init_help-line-39)">collisions.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="971.6" textLength="12.2" clip-path="url(#cli_init_help-line-39)">
+</text><text class="cli_init_help-r4" x="24.4" y="996" textLength="402.6" clip-path="url(#cli_init_help-line-40)">--resolve&#160;SELECTOR=CHOICE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="996" textLength="719.8" clip-path="url(#cli_init_help-line-40)">Settle&#160;conflicts&#160;by&#160;id,&#160;or&#160;every&#160;conflict&#160;in&#160;a&#160;file&#160;by&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="996" textLength="12.2" clip-path="url(#cli_init_help-line-40)">
+</text><text class="cli_init_help-r3" x="463.6" y="1020.4" textLength="719.8" clip-path="url(#cli_init_help-line-41)">path.&#160;CHOICE&#160;is&#160;local&#160;(keep&#160;yours),&#160;desired&#160;(take&#160;the&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1020.4" textLength="12.2" clip-path="url(#cli_init_help-line-41)">
+</text><text class="cli_init_help-r3" x="463.6" y="1044.8" textLength="719.8" clip-path="url(#cli_init_help-line-42)">update),&#160;or&#160;both&#160;(text&#160;lines&#160;only).&#160;Repeatable.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1044.8" textLength="12.2" clip-path="url(#cli_init_help-line-42)">
+</text><text class="cli_init_help-r4" x="24.4" y="1069.2" textLength="402.6" clip-path="url(#cli_init_help-line-43)">--direnv,&#160;--no-direnv&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1069.2" textLength="719.8" clip-path="url(#cli_init_help-line-43)">Activate&#160;the&#160;project&#x27;s&#160;environment&#160;whenever&#160;you&#160;enter&#160;its&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1069.2" textLength="12.2" clip-path="url(#cli_init_help-line-43)">
+</text><text class="cli_init_help-r3" x="463.6" y="1093.6" textLength="719.8" clip-path="url(#cli_init_help-line-44)">folder&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1093.6" textLength="12.2" clip-path="url(#cli_init_help-line-44)">
+</text><text class="cli_init_help-r4" x="24.4" y="1118" textLength="402.6" clip-path="url(#cli_init_help-line-45)">--markdownlint,&#160;--no-markdownlint</text><text class="cli_init_help-r3" x="463.6" y="1118" textLength="719.8" clip-path="url(#cli_init_help-line-45)">Check&#160;Markdown&#160;files&#160;for&#160;formatting&#160;mistakes,&#160;with&#160;relaxed&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1118" textLength="12.2" clip-path="url(#cli_init_help-line-45)">
+</text><text class="cli_init_help-r3" x="463.6" y="1142.4" textLength="719.8" clip-path="url(#cli_init_help-line-46)">rules&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1142.4" textLength="12.2" clip-path="url(#cli_init_help-line-46)">
+</text><text class="cli_init_help-r4" x="24.4" y="1166.8" textLength="402.6" clip-path="url(#cli_init_help-line-47)">--rumdl,&#160;--no-rumdl&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1166.8" textLength="719.8" clip-path="url(#cli_init_help-line-47)">Check&#160;and&#160;format&#160;Markdown&#160;files&#160;quickly&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1166.8" textLength="12.2" clip-path="url(#cli_init_help-line-47)">
+</text><text class="cli_init_help-r4" x="24.4" y="1191.2" textLength="402.6" clip-path="url(#cli_init_help-line-48)">--ruff,&#160;--no-ruff&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1191.2" textLength="719.8" clip-path="url(#cli_init_help-line-48)">Find&#160;common&#160;bugs&#160;and&#160;style&#160;problems&#160;in&#160;Python&#160;code,&#160;and&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1191.2" textLength="12.2" clip-path="url(#cli_init_help-line-48)">
+</text><text class="cli_init_help-r3" x="463.6" y="1215.6" textLength="719.8" clip-path="url(#cli_init_help-line-49)">format&#160;it&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1215.6" textLength="12.2" clip-path="url(#cli_init_help-line-49)">
+</text><text class="cli_init_help-r4" x="24.4" y="1240" textLength="402.6" clip-path="url(#cli_init_help-line-50)">--mypy,&#160;--no-mypy&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1240" textLength="719.8" clip-path="url(#cli_init_help-line-50)">Check&#160;type&#160;hints&#160;to&#160;catch&#160;mistakes&#160;before&#160;the&#160;code&#160;runs&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1240" textLength="12.2" clip-path="url(#cli_init_help-line-50)">
+</text><text class="cli_init_help-r4" x="24.4" y="1264.4" textLength="402.6" clip-path="url(#cli_init_help-line-51)">--ty,&#160;--no-ty&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1264.4" textLength="719.8" clip-path="url(#cli_init_help-line-51)">Check&#160;type&#160;hints&#160;quickly,&#160;with&#160;Astral&#x27;s&#160;type&#160;checker&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1264.4" textLength="12.2" clip-path="url(#cli_init_help-line-51)">
+</text><text class="cli_init_help-r4" x="24.4" y="1288.8" textLength="402.6" clip-path="url(#cli_init_help-line-52)">--pyrefly,&#160;--no-pyrefly&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1288.8" textLength="719.8" clip-path="url(#cli_init_help-line-52)">Check&#160;type&#160;hints&#160;quickly,&#160;with&#160;Meta&#x27;s&#160;type&#160;checker&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1288.8" textLength="12.2" clip-path="url(#cli_init_help-line-52)">
+</text><text class="cli_init_help-r4" x="24.4" y="1313.2" textLength="402.6" clip-path="url(#cli_init_help-line-53)">--pytest,&#160;--no-pytest&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1313.2" textLength="719.8" clip-path="url(#cli_init_help-line-53)">Run&#160;the&#160;project&#x27;s&#160;tests&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1313.2" textLength="12.2" clip-path="url(#cli_init_help-line-53)">
+</text><text class="cli_init_help-r4" x="24.4" y="1337.6" textLength="402.6" clip-path="url(#cli_init_help-line-54)">--pre-commit,&#160;--no-pre-commit&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1337.6" textLength="719.8" clip-path="url(#cli_init_help-line-54)">Run&#160;the&#160;project&#x27;s&#160;checks&#160;automatically&#160;each&#160;time&#160;you&#160;commit</text><text class="cli_init_help-r3" x="1183.4" y="1337.6" textLength="12.2" clip-path="url(#cli_init_help-line-54)">
+</text><text class="cli_init_help-r4" x="24.4" y="1362" textLength="402.6" clip-path="url(#cli_init_help-line-55)">--prek,&#160;--no-prek&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1362" textLength="719.8" clip-path="url(#cli_init_help-line-55)">Run&#160;the&#160;project&#x27;s&#160;checks&#160;automatically&#160;each&#160;time&#160;you&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1362" textLength="12.2" clip-path="url(#cli_init_help-line-55)">
+</text><text class="cli_init_help-r3" x="463.6" y="1386.4" textLength="719.8" clip-path="url(#cli_init_help-line-56)">commit,&#160;faster&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1386.4" textLength="12.2" clip-path="url(#cli_init_help-line-56)">
+</text><text class="cli_init_help-r4" x="24.4" y="1410.8" textLength="402.6" clip-path="url(#cli_init_help-line-57)">--commitizen,&#160;--no-commitizen&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1410.8" textLength="719.8" clip-path="url(#cli_init_help-line-57)">Write&#160;commit&#160;messages&#160;in&#160;a&#160;standard&#160;form&#160;that&#160;sets&#160;the&#160;next</text><text class="cli_init_help-r3" x="1183.4" y="1410.8" textLength="12.2" clip-path="url(#cli_init_help-line-57)">
+</text><text class="cli_init_help-r3" x="463.6" y="1435.2" textLength="719.8" clip-path="url(#cli_init_help-line-58)">version&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1435.2" textLength="12.2" clip-path="url(#cli_init_help-line-58)">
+</text><text class="cli_init_help-r4" x="24.4" y="1459.6" textLength="402.6" clip-path="url(#cli_init_help-line-59)">--renovate,&#160;--no-renovate&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1459.6" textLength="719.8" clip-path="url(#cli_init_help-line-59)">Open&#160;pull&#160;requests&#160;that&#160;keep&#160;dependencies&#160;up&#160;to&#160;date&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1459.6" textLength="12.2" clip-path="url(#cli_init_help-line-59)">
+</text><text class="cli_init_help-r4" x="24.4" y="1484" textLength="402.6" clip-path="url(#cli_init_help-line-60)">--codecov,&#160;--no-codecov&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1484" textLength="719.8" clip-path="url(#cli_init_help-line-60)">Report&#160;how&#160;much&#160;of&#160;the&#160;code&#160;the&#160;tests&#160;exercise,&#160;on&#160;each&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1484" textLength="12.2" clip-path="url(#cli_init_help-line-60)">
+</text><text class="cli_init_help-r3" x="463.6" y="1508.4" textLength="719.8" clip-path="url(#cli_init_help-line-61)">pull&#160;request&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1508.4" textLength="12.2" clip-path="url(#cli_init_help-line-61)">
+</text><text class="cli_init_help-r4" x="24.4" y="1532.8" textLength="402.6" clip-path="url(#cli_init_help-line-62)">--zensical,&#160;--no-zensical&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1532.8" textLength="719.8" clip-path="url(#cli_init_help-line-62)">Build&#160;a&#160;documentation&#160;website&#160;from&#160;Markdown&#160;files&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1532.8" textLength="12.2" clip-path="url(#cli_init_help-line-62)">
+</text><text class="cli_init_help-r4" x="24.4" y="1557.2" textLength="402.6" clip-path="url(#cli_init_help-line-63)">--readthedocs,&#160;--no-readthedocs&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1557.2" textLength="719.8" clip-path="url(#cli_init_help-line-63)">Publish&#160;the&#160;documentation&#160;website&#160;on&#160;Read&#160;the&#160;Docs&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1557.2" textLength="12.2" clip-path="url(#cli_init_help-line-63)">
+</text><text class="cli_init_help-r4" x="24.4" y="1581.6" textLength="402.6" clip-path="url(#cli_init_help-line-64)">--ci,&#160;--no-ci&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1581.6" textLength="719.8" clip-path="url(#cli_init_help-line-64)">Run&#160;the&#160;checks&#160;and&#160;tests&#160;on&#160;GitHub&#160;for&#160;every&#160;push&#160;and&#160;pull&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1581.6" textLength="12.2" clip-path="url(#cli_init_help-line-64)">
+</text><text class="cli_init_help-r3" x="463.6" y="1606" textLength="719.8" clip-path="url(#cli_init_help-line-65)">request&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1606" textLength="12.2" clip-path="url(#cli_init_help-line-65)">
+</text><text class="cli_init_help-r4" x="24.4" y="1630.4" textLength="402.6" clip-path="url(#cli_init_help-line-66)">--release,&#160;--no-release&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1630.4" textLength="719.8" clip-path="url(#cli_init_help-line-66)">Publish&#160;the&#160;package&#160;to&#160;PyPI&#160;when&#160;you&#160;push&#160;a&#160;version&#160;tag&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1630.4" textLength="12.2" clip-path="url(#cli_init_help-line-66)">
+</text><text class="cli_init_help-r4" x="24.4" y="1654.8" textLength="402.6" clip-path="url(#cli_init_help-line-67)">--docker,&#160;--no-docker&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1654.8" textLength="719.8" clip-path="url(#cli_init_help-line-67)">Package&#160;the&#160;project&#160;as&#160;a&#160;container&#160;image&#160;that&#160;runs&#160;anywhere</text><text class="cli_init_help-r3" x="1183.4" y="1654.8" textLength="12.2" clip-path="url(#cli_init_help-line-67)">
+</text><text class="cli_init_help-r4" x="24.4" y="1679.2" textLength="402.6" clip-path="url(#cli_init_help-line-68)">--just,&#160;--no-just&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1679.2" textLength="719.8" clip-path="url(#cli_init_help-line-68)">Give&#160;the&#160;project&#x27;s&#160;common&#160;commands&#160;short&#160;names,&#160;like&#160;`just&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1679.2" textLength="12.2" clip-path="url(#cli_init_help-line-68)">
+</text><text class="cli_init_help-r3" x="463.6" y="1703.6" textLength="719.8" clip-path="url(#cli_init_help-line-69)">test`&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1703.6" textLength="12.2" clip-path="url(#cli_init_help-line-69)">
+</text><text class="cli_init_help-r4" x="24.4" y="1728" textLength="402.6" clip-path="url(#cli_init_help-line-70)">--agents,&#160;--no-agents&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1728" textLength="719.8" clip-path="url(#cli_init_help-line-70)">Tell&#160;coding&#160;assistants&#160;how&#160;to&#160;work&#160;on&#160;the&#160;project&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1728" textLength="12.2" clip-path="url(#cli_init_help-line-70)">
+</text><text class="cli_init_help-r4" x="24.4" y="1752.4" textLength="402.6" clip-path="url(#cli_init_help-line-71)">--community,&#160;--no-community&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="463.6" y="1752.4" textLength="719.8" clip-path="url(#cli_init_help-line-71)">Add&#160;the&#160;files&#160;GitHub&#160;shows&#160;people&#160;who&#160;want&#160;to&#160;contribute&#160;&#160;&#160;</text><text class="cli_init_help-r3" x="1183.4" y="1752.4" textLength="12.2" clip-path="url(#cli_init_help-line-71)">
+</text><text class="cli_init_help-r3" x="1183.4" y="1776.8" textLength="12.2" clip-path="url(#cli_init_help-line-72)">
+</text><text class="cli_init_help-r5" x="0" y="1801.2" textLength="97.6" clip-path="url(#cli_init_help-line-73)">Example:</text><text class="cli_init_help-r3" x="1183.4" y="1801.2" textLength="12.2" clip-path="url(#cli_init_help-line-73)">
+</text><text class="cli_init_help-r3" x="0" y="1825.6" textLength="488" clip-path="url(#cli_init_help-line-74)">&#160;&#160;protostar&#160;init&#160;--template&#160;astro&#160;--mypy</text><text class="cli_init_help-r3" x="1183.4" y="1825.6" textLength="12.2" clip-path="url(#cli_init_help-line-74)">
+</text>
+    </g>
+    </g>
+</svg>
