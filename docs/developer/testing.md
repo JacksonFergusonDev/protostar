@@ -81,11 +81,19 @@ Repeatability and semantic-reconciliation acceptance live in `tests/test_templat
 
 End-to-end template validation is offloaded to a dedicated parallel matrix job (`template-hooks-smoke`). This job scaffolds each built-in template across operating systems, verifies that `prek` hooks are installed, runs a canary check ensuring non-conventional commit messages are rejected, and asserts that the first commit triggers and cleanly passes all pre-commit hooks.
 
-### Pull Request and Nightly Platforms
+### Pull Request, Nightly, and Release Platforms
 
-The pytest suite and the smoke matrix are defined once, in `.github/workflows/platforms.yml`, and each caller names the platforms it runs. Pull requests (`ci.yml`) run every operating system at the oldest and newest supported Python, every template on Linux, and `cli` on Windows. Nightly (`nightly.yml`) runs the rest each day on `main`, skipping a day when `main` hasn't changed since its last pass, and every release runs it on the tagged commit before publishing. `tests/test_nightly.py` checks that the two together cover every operating system, supported Python, and built-in template, and that neither repeats the other.
+The pytest suite and the smoke matrix are defined once, in `.github/workflows/platforms.yml`, and each caller hands it the matrix to run:
 
-Nightly retries a failed test once. A test that then passes doesn't fail the run; it is filed as flaky instead. Nightly Report (`nightly-report.yml`) opens a `nightly-failure` issue when the run fails, naming the failing jobs and the commits since the last pass, and closes it when a later run passes. Flaky tests go to a separate `flaky-test` issue that stays open until they are fixed. To run Nightly on a branch before merging a risky change, start it from the Actions tab.
+- **Pull requests** (`ci.yml`) run every operating system at the oldest and newest supported Python, every template on Linux, and `cli` on Windows.
+- **Nightly** (`nightly.yml`) runs every operating system, supported Python, and built-in template each day on `main`. It skips a day when `main` hasn't changed since its last pass.
+- **A release** (`release.yml`) publishes only when Nightly has passed on the tagged commit, or on its parent when the tagged commit only changes `pyproject.toml` and `uv.lock` (the version bump). It also smoke-tests the wheel it is about to publish on each operating system, and publishes that same wheel.
+
+`tests/test_nightly.py` checks that Nightly covers every combination, that pull requests run nothing Nightly doesn't, and that a release can't publish before both checks pass.
+
+Nightly retries a failed test or smoke run once. A test that then passes doesn't fail the run; it is filed as flaky instead. Nightly Report (`nightly-report.yml`) opens a `nightly-failure` issue when the run fails, naming the failing jobs and the commits since the last pass, and closes it when a later run passes. Flaky tests go to a separate `flaky-test` issue that stays open until they are fixed.
+
+To run Nightly before merging a risky change, or before a release when it hasn't run on the commit yet, start it from the Actions tab or with `gh workflow run nightly.yml --ref <branch or tag>`.
 
 ### Crash Reporter Testing (`--crash-test`)
 

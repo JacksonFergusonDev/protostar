@@ -1,24 +1,31 @@
 name: Platforms
 
-# The pytest suite and the template hooks smoke test on each platform the caller
-# names. CI runs the combinations most likely to break on every pull request;
-# Nightly runs the rest. Together they cover every OS, Python, and template.
+# The pytest suite and the template hooks smoke test across the platforms the
+# caller names. Pull requests run the combinations most likely to break, Nightly
+# runs every combination, and a release smoke-tests the wheel it will publish.
 on:
   workflow_call:
     inputs:
       tests:
-        description: 'JSON list of {"os", "python"} pairs, with "coverage": true on at most one'
-        required: true
+        description: 'pytest matrix as JSON: "os" and "python" axes, plus "coverage": true on at most one entry. Empty skips the suite.'
+        required: false
+        default: ""
         type: string
       smoke:
-        description: 'JSON list of {"os", "template"} pairs'
-        required: true
+        description: 'Template hooks smoke matrix as JSON: "os", "python", and "template" axes. Empty skips it.'
+        required: false
+        default: ""
         type: string
-      retry-failed-tests:
-        description: Rerun failed tests once and pass the job when they pass, recording them as flaky
+      retry:
+        description: Retry a failed test or smoke run once, passing the job when the retry passes and recording what flaked
         required: false
         default: false
         type: boolean
+      wheel-artifact:
+        description: Name of an artifact in this run holding the wheel to smoke-test, in place of the checkout
+        required: false
+        default: ""
+        type: string
     secrets:
       CODECOV_TOKEN:
         required: false
@@ -29,15 +36,16 @@ permissions:
 jobs:
   test:
     name: Test on ${{ matrix.os }} / Python ${{ matrix.python }}
+    if: inputs.tests != ''
     runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ inputs.retry-failed-tests && 10 || 6 }}
+    timeout-minutes: ${{ inputs.retry && 10 || 6 }}
     strategy:
       fail-fast: false
-      matrix:
-        include: ${{ fromJSON(inputs.tests) }}
+      matrix: ${{ fromJSON(inputs.tests) }}
 
     env:
       PYTHONIOENCODING: "utf-8"
+
 
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -64,7 +72,7 @@ jobs:
       if: ${{ !matrix.coverage }}
       shell: bash
       env:
-        RETRY: ${{ inputs.retry-failed-tests }}
+        RETRY: ${{ inputs.retry }}
         FLAKY_LIST: flaky-tests.txt
       run: |
         pytest=(uv run pytest -n auto --dist worksteal --durations=25 -o faulthandler_timeout=90)
@@ -119,13 +127,13 @@ jobs:
         name: test-results-ubuntu-py314
 
   template-hooks-smoke:
-    name: Template Hooks Smoke (${{ matrix.os }} / ${{ matrix.template }})
+    name: Template Hooks Smoke (${{ matrix.os }} / Python ${{ matrix.python }} / ${{ matrix.template }})
+    if: inputs.smoke != ''
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    timeout-minutes: ${{ inputs.retry && 15 || 10 }}
     strategy:
       fail-fast: false
-      matrix:
-        include: ${{ fromJSON(inputs.smoke) }}
+      matrix: ${{ fromJSON(inputs.smoke) }}
 
     env:
       GIT_TERMINAL_PROMPT: "0"
@@ -139,11 +147,25 @@ jobs:
       uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
       with:
         enable-cache: true
-        python-version: "3.12"
+        python-version: ${{ matrix.python }}
+
+    - name: Download the release wheel
+      if: inputs.wheel-artifact != ''
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        name: ${{ inputs.wheel-artifact }}
+        path: dist
 
     - name: Install Protostar
+      shell: bash
+      env:
+        WHEEL_ARTIFACT: ${{ inputs.wheel-artifact }}
       run: |
-        uv tool install --editable .
+        if [ -n "$WHEEL_ARTIFACT" ]; then
+          uv tool install dist/*.whl
+        else
+          uv tool install --editable .
+        fi
         uv tool install prek
 
     - name: Mock direnv
@@ -160,53 +182,18 @@ jobs:
 
     - name: Verify first commit triggers prek hooks
       shell: bash
+      env:
+        RETRY: ${{ inputs.retry }}
+        TEMPLATE: ${{ matrix.template }}
+        PYTHON: ${{ matrix.python }}
       run: |
-        if command -v cygpath >/dev/null 2>&1; then
-          TEMP_BASE=$(cygpath -u "${{ runner.temp }}")
-        else
-          TEMP_BASE="${{ runner.temp }}"
+        smoke=(.github/scripts/template-hooks-smoke.sh "$TEMPLATE" "$PYTHON")
+        if "${smoke[@]}"; then
+          exit 0
         fi
-        SMOKE_DIR="$TEMP_BASE/smoke_${{ matrix.template }}"
-        rm -rf "$SMOKE_DIR"
-        mkdir -p "$SMOKE_DIR"
-        cd "$SMOKE_DIR"
-
-        protostar init --template ${{ matrix.template }} --prek --python-version 3.12
-
-        # 1. Verify pre-commit hook script was installed by Protostar
-        test -f .git/hooks/pre-commit || { echo "ERROR: .git/hooks/pre-commit missing"; exit 1; }
-
-        # Pre-stage all files so hooks have staged content to inspect
-        git add .
-
-        # 2. Canary test: verify commit-msg hook actively rejects non-conventional commit (when present)
-        if [ -f .git/hooks/commit-msg ]; then
-          echo "=== Running commit-msg hook canary test ==="
-          canary_code=0
-          canary_output=$(git commit -m "invalid non-conventional commit message" < /dev/null 2>&1) || canary_code=$?
-          if [ $canary_code -eq 0 ]; then
-            echo "ERROR: commit-msg hook failed to reject invalid commit message"
-            echo "$canary_output"
-            exit 1
-          else
-            echo "Canary commit correctly rejected by commit-msg hook (exit code $canary_code)"
-            echo "$canary_output"
-          fi
-        fi
-
-        # 3. Verify clean first commit triggers prek hooks and succeeds
-        echo "=== Running valid initial commit ==="
-        commit_code=0
-        commit_output=$(git commit -m "feat: initial scaffold" < /dev/null 2>&1) || commit_code=$?
-        echo "$commit_output"
-
-        if [ $commit_code -ne 0 ]; then
-          echo "ERROR: Initial commit failed with exit code $commit_code"
+        if [ "$RETRY" != true ]; then
           exit 1
         fi
-
-        # 4. Verify hook execution output is present in commit output
-        echo "$commit_output" | grep -qE "(uv lock check|ruff check|ruff format|Passed)" || {
-          echo "ERROR: Prek hook execution not detected in commit output"
-          exit 1
-        }
+        # Downloads from PyPI and GitHub fail now and then; a real break fails twice.
+        echo "::warning title=Smoke test retried::$TEMPLATE failed once and was retried; see the first attempt's output above"
+        "${smoke[@]}"

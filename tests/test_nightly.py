@@ -1,9 +1,11 @@
 """The split between pull-request and nightly platforms, and the nightly report."""
 
+import itertools
 import json
 import re
 import tomllib
 from pathlib import Path
+from typing import Any
 
 import pytest
 from ruamel.yaml import YAML
@@ -23,26 +25,66 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 WORKFLOWS = REPO_ROOT / ".github/workflows"
 OPERATING_SYSTEMS = {"ubuntu-latest", "macos-latest", "windows-latest"}
 
+Entry = dict[str, Any]
 
-def platforms(workflow: str) -> dict[str, list[dict[str, object]]]:
-    """The `tests` and `smoke` lists a workflow hands to platforms.yml."""
+
+def expand(matrix: dict[str, Any]) -> list[Entry]:
+    """Expands a strategy matrix the way GitHub Actions does.
+
+    An `include` entry extends each original combination it can join without
+    changing one of that combination's values, and is added as its own
+    combination when it joins none.
+    """
+    axes = {key: values for key, values in matrix.items() if key != "include"}
+    original = [
+        dict(zip(axes, values, strict=True))
+        for values in itertools.product(*axes.values())
+    ]
+    combinations = [dict(entry) for entry in original]
+    for extra in matrix.get("include", []):
+        joined = False
+        for base, combination in zip(
+            original, combinations[: len(original)], strict=True
+        ):
+            if all(base.get(key, value) == value for key, value in extra.items()):
+                combination.update(extra)
+                joined = True
+        if not joined:
+            combinations.append(dict(extra))
+    return combinations
+
+
+def job(workflow: str, name: str) -> dict[str, Any]:
     jobs = YAML(typ="safe").load((WORKFLOWS / workflow).read_text(encoding="utf-8"))[
         "jobs"
     ]
-    inputs = jobs["platforms"]["with"]
-    assert jobs["platforms"]["uses"] == "./.github/workflows/platforms.yml"
-    return {name: json.loads(inputs[name]) for name in ("tests", "smoke")}
+    return jobs[name]
 
 
-def supported_pythons() -> set[str]:
+def platforms(workflow: str, name: str = "platforms") -> dict[str, list[Entry]]:
+    """The expanded `tests` and `smoke` matrices a job hands to platforms.yml."""
+    caller = job(workflow, name)
+    assert caller["uses"] == "./.github/workflows/platforms.yml"
+    return {
+        kind: expand(json.loads(caller["with"][kind])) if kind in caller["with"] else []
+        for kind in ("tests", "smoke")
+    }
+
+
+def platform(entry: Entry) -> tuple[tuple[str, Any], ...]:
+    return tuple(sorted((k, v) for k, v in entry.items() if k != "coverage"))
+
+
+def supported_pythons() -> list[str]:
     classifiers = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())["project"][
         "classifiers"
     ]
-    return {
+    versions = {
         match.group(1)
         for c in classifiers
         if (match := re.fullmatch(r"Programming Language :: Python :: (3\.\d+)", c))
     }
+    return sorted(versions, key=lambda v: tuple(map(int, v.split("."))))
 
 
 def built_in_templates() -> set[str]:
@@ -53,21 +95,54 @@ def built_in_templates() -> set[str]:
 
 PULL_REQUEST = platforms("ci.yml")
 NIGHTLY = platforms("nightly.yml")
+RELEASE = platforms("release.yml", "smoke")
 
 
-def test_every_os_and_python_is_tested_by_pull_requests_or_nightly():
-    tested = [(t["os"], t["python"]) for t in PULL_REQUEST["tests"] + NIGHTLY["tests"]]
-    assert sorted(tested) == sorted(
-        (os, python) for os in OPERATING_SYSTEMS for python in supported_pythons()
+def test_expand_follows_github_include_rules():
+    assert expand(
+        {
+            "os": ["a", "b"],
+            "python": ["1"],
+            "include": [{"os": "a", "python": "1", "coverage": True}, {"os": "c"}],
+        }
+    ) == [
+        {"os": "a", "python": "1", "coverage": True},
+        {"os": "b", "python": "1"},
+        {"os": "c"},
+    ]
+
+
+def test_nightly_tests_every_os_and_python():
+    assert sorted(map(platform, NIGHTLY["tests"])) == sorted(
+        platform({"os": os, "python": python})
+        for os in OPERATING_SYSTEMS
+        for python in supported_pythons()
     )
 
 
+def test_nightly_smoke_tests_every_template_on_every_os_and_python():
+    assert sorted(map(platform, NIGHTLY["smoke"])) == sorted(
+        platform({"os": os, "python": python, "template": template})
+        for os in OPERATING_SYSTEMS
+        for python in supported_pythons()
+        for template in built_in_templates()
+    )
+
+
+def test_pull_requests_run_only_what_nightly_also_runs():
+    for kind in ("tests", "smoke"):
+        assert {platform(e) for e in PULL_REQUEST[kind]} <= {
+            platform(e) for e in NIGHTLY[kind]
+        }
+
+
 def test_pull_requests_test_every_os_at_the_oldest_and_newest_python():
-    pythons = sorted(supported_pythons(), key=lambda v: tuple(map(int, v.split("."))))
-    tested = {(t["os"], t["python"]) for t in PULL_REQUEST["tests"]}
+    pythons = supported_pythons()
     assert {
-        (os, python) for os in OPERATING_SYSTEMS for python in (pythons[0], pythons[-1])
-    } <= tested
+        platform({"os": os, "python": python})
+        for os in OPERATING_SYSTEMS
+        for python in (pythons[0], pythons[-1])
+    } <= {platform(e) for e in PULL_REQUEST["tests"]}
 
 
 def test_one_pull_request_job_reports_coverage():
@@ -84,16 +159,6 @@ def test_pull_requests_smoke_test_every_built_in_template_on_linux():
     assert on_linux == built_in_templates()
 
 
-def test_nightly_repeats_no_pull_request_platform():
-    def key(entry):
-        return tuple(sorted((k, v) for k, v in entry.items() if k != "coverage"))
-
-    for kind in ("tests", "smoke"):
-        assert not {key(e) for e in PULL_REQUEST[kind]} & {
-            key(e) for e in NIGHTLY[kind]
-        }
-
-
 def test_pull_requests_stay_within_two_macos_jobs():
     # The account runs five macOS jobs at a time across every open PR and push.
     macos = [
@@ -103,6 +168,22 @@ def test_pull_requests_stay_within_two_macos_jobs():
         if e["os"] == "macos-latest"
     ]
     assert len(macos) <= 2
+
+
+def test_a_release_smoke_tests_the_wheel_it_publishes_on_every_os():
+    smoke = job("release.yml", "smoke")
+    assert smoke["needs"] == "build"
+    assert smoke["with"]["wheel-artifact"] == "dist"
+    assert {e["os"] for e in RELEASE["smoke"]} == OPERATING_SYSTEMS
+    assert RELEASE["tests"] == []
+
+
+def test_a_release_publishes_only_after_nightly_and_its_smoke_test_pass():
+    assert set(job("release.yml", "publish")["needs"]) == {
+        "build",
+        "nightly-passed",
+        "smoke",
+    }
 
 
 class FakeGitHub:

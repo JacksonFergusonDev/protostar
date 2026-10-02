@@ -97,8 +97,8 @@ jobs:
 
 
   # Every OS at the oldest and newest Python, and every template on Linux plus
-  # cli on Windows. Nightly runs the rest. This stays at two macOS jobs because
-  # the account runs five at a time, and a third PR job waits for a free runner.
+  # cli on Windows. Nightly runs every combination. Two macOS jobs at most,
+  # since the account runs five at a time and a third would wait for a runner.
   platforms:
     name: Platforms
     uses: ./.github/workflows/platforms.yml
@@ -106,24 +106,23 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
       tests: >-
-        [
-          {"os": "ubuntu-latest", "python": "3.12"},
-          {"os": "ubuntu-latest", "python": "3.13"},
-          {"os": "ubuntu-latest", "python": "3.14", "coverage": true},
-          {"os": "macos-latest", "python": "3.12"},
-          {"os": "macos-latest", "python": "3.14"},
-          {"os": "windows-latest", "python": "3.12"},
-          {"os": "windows-latest", "python": "3.14"}
-        ]
+        {
+          "os": ["ubuntu-latest", "macos-latest", "windows-latest"],
+          "python": ["3.12", "3.14"],
+          "include": [
+            {"os": "ubuntu-latest", "python": "3.13"},
+            {"os": "ubuntu-latest", "python": "3.14", "coverage": true}
+          ]
+        }
       smoke: >-
-        [
-          {"os": "ubuntu-latest", "template": "cli"},
-          {"os": "ubuntu-latest", "template": "api"},
-          {"os": "ubuntu-latest", "template": "lib"},
-          {"os": "ubuntu-latest", "template": "astro"},
-          {"os": "ubuntu-latest", "template": "ml"},
-          {"os": "windows-latest", "template": "cli"}
-        ]
+        {
+          "os": ["ubuntu-latest"],
+          "python": ["3.12"],
+          "template": ["cli", "api", "lib", "astro", "ml"],
+          "include": [
+            {"os": "windows-latest", "python": "3.12", "template": "cli"}
+          ]
+        }
 
   template-docker-build:
     name: Template Docker Build (${{ matrix.template }})
