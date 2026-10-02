@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790908204414,
+  "lastUpdate": 1790912991229,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20643,6 +20643,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1285.3,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a10b1d70f9c36e0ddd4c1b31f47c20bcbe3c1199",
+          "message": "feat(benchmarks): align dashboard and docs presentation (#411)\n\n* feat(benchmarks): unify the dashboard with the docs header\n\n* fix(benchmarks): keep the mean label inside the chart\n\n* feat(benchmarks): share the landing page footer\n\n* test(pages): read rendered benchmark HTML as UTF-8",
+          "timestamp": "2026-10-01T20:46:29-07:00",
+          "tree_id": "891153997801610622f88550253b832a88cc2139",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a10b1d70f9c36e0ddd4c1b31f47c20bcbe3c1199"
+        },
+        "date": 1790912990339,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 280.63,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1253.33,
             "unit": "ms"
           }
         ]
