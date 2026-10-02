@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790970138423,
+  "lastUpdate": 1790978919063,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21017,6 +21017,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 954.22,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e99548cddff08a82f910075a2c73c6b8f1ffc72f",
+          "message": "ci: run every platform nightly, trim PRs, and gate releases on Nightly (#416)\n\n* ci: run rarely-failing platforms nightly instead of on every PR\n\nPull requests now run every OS at Python 3.12 and 3.14, every template's\nhooks smoke on Linux, and cli on Windows. Nightly runs Python 3.13 on macOS\nand Windows and the remaining macOS and Windows smoke jobs, retries a failed\ntest once, and files failures and flaky tests as issues. Releases run\nNightly on the tagged commit before publishing.\n\n* ci: run every platform nightly and gate releases on its last pass\n\nNightly now runs pytest on every OS and Python and smoke-tests every\nbuilt-in template on every OS and Python, retrying a failed run once.\n\nA release no longer runs Nightly itself. It requires a passing Nightly on\nthe tagged commit, or on its parent when the tag only bumps the version,\nthen smoke-tests the built wheel on each OS and publishes that wheel.",
+          "timestamp": "2026-10-02T15:06:27-07:00",
+          "tree_id": "d347654d31428d6aec354dd4adfe8502f53fc4da",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/e99548cddff08a82f910075a2c73c6b8f1ffc72f"
+        },
+        "date": 1790978917667,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 112.58,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 793.68,
             "unit": "ms"
           }
         ]
