@@ -2317,7 +2317,7 @@ def test_benchmark_exits_after_first_frame(mocker, monkeypatch, tmp_path):
     monkeypatch.setenv("PROTOSTAR_BENCHMARK_RECIPE_EDITOR", "1")
     monkeypatch.setattr(sys, "argv", ["protostar", "init"])
     mocker.patch.object(UserConfig, "load", return_value=UserConfig())
-    launch = mocker.patch.object(parser, "edit_recipe", return_value=None)
+    launch = mocker.patch("protostar.cli.tui.launch.edit_recipe", return_value=None)
     execute = mocker.patch.object(ui, "_run_engine")
     with pytest.raises(SystemExit) as exc:
         parser.maybe_run_interactive_init(mocker.Mock())
@@ -2341,7 +2341,7 @@ def test_cancelled_editor_never_executes(mocker, monkeypatch, tmp_path):
     monkeypatch.setattr(sys, "argv", ["protostar", "init"])
     mocker.patch.object(parser, "is_interactive", return_value=True)
     mocker.patch.object(UserConfig, "load", return_value=UserConfig())
-    mocker.patch.object(parser, "edit_recipe", return_value=None)
+    mocker.patch("protostar.cli.tui.launch.edit_recipe", return_value=None)
     execute = mocker.patch.object(ui, "_run_engine")
     with pytest.raises(ExecutionAbortedError):
         parser.maybe_run_interactive_init(mocker.Mock())
@@ -2354,7 +2354,7 @@ def test_interactive_init_hands_the_editor_its_analysis(mocker, monkeypatch, tmp
     monkeypatch.setattr(sys, "argv", ["protostar"])
     mocker.patch.object(parser, "is_interactive", return_value=True)
     mocker.patch.object(UserConfig, "load", return_value=UserConfig())
-    edit = mocker.patch.object(parser, "edit_recipe", return_value=None)
+    edit = mocker.patch("protostar.cli.tui.launch.edit_recipe", return_value=None)
     with pytest.raises(ExecutionAbortedError):
         parser.maybe_run_interactive_init(mocker.Mock())
     draft = edit.call_args.args[0]
