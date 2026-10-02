@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790912991229,
+  "lastUpdate": 1790913055314,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20677,6 +20677,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1253.33,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d6b76ba5fccd52bb223a6fc739181e3f88f3d7de",
+          "message": "perf(cli): defer operation imports until command dispatch (#412)\n\n* perf(cli): defer operation imports until command dispatch\n\n* test(cli): patch the deferred recipe editor entry point",
+          "timestamp": "2026-10-01T20:46:40-07:00",
+          "tree_id": "56a8d502d916a91e56ac1a7fc522a20c59625886",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/d6b76ba5fccd52bb223a6fc739181e3f88f3d7de"
+        },
+        "date": 1790913054260,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 182.47,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1260.27,
             "unit": "ms"
           }
         ]
