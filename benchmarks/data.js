@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790978919063,
+  "lastUpdate": 1790983661125,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21051,6 +21051,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 793.68,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cea9c9a9a73c3644fe36c087009f74557b30ed45",
+          "message": "test(mutation): mutate dependencies and sync_state, and settle every survivor (#417)\n\n* test(mutation): mutate sync_state and dependencies\n\n* test(dependencies): catch the mutants that survived in dependencies\n\nExercise select_dependencies, retract_requirements, other_requirement_groups,\nand _upgrades directly, and assert the exact error messages and hints. Clear the\nsync_state baseline caches before each test so a cached result cannot hide a mutant.\n\n* test(dependencies): mark the one equivalent mutant on its own line\n\n* test(sync_state): catch the mutants that survived in sync_state\n\nAssert the exact message and hint of every state validation, name each stored\nfield when it is empty, and cover the template rules (credentials, remote-only\nrefs, built-in paths). Mark the mutants that cannot change behavior: casts that\ninform only the type checker, and a schema check SyncState repeats.",
+          "timestamp": "2026-10-02T16:24:42-07:00",
+          "tree_id": "40257520ee815f870720fd81a6a2662463c7a9e7",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/cea9c9a9a73c3644fe36c087009f74557b30ed45"
+        },
+        "date": 1790983659919,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 177.34,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1153.64,
             "unit": "ms"
           }
         ]
