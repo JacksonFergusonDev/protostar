@@ -23,22 +23,22 @@ jobs:
       matrix: ${{ steps.matrix.outputs.matrix }}
 
     steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
     - name: Select modules
       id: matrix
       env:
         REQUESTED: ${{ inputs.modules }}
       run: |
         python3 - <<'EOF'
-        import json, os, sys
+        import json, os, sys, tomllib
+        from pathlib import PurePosixPath
 
+        with open("pyproject.toml", "rb") as config:
+            source_paths = tomllib.load(config)["tool"]["mutmut"]["source_paths"]
         known = [
-            "fs_transaction",
-            "journal",
-            "jsonc_ast",
-            "merge",
-            "text_merge",
-            "toml_ast",
-            "yaml_ast",
+            ".".join(PurePosixPath(path).relative_to("src/protostar").with_suffix("").parts)
+            for path in source_paths
         ]
         requested = os.environ["REQUESTED"].replace(" ", "")
         chosen = known if requested == "all" else requested.split(",")
