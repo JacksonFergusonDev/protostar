@@ -12,9 +12,20 @@ on:
         type: string
 
 jobs:
+  # Pull requests skip some platforms that Nightly covers, so a release runs
+  # those too rather than trusting the last nightly ran on this commit.
+  nightly:
+    if: github.event_name == 'push'
+    name: Nightly
+    uses: ./.github/workflows/nightly.yml
+    permissions:
+      actions: read
+      contents: read
+
   build-n-publish:
     if: github.event_name == 'push'
     name: Build and publish to PyPI
+    needs: nightly
     runs-on: ubuntu-latest
     environment: release
     permissions:

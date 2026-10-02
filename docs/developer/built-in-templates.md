@@ -137,7 +137,7 @@ A payload that configures a tool declares it with `requires`, so `protostar init
 **Adding one.** Open an issue that answers the three [admission questions](#admission-criteria) and names the tier. Then:
 
 1. Write `src/protostar/templates/<name>.toml`, following the conventions above.
-1. Add it to the `template-hooks-smoke` matrix in `.github/workflows/ci.yml`.
+1. Add it to the `smoke` list in `.github/workflows/ci.yml`, which smoke-tests it on Linux in every pull request. Add it to `nightly.yml` too if it needs macOS or Windows coverage.
 1. Add a `RegressionScenario` to `scripts/run_snapshots.py` and its name to `SCENARIO_FIXTURES` in `tests/test_snapshots.py`, then run `just check-snapshots` and review every generated file by hand.
 
 The contract tests, template discovery, the template picker, shell completion, and the generated template table pick it up automatically.
