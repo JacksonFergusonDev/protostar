@@ -40,6 +40,12 @@ def _ignore_contribution(path: tuple[str, ...]) -> None:
     """Ignores attribution when assembling a standalone manifest slice."""
 
 
+def _render_path(path: str, context: dict[str, str]) -> str:
+    """Fills a declared path's built-in names in. A path is not TOML: nothing is escaped."""
+    # None is as falsy as False, so no test can tell the two apart.
+    return render_template(path, context, escape_toml=False)  # pragma: no mutate
+
+
 class DiagnosticPhase(enum.StrEnum):
     """Enumeration of execution phases for diagnostic events."""
 
@@ -742,11 +748,11 @@ class EnvironmentManifest:
 
         ctx = self._path_context()
         targets = {pyproject.TARGET} | {
-            Path(render_template(path, ctx, escape_toml=False)).as_posix()
+            Path(_render_path(path, ctx)).as_posix()
             for path in self.filesystem.structured
         }
         if renovate.TARGET in {
-            Path(render_template(path, ctx, escape_toml=False)).as_posix()
+            Path(_render_path(path, ctx)).as_posix()
             for path in self.filesystem.file_injections
         }:
             targets.add(renovate.TARGET)
@@ -790,14 +796,12 @@ class EnvironmentManifest:
         ctx = self._path_context()
 
         for filepath in self.filesystem.file_injections:
-            rendered = render_template(filepath, ctx, escape_toml=False)
-            targets.add(Path(rendered))
+            targets.add(Path(_render_path(filepath, ctx)))
 
         for filepath in (
             self.filesystem.structured.keys() | self.filesystem.regions.keys()
         ):
-            rendered = render_template(filepath, ctx, escape_toml=False)
-            targets.add(Path(rendered))
+            targets.add(Path(_render_path(filepath, ctx)))
 
         if self.dependencies.includes:
             targets.add(Path(pyproject.TARGET))
@@ -824,10 +828,7 @@ class EnvironmentManifest:
             A set of Path objects representing target directories.
         """
         ctx = self._path_context()
-        return {
-            Path(render_template(path, ctx, escape_toml=False))
-            for path in self.filesystem.directories
-        }
+        return {Path(_render_path(path, ctx)) for path in self.filesystem.directories}
 
     def written_files(self) -> set[Path]:
         """Returns every workspace file execution writes itself, for previews.
