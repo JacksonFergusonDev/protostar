@@ -12,7 +12,7 @@ Each format engine reconciles a document under a spec it is handed: `TomlDocumen
 
 | Module | Owns |
 | :--- | :--- |
-| `pyproject` | `TARGET`, `SPEC` (set-like lint selections, personal metadata as seed paths, the `tool` super table, the canonical layout), the resolver footprint, and dependency-group includes. |
+| `pyproject` | `TARGET`, `SPEC` (set-like lint selections, personal metadata as seed paths, the canonical layout), the resolver footprint, and dependency-group includes. |
 | `pyproject_layout` | The canonical `pyproject.toml` section order, banner, and headers. |
 | `locations` | `DocumentLocations` and `resolve_location`, shared by every document. |
 | `pre_commit` | `TARGET`, `SPEC` (repos by `repo`, hooks by `id`), `LOCATIONS` per hook runner, and `plan_hook_pins`, whose `HookPinPlan` guards unsafe automatic pins and advances pin provenance after the merge, moving it with a followed configuration. |
@@ -115,7 +115,7 @@ A guard that depends only on the decoded documents is registered by path in `doc
 
 ## TOML document specs
 
-A `TomlDocumentSpec` lives with its document in `src/protostar/documents/` and is looked up with `documents.toml_spec(path)`. Besides the kernel `MergePolicy`, super tables, and layout, it declares document policy as data.
+A `TomlDocumentSpec` lives with its document in `src/protostar/documents/` and is looked up with `documents.toml_spec(path)`. Besides the kernel `MergePolicy` and layout, it declares document policy as data.
 
 `seed_paths`
 :   Written only while Protostar creates the document or explicit overwrite is selected. `reconcile_toml` holds every seed it has written at its owned value and drops every other seed. A seed never merges into an existing document, editing or deleting one never conflicts, and a changed seed default is never applied. A written seed stays owned, so deleting its table still reads as a deletion (the dependency guards rely on an owned `project` table). pyproject's personal metadata is declared this way.

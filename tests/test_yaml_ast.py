@@ -27,6 +27,8 @@ from protostar.sync_state import (
 )
 from protostar.yaml_ast import (
     DEFAULT_STYLE,
+    WILDCARD,
+    KeyedSequence,
     YamlDocumentSpec,
     YamlGuard,
     YamlStyle,
@@ -351,6 +353,11 @@ def changed_lines(before: str, after: str) -> list[str]:
         ),
         pytest.param(
             "a:\n  - x\nb:\n- y\n", YamlStyle(2, 4, 2), id="first-sequence-wins"
+        ),
+        pytest.param(
+            "a:\n  - x\nb:\n    c: 1\n",
+            YamlStyle(4, 4, 2),
+            id="mapping-after-a-sequence",
         ),
     ],
 )
@@ -788,3 +795,65 @@ def test_a_guard_conflict_three_keys_deep_settles():
 
     assert result.content == "a: {b: {c: 2}}\n"
     assert result.baseline == {"a": {"b": {"c": 2}}}
+
+
+@pytest.mark.parametrize(
+    ("spec", "original", "desired", "held", "identity"),
+    [
+        pytest.param(
+            YamlDocumentSpec("x", keyed=(KeyedSequence(("a", "b"), "id"),)),
+            "a:\n  b:\n  - id: x\n  - id: x\n",
+            "a:\n  b:\n  - id: x\n    v: 1\n",
+            ("a",),
+            None,
+            id="below-the-top-level",
+        ),
+        pytest.param(
+            YamlDocumentSpec(
+                "x",
+                keyed=(
+                    KeyedSequence(("a",), "id"),
+                    KeyedSequence(("a", WILDCARD, "b", "c"), "id"),
+                ),
+            ),
+            "a:\n- id: r\n  b:\n    c:\n    - id: x\n    - id: x\n",
+            "a:\n- id: r\n  b:\n    c:\n    - id: x\n      v: 1\n",
+            ("a", "r", "b"),
+            None,
+            id="inside-a-record",
+        ),
+        pytest.param(
+            YamlDocumentSpec(
+                "x",
+                keyed=(
+                    KeyedSequence(("a",), "id"),
+                    KeyedSequence(("a", WILDCARD, "b"), "id"),
+                    KeyedSequence(("a", WILDCARD, "b", WILDCARD, "c"), "id"),
+                ),
+            ),
+            "a:\n- id: r\n  b:\n  - id: s\n    c:\n    - id: x\n    - id: x\n",
+            "a:\n- id: r\n  b:\n  - id: s\n    c:\n    - id: x\n      v: 1\n",
+            ("a", "r", "b", "s"),
+            "s",
+            id="inside-a-nested-record",
+        ),
+    ],
+)
+def test_a_duplicate_below_the_top_level_holds_the_entry_holding_its_sequence(
+    spec, original, desired, held, identity
+):
+    """Only a key whose parent is a keyed sequence is a record identity."""
+    result = reconcile_yaml(spec, original, desired, MISSING, MergeLocation("x.yaml"))
+
+    assert result.content == original
+    assert result.conflicts == (
+        MergeConflict(
+            MergeLocation("x.yaml", held, identity), ConflictReason.DUPLICATE_IDENTITY
+        ),
+    )
+
+
+def test_the_last_line_keeps_its_trailing_spaces():
+    result = plain("a: 1\nb: 2  # c   \n", "a: 2\n", {"a": 1})
+
+    assert result.content == "a: 2\nb: 2  # c   \n"

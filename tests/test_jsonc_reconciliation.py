@@ -367,3 +367,29 @@ def test_a_table_filled_in_an_unowned_document_is_owned():
 
 def test_owning_nothing_records_no_baseline():
     assert merge('{"a": 1}', '{"a": 1}').baseline is MISSING
+
+
+def test_overwriting_with_an_empty_update_owns_nothing():
+    local = '{"c": {}, "a": 0}'
+
+    result = merge(local, "{}", overwrite=True)
+
+    assert result.content == local
+    assert result.baseline is MISSING
+
+
+def test_an_edit_that_loses_a_value_fails_instead_of_writing(monkeypatch):
+    """A safety net: the editor must never write what the merge did not accept."""
+    from protostar import jsonc_ast
+
+    monkeypatch.setattr(jsonc_ast.JsoncDocument, "set", lambda self, path, value: self)
+
+    with pytest.raises(ConfigurationError) as caught:
+        merge("{}\n", '{"a": 1}\n')
+
+    assert str(caught.value) == (
+        "JSONC reconciliation could not preserve the accepted values."
+    )
+    assert caught.value.hint == (
+        "Simplify the target document or restore it from version control."
+    )

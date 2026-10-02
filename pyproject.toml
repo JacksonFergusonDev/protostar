@@ -186,6 +186,10 @@ source_paths = [
     "src/protostar/yaml_ast.py",
 ]
 pytest_add_cli_args_test_selection = ["tests/"]
+# mutmut reads a pragma only at the end of a statement; this applies it to the line
+# it is on, such as one argument of a call. Mark only mutants that cannot change
+# behavior, and say why on the line above.
+do_not_mutate_patterns = ["# pragma: no mutate"]
 also_copy = [
     ".github/",
     "AGENTS.md",
@@ -197,6 +201,7 @@ also_copy = [
     "SECURITY.md",
     "docs/",
     "justfile",
+    "overrides/",
     "scripts/",
     "src/",
     "zensical.toml",

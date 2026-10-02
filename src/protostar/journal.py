@@ -122,7 +122,12 @@ class MutationJournal:
 
     def normalize_path(self, path: Path) -> Path:
         """Returns an absolute path without dereferencing its final component."""
-        return enforce_path_jail(path, self._workspace_root, dereference_leaf=False)
+        return enforce_path_jail(
+            path,
+            self._workspace_root,
+            # None would read as False too.
+            dereference_leaf=False,  # pragma: no mutate
+        )
 
     def _format_display_path(self, path: Path, is_dir: bool = False) -> str:
         # Every journaled path went through normalize_path, so it is inside the root.
@@ -184,9 +189,7 @@ class MutationJournal:
         except FileNotFoundError:
             self._journal[path] = OriginalState.absent()
             self._created_paths.add(path)
-            self._touched_display_paths.add(
-                self._format_display_path(path, is_dir=False)
-            )
+            self._touched_display_paths.add(self._format_display_path(path))
             return
         except OSError as e:
             from .errors import FileSystemError
@@ -194,12 +197,11 @@ class MutationJournal:
             raise FileSystemError("inspect path before mutation", str(path), e) from e
 
         mode = stat.S_IMODE(node_stat.st_mode)
-        is_dir = False
+        is_dir = stat.S_ISDIR(node_stat.st_mode)
         if stat.S_ISLNK(node_stat.st_mode):
             raise UnsupportedFilesystemNodeError(path, "symbolic link")
-        if stat.S_ISDIR(node_stat.st_mode):
+        if is_dir:
             self._journal[path] = OriginalState.directory(mode)
-            is_dir = True
         elif stat.S_ISREG(node_stat.st_mode):
             try:
                 self._journal[path] = OriginalState.file(path.read_bytes(), mode)
@@ -247,10 +249,10 @@ class MutationJournal:
                     if not path.is_dir() or path.is_symlink():
                         if path.exists() or path.is_symlink():
                             path.unlink()
-                        path.mkdir(parents=True, exist_ok=True)
+                        path.mkdir(parents=True)
                     if state.mode is not None:
                         path.chmod(state.mode)
-                elif state.file_content is not None and state.mode is not None:
+                elif state.file_content is not None:
                     if path.exists() and path.is_dir():
                         path.rmdir()
                     atomic_write_bytes(path, state.file_content, mode=state.mode)

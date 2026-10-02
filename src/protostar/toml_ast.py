@@ -8,7 +8,15 @@ from typing import Any, cast
 import tomlkit
 import tomlkit.items
 from tomlkit.container import Container, OutOfOrderTableProxy
-from tomlkit.items import AoT, Comment, InlineTable, Item, Table, Whitespace
+from tomlkit.items import (
+    AbstractTable,
+    AoT,
+    Comment,
+    InlineTable,
+    Item,
+    Table,
+    Whitespace,
+)
 from tomlkit.toml_document import TOMLDocument
 
 from .errors import ConfigurationError
@@ -23,6 +31,7 @@ from .merge import (
     Resolutions,
     StructuredReconciliation,
     Value,
+    as_mapping,
     hold,
     lookup,
     overlay_declared,
@@ -72,8 +81,6 @@ class TomlDocumentSpec:
 
     Attributes:
         policy: Kernel policy, including set-like arrays.
-        super_tables: Paths of new tables emitted as super tables, so only their
-            children get headers.
         seed_paths: Paths written only while Protostar creates the document or
             explicit overwrite is selected, and never merged into an existing
             document. A written seed is owned, so deleting its table still reads as
@@ -87,7 +94,6 @@ class TomlDocumentSpec:
     """
 
     policy: MergePolicy = DEFAULT_POLICY
-    super_tables: frozenset[tuple[str, ...]] = frozenset()
     seed_paths: frozenset[tuple[str, ...]] = frozenset()
     root_table: str | None = None
     layout: TomlLayout | None = None
@@ -154,30 +160,27 @@ def aggregate_toml_document(
             owners[keys] = producer
             if isinstance(value, dict):
                 target[key] = {}
-                add_semantic(cast(dict[str, Value], target[key]), value, producer, keys)
+                add_semantic(as_mapping(target[key]), value, producer, keys)
 
-    def overlay_ast(target: Table | Container, incoming: Table | Container) -> None:
-        overlap_seen = False
-        separator_added = False
+    def overlay_ast(
+        target: AbstractTable | Container, incoming: AbstractTable | Container
+    ) -> None:
+        # None would read as False too.
+        overlap_seen = False  # pragma: no mutate
+        # None would read as False too.
+        separator_added = False  # pragma: no mutate
         for key, value in incoming.items():
             existed = key in target
-            if (
-                existed
-                and isinstance(target[key], tomlkit.items.AbstractTable)
-                and isinstance(value, tomlkit.items.AbstractTable)
-                and not isinstance(target[key], AoT)
-                and not isinstance(value, AoT)
-            ):
-                overlay_ast(
-                    cast(Table | Container, target[key]), cast(Table | Container, value)
-                )
+            current = target[key] if existed else None
+            if isinstance(current, AbstractTable) and isinstance(value, AbstractTable):
+                overlay_ast(current, value)
             else:
                 if (
                     not existed
                     and overlap_seen
                     and not separator_added
-                    and isinstance(target, tomlkit.items.AbstractTable)
-                    and not isinstance(value, tomlkit.items.AbstractTable)
+                    and isinstance(target, AbstractTable)
+                    and not isinstance(value, AbstractTable)
                 ):
                     target.add(tomlkit.nl())
                     separator_added = True
@@ -187,7 +190,7 @@ def aggregate_toml_document(
     for contribution in sorted(
         contributions, key=lambda item: item.producer.startswith("template:")
     ):
-        data = cast(dict[str, Value], validate_configuration(contribution.content))
+        data = as_mapping(validate_configuration(contribution.content))
         add_semantic(desired, data, contribution.producer)
         overlay_ast(desired_doc, tomlkit.parse(contribution.content))
     return AggregatedToml(desired, desired_doc)
@@ -246,7 +249,7 @@ def _spellings(
 def _member(table: dict[str, Value], path: tuple[str, ...]) -> Value:
     node: Value = table
     for key in path:
-        node = cast(dict[str, Value], node)[key]
+        node = as_mapping(node)[key]
     return node
 
 
@@ -262,16 +265,17 @@ def _map_flat_names(
     spec: TomlDocumentSpec,
     convert: Callable[[FlatNames, dict[str, Value]], Value],
 ) -> Value:
-    if not spec.flat_names or not isinstance(value, dict):
+    # With nothing to map, the copy equals the value.
+    if not spec.flat_names or not isinstance(value, dict):  # pragma: no mutate
         return value
     value = deepcopy(value)
     for names in spec.flat_names:
         *parents, leaf = names.path
         node: Value = value
         for key in parents:
-            node = node.get(key, MISSING) if isinstance(node, dict) else MISSING
+            node = node.get(key) if isinstance(node, dict) else MISSING
         if isinstance(node, dict) and isinstance(node.get(leaf), dict):
-            node[leaf] = convert(names, cast(dict[str, Value], node[leaf]))
+            node[leaf] = convert(names, as_mapping(node[leaf]))
     return value
 
 
@@ -312,18 +316,21 @@ def _inline(member: dict[str, Value]) -> Value:
     table.update(member)
     body = table.as_string()[1:-1]
     text = f"{{ {body} }}" if body else "{}"
-    return cast(Value, tomlkit.parse(f"member = {text}")["member"])
+    member = tomlkit.parse(f"member = {text}")["member"]
+    # A cast is a no-op.
+    return cast(Value, member)  # pragma: no mutate
 
 
-def _dotted_key(ast: Item | Container, key: str) -> bool:
-    """Whether a table's member is spelled with dotted keys, ``key.a = 1``.
+def _inline_only(ast: Table | Container, key: str) -> bool:
+    """Whether a table's member can hold only inline tables.
 
-    A table spread over out-of-order headers is never dotted; its members cannot
-    be told apart, so it reads as not dotted.
+    A member spelled with dotted keys, ``key.a = 1``, or as an inline table,
+    ``key = { a = 1 }``, cannot hold a table with its own header. A table spread
+    over out-of-order headers is neither; its members cannot be told apart.
     """
-    container = ast.value if isinstance(ast, Table) else ast
-    if not isinstance(container, Container):
-        return False
+    if isinstance(ast[key], InlineTable):
+        return True
+    container = ast if isinstance(ast, Container) else ast.value
     return any(
         k is not None and k.key == key and k.is_dotted() for k, _ in container.body
     )
@@ -331,7 +338,7 @@ def _dotted_key(ast: Item | Container, key: str) -> bool:
 
 def _place(table: dict[str, Value], path: tuple[str, ...], member: Value) -> None:
     for key in path[:-1]:
-        table = cast(dict[str, Value], table.setdefault(key, {}))
+        table = as_mapping(table.setdefault(key, {}))
     table[path[-1]] = member
 
 
@@ -416,7 +423,7 @@ def respell_names(
         return spelled
 
     def table_at(source: Value, path: tuple[str, ...]) -> dict[str, Value]:
-        node = lookup(source, path) if isinstance(source, dict) else MISSING
+        node = lookup(source, path)
         return node if isinstance(node, dict) else {}
 
     spelled = _map_flat_names(value, spec, respell)
@@ -449,20 +456,9 @@ def _above_trailing_comments(table: Table, key: str, start: int) -> None:
     Otherwise the value lands below a comment that introduces the next
     section, and the document's layout reads it as that section's.
     """
-    body = table.value.body
-    found = next(
-        (
-            (i, k, item)
-            for i, (k, item) in enumerate(body)
-            if k is not None and k.key == key
-        ),
-        None,
-    )
-    if found is None:
-        return
-    index, name, item = found
-    if index < start or name.is_dotted():
-        return
+    # The value was just appended below the block, so it is always found there;
+    # a table, or a dotted key's table, keeps its own place.
+    item = next(item for k, item in table.value.body if k is not None and k.key == key)
     if isinstance(item, (Table, AoT)):
         return
     table.value.remove(key)
@@ -487,8 +483,7 @@ def reconcile_toml(
     """Applies semantic decisions to the local AST, laid out by the document spec.
 
     Args:
-        spec: Set-like arrays, super tables, seed paths, and layout for this
-            document.
+        spec: Set-like arrays, seed paths, and layout for this document.
         original: Current workspace text.
         desired: Aggregated desired value.
         base: Previously applied owned contributions, or ``MISSING``.
@@ -511,10 +506,10 @@ def reconcile_toml(
             "Invalid structured TOML file.",
             hint="Correct the target TOML syntax before retrying.",
         ) from e
-    raw_local = cast(dict[str, Value], doc.unwrap())
+    raw_local = as_mapping(doc.unwrap())
     raw_desired = desired
-    local = cast(dict[str, Value], flatten_names(raw_local, spec))
-    desired = cast(dict[str, Value], flatten_names(desired, spec))
+    local = as_mapping(flatten_names(raw_local, spec))
+    desired = as_mapping(flatten_names(desired, spec))
     base = flatten_names(base, spec)
     if overwrite or initializing:
         # Explicit target authorization owns declared leaves, never foreign siblings.
@@ -522,7 +517,7 @@ def reconcile_toml(
 
         value = deepcopy(local)
         overlay_declared(value, desired)
-        overlay_declared(cast(dict[str, Value], baseline), desired)
+        overlay_declared(as_mapping(baseline), desired)
         conflicts: tuple[MergeConflict, ...] = ()
         resolved: tuple[MergeConflict, ...] = ()
         proposals: tuple[MergeConflict, ...] = ()
@@ -539,13 +534,13 @@ def reconcile_toml(
         if result.value is MISSING:
             return TomlReconciliation(
                 original,
-                respell_names(result.baseline, raw_local, raw_desired, spec),
+                respell_names(result.baseline, MISSING, raw_desired, spec),
                 result.conflicts,
                 resolved=result.resolved,
                 proposals=result.proposals,
                 preserved=result.preserved,
             )
-        value = cast(dict[str, Value], result.value)
+        value = as_mapping(result.value)
         baseline = result.baseline
         conflicts = result.conflicts
         resolved = result.resolved
@@ -561,7 +556,8 @@ def reconcile_toml(
                 node = node[key]
         except (KeyError, TypeError):
             return None
-        return cast(Item | Container | None, node)
+        found: Item | Container | None = node
+        return found
 
     def place_styled(
         ast: Table | Container,
@@ -579,10 +575,10 @@ def reconcile_toml(
         parent = desired_node(keys)
         if isinstance(parent, Table):
             parent = parent.value
-        body = parent.body if isinstance(parent, Container) else []
+        # A proxy's parent is always a container.
+        body = parent.body if isinstance(parent, Container) else []  # pragma: no mutate
         entries = [(k, item) for k, item in body if k is not None and k.key == key]
-        dotted = bool(entries) and all(k.is_dotted() for k, _ in entries)
-        if dotted and isinstance(ast, (Container, Table)):
+        if all(k.is_dotted() for k, _ in entries):
             if key in ast:
                 del ast[key]
             for k, item in entries:
@@ -595,26 +591,28 @@ def reconcile_toml(
         before: dict[str, Value],
         after: dict[str, Value],
         keys: tuple[str, ...] = (),
-        dotted: bool = False,
+        inline_only: bool = False,
     ) -> None:
         # A complete policy retracts owned keys the producers stop declaring.
         for key in [key for key in before if key not in after]:
             del ast[key]
         closing = _trailing_comments(ast) if isinstance(ast, Table) else None
         for key, value in after.items():
-            previous = before.get(key, MISSING)
+            previous = before.get(key)
             if semantic_equal(previous, value):
                 continue
             added = closing is not None and key not in ast
             path = (*keys, key)
             styled = desired_node(path)
-            styled_value: Value = MISSING
+            # TOML has no null, so None never equals a value either.
+            styled_value: Value = MISSING  # pragma: no mutate
             if styled is not None and hasattr(styled, "unwrap"):
-                styled_value = cast(Value, styled.unwrap())
+                styled_value = styled.unwrap()
             if isinstance(previous, dict) and isinstance(value, dict):
-                patch(ast[key], previous, value, path, dotted or _dotted_key(ast, key))
+                held_inline = inline_only or _inline_only(ast, key)
+                patch(ast[key], previous, value, path, held_inline)
             elif (
-                (dotted or path in inline)
+                (inline_only or path in inline)
                 and isinstance(value, dict)
                 and not (
                     isinstance(styled, InlineTable)
@@ -622,16 +620,10 @@ def reconcile_toml(
                 )
             ):
                 # tomlkit writes a table set inside a dotted-key table under a
-                # wrong top-level header; a dotted key holds an inline table.
+                # wrong top-level header, and an inline table cannot hold one;
+                # either holds an inline table.
                 # A new quoted name sits on one line, as the document's do.
                 ast[key] = _inline(value)
-            elif (
-                previous is MISSING
-                and isinstance(value, dict)
-                and path in spec.super_tables
-            ):
-                ast[key] = tomlkit.table(is_super_table=True)
-                patch(ast[key], {}, value, path)
             elif (
                 isinstance(previous, list)
                 and isinstance(value, list)
@@ -641,7 +633,10 @@ def reconcile_toml(
                 # Preserve local member trivia before considering desired AST replacement.
                 for member in value[len(previous) :]:
                     ast[key].append(tomlkit.item(member))
-            elif styled is not None and semantic_equal(styled_value, value):
+            # A value written here is the desired one.
+            elif styled is not None and semantic_equal(
+                styled_value, value
+            ):  # pragma: no mutate
                 place_styled(ast, keys, key, styled, value)
             else:
                 ast[key] = tomlkit.item(value)
@@ -652,13 +647,14 @@ def reconcile_toml(
     # The baseline is compared by name too, but kept in the document's spelling
     # so a lockfile never changes for a spelling alone.
     inline: set[tuple[str, ...]] = set()
-    value = cast(
-        dict[str, Value], respell_names(value, raw_local, raw_desired, spec, inline)
+    value = as_mapping(
+        respell_names(value, raw_local, raw_desired, spec, inline),
     )
     baseline = respell_names(baseline, raw_local, raw_desired, spec)
     patch(doc, raw_local, value)
     layout_notes: list[str] = []
-    if semantic_equal(raw_local, value):
+    # tomlkit round-trips an unchanged document.
+    if semantic_equal(raw_local, value):  # pragma: no mutate
         content = original
     elif spec.layout is not None and initializing:
         content = spec.layout.create(doc, layout_notes.append)

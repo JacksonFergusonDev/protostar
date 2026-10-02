@@ -922,11 +922,9 @@ def test_a_declined_proposal_for_a_missing_document_is_reported():
     ]
 
 
-def test_a_new_super_table_writes_only_its_childrens_headers():
-    spec = TomlDocumentSpec(super_tables=frozenset({("tool",)}))
-
+def test_a_new_table_of_tables_writes_only_its_childrens_headers():
     result = reconcile_toml(
-        spec,
+        PLAIN,
         "[project]\nname = 'x'\n",
         {"project": {"name": "x"}, "tool": {"ruff": {"a": 1}}},
         MISSING,
@@ -1168,3 +1166,130 @@ def test_flat_names_under_a_missing_parent_are_skipped():
     )
 
     assert result.content == "[r]\nx = 1\n"
+
+
+NESTED = TomlDocumentSpec(
+    flat_names=(FlatNames(("ext",), frozenset({("a",), ("a", "b")})),)
+)
+
+
+def _respelled(spec, original, desired_text, base=MISSING, **kwargs):
+    desired = tomlkit.parse(desired_text)
+    return reconcile_toml(
+        spec,
+        original,
+        desired.unwrap(),
+        base,
+        PLAIN_LOCATION,
+        desired_ast=desired,
+        **kwargs,
+    )
+
+
+def test_the_nested_spelling_is_read_wherever_the_quoted_one_sits():
+    result = _respelled(
+        FLAT,
+        '[ext]\na.b = { v = 1 }\n"a.b" = { hidden = true }\n',
+        "[ext]\na.b = { v = 2 }\n",
+        overwrite=True,
+    )
+
+    assert result.content == '[ext]\na.b = { v = 2 }\n"a.b" = { hidden = true }\n'
+
+
+def test_every_shadowed_spelling_of_a_name_is_left_as_it_is():
+    """Under nested namespaces one name has three spellings; the deepest is read."""
+    result = _respelled(
+        NESTED,
+        '[ext]\n"a.b.c" = { q = 1 }\na."b.c" = { q = 2 }\na.b.c = { q = 3 }\n',
+        "[ext]\na.b.c = { q = 9 }\n",
+        overwrite=True,
+    )
+
+    assert result.content == (
+        '[ext]\n"a.b.c" = { q = 1 }\na."b.c" = { q = 2 }\na.b.c = { q = 9 }\n'
+    )
+
+
+def test_a_new_name_nests_under_its_deepest_namespace():
+    result = _respelled(NESTED, "[ext]\na.x = {}\n", '[ext]\n"a.b.c" = {}\n')
+
+    assert result.content == "[ext]\na.x = {}\na.b = { c = {} }\n"
+
+
+def test_an_owned_name_outside_every_namespace_keeps_its_dots():
+    result = _respelled(FLAT, "[ext]\n", "[ext]\n", {"ext": {"q.x": {}}})
+
+    assert result.baseline == {"ext": {"q.x": {}}}
+
+
+def test_a_value_named_like_its_namespace_is_one_name():
+    assert _respelled(FLAT, "[ext]\n", "[ext]\na = 1\n").content == "[ext]\na = 1\n"
+
+
+def test_a_namespace_that_also_holds_a_value_stays_quoted():
+    result = _respelled(FLAT, '[ext]\na = 1\n"a.y" = {}\n', "[ext]\na.b = {}\n")
+
+    assert result.content == '[ext]\na = 1\n"a.y" = {}\n"a.b" = {}\n'
+
+
+def test_a_table_added_under_a_dotted_key_at_the_root_stays_inline():
+    result = reconcile_toml(
+        PLAIN,
+        "tool.a = 1\n",
+        {"tool": {"a": 1, "b": {"c": 1}}},
+        {"tool": {"a": 1}},
+        PLAIN_LOCATION,
+    )
+
+    assert result.content == "tool.a = 1\ntool.b = { c = 1 }\n"
+
+
+@pytest.mark.parametrize(
+    ("original", "desired", "expected"),
+    [
+        (
+            "x = { a = 1 }\n",
+            {"x": {"a": 1, "n": {"c": 2}}},
+            "x = { a = 1, n = { c = 2 }}\n",
+        ),
+        (
+            "[t]\nx = { a = { b = 1 } }\n",
+            {"t": {"x": {"a": {"b": 1, "n": {"c": 2}}}}},
+            "[t]\nx = { a = { b = 1, n = { c = 2 }} }\n",
+        ),
+    ],
+)
+def test_a_table_added_inside_an_inline_table_stays_inline(original, desired, expected):
+    base = tomllib.loads(original)
+
+    result = reconcile_toml(PLAIN, original, desired, base, PLAIN_LOCATION)
+
+    assert result.content == expected
+
+
+def test_a_key_added_beside_a_retracted_one_stays_above_the_closing_comment():
+    """A retracted key leaves a placeholder that must not hide the comment."""
+    spec = TomlDocumentSpec(policy=MergePolicy(complete=True))
+
+    result = reconcile_toml(
+        spec,
+        "[a]\nx = 1\ny = 2\n# next\n\n[b]\nq = 1\n",
+        {"a": {"x": 1, "z": 3}, "b": {"q": 1}},
+        {"a": {"x": 1, "y": 2}, "b": {"q": 1}},
+        PLAIN_LOCATION,
+    )
+
+    assert result.content == "[a]\nx = 1\nz = 3\n# next\n\n[b]\nq = 1\n"
+
+
+def test_a_changed_key_leaves_the_added_one_right_above_the_closing_comment():
+    result = reconcile_toml(
+        PLAIN,
+        "[a]\nx = 1\ny = 1\n# next\n\n[b]\nq = 1\n",
+        {"a": {"x": 2, "y": 1, "z": 3}, "b": {"q": 1}},
+        {"a": {"x": 1, "y": 1}, "b": {"q": 1}},
+        PLAIN_LOCATION,
+    )
+
+    assert result.content == "[a]\nx = 2\ny = 1\nz = 3\n# next\n\n[b]\nq = 1\n"

@@ -146,7 +146,7 @@ def preserved_text(
     if local is not None and not is_edited(local, baseline):
         return None
     try:
-        text = local.decode("utf-8") if local is not None else None
+        text = local.decode() if local is not None else None
     except UnicodeDecodeError:
         return MergeConflict(location, ConflictReason.PRESERVED)
     return MergeConflict(
@@ -192,7 +192,7 @@ def reconcile_text(
     Returns:
         What to write, what to own, and any refused or settled change.
     """
-    target = desired.encode("utf-8")
+    target = desired.encode()
     if overwrite or (baseline is None and local is None):
         return TextReconciliation(None if local == target else desired, desired)
     if baseline is not None and desired == baseline:
@@ -207,7 +207,7 @@ def reconcile_text(
             desired if restore else None, baseline, resolved=(settled,)
         )
     try:
-        text = local.decode("utf-8") if local is not None else None
+        text = local.decode() if local is not None else None
     except UnicodeDecodeError:
         reason = ConflictReason.UNOWNED if baseline is None else ConflictReason.DIVERGED
         return TextReconciliation(None, baseline, (MergeConflict(location, reason),))
@@ -335,7 +335,7 @@ def is_edited(local: bytes, baseline: str) -> bool:
         Whether the merge would treat the local text as edited.
     """
     try:
-        text = local.decode("utf-8")
+        text = local.decode()
     except UnicodeDecodeError:
         return True
     newline = _newline(text)
@@ -386,10 +386,11 @@ def _diff3(
     o = a = b = 0
     while True:
         run = 0
+        # Past the end of base both lookups miss. Extending a run by one line
+        # instead of all of them only splits it into more chunks.
         while (
-            o + run < len(base)
-            and to_local.get(o + run) == a + run
-            and to_remote.get(o + run) == b + run
+            to_local.get(o + run) == a + run  # pragma: no mutate
+            and to_remote.get(o + run) == b + run  # pragma: no mutate
         ):
             run += 1
         if run:
@@ -469,7 +470,8 @@ def _matches(a: _Lines, b: _Lines) -> list[_Match]:
         while alo < ahi and blo < bhi and a[ahi - 1] == b[bhi - 1]:
             ahi, bhi = ahi - 1, bhi - 1
             matches.append((ahi, bhi))
-        if alo == ahi or blo == bhi:
+        # An empty side matches nothing either way.
+        if alo == ahi or blo == bhi:  # pragma: no mutate
             continue
         anchors = _unique_anchors(a, b, alo, ahi, blo, bhi)
         if not anchors:
@@ -513,10 +515,10 @@ def _longest_increasing(pairs: list[_Match]) -> list[_Match]:
     """
     tops: list[int] = []
     top_pair: list[int] = []
-    previous = [-1] * len(pairs)
+    previous: list[int] = []
     for index, (i, _) in enumerate(pairs):
         pile = bisect_left(tops, i)
-        previous[index] = top_pair[pile - 1] if pile else -1
+        previous.append(top_pair[pile - 1] if pile else -1)
         if pile == len(tops):
             tops.append(i)
             top_pair.append(index)
