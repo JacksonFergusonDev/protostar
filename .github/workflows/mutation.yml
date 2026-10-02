@@ -1,7 +1,8 @@
 name: Mutation Testing
 
 # Manual only: a full run mutates thousands of lines and takes hours, so it never
-# runs on a commit. Each module gets its own runner, in parallel.
+# runs on a commit. Each module gets its own runner, in parallel; a module listed
+# under [tool.mutmut-shards] in pyproject.toml gets one runner per shard.
 on:
   workflow_dispatch:
     inputs:
@@ -35,22 +36,48 @@ jobs:
         from pathlib import PurePosixPath
 
         with open("pyproject.toml", "rb") as config:
-            source_paths = tomllib.load(config)["tool"]["mutmut"]["source_paths"]
+            tool = tomllib.load(config)["tool"]
         known = [
             ".".join(PurePosixPath(path).relative_to("src/protostar").with_suffix("").parts)
-            for path in source_paths
+            for path in tool["mutmut"]["source_paths"]
         ]
+        shards = tool.get("mutmut-shards", {})
+        orphaned = sorted(set(shards) - set(known))
+        if orphaned:
+            sys.exit(f"Shards for {orphaned}, which are not in source_paths {known}.")
         requested = os.environ["REQUESTED"].replace(" ", "")
         chosen = known if requested == "all" else requested.split(",")
         unknown = sorted(set(chosen) - set(known))
         if unknown:
             sys.exit(f"Unknown modules {unknown}; choose from {known} or 'all'.")
-        with open(os.environ["GITHUB_OUTPUT"], "a") as out:
-            out.write(f"matrix={json.dumps({'module': chosen})}\n")
+
+        def pattern(module, function):
+            # mutmut names a mutant x_<function> or x<ǁ>Class<ǁ>method.
+            cls, _, name = function.rpartition(".")
+            body = f"xǁ{cls}ǁ{name}" if cls else f"x_{name}"
+            return f"protostar.{module}.{body}__mutmut_*"
+
+        include = []
+        for module in chosen:
+            if module not in shards:
+                include.append(
+                    {"name": module, "artifact": module, "patterns": f"protostar.{module}.*"}
+                )
+                continue
+            for shard, functions in shards[module].items():
+                include.append(
+                    {
+                        "name": f"{module} ({shard})",
+                        "artifact": f"{module}-{shard}",
+                        "patterns": " ".join(pattern(module, f) for f in functions),
+                    }
+                )
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+            out.write(f"matrix={json.dumps({'include': include}, ensure_ascii=False)}\n")
         EOF
 
   mutate:
-    name: Mutate ${{ matrix.module }}
+    name: Mutate ${{ matrix.name }}
     needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 350
@@ -73,24 +100,27 @@ jobs:
     - name: Mock direnv
       uses: ./.github/actions/mock-direnv
 
-    - name: Mutate ${{ matrix.module }}
+    - name: Mutate ${{ matrix.name }}
+      env:
+        PATTERNS: ${{ matrix.patterns }}
       run: |
         # A mutant can turn a loop into runaway allocation, which takes the whole
         # runner down ("received a shutdown signal"). Capping each process makes
         # that a MemoryError the suite catches instead.
         ulimit -v 4194304
-        uv run --no-sync mutmut run "protostar.${{ matrix.module }}.*"
+        read -r -a patterns <<< "$PATTERNS"
+        uv run --no-sync mutmut run "${patterns[@]}"
 
     - name: Summarize
       if: ${{ !cancelled() }}
       run: |
         {
-          echo "### ${{ matrix.module }} at ${GITHUB_SHA::7}"
+          echo "### ${{ matrix.name }} at ${GITHUB_SHA::7}"
           echo
           uv run --no-sync python scripts/mutation_report.py report \
             --json mutants/summary.json --survivors mutants/survivors.txt
           echo
-          echo "Every survivor's change is in the \`mutation-${{ matrix.module }}\` artifact, as survivors.md."
+          echo "Every survivor's change is in the \`mutation-${{ matrix.artifact }}\` artifact, as survivors.md."
         } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Write survivor diffs
@@ -101,7 +131,7 @@ jobs:
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: mutation-${{ matrix.module }}
+        name: mutation-${{ matrix.artifact }}
         path: |
           mutants/summary.json
           mutants/survivors.txt

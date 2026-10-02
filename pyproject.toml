@@ -221,6 +221,70 @@ also_copy = [
     "zensical.toml",
 ]
 
+# A module too slow for one runner is split by function: one runner per shard, named for its
+# largest function (the split balances size, not topic). Shards must cover every function
+# exactly once; tests/test_mutation_workflow.py checks.
+[tool.mutmut-shards.reconciliation]
+append-files = [
+    "Reconciliation._append_files",
+    "Reconciliation._migrate",
+    "Reconciliation._locate",
+    "Reconciliation._proposing",
+    "Reconciliation._resolve",
+    "Reconciliation.workspace_root",
+    "Reconciliation._write_release_workflow",
+]
+dependency-includes = [
+    "Reconciliation._apply_dependency_includes",
+    "Reconciliation._release_undeclared_generated",
+    "Reconciliation._write_pre_commit_config",
+    "Reconciliation._settle_retired",
+    "Reconciliation._outside_root_table",
+    "Reconciliation._release_seed",
+    "Reconciliation._file_record",
+    "Reconciliation._seed",
+]
+dependency-selection = [
+    "Reconciliation._select_dependencies",
+    "Reconciliation._write_injected_files",
+    "Reconciliation._report",
+    "Reconciliation._follow",
+    "Reconciliation._write_justfile",
+    "Reconciliation._create_directories",
+    "Reconciliation.interpolation_context",
+    "Reconciliation._migrated",
+]
+generated-files = [
+    "Reconciliation._write_generated",
+    "Reconciliation._materialize_dependencies",
+    "Reconciliation._release_undeclared_dependencies",
+    "Reconciliation._rename_seed",
+    "Reconciliation._validate_node",
+    "Reconciliation.add_diagnostic",
+    "Reconciliation._own",
+    "Reconciliation._write_workflow",
+]
+targets-and-docker = [
+    "Reconciliation._validate_targets",
+    "Reconciliation._write_docker_artifacts",
+    "Reconciliation._write_ide_settings",
+    "Reconciliation.__init__",
+    "Reconciliation._release_undeclared_seeds",
+    "Reconciliation._remove_seed",
+    "Reconciliation._merge_warning",
+    "Reconciliation._existing",
+]
+documents = [
+    "Reconciliation._release_undeclared_documents",
+    "Reconciliation._reconcile_document",
+    "Reconciliation._load_state",
+    "Reconciliation._write_ignores",
+    "Reconciliation._write_recipe",
+    "Reconciliation._write_ci_workflow",
+    "Reconciliation._layout_warning",
+    "Reconciliation._release_document",
+]
+
 # ---- rumdl  ---- #
 
 [tool.rumdl]

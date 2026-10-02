@@ -284,13 +284,40 @@ def _diffs(args: argparse.Namespace) -> None:
     sys.stdout.write(f"Wrote {args.out}\n")
 
 
+def combine_results(paths: list[Path]) -> list[ModuleResult]:
+    """Merges several ``--json`` results into one row per module.
+
+    A module split across runners writes one file per shard, each counting only
+    the mutants that shard ran, so the counts add up.
+
+    Args:
+        paths: JSON files written by ``report --json``.
+
+    Returns:
+        One result per module, sorted by module name.
+    """
+    totals: dict[str, ModuleResult] = {}
+    for path in paths:
+        for row in json.loads(path.read_text(encoding="utf-8")):
+            result = ModuleResult(**row)
+            seen = totals.get(result.module)
+            totals[result.module] = (
+                result
+                if seen is None
+                else ModuleResult(
+                    module=result.module,
+                    killed=seen.killed + result.killed,
+                    timeout=seen.timeout + result.timeout,
+                    survived=seen.survived + result.survived,
+                    suspicious=seen.suspicious + result.suspicious,
+                    no_tests=seen.no_tests + result.no_tests,
+                )
+            )
+    return sorted(totals.values(), key=lambda r: r.module)
+
+
 def _combine(args: argparse.Namespace) -> None:
-    results = [
-        ModuleResult(**row)
-        for path in args.results
-        for row in json.loads(path.read_text(encoding="utf-8"))
-    ]
-    sys.stdout.write(render_markdown(sorted(results, key=lambda r: r.module)))
+    sys.stdout.write(render_markdown(combine_results(args.results)))
 
 
 def parse_args() -> argparse.Namespace:

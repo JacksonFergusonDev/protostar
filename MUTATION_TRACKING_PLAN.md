@@ -43,7 +43,7 @@ Before the survivor pass, check for two things that hide mutants:
 
 The target set, roughly in order of value:
 
-- `reconciliation.py`: the most important module not yet covered and by far the largest. Measure it first. If it doesn't fit comfortably in one runner's time limit, split it across runners.
+- `reconciliation.py`: the most important module not yet covered and by far the largest. Measure it first. It did not fit in one runner (a run passed four hours without finishing), so it is split by function across six runners through `[tool.mutmut-shards]` in `pyproject.toml`; the workflow runs one runner per shard and `mutation_report.py combine` adds each module's shards back together. Shards must cover every function once, and `tests/test_mutation_workflow.py` checks that.
 - `manifest.py`, `sync_state.py`, `appends.py`, `toml_lines.py`, `dependencies.py`, `documents/pyproject_layout.py`.
 
 Already covered: `fs_transaction`, `journal`, `jsonc_ast`, `merge`, `text_merge`, `toml_ast`, `yaml_ast`.
