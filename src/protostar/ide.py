@@ -1,13 +1,18 @@
 """IDE extension verification."""
 
+from __future__ import annotations
+
 import enum
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from .errors import ProcessTerminationError
-from .manifest import Severity
 from .progress import ProgressStep, no_progress
 from .system import ProcessRunner
 from .system_deps import find_executable
+
+if TYPE_CHECKING:
+    from .manifest import Severity
 
 __all__ = ["IDEType", "check_ide_extensions"]
 
@@ -52,6 +57,8 @@ def check_ide_extensions(
         progress: Brackets the IDE CLI probe, which runs only when the CLI is installed.
             A failed probe is reported as a skip and still completes the step.
     """
+    from .manifest import Severity
+
     if not ide_extensions or ide is None:
         return
 

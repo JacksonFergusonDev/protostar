@@ -3,16 +3,18 @@
 import pytest
 
 from protostar.documents import (
-    LOCATIONS,
-    YAML_DOCUMENTS,
     codecov,
-    document_locations,
     github_workflows,
     pre_commit,
     readthedocs,
     renovate,
-    yaml_spec,
     zensical,
+)
+from protostar.documents.catalog import (
+    LOCATIONS,
+    YAML_DOCUMENTS,
+    document_locations,
+    yaml_spec,
 )
 from protostar.documents.locations import (
     DocumentLocations,

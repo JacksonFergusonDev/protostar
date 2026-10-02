@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import difflib
 import os
@@ -14,19 +16,15 @@ import argcomplete
 from rich.console import Console
 from rich.table import Table
 
-from protostar.analysis import analyze_project
 from protostar.cli import completion, schema, ui
 from protostar.cli import main as cli_main
+from protostar.cli.arguments import Operation, OutputFormat
 from protostar.cli.completion import Shell
-from protostar.cli.tui.launch import edit_recipe
 from protostar.config import UserConfig
 from protostar.docs_registry import DocsPage
 from protostar.errors import ExecutionAbortedError, InvalidUsageError
-from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
 from protostar.intent import TemplateOrigin
 from protostar.modules import TOOLING_MODULES
-from protostar.recipe import read_recipe
-from protostar.sync_state import read_workspace_state
 from protostar.system import is_interactive
 from protostar.system_deps import check_required_executables
 from protostar.templates import discover_templates
@@ -241,7 +239,7 @@ class _VersionAction(argparse.Action):
 _RESOLVE_HELP = "Settle conflicts by id, or every conflict in a file by path. CHOICE is local (keep yours), desired (take the update), or both (text lines only). Repeatable."
 
 
-def _resolution_request(value: str) -> "ResolutionRequest":
+def _resolution_request(value: str) -> ResolutionRequest:
     """Parses one ``SELECTOR=CHOICE`` resolution for ``--resolve``."""
     from protostar.merge import ResolutionChoice
     from protostar.preparation import ResolutionRequest
@@ -341,8 +339,6 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="<command>",
     )
 
-    from protostar.cli.reviews import handle_review
-
     for command, description in (
         (
             "status",
@@ -360,9 +356,7 @@ def build_parser() -> argparse.ArgumentParser:
             parents=[base_parser],
             epilog="Inspects the current directory. Requires [tool.protostar] and protostar.lock; never executes tasks or writes files.",
         )
-        review_parser.set_defaults(func=handle_review)
-
-    from protostar.cli.reviews import handle_sync
+        review_parser.set_defaults(func=dispatch_operation, operation=Operation.REVIEW)
 
     sync_parser = subparsers.add_parser(
         "sync",
@@ -429,9 +423,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Read-only check; exit 1 when accepted work, state advancement, or conflicts remain.",
     )
-    sync_parser.set_defaults(func=handle_sync)
-
-    from protostar.cli.guide import handle_guide
+    sync_parser.set_defaults(func=dispatch_operation, operation=Operation.SYNC)
 
     guide_parser = subparsers.add_parser(
         "guide",
@@ -440,9 +432,7 @@ def build_parser() -> argparse.ArgumentParser:
         parents=[base_parser],
         epilog="Reads the project recipe and pyproject.toml; never runs project commands or writes files. The commands match the project's AGENTS.md and CONTRIBUTING.md.",
     )
-    guide_parser.set_defaults(func=handle_guide)
-
-    from protostar.cli.eject import handle_eject
+    guide_parser.set_defaults(func=dispatch_operation, operation=Operation.GUIDE)
 
     eject_parser = subparsers.add_parser(
         "eject",
@@ -461,7 +451,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Confirm ejection without an interactive prompt.",
     )
-    eject_parser.set_defaults(func=handle_eject)
+    eject_parser.set_defaults(func=dispatch_operation, operation=Operation.EJECT)
 
     # --- Init Subparser ---
     init_parser = subparsers.add_parser(
@@ -613,8 +603,6 @@ def build_parser() -> argparse.ArgumentParser:
     export_schema_parser.set_defaults(func=schema.handle_export_schema)
 
     # --- Check Template Subparser ---
-    from protostar.cli.check_template import OutputFormat, handle_check_template
-
     check_template_parser = subparsers.add_parser(
         "check-template",
         help="Check a template for errors and authoring problems before publishing it.",
@@ -643,7 +631,9 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="<format>",
         help="text (default) for people, or github for GitHub Actions annotations on the template's files.",
     )
-    check_template_parser.set_defaults(func=handle_check_template)
+    check_template_parser.set_defaults(
+        func=dispatch_operation, operation=Operation.CHECK_TEMPLATE
+    )
 
     # --- Config Subparser ---
     config_parser = subparsers.add_parser(
@@ -813,6 +803,12 @@ def maybe_run_interactive_init(parser: argparse.ArgumentParser) -> None:
     if cmd == "init":
         if not is_interactive():
             return
+        from protostar.analysis import analyze_project
+        from protostar.cli.tui.launch import edit_recipe
+        from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
+        from protostar.recipe import read_recipe
+        from protostar.sync_state import read_workspace_state
+
         # Nothing can be applied without these, so fail before the editor opens.
         check_required_executables()
         user_config = UserConfig.load()
@@ -866,3 +862,29 @@ def __getattr__(name: str) -> Any:
         globals()["Orchestrator"] = Orchestrator
         return Orchestrator
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def dispatch_operation(args: argparse.Namespace) -> None:
+    """Load only the selected command's implementation after parsing finishes."""
+    operation: Operation = args.operation
+    match operation:
+        case Operation.REVIEW:
+            from protostar.cli.reviews import handle_review
+
+            handle_review(args)
+        case Operation.SYNC:
+            from protostar.cli.reviews import handle_sync
+
+            handle_sync(args)
+        case Operation.GUIDE:
+            from protostar.cli.guide import handle_guide
+
+            handle_guide(args)
+        case Operation.EJECT:
+            from protostar.cli.eject import handle_eject
+
+            handle_eject(args)
+        case Operation.CHECK_TEMPLATE:
+            from protostar.cli.check_template import handle_check_template
+
+            handle_check_template(args)

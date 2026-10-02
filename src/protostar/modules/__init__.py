@@ -61,28 +61,8 @@ TOOLING_MODULES: tuple[ToolModule, ...] = (
 )
 
 
-def _check_tool_alignment() -> None:
-    from protostar.recipe import Tool
-
-    tool_values = {t.value for t in Tool}
-    module_keys = {m.config_key for m in TOOLING_MODULES}
-    if tool_values != module_keys:
-        missing_in_modules = tool_values - module_keys
-        missing_in_tools = module_keys - tool_values
-        reasons = []
-        if missing_in_modules:
-            reasons.append(
-                f"Tools defined in Tool enum but missing from TOOLING_MODULES: {sorted(missing_in_modules)}"
-            )
-        if missing_in_tools:
-            reasons.append(
-                f"Modules in TOOLING_MODULES with config_key missing from Tool enum: {sorted(missing_in_tools)}"
-            )
-        raise RuntimeError(f"Tool alignment mismatch: {'; '.join(reasons)}")
-
-
-_check_tool_alignment()
-
+# Tool enum / module alignment is enforced by tests/test_tool_definitions.py.
+# Keep the registry usable for help without importing recipe resolution.
 __all__ = [
     "AGENTS_TARGET",
     "DOCKER_INFO",

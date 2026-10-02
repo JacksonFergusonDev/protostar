@@ -98,8 +98,10 @@ class BootstrapModule(abc.ABC):
     optional_metadata: ClassVar[tuple[MetadataKey | str, ...]] = ()
     """The metadata keys that are nice to have but not strictly required."""
 
-    signals: ClassVar[tuple[Signal, ...]] = ()
-    """What in an existing project shows it already uses this module's tool."""
+    @property
+    def signals(self) -> tuple[Signal, ...]:
+        """What in an existing project shows it already uses this module's tool."""
+        return ()
 
     executables: ClassVar[tuple[GlobalExecutable, ...]] = ()
     """Executables the tool runs, beyond ``system_deps.REQUIRED``.

@@ -156,7 +156,7 @@ def test_collision_overwrite_e2e(
     # 2. Mock the interactive environment; Pilot tests drive the review itself.
     mocker.patch("protostar.cli.main.is_interactive", return_value=True)
     review = mocker.patch(
-        "protostar.cli.main.review_changes",
+        "protostar.cli.tui.launch.review_changes",
         side_effect=lambda draft, config: InitDecision(
             replace(draft, collision_strategy=CollisionStrategy.OVERWRITE), ()
         ),

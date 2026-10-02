@@ -4,19 +4,10 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from protostar.community import (
-    CommunitySpec,
-    generate_bug_report_form,
-    generate_code_of_conduct,
-    generate_feature_request_form,
-    generate_issue_config,
-    generate_security_policy,
-)
-from protostar.documents import community
 from protostar.metadata import MetadataKey
 from protostar.workflows import TargetOS
 
-from .base import PathSignal, ToolInfo, ToolModule
+from .base import PathSignal, Signal, ToolInfo, ToolModule
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
@@ -42,16 +33,23 @@ class CommunityModule(ToolModule):
         docs_url="https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions",
     )
     config_key = "community"
-    signals = tuple(
-        PathSignal(path)
-        for locations in (
-            community.CONTRIBUTING_LOCATIONS,
-            community.CODE_OF_CONDUCT_LOCATIONS,
-            community.BUG_REPORT_LOCATIONS,
-            community.FEATURE_REQUEST_LOCATIONS,
+
+    @property
+    def signals(self) -> tuple[Signal, ...]:
+        """Read the configuration locations declared by this tool's documents."""
+        from protostar.documents import community
+
+        return tuple(
+            PathSignal(path)
+            for locations in (
+                community.CONTRIBUTING_LOCATIONS,
+                community.CODE_OF_CONDUCT_LOCATIONS,
+                community.BUG_REPORT_LOCATIONS,
+                community.FEATURE_REQUEST_LOCATIONS,
+            )
+            for path in locations.editable
         )
-        for path in locations.editable
-    )
+
     required_metadata = (
         MetadataKey.AUTHOR_EMAIL,
         MetadataKey.GITHUB_USERNAME,
@@ -73,6 +71,16 @@ class CommunityModule(ToolModule):
         Args:
             manifest: The centralized state object.
         """
+        from protostar.community import (
+            CommunitySpec,
+            generate_bug_report_form,
+            generate_code_of_conduct,
+            generate_feature_request_form,
+            generate_issue_config,
+            generate_security_policy,
+        )
+        from protostar.documents import community
+
         logger.debug("Building Community layer.")
         manifest.tooling.wants_community = True
 

@@ -86,7 +86,7 @@ def test_maybe_run_interactive_init_cancellations(mocker):
     # Interactive Init Cancellation
     mocker.patch.object(sys, "argv", ["protostar", "init"])
     mocker.patch(
-        "protostar.cli.parser.edit_recipe",
+        "protostar.cli.tui.launch.edit_recipe",
         side_effect=ExecutionAbortedError(
             "Interactive initialization cancelled by user."
         ),
@@ -104,7 +104,7 @@ def test_interactive_init_rejects_unreadable_state_before_the_editor(
     (tmp_path / "protostar.lock").write_bytes(b"\xff")
     mocker.patch("protostar.cli.parser.is_interactive", return_value=True)
     mocker.patch.object(sys, "argv", ["protostar", "init"])
-    editor = mocker.patch("protostar.cli.parser.edit_recipe")
+    editor = mocker.patch("protostar.cli.tui.launch.edit_recipe")
 
     with pytest.raises(ConfigurationError, match="ownership state"):
         maybe_run_interactive_init(mocker.Mock())
@@ -431,7 +431,7 @@ def test_maybe_run_interactive_init_success(mocker):
     )
     snapshot = (mocker.sentinel.revision,)
     mocker.patch(
-        "protostar.cli.parser.edit_recipe",
+        "protostar.cli.tui.launch.edit_recipe",
         return_value=InitDecision(selections, snapshot),
     )
     mocker.patch("protostar.cli.parser.UserConfig.load")
@@ -1598,7 +1598,9 @@ def test_flag_init_reviews_an_open_collision(mocker, tmp_path, monkeypatch):
             replace(draft, collision_strategy=CollisionStrategy.OVERWRITE), ()
         )
 
-    reviewed = mocker.patch("protostar.cli.main.review_changes", side_effect=review)
+    reviewed = mocker.patch(
+        "protostar.cli.tui.launch.review_changes", side_effect=review
+    )
     run = mocker.patch("protostar.cli.ui._run_engine")
     _flag_init(mocker, tmp_path, monkeypatch)
 
@@ -1616,7 +1618,7 @@ def test_flag_init_reviews_an_open_collision(mocker, tmp_path, monkeypatch):
 )
 def test_flag_init_skips_the_review(mocker, tmp_path, monkeypatch, interactive, flags):
     """Resolved flags never open the review; off a terminal the guard raises instead."""
-    reviewed = mocker.patch("protostar.cli.main.review_changes")
+    reviewed = mocker.patch("protostar.cli.tui.launch.review_changes")
     run = mocker.patch("protostar.cli.ui._run_engine")
     _flag_init(mocker, tmp_path, monkeypatch, interactive=interactive, **flags)
 
@@ -1625,7 +1627,7 @@ def test_flag_init_skips_the_review(mocker, tmp_path, monkeypatch, interactive, 
 
 
 def test_cancelled_review_never_executes(mocker, tmp_path, monkeypatch):
-    mocker.patch("protostar.cli.main.review_changes", return_value=None)
+    mocker.patch("protostar.cli.tui.launch.review_changes", return_value=None)
     run = mocker.patch("protostar.cli.ui._run_engine")
     with pytest.raises(ExecutionAbortedError, match="Change review cancelled"):
         _flag_init(mocker, tmp_path, monkeypatch)
@@ -1644,7 +1646,7 @@ def test_template_switch_fails_before_any_screen(mocker, tmp_path, monkeypatch):
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
     mocker.patch("protostar.cli.main.is_interactive", return_value=True)
     screens = [
-        mocker.patch(f"protostar.cli.main.{name}")
+        mocker.patch(f"protostar.cli.tui.launch.{name}")
         for name in ("edit_variables", "review_changes")
     ]
     run = mocker.patch("protostar.cli.ui._run_engine")
@@ -2037,7 +2039,7 @@ def test_dry_run_takes_the_registry_snapshot_only_for_hooks(
     registry = mocker.patch(
         "protostar.cli.changes.resolve_hook_revisions", return_value=()
     )
-    shown = mocker.patch("protostar.cli.main.print_dry_run")
+    shown = mocker.patch("protostar.cli.changes.print_dry_run")
     args = build_parser().parse_args(
         ["init", "--dry-run", "--no-pre-commit", flag, "--no-direnv"]
     )

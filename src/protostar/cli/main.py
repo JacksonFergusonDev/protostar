@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import importlib.resources
 import logging
@@ -12,23 +14,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from rich.columns import Columns
-
-if TYPE_CHECKING:
-    from protostar.orchestrator import Orchestrator
 from rich.console import Group
 from rich.logging import RichHandler
 from rich.markup import escape
 from rich.text import Text
 
 from protostar.cli import parser, schema, ui
-from protostar.cli.changes import (
-    entries_record,
-    hook_snapshot,
-    prepare_draft,
-    print_dry_run,
-)
 from protostar.cli.docs_links import format_docs_link
-from protostar.cli.tui.launch import edit_settings, edit_variables, review_changes
 from protostar.config import (
     DEFAULT_CONFIG_CONTENT,
     TemplateSource,
@@ -36,13 +28,6 @@ from protostar.config import (
     active_config_source,
     clear_user_config_cache,
     select_config_source,
-)
-from protostar.config_edit import (
-    IDENTITY_KEYS,
-    ConfigEdit,
-    EnvValue,
-    SaveConfig,
-    config_values,
 )
 from protostar.docs_registry import DocsPage
 from protostar.errors import (
@@ -57,40 +42,54 @@ from protostar.errors import (
     exit_code_for,
 )
 from protostar.fs import atomic_write_text
-from protostar.init_draft import (
-    DraftTemplate,
-    InitDecision,
-    InitDraft,
-    resolve_init,
-)
 from protostar.intent import TemplateOrigin
 from protostar.interpolation import VARIABLE_NAME
-from protostar.lifecycle import migrate_variables
-from protostar.manifest import CollisionStrategy
 from protostar.metadata import MetadataKey, resolve_auto_metadata
 from protostar.modules import (
     TOOLING_MODULES,
     BootstrapModule,
 )
 from protostar.options import OptionValue
-from protostar.preparation import select_resolutions
-from protostar.secret_guard import credential_named
-from protostar.sync_state import (
-    check_one_shot_workspace,
-    check_workspace_identity,
-    read_workspace_state,
-)
 from protostar.system import is_interactive
 from protostar.system_deps import check_required_executables, find_executable
 from protostar.tiers import Tier
+
+if TYPE_CHECKING:
+    from protostar.config_edit import ConfigEdit, EnvValue
+    from protostar.init_draft import InitDraft
+    from protostar.orchestrator import Orchestrator
 
 logger = logging.getLogger("protostar")
 
 
 def handle_init(args: argparse.Namespace) -> None:
     """Handles the 'init' subcommand to scaffold environments."""
+    from protostar.manifest import CollisionStrategy
+    from protostar.sync_state import (
+        check_one_shot_workspace,
+        check_workspace_identity,
+        read_workspace_state,
+    )
+
     if getattr(args, "list_templates", False):
         ui._print_templates_and_exit()
+    from protostar.cli.changes import (
+        entries_record,
+        hook_snapshot,
+        prepare_draft,
+        print_dry_run,
+    )
+    from protostar.cli.tui.launch import review_changes
+    from protostar.init_draft import (
+        DraftTemplate,
+        InitDecision,
+        InitDraft,
+        resolve_init,
+    )
+    from protostar.lifecycle import migrate_variables
+    from protostar.preparation import select_resolutions
+    from protostar.secret_guard import credential_named
+
     # Nothing can be applied without these, so fail before asking anything.
     check_required_executables()
 
@@ -337,6 +336,8 @@ def _edit_variables(
     Raises:
         ExecutionAbortedError: If the user cancels the screen.
     """
+    from protostar.cli.tui.launch import edit_variables
+
     edited = edit_variables(draft, config, flagged, command=command)
     if edited is None:
         raise ExecutionAbortedError("Variable entry cancelled by user.")
@@ -345,6 +346,8 @@ def _edit_variables(
 
 def _config_prefill(config: UserConfig) -> dict[str, EnvValue]:
     """The form's starting values: the file's, then Git's identity."""
+    from protostar.config_edit import IDENTITY_KEYS, config_values
+
     values = config_values(config)
     identity = resolve_auto_metadata(
         {
@@ -398,6 +401,9 @@ def handle_config(args: argparse.Namespace) -> None:
     Args:
         args: Parsed CLI arguments mapping to this command.
     """
+    from protostar.cli.tui.launch import edit_settings
+    from protostar.config_edit import SaveConfig
+
     source = active_config_source()
     if source.path is None:
         raise InvalidUsageError(

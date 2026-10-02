@@ -196,6 +196,8 @@ The CI regression check uses 30 executions after 5 warmups and fails when a meas
 
 The `justfile` includes predefined recipes using [Hyperfine](https://github.com/sharkdp/hyperfine) to reproduce the measurements locally. Compare changes on the same machine and checkout conditions to check whether dynamic module imports have increased startup time.
 
+Help and version requests load argument definitions and tool descriptions, but do not load project analysis, reviews, execution, or format engines. Command implementations load only after dispatch. A tool reads its document-backed signals when analysis asks for them, and loads its document generators when planning calls `build()`. `tests/test_cli_startup.py` checks this boundary in fresh interpreters, including JSON help; this catches unnecessary imports without a machine-dependent timing threshold.
+
 The dashboard source lives in `benchmarks/` on `main`. Pages publishing combines that source with the recorded `benchmarks/data.js` from `gh-pages`; it never publishes dashboard code from the data branch. To test its data handling locally, use Node.js 18 or newer:
 
 ```bash

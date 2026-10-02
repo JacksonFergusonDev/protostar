@@ -186,7 +186,7 @@ def test_resolve_skips_the_change_review(project, monkeypatch, mocker):
     from protostar.merge import ResolutionChoice
 
     mocker.patch("protostar.cli.main.is_interactive", return_value=True)
-    reviewed = mocker.patch("protostar.cli.main.review_changes")
+    reviewed = mocker.patch("protostar.cli.tui.launch.review_changes")
     engine = mocker.patch("protostar.cli.ui._run_engine")
     args = build_parser().parse_args(
         ["init", "--resolve", "pyproject.toml=local", *FLAGS]

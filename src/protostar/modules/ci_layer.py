@@ -3,10 +3,9 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from protostar.documents import github_workflows
 from protostar.metadata import MetadataKey
 
-from .base import PathSignal, ToolInfo, ToolModule
+from .base import PathSignal, Signal, ToolInfo, ToolModule
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
@@ -52,7 +51,14 @@ class CIModule(ToolModule):
         docs_url="https://docs.github.com/en/actions",
     )
     config_key = "ci"
-    signals = tuple(PathSignal(path) for path in github_workflows.CI_LOCATIONS.paths)
+
+    @property
+    def signals(self) -> tuple[Signal, ...]:
+        """Read the configuration locations declared by this tool's documents."""
+        from protostar.documents import github_workflows
+
+        return tuple(PathSignal(path) for path in github_workflows.CI_LOCATIONS.paths)
+
     required_metadata = (MetadataKey.SUPPORTED_OS, MetadataKey.MINIMUM_PYTHON)
 
     @property
@@ -86,9 +92,15 @@ class ReleaseModule(ToolModule):
         docs_url="https://docs.pypi.org/trusted-publishers/",
     )
     config_key = "release"
-    signals = tuple(
-        PathSignal(path) for path in github_workflows.RELEASE_LOCATIONS.paths
-    )
+
+    @property
+    def signals(self) -> tuple[Signal, ...]:
+        """Read the configuration locations declared by this tool's documents."""
+        from protostar.documents import github_workflows
+
+        return tuple(
+            PathSignal(path) for path in github_workflows.RELEASE_LOCATIONS.paths
+        )
 
     @property
     def name(self) -> str:
