@@ -8,8 +8,8 @@ Widen mutation testing to the rest of the engine, then run it on a schedule, rec
 
 | Phase | Work | Status |
 |---|---|---|
-| 1 | One module list for mutation testing | Planned |
-| 2 | Expand coverage to the target set | Planned |
+| 1 | One module list for mutation testing | Finished (#413) |
+| 2 | Expand coverage to the target set | In progress (reconciliation first) |
 | 3 | Record scores on `gh-pages` on a schedule | Planned |
 | 4 | Dashboard graph and README badge | Planned |
 | 5 | Score on jacksonferguson.me | Planned |
@@ -26,10 +26,6 @@ Widen mutation testing to the rest of the engine, then run it on a schedule, rec
 - **Our own JSON, not github-action-benchmark.** That action writes a JS file built for speed regressions. Mutation results go in their own files under `benchmarks/` on `gh-pages`: a history file for the graph and a small latest-score file in shields.io's endpoint format, which the badge and the website both read.
 - **The website reads the score when it builds.** jacksonferguson.me (Astro, `~/Developer/JacksonFergusonDev.github.io`) already fetches remote files at build time through `config/remote-assets.json`, and its `deploy.yml` already rebuilds on `repository_dispatch` of type `remote-assets-updated`, plus weekly. Protostar sends that dispatch after the Pages deploy finishes, not just after the `gh-pages` push, so the site never fetches a stale file.
 - **Say what the score covers.** It covers the mutated modules, not the whole codebase. The dashboard says which modules, and the badge label doesn't imply full coverage.
-
-## Phase 1: One module list for mutation testing
-
-`mutation.yml`'s plan step hardcodes the modules it accepts, which repeats `[tool.mutmut].source_paths` in `pyproject.toml`. Derive the workflow's module list (and its `all` choice) from `source_paths`, so adding a module is a one-line change in `pyproject.toml`. Keep `just mutate <module>` working.
 
 ## Phase 2: Expand coverage to the target set
 
@@ -77,4 +73,4 @@ After tracking starts, add more engine modules the same way as Phase 2, one or a
 
 ## Finished
 
-Nothing yet.
+- Phase 1 (#413): The workflow derives its module list and `all` selection from `[tool.mutmut].source_paths`, including nested modules. `just mutate <module>` continues to work.

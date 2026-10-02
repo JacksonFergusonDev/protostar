@@ -190,6 +190,7 @@ source_paths = [
     "src/protostar/jsonc_ast.py",
     "src/protostar/manifest.py",
     "src/protostar/merge.py",
+    "src/protostar/reconciliation.py",
     "src/protostar/sync_state.py",
     "src/protostar/text_merge.py",
     "src/protostar/toml_ast.py",
@@ -203,6 +204,7 @@ pytest_add_cli_args_test_selection = ["tests/"]
 do_not_mutate_patterns = ["# pragma: no mutate"]
 also_copy = [
     ".github/",
+    "benchmarks/",
     "AGENTS.md",
     "CHANGELOG.md",
     "CODE_OF_CONDUCT.md",
