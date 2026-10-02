@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790913953011,
+  "lastUpdate": 1790915474787,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20779,6 +20779,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1200.78,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "2652906ae62b2c500206023a466c4991a2ecdb37",
+          "message": "feat(docs): use Python brand icon in shared footer",
+          "timestamp": "2026-10-01T21:27:44-07:00",
+          "tree_id": "0acd6fdbd9453f8febe663b4228d3e068e024d34",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/2652906ae62b2c500206023a466c4991a2ecdb37"
+        },
+        "date": 1790915473211,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 174.5,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1206.49,
             "unit": "ms"
           }
         ]
