@@ -146,6 +146,12 @@ Pass Protostar arguments to run one command without entering a shell, such as `j
     just serve
     ```
 
+=== "Benchmark Preview"
+    Opens the benchmark dashboard at `http://127.0.0.1:8765/benchmarks/`, independently of the documentation server on port 8000. It fetches the published measurements once; refresh the page to see source edits. Stop it with `Ctrl+C`, or choose another port with `just serve-benchmarks 8766`.
+    ```bash
+    just serve-benchmarks
+    ```
+
 !!! tip "Manual Execution"
     If you need to pass specific flags directly to pytest or run a single file, bypass the runner and use `uv` directly:
     ```bash

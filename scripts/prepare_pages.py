@@ -21,7 +21,9 @@ sys.path.insert(0, str(_repo_root / "src"))
 from protostar.errors import ConfigurationError
 
 BENCHMARK_DIR = _repo_root / "benchmarks"
-BENCHMARK_ASSETS = ("index.html", "dashboard.js", "metrics.mjs")
+BENCHMARK_ASSETS = ("index.html", "style.css", "dashboard.js", "metrics.mjs")
+HOUSE_DIR = _repo_root / "docs" / "house"
+HEADER_CSS = _repo_root / "docs" / "stylesheets" / "site-header.css"
 
 
 @dataclass(frozen=True)
@@ -169,6 +171,8 @@ def assemble_pages(source: Path, output: Path, config_path: Path) -> str:
         shutil.copyfile(benchmark_data, benchmark_output / "data.js")
         for filename in BENCHMARK_ASSETS:
             shutil.copyfile(BENCHMARK_DIR / filename, benchmark_output / filename)
+        shutil.copytree(HOUSE_DIR, benchmark_output / "house")
+        shutil.copyfile(HEADER_CSS, benchmark_output / "site-header.css")
         for filename in ("favicon.svg", "favicon.png"):
             shutil.copyfile(
                 _repo_root / "docs" / "assets" / filename,

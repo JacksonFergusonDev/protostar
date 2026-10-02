@@ -9,6 +9,8 @@ from protostar.errors import ConfigurationError
 from scripts.prepare_pages import (
     BENCHMARK_ASSETS,
     BENCHMARK_DIR,
+    HEADER_CSS,
+    HOUSE_DIR,
     assemble_pages,
     read_versions,
 )
@@ -69,6 +71,9 @@ def test_latest_content_redirects_and_benchmarks_share_one_clean_artifact(
     before = {path: path.read_bytes() for path in source.rglob("*") if path.is_file()}
 
     assert assemble_pages(source, output, config) == "0.10.1"
+    assert (
+        output / "benchmarks" / "site-header.css"
+    ).read_bytes() == HEADER_CSS.read_bytes()
 
     for relative in ("index.html", "why-protostar/index.html"):
         redirect = (output / relative).read_text(encoding="utf-8")
@@ -98,6 +103,15 @@ def test_latest_content_redirects_and_benchmarks_share_one_clean_artifact(
             BENCHMARK_DIR / filename
         ).read_bytes()
     assert not (output / "benchmarks" / "retired.js").exists()
+    assert {
+        path.relative_to(output / "benchmarks" / "house"): path.read_bytes()
+        for path in (output / "benchmarks" / "house").rglob("*")
+        if path.is_file()
+    } == {
+        path.relative_to(HOUSE_DIR): path.read_bytes()
+        for path in HOUSE_DIR.rglob("*")
+        if path.is_file()
+    }
     for filename in ("favicon.svg", "favicon.png"):
         assert (output / "benchmarks" / filename).is_file()
     assert not (output / "retired-page").exists()

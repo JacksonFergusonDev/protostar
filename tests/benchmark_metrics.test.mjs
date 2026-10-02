@@ -75,10 +75,18 @@ test('dashboard wiring displays the current editor result, preceding count, and 
       run(1, wizard, 1500), run(2, editor, 800), run(3, editor, 1000),
     ] } }, addEventListener() {} },
     document: {
+      documentElement: {},
+      fonts: { ready: Promise.resolve() },
       getElementById: element,
       querySelectorAll() { return []; },
-      createElement() { return {}; },
+      createElement() { return { setAttribute() {}, appendChild() {}, prepend() {} }; },
       body: { appendChild(script) { script.onload(); } },
+    },
+    getComputedStyle() {
+      const tokens = { '--panel': '#0e1114', '--text': '#e8edef', '--muted': '#939da6',
+        '--accent': '#22d3ee', '--line': '#252c31', '--mono': 'JetBrains Mono',
+        '--fs-ui': '14px', '--fs-label': '11px' };
+      return { getPropertyValue(name) { return tokens[name]; } };
     },
     echarts: {
       init() {
@@ -95,4 +103,6 @@ test('dashboard wiring displays the current editor result, preceding count, and 
   assert.equal(element('kpi-editor-delta').textContent, '+25.0%');
   assert.equal(element('kpi-headless-val').textContent, 'N/A');
   assert.deepEqual(Array.from(charts[1].series[0].data), [800, 1000]);
+  assert.equal(charts[1].series[0].lineStyle.color, '#22d3ee');
+  assert.equal(charts[1].xAxis.axisLabel.fontFamily, 'JetBrains Mono');
 });

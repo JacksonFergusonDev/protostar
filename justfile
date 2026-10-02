@@ -218,6 +218,10 @@ serve: sync
     @printf "\n{{ blue }}=== Launching Zensical Server ==={{ nc }}\n"
     uv run zensical serve -o
 
+# Preview benchmark history on port 8765, separately from the docs server
+serve-benchmarks port="8765":
+    uv run python scripts/serve_benchmarks.py --port {{ port }}
+
 # Refresh release inputs for review, then bump version, sync lockfile, commit, tag, and push
 bump part:
     uv run python scripts/prepare_release.py
