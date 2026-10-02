@@ -31,7 +31,7 @@ A site may add its own rules, but it never contradicts these. When a rule here i
   | `arrow-left` | The previous page, or back to where the reader came from |
   | `arrow-up-right` | Another site, or a page only loosely related to this one |
 
-- **Brand links carry their brand.** A link to GitHub, LinkedIn, or email shows its `brand-*` icon before the label instead of an arrow. A link to jacksonferguson.me from a project site shows `icons/jacksonferguson.svg`.
+- **Brand links carry their brand.** A link to GitHub, LinkedIn, Python, or email shows its `brand-*` icon before the label instead of an arrow. A link to jacksonferguson.me from a project site shows `icons/jacksonferguson.svg`.
 - **A link inside a sentence takes no icon.** It reads as part of the prose.
 - **Use only the icons in `icons/`.** Never a text arrow (`→`), an emoji, or another icon set. A site that can inline SVG inlines these files; any other site uses `css/icons.css`. A missing icon is added here first.
 - **Icons are decoration.** Mark them `aria-hidden="true"`; the label carries the meaning.
