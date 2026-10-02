@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790915474787,
+  "lastUpdate": 1790916685287,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20813,6 +20813,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1206.49,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "19c0cb32e7df4b3d8d57c1b233fdae5c83984e35",
+          "message": "feat(docs): increase prominence of the hero attractor",
+          "timestamp": "2026-10-01T21:47:58-07:00",
+          "tree_id": "a769ff35c8ae7434e3e1cede8b037c03984011d4",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/19c0cb32e7df4b3d8d57c1b233fdae5c83984e35"
+        },
+        "date": 1790916684211,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 187.86,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1270.56,
             "unit": "ms"
           }
         ]
