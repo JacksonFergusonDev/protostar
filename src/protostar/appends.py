@@ -367,10 +367,11 @@ def append_marker_blocks(
         conflicts: list[MergeConflict] = []
         for tag, conflict in found:
             lines = conflict.location.lines
-            begin = marker(tag)
-            # Each marker occurs once, so which end a search comes from can't matter.
-            start = result.find(begin)  # pragma: no mutate
-            if lines is not None and start != -1:
+            if lines is not None:
+                # A conflict with lines is a hunk of a region the file still
+                # holds, and its marker occurs once, so either end finds it.
+                begin = marker(tag)
+                start = result.find(begin)  # pragma: no mutate
                 offset = result[:start].count("\n")
                 lines = LineSpan(lines.start + offset, lines.count)
             conflicts.append(
