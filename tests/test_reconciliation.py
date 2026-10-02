@@ -271,6 +271,38 @@ def test_missing_gitignore_contains_only_requested_entries(reconciliation):
     assert reconciliation.fs.contents == {".gitignore": b".cache/\nbuild/\n"}
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Requires unprivileged symlinks")
+@pytest.mark.parametrize("target", [".gitignore", ".dockerignore", "Dockerfile"])
+def test_generated_artifacts_validate_their_project_root(tmp_path, monkeypatch, target):
+    root = tmp_path / "project"
+    root.mkdir()
+    (root / target).write_text("local/\n")
+    caller = tmp_path / "caller"
+    caller.mkdir()
+    (caller / target).symlink_to(root / target)
+    monkeypatch.chdir(caller)
+    workspace = ReviewWorkspace(root)
+    manifest = EnvironmentManifest()
+    manifest.tooling.wants_docker = target != ".gitignore"
+    reconciliation = Reconciliation(
+        manifest, UserConfig(), workspace, workspace, workspace
+    )
+    reconciliation.manifest.filesystem.vcs_ignores = {"build/"}
+
+    if target == ".gitignore":
+        reconciliation._write_ignores()
+        assert workspace.contents == {".gitignore": b"local/\nbuild/\n"}
+    else:
+        reconciliation._write_docker_artifacts()
+        expected = {".dockerignore"}
+        if target != "Dockerfile":
+            expected.add("Dockerfile")
+        assert set(workspace.contents) == expected
+        assert b"build/\n" in workspace.contents[".dockerignore"]
+
+    assert (root / target).read_text() == "local/\n"
+
+
 @pytest.mark.parametrize(
     ("method", "operation", "path"),
     [
