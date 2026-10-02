@@ -197,6 +197,7 @@ also_copy = [
     "SECURITY.md",
     "docs/",
     "justfile",
+    "overrides/",
     "scripts/",
     "src/",
     "zensical.toml",
