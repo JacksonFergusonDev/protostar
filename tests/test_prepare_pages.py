@@ -101,9 +101,9 @@ def test_latest_content_redirects_and_benchmarks_share_one_clean_artifact(
     ).read_bytes()
     for filename in BENCHMARK_ASSETS:
         if filename == "index.html":
-            assert (
-                output / "benchmarks" / filename
-            ).read_text() == render_benchmark_index()
+            assert (output / "benchmarks" / filename).read_text(
+                encoding="utf-8"
+            ) == render_benchmark_index()
             continue
         assert (output / "benchmarks" / filename).read_bytes() == (
             BENCHMARK_DIR / filename
