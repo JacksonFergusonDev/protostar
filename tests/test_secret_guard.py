@@ -568,12 +568,12 @@ def test_terminal_settles_a_flagged_var_on_the_variables_screen(
     monkeypatch.chdir(tmp_path)
     mocker.patch("protostar.cli.main.is_interactive", return_value=True)
     screen = mocker.patch(
-        "protostar.cli.main.edit_variables",
+        "protostar.cli.tui.launch.edit_variables",
         side_effect=lambda draft, config, flagged, **_: replace(
             draft, allowed_secrets=frozenset(flagged)
         ),
     )
-    summary = mocker.patch("protostar.cli.main.print_dry_run")
+    summary = mocker.patch("protostar.cli.changes.print_dry_run")
 
     with pytest.raises(SystemExit) as exc:
         handle_init(_flagged_var_args(tmp_path, TOKENS["github-pat"]))
@@ -586,7 +586,7 @@ def test_terminal_settles_a_flagged_var_on_the_variables_screen(
 def test_cancelling_the_flagged_var_screen_aborts(mocker, monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     mocker.patch("protostar.cli.main.is_interactive", return_value=True)
-    mocker.patch("protostar.cli.main.edit_variables", return_value=None)
+    mocker.patch("protostar.cli.tui.launch.edit_variables", return_value=None)
 
     with pytest.raises(ExecutionAbortedError, match="Variable entry cancelled"):
         handle_init(_flagged_var_args(tmp_path, TOKENS["github-pat"]))
@@ -595,7 +595,7 @@ def test_cancelling_the_flagged_var_screen_aborts(mocker, monkeypatch, tmp_path)
 def test_flagged_var_off_a_terminal_never_opens_a_screen(mocker, monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     mocker.patch("protostar.cli.main.is_interactive", return_value=False)
-    screen = mocker.patch("protostar.cli.main.edit_variables")
+    screen = mocker.patch("protostar.cli.tui.launch.edit_variables")
 
     with pytest.raises(SecretDetectedError, match="org_name"):
         handle_init(_flagged_var_args(tmp_path, TOKENS["github-pat"]))

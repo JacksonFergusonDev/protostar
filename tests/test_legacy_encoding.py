@@ -322,7 +322,9 @@ def test_the_saved_configuration_summary_is_cp1252_safe(
     edit = ConfigEdit(
         DEFAULT_CONFIG_CONTENT, DEFAULT_CONFIG_CONTENT + "mypy = true\n", ("mypy",)
     )
-    mocker.patch("protostar.cli.main.edit_settings", return_value=SaveConfig(edit))
+    mocker.patch(
+        "protostar.cli.tui.launch.edit_settings", return_value=SaveConfig(edit)
+    )
     handle_config(argparse.Namespace())
     output = legacy_console()
     assert output.startswith("+ Saved mypy to ")

@@ -3,9 +3,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from protostar.documents import codecov, pre_commit, readthedocs, renovate, zensical
 from protostar.intent import DependencyGroup, StructuredFormat
-from protostar.manifest import DiagnosticEvent, DiagnosticPhase, Severity
 from protostar.metadata import MetadataKey
 from protostar.registry import RemoteHook
 from protostar.system_deps import GlobalExecutable
@@ -16,6 +14,7 @@ from .base import (
     PathSignal,
     RequirementSignal,
     SectionSignal,
+    Signal,
     TableSignal,
     ToolInfo,
     ToolModule,
@@ -59,6 +58,8 @@ class DirenvModule(ToolModule):
 
     def build(self, manifest: EnvironmentManifest) -> None:
         """Appends direnv context ignores, injects the .envrc, and queues evaluation."""
+        from protostar.manifest import DiagnosticEvent, DiagnosticPhase, Severity
+
         logger.debug("Building direnv tooling layer.")
         manifest.filesystem.add_vcs_ignore(".envrc.local")
         manifest.filesystem.add_vcs_ignore(".direnv/")
@@ -629,13 +630,19 @@ class PreCommitModule(ToolModule):
         docs_url="https://pre-commit.com/",
     )
     config_key = "pre_commit"
-    signals = (
-        *(
-            PathSignal(path)
-            for path in pre_commit.LOCATIONS[HookRunner.PRE_COMMIT].paths
-        ),
-        RequirementSignal("pre-commit"),
-    )
+
+    @property
+    def signals(self) -> tuple[Signal, ...]:
+        """Read the configuration locations declared by this tool's documents."""
+        from protostar.documents import pre_commit
+
+        return (
+            *(
+                PathSignal(path)
+                for path in pre_commit.LOCATIONS[HookRunner.PRE_COMMIT].paths
+            ),
+            RequirementSignal("pre-commit"),
+        )
 
     @property
     def name(self) -> str:
@@ -673,10 +680,16 @@ class PrekModule(ToolModule):
         docs_url="https://github.com/j178/prek",
     )
     config_key = "prek"
-    signals = (
-        *(PathSignal(path) for path in pre_commit.LOCATIONS[HookRunner.PREK].paths),
-        RequirementSignal("prek"),
-    )
+
+    @property
+    def signals(self) -> tuple[Signal, ...]:
+        """Read the configuration locations declared by this tool's documents."""
+        from protostar.documents import pre_commit
+
+        return (
+            *(PathSignal(path) for path in pre_commit.LOCATIONS[HookRunner.PREK].paths),
+            RequirementSignal("prek"),
+        )
 
     @property
     def name(self) -> str:
@@ -836,7 +849,13 @@ class RenovateModule(ToolModule):
         docs_url="https://docs.renovatebot.com/",
     )
     config_key = "renovate"
-    signals = tuple(PathSignal(path) for path in renovate.LOCATIONS.paths)
+
+    @property
+    def signals(self) -> tuple[Signal, ...]:
+        """Read the configuration locations declared by this tool's documents."""
+        from protostar.documents import renovate
+
+        return tuple(PathSignal(path) for path in renovate.LOCATIONS.paths)
 
     @property
     def name(self) -> str:
@@ -849,6 +868,8 @@ class RenovateModule(ToolModule):
         Args:
             manifest: The centralized state object.
         """
+        from protostar.documents import pre_commit, renovate
+
         logger.debug("Building Renovate tooling layer.")
 
         config = """{
@@ -936,7 +957,13 @@ class CodecovModule(ToolModule):
         docs_url="https://docs.codecov.com/docs",
     )
     config_key = "codecov"
-    signals = tuple(PathSignal(path) for path in codecov.LOCATIONS.paths)
+
+    @property
+    def signals(self) -> tuple[Signal, ...]:
+        """Read the configuration locations declared by this tool's documents."""
+        from protostar.documents import codecov
+
+        return tuple(PathSignal(path) for path in codecov.LOCATIONS.paths)
 
     @property
     def name(self) -> str:
@@ -949,6 +976,8 @@ class CodecovModule(ToolModule):
         Args:
             manifest: The centralized state object.
         """
+        from protostar.documents import codecov
+
         logger.debug("Building Codecov tooling layer.")
         manifest.tooling.add_ci_flag(CIFlag.CODECOV)
 
@@ -1009,11 +1038,17 @@ class ZensicalModule(ToolModule):
         docs_url="https://zensical.org/docs/",
     )
     config_key = "zensical"
+
     # A MkDocs site is a competitor, not Zensical: only its own file counts.
-    signals = (
-        *(PathSignal(path) for path in zensical.LOCATIONS.editable),
-        RequirementSignal("zensical"),
-    )
+    @property
+    def signals(self) -> tuple[Signal, ...]:
+        """Read the configuration locations declared by this tool's documents."""
+        from protostar.documents import zensical
+
+        return (
+            *(PathSignal(path) for path in zensical.LOCATIONS.editable),
+            RequirementSignal("zensical"),
+        )
 
     @property
     def name(self) -> str:
@@ -1022,6 +1057,8 @@ class ZensicalModule(ToolModule):
 
     def build(self, manifest: EnvironmentManifest) -> None:
         """Queues Zensical dependencies, scaffolding, and ignore rules."""
+        from protostar.documents import zensical
+
         logger.debug("Building Zensical tooling layer.")
 
         manifest.dependencies.add_docs("mkdocstrings[python]")
@@ -1141,7 +1178,14 @@ class ReadTheDocsModule(ToolModule):
         docs_url="https://docs.readthedocs.com/platform/stable/",
     )
     config_key = "readthedocs"
-    signals = tuple(PathSignal(path) for path in readthedocs.LOCATIONS.paths)
+
+    @property
+    def signals(self) -> tuple[Signal, ...]:
+        """Read the configuration locations declared by this tool's documents."""
+        from protostar.documents import readthedocs
+
+        return tuple(PathSignal(path) for path in readthedocs.LOCATIONS.paths)
+
     required_metadata = (MetadataKey.MINIMUM_PYTHON,)
 
     @property
@@ -1155,6 +1199,8 @@ class ReadTheDocsModule(ToolModule):
         Args:
             manifest: The centralized state object.
         """
+        from protostar.documents import pre_commit, readthedocs
+
         logger.debug("Building Read the Docs tooling layer.")
 
         raw_python = manifest.metadata.get("minimum_python", DEFAULT_PYTHON_VERSION)

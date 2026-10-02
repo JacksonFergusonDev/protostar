@@ -512,7 +512,7 @@ def test_missing_variables_fail_without_prompt_or_mutation_off_a_terminal(
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
     mocker.patch("protostar.cli.main.is_interactive", return_value=False)
     prompt = mocker.patch(
-        "protostar.cli.main.edit_variables",
+        "protostar.cli.tui.launch.edit_variables",
         side_effect=AssertionError("no prompts"),
     )
 
@@ -537,7 +537,7 @@ def test_json_mode_never_prompts_for_variables(tmp_path, monkeypatch, mocker):
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
     mocker.patch("protostar.cli.main.is_interactive", return_value=True)
     monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
-    prompt = mocker.patch("protostar.cli.main.edit_variables")
+    prompt = mocker.patch("protostar.cli.tui.launch.edit_variables")
 
     with pytest.raises(MissingTemplateVariablesError):
         handle_init(argparse.Namespace(from_path=str(source)))
@@ -557,7 +557,7 @@ def test_terminal_opens_the_variables_step_for_missing_variables(
     engines = _capture_init_engines(mocker)
     mocker.patch("protostar.cli.main.is_interactive", return_value=True)
     step = mocker.patch(
-        "protostar.cli.main.edit_variables",
+        "protostar.cli.tui.launch.edit_variables",
         side_effect=lambda draft, config, flagged, **_: replace(
             draft, variables=(*draft.variables, ("TIER", "gold"))
         ),
@@ -592,7 +592,7 @@ def test_reinit_reuses_recorded_variables_and_flags_override_them(
     engines = _capture_init_engines(mocker)
     mocker.patch("protostar.cli.main.is_interactive", return_value=True)
     prompt = mocker.patch(
-        "protostar.cli.main.edit_variables",
+        "protostar.cli.tui.launch.edit_variables",
         side_effect=AssertionError("nothing is missing"),
     )
 
@@ -795,7 +795,7 @@ def _capture_init_engines(mocker):
     mocker.patch("shutil.which", return_value="/mock/command")
     # A local template is untrusted, so an interactive run reviews it first.
     mocker.patch(
-        "protostar.cli.main.review_changes",
+        "protostar.cli.tui.launch.review_changes",
         side_effect=lambda draft, config: InitDecision(draft, ()),
     )
     engines = []

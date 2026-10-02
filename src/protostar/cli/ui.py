@@ -18,7 +18,6 @@ from rich.tree import Tree
 
 from protostar.cli import schema
 from protostar.config import active_config_source
-from protostar.dependencies import resolver_commands
 from protostar.docs_registry import DocsPage
 from protostar.errors import (
     ConfigurationError,
@@ -26,17 +25,7 @@ from protostar.errors import (
     SecurityViolationError,
     WorkspaceCollisionError,
 )
-from protostar.guide import Entrypoint, read_entrypoints
-from protostar.manifest import (
-    DiagnosticEvent,
-    DiagnosticPhase,
-    EnvironmentManifest,
-    MissingTool,
-    Severity,
-)
 from protostar.merge import NO_RESOLUTIONS
-from protostar.models import ExecutionResult, InitRequest
-from protostar.progress import ProgressStep
 from protostar.system_deps import (
     InstallCommand,
     Platform,
@@ -45,8 +34,12 @@ from protostar.system_deps import (
 )
 
 if TYPE_CHECKING:
+    from protostar.guide import Entrypoint
     from protostar.init_draft import InitDecision
+    from protostar.manifest import DiagnosticEvent, EnvironmentManifest, MissingTool
+    from protostar.models import ExecutionResult, InitRequest
     from protostar.orchestrator import Orchestrator
+    from protostar.progress import ProgressStep
 
 # Marks the agent interface as experimental. Increment when the schema
 # stabilises and a compatibility commitment is made.
@@ -307,6 +300,8 @@ def untrusted_commands(
         execution order, or nothing when the template is built in or configured
         as trusted.
     """
+    from protostar.dependencies import resolver_commands
+
     if not request.is_external or request.is_trusted:
         return ()
     return (
@@ -396,6 +391,9 @@ def _run_engine(
     Returns:
         The ExecutionResult produced by the engine.
     """
+    from protostar.guide import read_entrypoints
+    from protostar.manifest import Severity
+
     # --- Collision Guard ---
     manifest = engine.plan()
     if manifest.collisions and manifest.collision_strategy is None:
@@ -629,6 +627,8 @@ def diagnostics_report(events: Sequence[DiagnosticEvent]) -> Group:
         A ``Diagnostics`` heading over the events: warnings in yellow, skips
         dimmed, and everything else marked in cyan.
     """
+    from protostar.manifest import DiagnosticPhase, Severity
+
     warning = glyph("⚠", "!")
     lines: list[Text] = []
     for event in events:

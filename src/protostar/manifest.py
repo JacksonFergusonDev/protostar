@@ -339,7 +339,7 @@ class FilesystemManifest:
                 hint="Use one contribution policy per target.",
             )
         if document_format is StructuredFormat.YAML:
-            from .documents import YAML_CONTRIBUTION_TARGETS
+            from .documents.catalog import YAML_CONTRIBUTION_TARGETS
             from .yaml_ast import decode_yaml_baseline
 
             if path not in YAML_CONTRIBUTION_TARGETS:
@@ -377,7 +377,7 @@ class FilesystemManifest:
                 "TOML append regions are unsupported.",
                 hint="Use dev.pyproject structured configuration.",
             )
-        from .documents import yaml_spec
+        from .documents.catalog import yaml_spec
 
         if yaml_spec(path) is not None:
             raise ConfigurationError(
@@ -717,7 +717,7 @@ class EnvironmentManifest:
         Returns:
             The document's locations under this manifest's hook runner.
         """
-        from .documents import document_locations
+        from .documents.catalog import document_locations
 
         return document_locations(target, self.tooling.hook_runner)
 

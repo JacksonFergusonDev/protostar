@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING
 
 from protostar.config import UserConfig
 from protostar.config_edit import ConfigDecision, EnvValue
-from protostar.init_draft import InitDecision, InitDraft
 from protostar.merge import ResolutionChoice
 from protostar.templates import TemplateInfo
 
 if TYPE_CHECKING:
+    from protostar.init_draft import InitDecision, InitDraft
     from protostar.lifecycle import PreparedProject
 
 

@@ -345,7 +345,7 @@ def test_a_successful_format_reports_nothing() -> None:
 
 
 def test_reconcile_reports_when_it_could_not_format_a_new_pyproject(mocker) -> None:
-    from protostar.documents import toml_spec
+    from protostar.documents.catalog import toml_spec
     from protostar.merge import MISSING, MergeLocation
     from protostar.toml_ast import reconcile_toml
 

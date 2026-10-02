@@ -3,21 +3,14 @@
 import argparse
 import os
 import sys
-from enum import StrEnum
 from pathlib import Path
 
 from rich.text import Text
 
 from protostar.cli import schema, ui
+from protostar.cli.arguments import OutputFormat
 from protostar.errors import InvalidUsageError, ProtostarError
 from protostar.template_check import Finding, Severity, TemplateCheck, check_template
-
-
-class OutputFormat(StrEnum):
-    """How findings are written for a human or a CI system."""
-
-    TEXT = "text"
-    GITHUB = "github"
 
 
 def handle_check_template(args: argparse.Namespace) -> None:

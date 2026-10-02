@@ -25,16 +25,12 @@ from .dependencies import (
     retract_requirements,
     select_dependencies,
 )
-from .documents import (
+from .documents import github_workflows, pre_commit, pyproject, renovate, vscode
+from .documents.catalog import (
     YAML_CONTRIBUTION_TARGETS,
     YAML_DOCUMENTS,
     YAML_GUARDS,
-    github_workflows,
-    pre_commit,
-    pyproject,
-    renovate,
     toml_spec,
-    vscode,
     yaml_spec,
 )
 from .documents.locations import Resolution, resolve_location

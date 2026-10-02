@@ -24,7 +24,6 @@ from .intent import (
     TemplateReference,
     validate_region_id,
 )
-from .jsonc_ast import decode_jsonc_baseline, encode_jsonc_baseline
 from .merge import Value, sort_value_keys, validate_value
 from .registry import PinProvenance as PinProvenance
 from .review_workspace import capture_node
@@ -153,9 +152,11 @@ class FileState:
                     if not isinstance(tool, dict) or "protostar" in tool:
                         raise _invalid("tool.protostar cannot be owned.")
             elif self.policy is FilePolicy.JSONC:
+                from .jsonc_ast import decode_jsonc_baseline
+
                 decode_jsonc_baseline(self.baseline)
             else:
-                from .documents import yaml_spec
+                from .documents.catalog import yaml_spec
                 from .yaml_ast import decode_yaml_baseline, validate_yaml_baseline
 
                 value = decode_yaml_baseline(self.baseline)
@@ -576,6 +577,8 @@ def _canonical_baseline(policy: FilePolicy, baseline: str) -> str:
 
         return encode_yaml_baseline(decode_yaml_baseline(baseline))
     if policy is FilePolicy.JSONC:
+        from .jsonc_ast import decode_jsonc_baseline, encode_jsonc_baseline
+
         return encode_jsonc_baseline(decode_jsonc_baseline(baseline))
     return encode_toml_baseline(decode_toml_baseline(baseline))
 

@@ -4,14 +4,11 @@ from typing import Any
 
 import pytest
 
-from protostar.documents import (
+from protostar.documents import codecov, github_workflows, pre_commit, readthedocs
+from protostar.documents.catalog import (
     YAML_CONTRIBUTION_TARGETS,
     YAML_DOCUMENTS,
     YAML_GUARDS,
-    codecov,
-    github_workflows,
-    pre_commit,
-    readthedocs,
 )
 from protostar.errors import ConfigurationError
 from protostar.merge import MISSING, ConflictReason, MergeLocation

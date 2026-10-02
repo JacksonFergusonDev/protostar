@@ -193,7 +193,7 @@ def test_missing_uv_fails_before_the_editor_opens(
     monkeypatch.setattr(ui, "is_json_mode", False)
     monkeypatch.setattr("sys.argv", ["protostar", "init"])
     mocker.patch("protostar.cli.parser.is_interactive", return_value=True)
-    editor = mocker.patch("protostar.cli.parser.edit_recipe")
+    editor = mocker.patch("protostar.cli.tui.launch.edit_recipe")
 
     with pytest.raises(SystemExit) as caught:
         main()

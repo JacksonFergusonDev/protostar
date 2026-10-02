@@ -294,7 +294,7 @@ def test_interactive_upgrade_asks_for_new_variables(project, monkeypatch, mocker
     )
     mocker.patch("protostar.cli.reviews.is_interactive", return_value=True)
     screen = mocker.patch(
-        "protostar.cli.main.edit_variables",
+        "protostar.cli.tui.launch.edit_variables",
         side_effect=lambda draft, config, flagged, **_: replace(
             draft, variables=(("REGION", "us"),)
         ),

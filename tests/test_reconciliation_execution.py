@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from protostar.config import UserConfig
-from protostar.documents import toml_spec
+from protostar.documents.catalog import toml_spec
 from protostar.errors import (
     CommandExecutionError,
     ConfigurationError,

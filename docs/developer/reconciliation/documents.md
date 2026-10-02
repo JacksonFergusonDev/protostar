@@ -23,7 +23,7 @@ Each format engine reconciles a document under a spec it is handed: `TomlDocumen
 | `renovate` | `TARGET` and `LOCATIONS`. |
 | `vscode` | The settings target and its default indentation. |
 
-The package's `__init__` assembles the registries callers look up by path:
+`documents/catalog.py` assembles the registries callers look up by path. Import the catalog when planning or reconciling documents; importing the package or a lightweight document layout does not load every format engine:
 
 - `YAML_DOCUMENTS`
 - `YAML_CONTRIBUTION_TARGETS`
@@ -88,7 +88,7 @@ Every YAML document the engine reconciles is described by a `YamlDocumentSpec`. 
 - Supplies the kernel `MergePolicy` (Codecov's set-like `ignore`, for example).
 - Declares its keyed sequences.
 
-Nothing outside the catalog compares against YAML file names. State validation, preserved-deviation inspection, and append-region rejection look up the spec with `documents.yaml_spec(path)`, which knows every name the document may be edited under.
+Nothing outside the catalog compares against YAML file names. State validation, preserved-deviation inspection, and append-region rejection look up the spec with `documents.catalog.yaml_spec(path)`, which knows every name the document may be edited under.
 
 The structured contribution channel accepts only the targets in `documents.YAML_CONTRIBUTION_TARGETS` (`.github/codecov.yml` and `.readthedocs.yaml`), declared by their canonical path. It does not infer structured intent from free-form file extensions or expose arbitrary YAML template injections. Pre-commit and workflows arrive through their own generators, and TOML remains the default format.
 
@@ -111,7 +111,7 @@ A **hold** replaces the desired value at that path with the owned baseline value
 
 The pre-commit pin guard holds `repos.<repo>.rev` instead of rewriting the desired document, so other additions keep their desired key order and styling.
 
-A guard that depends only on the decoded documents is registered by path in `documents.YAML_GUARDS` (workflows and Read the Docs). Pre-commit's is planned per run from registry responses, so its caller passes it directly.
+A guard that depends only on the decoded documents is registered by path in `documents.catalog.YAML_GUARDS` (workflows and Read the Docs). Pre-commit's is planned per run from registry responses, so its caller passes it directly.
 
 ## TOML document specs
 

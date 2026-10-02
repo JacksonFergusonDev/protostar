@@ -201,7 +201,7 @@ def test_bare_config_opens_the_form_and_saves_its_change(mocker, config_file):
         edit = ConfigEdit(content, content.replace("true", "false"), ("ruff",))
         return SaveConfig(edit)
 
-    mocker.patch("protostar.cli.main.edit_settings", side_effect=save)
+    mocker.patch("protostar.cli.tui.launch.edit_settings", side_effect=save)
     run = mocker.patch("subprocess.run")
     handle_config(argparse.Namespace())
     assert config_file.read_text() == "[env]\n# keep me\nruff = false\n"
@@ -215,19 +215,19 @@ def test_a_missing_file_starts_from_the_default_and_is_written_on_save(
         assert content == DEFAULT_CONFIG_CONTENT
         return SaveConfig(ConfigEdit(content, content + "mypy = true\n", ("mypy",)))
 
-    mocker.patch("protostar.cli.main.edit_settings", side_effect=save)
+    mocker.patch("protostar.cli.tui.launch.edit_settings", side_effect=save)
     handle_config(argparse.Namespace())
     assert config_file.read_text().endswith("mypy = true\n")
 
 
 def test_cancelling_the_form_writes_nothing(mocker, config_file):
-    mocker.patch("protostar.cli.main.edit_settings", return_value=None)
+    mocker.patch("protostar.cli.tui.launch.edit_settings", return_value=None)
     handle_config(argparse.Namespace())
     assert not config_file.exists()
 
 
 def test_the_form_hands_off_to_the_editor(mocker, config_file):
-    mocker.patch("protostar.cli.main.edit_settings", return_value=OpenInEditor())
+    mocker.patch("protostar.cli.tui.launch.edit_settings", return_value=OpenInEditor())
     mocker.patch.dict("os.environ", {"EDITOR": "nano"})
     mocker.patch("shutil.which", return_value="/usr/bin/nano")
     run = mocker.patch("subprocess.run")
@@ -244,7 +244,7 @@ def test_a_file_changed_while_the_form_was_open_is_not_overwritten(mocker, confi
         config_file.write_text("[env]\nmypy = true\n")
         return SaveConfig(ConfigEdit(content, "[env]\nide = 'none'\n", ("ide",)))
 
-    mocker.patch("protostar.cli.main.edit_settings", side_effect=save)
+    mocker.patch("protostar.cli.tui.launch.edit_settings", side_effect=save)
     with pytest.raises(ConfigurationError, match="changed while the form was open"):
         handle_config(argparse.Namespace())
     assert config_file.read_text() == "[env]\nmypy = true\n"
@@ -260,7 +260,7 @@ def test_bare_config_needs_an_interactive_terminal(
 ):
     mocker.patch("protostar.cli.main.is_interactive", return_value=interactive)
     monkeypatch.setattr(ui, "is_json_mode", json_mode)
-    form = mocker.patch("protostar.cli.main.edit_settings")
+    form = mocker.patch("protostar.cli.tui.launch.edit_settings")
     with pytest.raises(InvalidUsageError, match="interactive terminal") as caught:
         handle_config(argparse.Namespace())
     assert "protostar config --edit" in (caught.value.hint or "")

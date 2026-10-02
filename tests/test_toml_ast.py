@@ -249,7 +249,7 @@ disable = ["MD013"]
 
 def test_set_extension_preserves_existing_member_comments():
     """Accepted set additions retain the local array's nodes and presentation."""
-    from protostar.documents import toml_spec
+    from protostar.documents.catalog import toml_spec
     from protostar.merge import MergeLocation
     from protostar.toml_ast import reconcile_toml
 
@@ -285,7 +285,7 @@ def test_set_extension_preserves_existing_member_comments():
 
 def test_adding_tool_preserves_existing_document_presentation():
     """Semantic equality never authorizes reformatting pre-existing tables."""
-    from protostar.documents import toml_spec
+    from protostar.documents.catalog import toml_spec
     from protostar.merge import MergeLocation
     from protostar.toml_ast import reconcile_toml
 
@@ -429,7 +429,7 @@ version = 1
 
 
 def test_a_tool_added_to_an_existing_project_is_placed_before_protostar():
-    from protostar.documents import toml_spec
+    from protostar.documents.catalog import toml_spec
     from protostar.merge import MergeLocation
     from protostar.toml_ast import reconcile_toml
 
@@ -457,7 +457,7 @@ def test_a_tool_added_to_an_existing_project_is_placed_before_protostar():
 
 
 def test_placing_a_new_tool_is_stable_when_repeated():
-    from protostar.documents import toml_spec
+    from protostar.documents.catalog import toml_spec
     from protostar.merge import MergeLocation
     from protostar.toml_ast import reconcile_toml
 
@@ -483,7 +483,7 @@ def test_placing_a_new_tool_is_stable_when_repeated():
 
 
 def test_a_non_pyproject_toml_target_is_left_to_a_plain_dump():
-    from protostar.documents import toml_spec
+    from protostar.documents.catalog import toml_spec
     from protostar.merge import MergeLocation
     from protostar.toml_ast import reconcile_toml
 
@@ -743,7 +743,7 @@ _SECTIONED_BASE: dict[str, Value] = {
 
 def test_a_key_added_to_a_table_stays_above_the_next_sections_header():
     """The header comment opens the next section, so new values go above it."""
-    from protostar.documents import toml_spec
+    from protostar.documents.catalog import toml_spec
 
     desired: dict[str, Value] = {
         "project": {"name": "app"},
@@ -768,7 +768,7 @@ def test_a_key_added_to_a_table_stays_above_the_next_sections_header():
 
 
 def test_a_key_added_to_a_table_without_a_closing_comment_is_appended():
-    from protostar.documents import toml_spec
+    from protostar.documents.catalog import toml_spec
 
     original = '[tool.ruff.lint]\nselect = ["E"]\n\n[tool.mypy]\nstrict = true\n'
     base: dict[str, Value] = {
@@ -976,7 +976,7 @@ def test_a_changed_document_keeps_its_own_ending(original, content):
 
 
 def test_a_layout_that_falls_back_says_why(mocker: MockerFixture):
-    from protostar.documents import toml_spec
+    from protostar.documents.catalog import toml_spec
 
     mocker.patch(
         "protostar.documents.pyproject_layout.join_sections", return_value="= broken"
@@ -997,7 +997,7 @@ def test_a_layout_that_falls_back_says_why(mocker: MockerFixture):
 
 
 def test_a_key_added_below_several_keys_stays_above_the_closing_comment():
-    from protostar.documents import toml_spec
+    from protostar.documents.catalog import toml_spec
 
     original = _SECTIONED.replace('select = ["E"]\n', 'select = ["E"]\nfix = true\n')
     base: dict[str, Value] = {
