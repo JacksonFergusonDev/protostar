@@ -257,6 +257,7 @@ import { metricHistory, precedingAverage, escapeHtml } from './metrics.mjs';
                 name: 'Avg',
                 label: {
                   formatter: 'Mean: {c} ms',
+                  position: 'insideEndTop',
                   fontFamily: theme.mono,
                   fontSize: theme.labelSize,
                   color: theme.muted
