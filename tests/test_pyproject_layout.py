@@ -15,12 +15,15 @@ from protostar.documents.pyproject_layout import (
     TOOL_SECTION_NAMES,
     TOOL_SECTIONS,
     Section,
+    _announced,
+    _take_leading_comments,
     compose_children,
     format_document,
     insert_section,
     join_sections,
     place_new_sections,
     section_rank,
+    section_title,
     split_sections,
 )
 from protostar.manifest import EnvironmentManifest
@@ -679,4 +682,573 @@ def test_removing_every_managed_tool_keeps_the_banner_for_the_recipe():
         "# ---- Ruff ---- #\n\n[tool.ruff]\nline-length = 88\n\n"
         "[tool.example]\ndatabase = true\n\n",
         "",
+    )
+
+
+# ---- the spec: where a section sorts and what labels it ----
+
+
+@pytest.mark.parametrize(
+    ("path", "rank"),
+    [
+        ((), (0, "")),
+        (("project",), (1, "project")),
+        (("build-system",), (2, "build-system")),
+        (("dependency-groups",), (3, "dependency-groups")),
+        (("uv",), (100, "uv")),
+        (("tool",), (100, "tool")),
+        (("a", "b"), (100, "a")),
+        (("tool", "hatch"), (499, "hatch")),
+        (("tool", "ruff"), (500, "ruff")),
+        (("tool", "rumdl"), (507, "rumdl")),
+        (("tool", "zzz"), (600, "zzz")),
+        (("tool", "protostar"), (700, "protostar")),
+    ],
+)
+def test_a_section_sorts_by_its_root_then_its_tool(path, rank) -> None:
+    assert section_rank(path) == rank
+
+
+@pytest.mark.parametrize(
+    ("path", "title"),
+    [
+        (("tool", "ruff"), "Ruff"),
+        (("tool", "coverage"), "Pytest"),
+        (("tool", "hatch"), None),
+        (("tool", "zzz"), None),
+        (("tool",), None),
+        (("project",), None),
+        (("a", "ruff"), None),
+        ((), None),
+    ],
+)
+def test_only_a_known_tool_table_has_a_header_title(path, title) -> None:
+    assert section_title(path) == title
+
+
+def test_a_tail_announces_the_banner_by_its_title_and_headers_by_exact_line() -> None:
+    rule, title = BANNER[0], BANNER[1]
+
+    assert _announced(f"\n{rule}\n{title}\n{rule}\n\n# ---- Ruff ---- #\n") == (
+        True,
+        ["# ---- Ruff ---- #"],
+    )
+    assert _announced(f"\n{rule}\n\n") == (False, [])
+    assert _announced(f"\n{title}\n") == (True, [])
+    assert _announced("# ---- Mypy ---- #\n# ---- Mypy ---- #\n# ---- Nope ---- #") == (
+        False,
+        ["# ---- Mypy ---- #"],
+    )
+
+
+# ---- splitting a document into sections ----
+
+
+def test_sections_are_named_by_their_table() -> None:
+    document = tomlkit.parse(
+        '[project]\nname = "x"\n\n[tool.ruff]\na = 1\n\n[a.b]\nc = 1\n\n[[tool.mypy.overrides]]\nm = 1\n'
+    )
+
+    assert [section.path for section in split_sections(document)] == [
+        ("project",),
+        ("tool", "ruff"),
+        ("a",),
+        ("tool", "mypy"),
+    ]
+
+
+@pytest.mark.parametrize("text", ["tool = 1\n", "tool = { ruff = { a = 1 } }\n"])
+def test_a_tool_that_is_not_a_table_of_tables_is_one_section(text: str) -> None:
+    sections = split_sections(tomlkit.parse(text))
+
+    assert [(section.path, section.text) for section in sections] == [(("tool",), text)]
+
+
+def test_a_section_that_is_only_managed_lines_is_all_tail() -> None:
+    (section,) = split_sections(tomlkit.parse("# ---- Ruff ---- #\n"))
+
+    assert (section.path, section.body, section.tail) == (
+        (),
+        "",
+        "# ---- Ruff ---- #\n",
+    )
+
+
+def test_managed_lines_without_a_final_newline_still_end_a_section() -> None:
+    sections = split_sections(
+        tomlkit.parse('[project]\nname = "x"\n\n# ---- Ruff ---- #')
+    )
+
+    assert [(s.body, s.tail) for s in sections] == [
+        ('[project]\nname = "x"\n', "\n# ---- Ruff ---- #")
+    ]
+
+
+# ---- inserting a section object ----
+
+
+def test_insert_keeps_a_tail_the_previous_section_already_had() -> None:
+    sections = [Section(("project",), "[project]\nname = 1", "\n# ---- Ruff ---- #")]
+
+    insert_section(sections, Section(("tool", "x"), "[tool.x]\na = 1\n"), 1)
+
+    assert [section.tail for section in sections] == [
+        "\n# ---- Ruff ---- #\n\n",
+        "",
+    ]
+
+
+def test_insert_keeps_a_tail_the_new_section_already_had() -> None:
+    sections = _sections('[project]\nname = "x"\n')
+
+    insert_section(
+        sections,
+        Section(("tool", "x"), "[tool.x]\na = 1\n", "# ---- Ruff ---- #\n"),
+        0,
+    )
+
+    assert sections[0].tail == "# ---- Ruff ---- #\n\n"
+    assert join_sections(sections).startswith("[tool.x]\na = 1\n# ---- Ruff ---- #\n\n")
+
+
+def test_insert_leaves_a_body_that_already_ends_in_a_blank_line_alone() -> None:
+    sections = _sections('[project]\nname = "x"\n')
+
+    insert_section(sections, Section(("tool", "x"), "[tool.x]\na = 1\n\n"), 0)
+
+    assert sections[0].text == "[tool.x]\na = 1\n\n"
+
+
+# ---- composing children, at any depth ----
+
+
+def test_compose_children_follows_the_order_then_the_rest_as_they_were() -> None:
+    document = tomlkit.parse(
+        "[tool.p]\nv = 1\n[tool.p.z]\nz = 1\n[tool.p.b]\nb = 1\n[tool.p.a]\na = 1\n"
+    )
+
+    text = compose_children(document, ("tool", "p"), ("a",))
+
+    assert text == (
+        "[tool.p]\nv = 1\n\n[tool.p.a]\na = 1\n\n[tool.p.z]\nz = 1\n\n"
+        "[tool.p.b]\nb = 1\n"
+    )
+
+
+def test_compose_children_rebuilds_the_whole_path_of_a_nested_table() -> None:
+    document = tomlkit.parse(
+        "[tool.a.b]\nv = 1\n[tool.a.b.y]\ny = 1\n[tool.a.b.x]\nx = 1\n"
+    )
+
+    text = compose_children(document, ("tool", "a", "b"), ("x", "y"))
+
+    assert text == "[tool.a.b]\nv = 1\n\n[tool.a.b.x]\nx = 1\n\n[tool.a.b.y]\ny = 1\n"
+
+
+def test_compose_children_of_a_root_table() -> None:
+    document = tomlkit.parse("[a]\nv = 1\n[a.y]\ny = 1\n[a.x]\nx = 1\n")
+
+    text = compose_children(document, ("a",), ("x", "y"))
+
+    assert text == "[a]\nv = 1\n\n[a.x]\nx = 1\n\n[a.y]\ny = 1\n"
+
+
+# ---- the fallbacks say exactly what happened ----
+
+
+def test_a_fallback_logs_why_and_hands_the_reason_to_the_caller(
+    mocker, caplog: pytest.LogCaptureFixture
+) -> None:
+    mocker.patch(
+        "protostar.documents.pyproject_layout.format_sections", return_value=CORRUPTED
+    )
+    reasons: list[str] = []
+
+    with caplog.at_level(logging.WARNING, logger="protostar"):
+        format_document(tomlkit.parse('[project]\nname = "app"\n'), reasons.append)
+
+    reason = "AST Parity mismatch during pyproject.toml formatting"
+    assert reasons == [reason]
+    assert [record.message for record in caplog.records] == [
+        f"{reason}; falling back to direct AST dump."
+    ]
+
+
+def test_a_formatter_that_raises_falls_back_with_its_error(
+    mocker, caplog: pytest.LogCaptureFixture
+) -> None:
+    mocker.patch(
+        "protostar.documents.pyproject_layout.format_sections", return_value="[broken"
+    )
+    reasons: list[str] = []
+
+    with caplog.at_level(logging.WARNING, logger="protostar"):
+        result = format_document(
+            tomlkit.parse('[project]\nname = "app"\n\n\n\n'), reasons.append
+        )
+
+    assert result == '[project]\nname = "app"\n'
+    assert len(reasons) == 1
+    assert reasons[0].startswith("Validation error during pyproject.toml formatting (")
+    assert [record.message for record in caplog.records] == [
+        f"{reasons[0]}; falling back to direct AST dump."
+    ]
+
+
+def _place_with_join_returning(mocker, text: str, caplog) -> tuple[str, list[str]]:
+    original = _canonical(("ruff",))
+    document = tomlkit.parse(original)
+    document["tool"]["mypy"] = tomlkit.parse("[tool.mypy]\nstrict = true\n")["tool"][
+        "mypy"
+    ]
+    mocker.patch(
+        "protostar.documents.pyproject_layout.join_sections", return_value=text
+    )
+    reasons: list[str] = []
+    with caplog.at_level(logging.WARNING, logger="protostar"):
+        result = place_new_sections(original, document, reasons.append)
+    assert result == tomlkit.dumps(document)
+    return result, reasons
+
+
+def test_a_placement_that_changes_data_logs_a_parity_mismatch(
+    mocker, caplog: pytest.LogCaptureFixture
+) -> None:
+    _, reasons = _place_with_join_returning(mocker, CORRUPTED, caplog)
+
+    reason = "AST Parity mismatch while placing new pyproject.toml sections"
+    assert reasons == [reason]
+    assert [record.message for record in caplog.records] == [
+        f"{reason}; falling back to direct AST dump."
+    ]
+
+
+def test_a_placement_that_is_not_toml_logs_the_error(
+    mocker, caplog: pytest.LogCaptureFixture
+) -> None:
+    _, reasons = _place_with_join_returning(mocker, "[broken", caplog)
+
+    assert len(reasons) == 1
+    assert reasons[0].startswith(
+        "Validation error while placing new pyproject.toml sections ("
+    )
+    assert [record.message for record in caplog.records] == [
+        f"{reasons[0]}; falling back to direct AST dump."
+    ]
+
+
+# ---- placing and removing tables in a user's file, to the byte ----
+
+_RULE = BANNER[0]
+_CONFIGURATION = "\n".join(BANNER)
+
+
+def _ruff_table() -> tomlkit.items.Table:
+    return tomlkit.parse("[tool.ruff]\nline-length = 88\n")["tool"]["ruff"]
+
+
+def _add_ruff(document: tomlkit.TOMLDocument) -> None:
+    if "tool" not in document:
+        document["tool"] = tomlkit.table(is_super_table=True)
+    document["tool"]["ruff"] = _ruff_table()
+
+
+def _placed(original: str, *edits) -> str:
+    document = tomlkit.parse(original)
+    for edit in edits:
+        edit(document)
+    return place_new_sections(original, document)
+
+
+def test_a_root_table_that_sorts_first_goes_above_every_tool() -> None:
+    def add_project(document: tomlkit.TOMLDocument) -> None:
+        document["project"] = tomlkit.parse('[project]\nname = "x"\n')["project"]
+
+    assert _placed("[tool.ruff]\nline-length = 88\n", add_project) == (
+        '[project]\nname = "x"\n\n[tool.ruff]\nline-length = 88\n'
+    )
+
+
+def test_a_new_tool_first_in_a_file_brings_the_banner_and_its_header() -> None:
+    assert _placed("[tool.mypy]\nstrict = true\n", _add_ruff) == (
+        f"{_CONFIGURATION}\n\n# ---- Ruff ---- #\n\n"
+        "[tool.ruff]\nline-length = 88\n\n[tool.mypy]\nstrict = true\n"
+    )
+
+
+def test_a_new_tool_first_in_a_file_that_has_its_banner_further_down_adds_only_a_header() -> (
+    None
+):
+    original = (
+        f"[tool.zzz]\nx = 1\n\n{_CONFIGURATION}\n\n# ---- Mypy ---- #\n"
+        "[tool.mypy]\nstrict = true\n"
+    )
+
+    assert _placed(original, _add_ruff) == (
+        f"# ---- Ruff ---- #\n\n[tool.ruff]\nline-length = 88\n\n{original}"
+    )
+
+
+def test_a_banner_rule_alone_is_not_the_banner() -> None:
+    original = f'[project]\nname = "x"\n\n{_RULE}\n\n[tool.black]\nx = 1\n'
+
+    merged = _placed(original, _add_ruff)
+
+    assert merged.count("# Tool Configuration") == 1
+    assert merged.index("# Tool Configuration") < merged.index("[tool.ruff]")
+
+
+def test_a_title_further_down_is_the_banner_already_there() -> None:
+    original = (
+        '[project]\nname = "x"\n\n[tool.black]\nx = 1\n\n# Tool Configuration\n\n'
+        "[tool.zz]\nv = 1\n"
+    )
+
+    assert _RULE not in _placed(original, _add_ruff)
+
+
+def test_a_comment_block_above_a_table_moves_with_it_whole() -> None:
+    original = '[project]\nname = "x"\n\n# one\n  # two\n[tool.black]\nx = 1\n'
+
+    merged = _placed(original, _add_ruff)
+
+    assert merged.endswith("line-length = 88\n\n# one\n  # two\n[tool.black]\nx = 1\n")
+
+
+def test_a_comment_that_is_the_whole_section_moves_with_its_table() -> None:
+    assert _placed("# about black\n[tool.black]\nx = 1\n", _add_ruff) == (
+        f"\n{_CONFIGURATION}\n\n# ---- Ruff ---- #\n\n"
+        "[tool.ruff]\nline-length = 88\n\n# about black\n[tool.black]\nx = 1\n"
+    )
+
+
+def test_taking_comments_leaves_the_rest_of_the_section_and_returns_the_block() -> None:
+    kept = Section(("tool", "a"), "a = 1\n\n# one\n# two\n")
+    only_comments = Section((), "# one\n# two\n")
+    crlf = Section((), "x = 1\r\n# one\r\n")
+    no_comment = Section((), "x = 1\n")
+
+    assert _take_leading_comments(kept) == "# one\n# two\n"
+    assert kept.body == "a = 1\n\n"
+    assert _take_leading_comments(only_comments) == "# one\n# two\n"
+    assert only_comments.body == ""
+    assert _take_leading_comments(crlf) == "# one\r\n"
+    assert crlf.body == "x = 1\r\n"
+    assert _take_leading_comments(no_comment) == ""
+    assert no_comment.body == "x = 1\n"
+
+
+def test_comments_above_a_managed_header_stay_where_they_are() -> None:
+    section = Section(("project",), "x = 1\n# note\n", "\n# ---- Ruff ---- #\n")
+
+    assert _take_leading_comments(section) == ""
+    assert section.body == "x = 1\n# note\n"
+
+
+def test_an_indented_comment_above_a_table_moves_with_it() -> None:
+    merged = _placed("  # indented\n[tool.black]\nx = 1\n", _add_ruff)
+
+    assert merged.endswith("\n\n  # indented\n[tool.black]\nx = 1\n")
+
+
+@pytest.mark.parametrize("trailing", ["   ", "\t", " # MAX", " # X"])
+def test_what_the_previous_table_ends_with_is_never_trimmed(trailing: str) -> None:
+    original = f'[project]\nname = "x"{trailing}\n\n[tool.zz]\nv = 1\n'
+
+    merged = _placed(original, _add_ruff)
+
+    assert merged.startswith(f'[project]\nname = "x"{trailing}\n\n{_RULE}\n')
+
+
+def test_a_table_in_the_other_newline_style_is_converted_whole() -> None:
+    crlf = tomlkit.parse("[tool.ruff]\r\nline-length = 88\r\n")["tool"]["ruff"]
+
+    def add(document: tomlkit.TOMLDocument) -> None:
+        document["tool"] = tomlkit.table(is_super_table=True)
+        document["tool"]["ruff"] = crlf
+
+    lf_file = _placed('[project]\nname = "x"\n', add)
+    crlf_file = _placed('[project]\r\nname = "x"\r\n', add)
+
+    assert "\r" not in lf_file
+    assert lf_file.endswith("[tool.ruff]\nline-length = 88\n")
+    assert crlf_file.replace("\r\n", "") == crlf_file.replace("\r", "").replace(
+        "\n", ""
+    )
+    assert crlf_file.endswith("[tool.ruff]\r\nline-length = 88\r\n")
+
+
+def test_tables_defined_out_of_order_keep_their_place_when_a_tool_is_added() -> None:
+    original = (
+        '[project]\nname="x"\n\n[tool.ruff]\na=1\n\n[project.scripts]\nx="y"\n\n'
+        '[tool.ruff.lint]\nselect=["E"]\n'
+    )
+
+    def add_mypy(document: tomlkit.TOMLDocument) -> None:
+        document["tool"]["mypy"] = tomlkit.parse("[tool.mypy]\nstrict = true\n")[
+            "tool"
+        ]["mypy"]
+
+    assert _placed(original, add_mypy) == (
+        f"{original}\n{_CONFIGURATION}\n\n# ---- Mypy ---- #\n\n"
+        "[tool.mypy]\nstrict = true\n"
+    )
+
+
+def test_three_pieces_of_one_table_each_keep_their_own_spacing_when_a_tool_is_added() -> (
+    None
+):
+    original = (
+        '[project]\nname = "x"\n\n[tool.black]\nb = 1\n\n[project.scripts]\n'
+        'x = "y"\n\n\n\n[tool.zz]\nz = 1\n\n[project.urls]\nu = "v"\n\n'
+        "[tool.yy]\ny = 1\n"
+    )
+
+    def add_last(document: tomlkit.TOMLDocument) -> None:
+        document["tool"]["zzz"] = tomlkit.parse("[tool.zzz]\nv = 1\n")["tool"]["zzz"]
+
+    assert _placed(original, add_last) == f"{original}\n[tool.zzz]\nv = 1\n"
+
+
+@pytest.mark.parametrize(
+    ("present", "first", "second"),
+    _ADD_PAIRS,
+    ids=lambda v: "+".join(v) if isinstance(v, tuple) else v,
+)
+def test_tables_added_by_one_merge_land_as_if_added_one_at_a_time(
+    present: tuple[str, ...], first: str, second: str
+) -> None:
+    def add_both(order: tuple[str, str]):
+        def edit(document: tomlkit.TOMLDocument) -> None:
+            if "tool" not in document:
+                document["tool"] = tomlkit.table(is_super_table=True)
+            for key in order:
+                table = tomlkit.parse(
+                    _TABLE_FOR.get(key, f"[tool.{key}]\nvalue = 1\n")
+                )["tool"][key]
+                document["tool"][key] = table
+
+        return edit
+
+    original = _canonical(present)
+
+    assert (
+        _placed(original, add_both((first, second)))
+        == _placed(original, add_both((second, first)))
+        == _canonical((*present, first, second))
+    )
+
+
+def test_an_edited_table_keeps_its_sort_position_and_its_header() -> None:
+    original = _canonical(("ruff", "mypy"))
+
+    def edit(document: tomlkit.TOMLDocument) -> None:
+        document["tool"]["ruff"]["line-length"] = 100
+
+    def add_pytest(document: tomlkit.TOMLDocument) -> None:
+        document["tool"]["pytest"] = tomlkit.parse(_TABLE_FOR["pytest"])["tool"][
+            "pytest"
+        ]
+
+    merged = _placed(original, edit, add_pytest)
+
+    assert merged == format_document(
+        tomlkit.parse(_canonical(("ruff", "mypy", "pytest")).replace("= 88", "= 100"))
+    )
+
+
+def test_an_edited_table_that_sorts_late_still_leaves_new_tables_before_it() -> None:
+    original = '[project]\nname = "x"\n\n[tool.black]\nline-length = 99\n'
+
+    def edit(document: tomlkit.TOMLDocument) -> None:
+        document["tool"]["black"]["line-length"] = 100
+
+    merged = _placed(original, edit, _add_ruff)
+
+    assert merged.index("[tool.ruff]") < merged.index("[tool.black]")
+    assert merged.endswith("[tool.black]\nline-length = 100\n")
+
+
+def test_tables_added_in_one_merge_are_placed_by_rank_not_by_arrival() -> None:
+    def add_mypy_then_ruff(document: tomlkit.TOMLDocument) -> None:
+        document["tool"] = tomlkit.table(is_super_table=True)
+        document["tool"]["mypy"] = tomlkit.parse("[tool.mypy]\nstrict = true\n")[
+            "tool"
+        ]["mypy"]
+        document["tool"]["ruff"] = _ruff_table()
+
+    assert _placed('[project]\nname = "x"\n', add_mypy_then_ruff) == (
+        f'[project]\nname = "x"\n\n{_CONFIGURATION}\n\n# ---- Ruff ---- #\n\n'
+        "[tool.ruff]\nline-length = 88\n\n# ---- Mypy ---- #\n\n"
+        "[tool.mypy]\nstrict = true\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "dangling",
+    [
+        "# Tool Configuration\n",
+        f"{_CONFIGURATION}\n",
+        f"{_CONFIGURATION}\n\n# ---- Ruff ---- #\n",
+        "# ---- Ruff ---- #\n",
+    ],
+)
+def test_a_banner_or_header_left_at_the_end_of_a_file_labels_the_table_added_after_it(
+    dangling: str,
+) -> None:
+    original = f'[project]\nname = "x"\n\n{dangling}'
+
+    assert _placed(original, _add_ruff) == (
+        f'[project]\nname = "x"\n\n{_CONFIGURATION}\n\n# ---- Ruff ---- #\n\n'
+        "[tool.ruff]\nline-length = 88\n"
+    )
+
+
+# ---- removing tables ----
+
+
+def _removed(original: str, *tables: str) -> str:
+    document = tomlkit.parse(original)
+    for table in tables:
+        if table in document:
+            del document[table]
+        else:
+            del document["tool"][table]
+    return place_new_sections(original, document)
+
+
+def test_removing_the_first_table_leaves_the_rest_as_they_were() -> None:
+    assert _removed(REMOVAL_ORIGINAL, "project") == (
+        "[tool.ruff]\nline-length = 88\n\n[tool.example]\ndatabase = true\n\n"
+        "# ---- Protostar ---- #\n\n[tool.protostar]\nversion = 1\n"
+    )
+
+
+def test_removing_the_last_table_leaves_no_header_dangling() -> None:
+    assert _removed(REMOVAL_ORIGINAL, "protostar") == REMOVAL_ORIGINAL.replace(
+        "\n# ---- Protostar ---- #\n\n[tool.protostar]\nversion = 1\n", ""
+    )
+
+
+def test_removing_an_untitled_table_keeps_the_header_that_announced_it() -> None:
+    original = (
+        '[project]\nname = "x"\n\n# ---- Ruff ---- #\n\n[tool.example]\n'
+        "database = true\n\n[tool.zzz]\nx = 1\n"
+    )
+
+    assert _removed(original, "example") == (
+        '[project]\nname = "x"\n\n# ---- Ruff ---- #\n\n[tool.zzz]\nx = 1\n'
+    )
+
+
+@pytest.mark.parametrize("trailing", ["   ", " # MAX", " # X"])
+def test_removing_a_table_does_not_trim_what_the_one_before_ends_with(
+    trailing: str,
+) -> None:
+    original = (
+        f'[project]\nname = "x"\n\n[tool.zz]\nv = 1{trailing}\n\n[tool.yy]\nv = 2\n'
+    )
+
+    assert _removed(original, "yy") == (
+        f'[project]\nname = "x"\n\n[tool.zz]\nv = 1{trailing}\n'
     )

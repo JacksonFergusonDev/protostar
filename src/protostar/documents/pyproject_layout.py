@@ -142,11 +142,9 @@ def _split_tail(text: str) -> tuple[str, str]:
     """Separates trailing managed lines (and the blanks around them) from a section."""
     lines = text.split("\n")
     index = len(lines)
-    found = False
     while index > 0 and (not lines[index - 1].strip() or _is_managed(lines[index - 1])):
-        found = found or _is_managed(lines[index - 1])
         index -= 1
-    if not found:
+    if not any(_is_managed(line) for line in lines[index:]):
         return text, ""
     cut = sum(len(line) + 1 for line in lines[:index])
     return text[:cut], text[cut:]
@@ -272,8 +270,7 @@ def insert_section(sections: list[Section], new: Section, index: int) -> None:
     file's own newline style is used for anything written.
     """
     newline = _newline(sections)
-    if newline != "\n":
-        new.body = new.body.replace("\n", newline)
+    new.body = new.body.replace("\n", newline)
     if index > 0:
         previous = sections[index - 1]
         if previous.text and not previous.text.endswith("\n"):
@@ -308,10 +305,10 @@ def compose_children(
         root = tomlkit.document()
         holder: Table | TOMLDocument = root
         for name in path[:-1]:
-            table = tomlkit.table(is_super_table=True)
+            table = tomlkit.table()
             holder.append(name, table)
             holder = table
-        middle = tomlkit.table(is_super_table=True)
+        middle = tomlkit.table()
         middle.append(key, children[key])
         holder.append(path[-1], middle)
         parts.append(_trim(tomlkit.dumps(root)))
@@ -351,15 +348,15 @@ def _take_leading_comments(previous: Section) -> str:
     """
     if previous.tail:
         return ""
-    lines = previous.body.split("\n")
-    end = len(lines) - 1 if lines[-1] == "" else len(lines)
+    lines = previous.body.removesuffix("\n").split("\n")
+    end = len(lines)
     start = end
     while start > 0 and lines[start - 1].lstrip().startswith("#"):
         start -= 1
     if start == end:
         return ""
-    previous.body = "\n".join(lines[:start]) + ("\n" if start else "")
-    return "\n".join(lines[start:end]) + "\n"
+    previous.body = "".join(line + "\n" for line in lines[:start])
+    return "".join(line + "\n" for line in lines[start:end])
 
 
 def _insert_ranked(sections: list[Section], new: Section) -> None:
@@ -372,18 +369,21 @@ def _insert_ranked(sections: list[Section], new: Section) -> None:
     """
     newline = _newline(sections)
     key = section_rank(new.path)
-    index = 1 + max(
-        (i for i, s in enumerate(sections) if section_rank(s.path) <= key), default=-1
+    at_or_below = (
+        i
+        for i, s in enumerate(sections)
+        # No added table ties with a kept one: equal ranks mean equal paths, and a
+        # merge extends a table's first piece instead of adding another.
+        if section_rank(s.path) <= key  # pragma: no mutate
     )
+    index = 1 + max(at_or_below, default=-1)
     previous = sections[index - 1] if index else None
     following = index < len(sections)
     if previous is not None and following:
         sections[index].body = _take_leading_comments(previous) + sections[index].body
     in_file = {line.strip() for line in join_sections(sections).splitlines()}
 
-    banner, headers = (
-        _announced(previous.tail) if previous and following else (False, [])
-    )
+    banner, headers = _announced(previous.tail) if previous else (False, [])
     title = section_title(new.path)
     lead_banner, lead_headers = False, []
     if title is not None:
@@ -398,7 +398,7 @@ def _insert_ranked(sections: list[Section], new: Section) -> None:
         elif BANNER[1] not in in_file and lead_headers:
             lead_banner = True
 
-    body = _trim(new.body).replace("\r\n", "\n").replace("\n", newline)
+    body = _trim(new.body.replace("\r\n", "\n")).replace("\n", newline)
     new.body = body + newline
     new.tail = _decoration(newline, banner, headers) if following else ""
 
@@ -408,7 +408,7 @@ def _insert_ranked(sections: list[Section], new: Section) -> None:
             previous.body = previous.body.rstrip("\r\n") + newline
         previous.tail = lead
     elif lead_banner or lead_headers:
-        new.body = lead.lstrip("\r\n") + new.body
+        new.body = lead.lstrip() + new.body
     sections.insert(index, new)
 
 
@@ -427,15 +427,14 @@ def _remove_section(
     """
     removed = before[index]
     predecessor = next(
-        (continued[i] for i in range(index - 1, -1, -1) if i in continued), None
+        (continued[i] for i in reversed(range(index)) if i in continued), None
     )
     if predecessor is None:
         return
     newline = _newline(kept)
     _take_leading_comments(predecessor)
     banner, headers = _announced(predecessor.tail)
-    title = section_title(removed.path)
-    own = f"# ---- {title} ---- #" if title is not None else None
+    own = f"# ---- {section_title(removed.path)} ---- #"  # untitled: matches no header
     next_banner, next_headers = _announced(removed.tail)
     headers = [
         header
@@ -483,31 +482,30 @@ def place_new_sections(
         matches = by_path.get(section.path, [])
         if position < len(matches):
             original_section = matches[position]
-            if section.body.rstrip() == original_section.body.rstrip():
-                kept.append(original_section)
-            else:
-                trailing = original_section.body[len(original_section.body.rstrip()) :]
-                kept.append(
-                    Section(
-                        section.path,
-                        section.body.rstrip() + trailing,
-                        original_section.tail,
-                    )
+            trailing = original_section.body[len(original_section.body.rstrip()) :]
+            kept.append(
+                Section(
+                    section.path,
+                    section.body.rstrip() + trailing,
+                    original_section.tail,
                 )
+            )
             continued[before.index(original_section)] = kept[-1]
         elif not _keyless(section.path):
             added.append(section)
     removed = [
         index
         for index, section in enumerate(before)
-        if index not in continued and not _keyless(section.path)
+        # A merge keeps every comment and blank line, so a keyless section is always
+        # matched; the guard only says that removing one is not a decision.
+        if index not in continued and not _keyless(section.path)  # pragma: no mutate
     ]
 
     if not added and not removed:
         return raw
     for index in removed:
         _remove_section(kept, before, continued, index)
-    for section in sorted(added, key=lambda s: section_rank(s.path)):
+    for section in added:
         _insert_ranked(kept, section)
 
     text = join_sections(kept)
