@@ -470,10 +470,14 @@ def select_dependencies(
         # Kept: the local requirement stands for the request from now on, and
         # a deleted one stays deleted as the request's materialization.
         # Nothing listed means a record exists (an unowned request is listed or
-        # settled earlier), so no mutation of the record test can change the result.
+        # settled earlier), so the test below can't change the result.
         materialized = (
-            entries[0] if entries else record.materialized if record else request
-        )  # pragma: no mutate
+            entries[0]
+            if entries
+            else record.materialized
+            if record  # pragma: no mutate
+            else request
+        )
         kept.append(
             DependencyState("pyproject.toml", group, *identity, request, materialized)
         )
