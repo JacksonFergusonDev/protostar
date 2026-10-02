@@ -36,8 +36,14 @@ Widen mutation testing to the rest of the engine, then run it on a schedule, rec
 Add each module (or a small group) in its own PR:
 
 1. Add it to `source_paths`.
-1. Run it through the manual workflow, and note its runtime and survivors in the PR.
+1. Run it through the manual workflow, and note its survivors in the PR.
 1. Kill the survivors worth killing, following #407–#409: strengthen tests, and mark only mutants that cannot change behavior with `# pragma: no mutate` and a reason on the line above.
+1. Run the workflow again on the finished tests, and report the runtime of both runs. The second one is what Phase 3 plans with: a surviving mutant runs every test that reaches its function, while a killed one stops at its first failure, so a first run can take ten times longer (`appends` took 76 minutes before its survivor pass and 7 after, #415).
+
+Before the survivor pass, check for two things that hide mutants:
+
+- **State built before a test runs.** mutmut forks each mutant from a process that has already imported the tests and run the module once, so an `lru_cache` in the module (like `sync_state`'s decoders) or an object built at import in a test file means the mutated code never runs. Clear caches in an autouse fixture (#409) and build test objects in fixtures (#415).
+- **Local runs on macOS.** Forked workers there crash on mutants in widely reached functions, which then count as suspicious instead of surviving. Trust the workflow's counts.
 
 The target set, roughly in order of value:
 
@@ -49,7 +55,7 @@ Already covered: `fs_transaction`, `journal`, `jsonc_ast`, `merge`, `text_merge`
 ## Phase 3: Record scores on `gh-pages` on a schedule
 
 - **Report:** give `scripts/mutation_report.py` JSON output for one history entry and for the shields endpoint file.
-- **Workflow:** add a schedule to `mutation.yml` with the change check above. Choose how often it runs from Phase 2's measured runtime: nightly if a full run is short enough, less often if not. Add a publish job that runs only when every module succeeded. It appends to the history and writes the latest-score file on `gh-pages`, rebases and retries its push (the benchmark workflow pushes to the same branch), then calls `pages.yml` as `benchmark.yml` does.
+- **Workflow:** add a schedule to `mutation.yml` with the change check above. Choose how often it runs from Phase 2's runtimes after each survivor pass: nightly if a full run is short enough, less often if not. Add a publish job that runs only when every module succeeded. It appends to the history and writes the latest-score file on `gh-pages`, rebases and retries its push (the benchmark workflow pushes to the same branch), then calls `pages.yml` as `benchmark.yml` does.
 - **Pages:** `scripts/prepare_pages.py` copies only `benchmarks/data.js` from `gh-pages` today; teach it to carry the mutation files too.
 - **Docs:** document mutation testing and its schedule in `docs/developer/testing.md`, including that GitHub disables scheduled workflows in a public repo after 60 days without commits, and that `gh workflow enable mutation.yml` turns it back on.
 

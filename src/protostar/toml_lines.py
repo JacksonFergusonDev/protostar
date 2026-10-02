@@ -28,8 +28,7 @@ class _Entry:
     value_start: int
     value_end: int
     # The body of a value that is one multi-line string, when it is.
-    string_start: int | None = None
-    string_end: int | None = None
+    string: tuple[int, int] | None = None
 
 
 class TomlLineIndex:
@@ -57,7 +56,9 @@ class TomlLineIndex:
         A table only defined implicitly, such as ``tool`` under
         ``[tool.ruff]``, is at its first key or header.
         """
-        entry = self._entries.get(path)
+        # A shortcut: the scan below finds the same line, since a key is
+        # indexed no later than anything nested in it.
+        entry = self._entries.get(path)  # pragma: no mutate
         if entry is not None:
             return self._line(entry.key_start)
         starts = [
@@ -76,7 +77,7 @@ class TomlLineIndex:
         if entry is None:
             return None
         found = self._text.find(needle, entry.value_start, entry.value_end)
-        return self._line(found if found >= 0 else entry.key_start)
+        return self._line(entry.key_start if found == -1 else found)
 
     def line_in_string(
         self, path: tuple[str, ...], inner: tuple[str, ...]
@@ -97,13 +98,13 @@ class TomlLineIndex:
         entry = self._entries.get(path)
         if entry is None:
             return None
-        if entry.string_start is None or entry.string_end is None:
+        if entry.string is None:
             return self._line(entry.key_start)
-        body = self._text[entry.string_start : entry.string_end]
-        inner_line = TomlLineIndex(body).line_of(inner)
+        start, end = entry.string
+        inner_line = TomlLineIndex(self._text[start:end]).line_of(inner)
         if inner_line is None:
             return self._line(entry.key_start)
-        return self._line(entry.string_start) + inner_line - 1
+        return self._line(start) + inner_line - 1
 
     def _line(self, offset: int) -> int:
         return bisect.bisect_right(self._line_starts, offset)
@@ -133,15 +134,7 @@ class TomlLineIndex:
                 self._entries.setdefault(
                     (*table, *keys[: depth + 1]), _Entry(pos, pos, pos)
                 )
-            self._entries.setdefault(
-                path,
-                _Entry(
-                    pos,
-                    value_start,
-                    value_end,
-                    *(string if string else (None, None)),
-                ),
-            )
+            self._entries.setdefault(path, _Entry(pos, value_start, value_end, string))
             pos = value_end
 
 
@@ -152,20 +145,18 @@ def _skip_spaces(text: str, pos: int) -> int:
 
 
 def _skip_blank(text: str, pos: int) -> int:
-    """Skips whitespace, newlines, and comments."""
-    while pos < len(text):
-        if text[pos] in " \t\r\n":
-            pos += 1
-        elif text[pos] == "#":
-            pos = _line_end(text, pos)
-        else:
-            break
+    """Skips whitespace and newlines.
+
+    A comment is left to the caller, which skips it as a line with no key.
+    """
+    while pos < len(text) and text[pos] in " \t\r\n":
+        pos += 1
     return pos
 
 
 def _line_end(text: str, pos: int) -> int:
     end = text.find("\n", pos)
-    return len(text) if end < 0 else end + 1
+    return len(text) if end == -1 else end + 1
 
 
 def _read_key(text: str, pos: int) -> tuple[tuple[str, ...], int] | None:
@@ -227,16 +218,15 @@ def _scan_value(text: str, pos: int) -> tuple[int, tuple[int, int] | None]:
     while pos < len(text):
         quotes = text[pos : pos + 3]
         if quotes in _MULTILINE_QUOTES:
+            # TOML drops a newline right after the opening quotes. It stays
+            # in the body, whose lines are counted from the opening line.
             body = pos + 3
-            if text.startswith("\r\n", body):
-                body += 2
-            elif text.startswith("\n", body):
-                body += 1
-            close = _multiline_end(text, pos + 3, quotes)
+            close = _multiline_end(text, body, quotes)
             if pos == start:
                 string = (body, close)
             pos = min(len(text), close + 3)
-            while pos < len(text) and text[pos] == quotes[0]:
+            # Up to two more quotes end the string as part of its content.
+            while pos < len(text) and text[pos] in quotes:
                 pos += 1
         elif text[pos] in "\"'":
             # An unterminated string ends with its line.
@@ -250,7 +240,7 @@ def _scan_value(text: str, pos: int) -> tuple[int, tuple[int, int] | None]:
             pos += 1
         elif text[pos] == "#":
             end = text.find("\n", pos)
-            pos = len(text) if end < 0 else end
+            pos = len(text) if end == -1 else end
         elif text[pos] == "\n" and depth <= 0:
             return pos, string
         else:
@@ -260,9 +250,11 @@ def _scan_value(text: str, pos: int) -> tuple[int, tuple[int, int] | None]:
 
 def _multiline_end(text: str, pos: int, quotes: str) -> int:
     """Returns the offset of the quotes closing a multi-line string."""
-    while (found := text.find(quotes, pos)) >= 0:
+    while (found := text.find(quotes, pos)) != -1:
         if quotes == '"""':
-            backslashes = len(text[:found]) - len(text[:found].rstrip("\\"))
+            prefix = text[:found]
+            # Only the count's parity is read, which + would not change.
+            backslashes = len(prefix) - len(prefix.rstrip("\\"))  # pragma: no mutate
             if backslashes % 2:
                 pos = found + 1
                 continue

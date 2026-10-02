@@ -1,0 +1,37 @@
+name: Nightly Report
+
+# Kept apart from Nightly so that workflow needs only read access when a
+# release calls it. A release's run is the Release workflow's, so it never
+# reaches here.
+on:
+  workflow_run:
+    workflows: ["Nightly"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: File the outcome
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: >-
+      github.event.workflow_run.head_branch == 'main' &&
+      contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion)
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Open, update, or close the tracking issues
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO: ${{ github.repository }}
+        RUN_ID: ${{ github.event.workflow_run.id }}
+        SHA: ${{ github.event.workflow_run.head_sha }}
+      run: python3 scripts/nightly_report.py --repo "$REPO" --run-id "$RUN_ID" --sha "$SHA"

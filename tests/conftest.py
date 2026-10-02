@@ -26,12 +26,20 @@ def settled_pilot(monkeypatch):
     Pilot's default pause inserts one barrier per widget. A child can post
     to a parent after its barrier passed, and scrolls run after rendering.
     Wait for those phases too, but leave background workers to the test.
+
+    A key press is followed by the same settle, one key at a time. Pilot's own
+    press waits only on the widgets that existed before the key landed, so a
+    pushed screen's nested children, a widget's forwarded key, and the next
+    key of the same press would otherwise race the assertion. Windows reports
+    idleness after one sleep (its process clock ticks every 15.6ms), which is
+    where those races showed.
     """
     import asyncio
 
     from textual.pilot import Pilot
 
     pause = Pilot.pause
+    press = Pilot.press
 
     async def idle(*args, **kwargs):
         # Every opted-in test exercises immediate idleness: correctness must
@@ -48,8 +56,15 @@ def settled_pilot(monkeypatch):
                     break
                 await pause(self, 0)
 
+    async def settled_press(self, *keys):
+        for key in keys:
+            await press(self, key)
+            await self.pause()
+
     monkeypatch.setattr(Pilot, "pause", settled)
+    monkeypatch.setattr(Pilot, "press", settled_press)
     monkeypatch.setattr("textual.pilot.wait_for_idle", idle)
+    monkeypatch.setattr("textual.app.wait_for_idle", idle)
 
 
 @pytest.fixture(autouse=True)
