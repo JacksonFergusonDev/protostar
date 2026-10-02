@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790916685287,
+  "lastUpdate": 1790957536461,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20847,6 +20847,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1270.56,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "de5d8a65af940115ff3eb13e11b7523c833f05ab",
+          "message": "chore(hooks): tighten pre-commit config\n\n- Trigger zensical build on overrides/ changes\n- Keep whitespace fixers out of tests/snapshots/ fixtures\n- Run mypy when pyproject.toml or uv.lock change\n- Drop rumdl fmt, redundant with rumdl check --fix\n- Use ruff --force-exclude instead of duplicating its excludes",
+          "timestamp": "2026-10-02T09:09:37-07:00",
+          "tree_id": "c7f9bada1795625a98f6e36e4fc38e2fd84512fe",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/de5d8a65af940115ff3eb13e11b7523c833f05ab"
+        },
+        "date": 1790957534299,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 136.45,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 936.56,
             "unit": "ms"
           }
         ]
