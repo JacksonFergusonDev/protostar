@@ -1,0 +1,199 @@
+name: Platforms
+
+# The pytest suite and the template hooks smoke test across the platforms the
+# caller names. Pull requests run the combinations most likely to break, Nightly
+# runs every combination, and a release smoke-tests the wheel it will publish.
+on:
+  workflow_call:
+    inputs:
+      tests:
+        description: 'pytest matrix as JSON: "os" and "python" axes, plus "coverage": true on at most one entry. Empty skips the suite.'
+        required: false
+        default: ""
+        type: string
+      smoke:
+        description: 'Template hooks smoke matrix as JSON: "os", "python", and "template" axes. Empty skips it.'
+        required: false
+        default: ""
+        type: string
+      retry:
+        description: Retry a failed test or smoke run once, passing the job when the retry passes and recording what flaked
+        required: false
+        default: false
+        type: boolean
+      wheel-artifact:
+        description: Name of an artifact in this run holding the wheel to smoke-test, in place of the checkout
+        required: false
+        default: ""
+        type: string
+    secrets:
+      CODECOV_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }} / Python ${{ matrix.python }}
+    if: inputs.tests != ''
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: ${{ inputs.retry && 10 || 6 }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(inputs.tests) }}
+
+    env:
+      PYTHONIOENCODING: "utf-8"
+
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+      with:
+        enable-cache: true
+        python-version: ${{ matrix.python }}
+
+    - name: Install dependencies
+      run: |
+        uv sync --only-group ci --locked
+        uv pip install pytest-github-actions-annotate-failures
+
+    - name: Mock direnv
+      uses: ./.github/actions/mock-direnv
+
+    - name: Run tests with coverage # (for Codecov)
+      if: matrix.coverage
+      run: uv run pytest -n auto --dist worksteal --durations=25 -o faulthandler_timeout=90 --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+
+    - name: Run tests # (without coverage to avoid overhead on non-Codecov runs)
+      if: ${{ !matrix.coverage }}
+      shell: bash
+      env:
+        RETRY: ${{ inputs.retry }}
+        FLAKY_LIST: flaky-tests.txt
+      run: |
+        pytest=(uv run pytest -n auto --dist worksteal --durations=25 -o faulthandler_timeout=90)
+        if "${pytest[@]}"; then
+          exit 0
+        fi
+        if [ "$RETRY" != true ]; then
+          exit 1
+        fi
+
+        # A test that fails and then passes alone is flaky, not broken: record
+        # it for the nightly report instead of failing the run.
+        uv run --no-sync python -c 'import json; print("\n".join(sorted(json.load(open(".pytest_cache/v/cache/lastfailed")))))' > "$FLAKY_LIST"
+        echo "Retrying $(wc -l < "$FLAKY_LIST") failed test(s) once"
+        "${pytest[@]}" --last-failed --last-failed-no-failures none
+        {
+          echo "### Flaky tests"
+          echo
+          echo "These failed, then passed when retried:"
+          echo
+          # shellcheck disable=SC2016 # the backticks are Markdown
+          sed 's/^/- `/; s/$/`/' "$FLAKY_LIST"
+        } >> "$GITHUB_STEP_SUMMARY"
+        echo "::warning title=Flaky tests::$(wc -l < "$FLAKY_LIST") test(s) passed only when retried; see the job summary"
+
+    - name: Upload flaky tests
+      if: ${{ hashFiles('flaky-tests.txt') != '' }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: flaky-tests-${{ matrix.os }}-py${{ matrix.python }}
+        path: flaky-tests.txt
+        retention-days: 30
+
+    - name: Upload coverage to Codecov
+      if: matrix.coverage
+      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: coverage.xml
+        disable_search: true
+        name: coverage-ubuntu-py314
+        fail_ci_if_error: true
+
+    - name: Upload test analytics to Codecov
+      if: ${{ matrix.coverage && !cancelled() }}
+      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: junit.xml
+        disable_search: true
+        report_type: test_results
+        name: test-results-ubuntu-py314
+
+  template-hooks-smoke:
+    name: Template Hooks Smoke (${{ matrix.os }} / Python ${{ matrix.python }} / ${{ matrix.template }})
+    if: inputs.smoke != ''
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: ${{ inputs.retry && 15 || 10 }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(inputs.smoke) }}
+
+    env:
+      GIT_TERMINAL_PROMPT: "0"
+      GCM_INTERACTIVE: "never"
+      PREK_COLOR: "never"
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+      with:
+        enable-cache: true
+        python-version: ${{ matrix.python }}
+
+    - name: Download the release wheel
+      if: inputs.wheel-artifact != ''
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        name: ${{ inputs.wheel-artifact }}
+        path: dist
+
+    - name: Install Protostar
+      shell: bash
+      env:
+        WHEEL_ARTIFACT: ${{ inputs.wheel-artifact }}
+      run: |
+        if [ -n "$WHEEL_ARTIFACT" ]; then
+          uv tool install dist/*.whl
+        else
+          uv tool install --editable .
+        fi
+        uv tool install prek
+
+    - name: Mock direnv
+      uses: ./.github/actions/mock-direnv
+
+    - name: Configure Git Identity
+      shell: bash
+      run: |
+        git config --global user.name "Protostar Bot"
+        git config --global user.email "bot@protostar.dev"
+        git config --global init.defaultBranch main
+        git config --global core.autocrlf false
+        git config --global credential.helper ""
+
+    - name: Verify first commit triggers prek hooks
+      shell: bash
+      env:
+        RETRY: ${{ inputs.retry }}
+        TEMPLATE: ${{ matrix.template }}
+        PYTHON: ${{ matrix.python }}
+      run: |
+        smoke=(.github/scripts/template-hooks-smoke.sh "$TEMPLATE" "$PYTHON")
+        if "${smoke[@]}"; then
+          exit 0
+        fi
+        if [ "$RETRY" != true ]; then
+          exit 1
+        fi
+        # Downloads from PyPI and GitHub fail now and then; a real break fails twice.
+        echo "::warning title=Smoke test retried::$TEMPLATE failed once and was retried; see the first attempt's output above"
+        "${smoke[@]}"

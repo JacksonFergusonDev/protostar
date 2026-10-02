@@ -96,182 +96,32 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
-  test:
-    name: Test on ${{ matrix.os }} / Python ${{ matrix.python-version }}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 6
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.12", "3.13", "3.14"]
-        include:
-          - os: ubuntu-latest
-            python-version: "3.14"
-            coverage: true
-
-    env:
-      PYTHONIOENCODING: "utf-8"
-
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
-      with:
-        enable-cache: true
-        python-version: ${{ matrix.python-version }}
-
-    - name: Install dependencies
-      run: |
-        uv sync --only-group ci --locked
-        uv pip install pytest-github-actions-annotate-failures
-
-    - name: Mock direnv
-      uses: ./.github/actions/mock-direnv
-
-    - name: Run tests with coverage # (for Codecov)
-      if: matrix.coverage
-      run: uv run pytest -n auto --dist worksteal --durations=25 -o faulthandler_timeout=90 --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
-
-    - name: Run tests # (without coverage to avoid overhead on non-Codecov runs)
-      if: ${{ !matrix.coverage }}
-      shell: bash
-      run: uv run pytest -n auto --dist worksteal --durations=25 -o faulthandler_timeout=90
-
-    - name: Upload coverage to Codecov
-      if: matrix.coverage
-      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: coverage.xml
-        disable_search: true
-        name: coverage-ubuntu-py314
-        fail_ci_if_error: true
-
-    - name: Upload test analytics to Codecov
-      if: ${{ matrix.coverage && !cancelled() }}
-      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: junit.xml
-        disable_search: true
-        report_type: test_results
-        name: test-results-ubuntu-py314
-
-  template-hooks-smoke:
-    name: Template Hooks Smoke (${{ matrix.os }} / ${{ matrix.template }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            template: cli
-          - os: ubuntu-latest
-            template: api
-          - os: ubuntu-latest
-            template: lib
-          - os: ubuntu-latest
-            template: astro
-          - os: ubuntu-latest
-            template: ml
-          - os: macos-latest
-            template: cli
-          - os: macos-latest
-            template: api
-          - os: macos-latest
-            template: lib
-          - os: windows-latest
-            template: cli
-          - os: windows-latest
-            template: api
-          - os: windows-latest
-            template: lib
-
-    env:
-      GIT_TERMINAL_PROMPT: "0"
-      GCM_INTERACTIVE: "never"
-      PREK_COLOR: "never"
-
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
-      with:
-        enable-cache: true
-        python-version: "3.12"
-
-    - name: Install Protostar
-      run: |
-        uv tool install --editable .
-        uv tool install prek
-
-    - name: Mock direnv
-      uses: ./.github/actions/mock-direnv
-
-    - name: Configure Git Identity
-      shell: bash
-      run: |
-        git config --global user.name "Protostar Bot"
-        git config --global user.email "bot@protostar.dev"
-        git config --global init.defaultBranch main
-        git config --global core.autocrlf false
-        git config --global credential.helper ""
-
-    - name: Verify first commit triggers prek hooks
-      shell: bash
-      run: |
-        if command -v cygpath >/dev/null 2>&1; then
-          TEMP_BASE=$(cygpath -u "${{ runner.temp }}")
-        else
-          TEMP_BASE="${{ runner.temp }}"
-        fi
-        SMOKE_DIR="$TEMP_BASE/smoke_${{ matrix.template }}"
-        rm -rf "$SMOKE_DIR"
-        mkdir -p "$SMOKE_DIR"
-        cd "$SMOKE_DIR"
-
-        protostar init --template ${{ matrix.template }} --prek --python-version 3.12
-
-        # 1. Verify pre-commit hook script was installed by Protostar
-        test -f .git/hooks/pre-commit || { echo "ERROR: .git/hooks/pre-commit missing"; exit 1; }
-
-        # Pre-stage all files so hooks have staged content to inspect
-        git add .
-
-        # 2. Canary test: verify commit-msg hook actively rejects non-conventional commit (when present)
-        if [ -f .git/hooks/commit-msg ]; then
-          echo "=== Running commit-msg hook canary test ==="
-          canary_code=0
-          canary_output=$(git commit -m "invalid non-conventional commit message" < /dev/null 2>&1) || canary_code=$?
-          if [ $canary_code -eq 0 ]; then
-            echo "ERROR: commit-msg hook failed to reject invalid commit message"
-            echo "$canary_output"
-            exit 1
-          else
-            echo "Canary commit correctly rejected by commit-msg hook (exit code $canary_code)"
-            echo "$canary_output"
-          fi
-        fi
-
-        # 3. Verify clean first commit triggers prek hooks and succeeds
-        echo "=== Running valid initial commit ==="
-        commit_code=0
-        commit_output=$(git commit -m "feat: initial scaffold" < /dev/null 2>&1) || commit_code=$?
-        echo "$commit_output"
-
-        if [ $commit_code -ne 0 ]; then
-          echo "ERROR: Initial commit failed with exit code $commit_code"
-          exit 1
-        fi
-
-        # 4. Verify hook execution output is present in commit output
-        echo "$commit_output" | grep -qE "(uv lock check|ruff check|ruff format|Passed)" || {
-          echo "ERROR: Prek hook execution not detected in commit output"
-          exit 1
+  # Every OS at the oldest and newest Python, and every template on Linux plus
+  # cli on Windows. Nightly runs every combination. Two macOS jobs at most,
+  # since the account runs five at a time and a third would wait for a runner.
+  platforms:
+    name: Platforms
+    uses: ./.github/workflows/platforms.yml
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    with:
+      tests: >-
+        {
+          "os": ["ubuntu-latest", "macos-latest", "windows-latest"],
+          "python": ["3.12", "3.14"],
+          "include": [
+            {"os": "ubuntu-latest", "python": "3.13"},
+            {"os": "ubuntu-latest", "python": "3.14", "coverage": true}
+          ]
+        }
+      smoke: >-
+        {
+          "os": ["ubuntu-latest"],
+          "python": ["3.12"],
+          "template": ["cli", "api", "lib", "astro", "ml"],
+          "include": [
+            {"os": "windows-latest", "python": "3.12", "template": "cli"}
+          ]
         }
 
   template-docker-build:
