@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790957536461,
+  "lastUpdate": 1790960007325,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20881,6 +20881,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 936.56,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9c9ddf64ff280e3f3e2674c98937a9d21fefd13a",
+          "message": "chore(mutation): derive workflow modules from source paths (#413)",
+          "timestamp": "2026-10-02T09:50:14-07:00",
+          "tree_id": "14c408775eceb424946a5e8ad42ca49d9a58c33f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9c9ddf64ff280e3f3e2674c98937a9d21fefd13a"
+        },
+        "date": 1790960006013,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 182.46,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1268.77,
             "unit": "ms"
           }
         ]
