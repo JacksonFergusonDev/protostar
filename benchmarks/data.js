@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790983661125,
+  "lastUpdate": 1790984564541,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21085,6 +21085,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1153.64,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "427b8aed1c6a83762212e6674e96e616e6ef735d",
+          "message": "test(mutation): mutate manifest and pyproject_layout (#418)\n\n* chore(mutation): mutate manifest and pyproject_layout\n\n* test(layout): catch the mutants that survived in pyproject_layout\n\nThe first run left 77 survivors. Cutting a section's tail, comments above a\ntable, the seams around an added or removed table, and the fallback messages\nare now checked to the byte, including CRLF and trailing whitespace.\n\nTwo bugs surfaced and are fixed:\n\n- A table in the other newline style kept a stray carriage return on its last\n  line when placed, which could make the placement fail its parity check and\n  fall back to a plain dump.\n- A banner or header left at the end of a file was thrown away when a tool\n  was appended after it, leaving the new table unlabelled.\n\nDead code removed: the equal-body shortcut in place_new_sections (the\nrebuilt section holds the same bytes), the sort of added tables (placement\ndoes not depend on arrival order), the newline guard in insert_section, and\nthe explicit super-table flags tomlkit infers anyway. The two guards no\ninput can reach are marked, with the reason.\n\n* test(manifest): pin what the manifest records, rejects, and serializes\n\nThe manifest's tests only exercised the happy path of each declaration, so\nnothing checked what each add_* method reports to the contribution observer,\nwhich input it rejects and with what message and hint, or what to_dict\nemits. They now cover every declaration, error, and serialized field, and\nthe path-rendering and preview helpers with and without a recipe.\n\nThe five calls that fill a declared path's built-in names in are one helper,\nso a path is checked once for staying unescaped, and the one mutant no test\ncan tell apart (escape_toml=None is as falsy as False) is marked with why.",
+          "timestamp": "2026-10-02T16:40:29-07:00",
+          "tree_id": "95e31bb1610b81f84778b3482e45469b3495b3ec",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/427b8aed1c6a83762212e6674e96e616e6ef735d"
+        },
+        "date": 1790984563198,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 125.39,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 828.86,
             "unit": "ms"
           }
         ]
