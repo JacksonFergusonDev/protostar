@@ -9,7 +9,7 @@ default_stages:
 fail_fast: true
 
 repos:
-  # Generic hooks (configured to IGNORE Python)
+  # Generic hooks
   - repo: builtin
     hooks:
       - id: check-added-large-files
@@ -19,11 +19,12 @@ repos:
       - id: check-symlinks
       - id: check-executables-have-shebangs
       # Textual snapshots preserve the SVG serializer output byte-for-byte,
+      # scaffold snapshots must match generated output byte-for-byte,
       # and docs/house/ must match its house-style release byte-for-byte.
       - id: trailing-whitespace
-        exclude: \.py$|^tests/__snapshots__/|^docs/house/
+        exclude: \.py$|^tests/(__snapshots__|snapshots)/|^docs/house/
       - id: end-of-file-fixer
-        exclude: \.py$|^tests/__snapshots__/|^docs/house/
+        exclude: \.py$|^tests/(__snapshots__|snapshots)/|^docs/house/
       - id: check-yaml
       - id: check-json
       - id: check-toml
@@ -40,18 +41,16 @@ repos:
 
       - id: ruff-check
         name: ruff check
-        entry: uv run ruff check --fix
+        entry: uv run ruff check --fix --force-exclude
         language: system
         types: [python]
-        exclude: ^(docs/|site/|tests/snapshots/|src/protostar/_secret_rules\.py$)
         require_serial: true
 
       - id: ruff-format
         name: ruff format
-        entry: uv run ruff format
+        entry: uv run ruff format --force-exclude
         language: system
         types: [python]
-        exclude: ^(docs/|site/|tests/snapshots/|src/protostar/_secret_rules\.py$)
         require_serial: true
 
       - id: mypy
@@ -59,19 +58,12 @@ repos:
         entry: uv run mypy .
         language: system
         pass_filenames: false
-        types: [python]
+        files: \.py$|^(pyproject\.toml|uv\.lock)$
         exclude: ^(docs/|site/|tests/snapshots/)
 
       - id: rumdl-check
         name: rumdl check
         entry: uv run rumdl check --fix
-        language: system
-        types: [markdown]
-        require_serial: true
-
-      - id: rumdl-fmt
-        name: rumdl fmt
-        entry: uv run rumdl fmt
         language: system
         types: [markdown]
         require_serial: true
@@ -104,7 +96,7 @@ repos:
         entry: uv run zensical build --strict
         language: system
         pass_filenames: false
-        files: ^(docs/|zensical\.toml|README\.md|src/|tests/snapshots/)
+        files: ^(docs/|overrides/|zensical\.toml|README\.md|src/|tests/snapshots/)
         stages: [pre-push]
 
       - id: check-doc-links
