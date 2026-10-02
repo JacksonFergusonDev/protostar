@@ -256,6 +256,7 @@ def _region(newline: str) -> str:
         ("a\n\n{R}\n\nb\n", "LF", "a\n\nb\n"),
         ("a\r\n\r\n{R}\r\n\r\nb\r\n", "CRLF", "a\r\n\r\nb\r\n"),
         ("a\n\n{R}\nb\n", "LF", "a\n\nb\n"),
+        ("a\n{R}\n\nb\n", "LF", "a\n\nb\n"),
         # Last in the file.
         ("a\n{R}\n", "LF", "a\n"),
         ("a\n\n{R}\n", "LF", "a\n"),
@@ -504,3 +505,14 @@ def test_each_retracted_region_is_decided_on_its_own():
     assert result.baselines == {"b": baselines["b"]}
     assert result.conflicts == (second,)
     assert [conflict.id for conflict in result.resolved] == [first.id]
+
+
+def test_a_region_already_gone_does_not_stop_the_next_retraction():
+    baselines = {"a": _framed("a", "x"), "b": _framed("b", "y")}
+
+    result = append_marker_blocks(
+        f"keep\n\n{_framed('b', 'y')}\n", [], Path(".envrc"), baselines=baselines
+    )
+
+    assert result.content == "keep\n"
+    assert result.baselines == {}

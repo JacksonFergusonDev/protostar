@@ -367,9 +367,11 @@ def append_marker_blocks(
         conflicts: list[MergeConflict] = []
         for tag, conflict in found:
             lines = conflict.location.lines
-            span = _span(result, marker(tag), marker(tag, True))
-            if lines is not None and span is not None:
-                offset = result[: span[0]].count("\n")
+            begin = marker(tag)
+            # Each marker occurs once, so which end a search comes from can't matter.
+            start = result.find(begin)  # pragma: no mutate
+            if lines is not None and start != -1:
+                offset = result[:start].count("\n")
                 lines = LineSpan(lines.start + offset, lines.count)
             conflicts.append(
                 replace(conflict, location=replace(conflict.location, lines=lines))
