@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790960007325,
+  "lastUpdate": 1790968179796,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20915,6 +20915,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1268.77,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1e7525259ae8878bd1eed965275e306fa36fbb49",
+          "message": "test(tui): settle after every key press, not only on pause (#414)\n\nPilot.press waits only on the widgets that existed before the key\nlanded, after a CPU-idle heuristic that Windows satisfies after one\nsleep. settled_pilot patched pause, which press never calls, and made\nonly pilot's idle check immediate, not the one press uses. A popup's\nnested rows, a widget's forwarded key, and the next key of a\nmulti-key press could all race the assertion that followed.\n\nSettle after each key, and make press's idle check immediate too so\nevery platform runs the Windows timing.",
+          "timestamp": "2026-10-02T12:06:19-07:00",
+          "tree_id": "1359c8a6c362449bab3952a377ff0c0448186279",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1e7525259ae8878bd1eed965275e306fa36fbb49"
+        },
+        "date": 1790968178363,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 185.73,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1277.44,
             "unit": "ms"
           }
         ]
