@@ -91,6 +91,14 @@ repos:
 
       # --- Pre-push hooks --- #
 
+      - id: benchmark-dashboard
+        name: benchmark dashboard data handling
+        entry: node --test tests/benchmark_metrics.test.mjs
+        language: system
+        pass_filenames: false
+        files: ^(benchmarks/|tests/benchmark_metrics\.test\.mjs$)
+        stages: [pre-push]
+
       - id: zensical-build
         name: zensical build
         entry: uv run zensical build --strict

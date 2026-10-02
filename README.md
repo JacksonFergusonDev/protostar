@@ -211,7 +211,7 @@ Protostar edits other people's work, so it's built to be careful:
 - **The engine is separate from the interface.** The same core runs behind the interactive editor, the command line, and coding agents, which is why every command can also answer in JSON.
 - **It's tested thoroughly.** Over 3,500 tests, including runs of the real tools, pass on Linux, macOS, and Windows, with strict type checking and at least 85% coverage.
 - **Its docs are checked against its code.** Before every push, a script confirms that the commands, errors, exit codes, and file paths the docs mention still match the code.
-- **It stays fast.** CI measures startup time on every change and blocks regressions; see the [performance dashboard](https://protostar.jacksonferguson.me/benchmarks/).
+- **Performance stays visible.** CI tracks help-command startup and the recipe editor's first frame, flagging large regressions; see the [CI performance history](https://protostar.jacksonferguson.me/benchmarks/).
 
 ---
 

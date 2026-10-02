@@ -6,7 +6,12 @@ from pathlib import Path
 import pytest
 
 from protostar.errors import ConfigurationError
-from scripts.prepare_pages import assemble_pages, read_versions
+from scripts.prepare_pages import (
+    BENCHMARK_ASSETS,
+    BENCHMARK_DIR,
+    assemble_pages,
+    read_versions,
+)
 
 
 def _write(path: Path, text: str) -> None:
@@ -47,6 +52,7 @@ def published_docs(tmp_path: Path) -> tuple[Path, Path, Path]:
     _write(source / "latest" / "index.html", "Old alias")
     _write(source / "benchmarks" / "index.html", "Benchmark dashboard")
     _write(source / "benchmarks" / "data.js", "Historical measurements")
+    _write(source / "benchmarks" / "retired.js", "Obsolete dashboard code")
     _write(
         config,
         '[project]\nsite_name = "Protostar"\nsite_description = "Python projects"\n'
@@ -87,6 +93,13 @@ def test_latest_content_redirects_and_benchmarks_share_one_clean_artifact(
     assert (output / "benchmarks" / "data.js").read_bytes() == (
         source / "benchmarks" / "data.js"
     ).read_bytes()
+    for filename in BENCHMARK_ASSETS:
+        assert (output / "benchmarks" / filename).read_bytes() == (
+            BENCHMARK_DIR / filename
+        ).read_bytes()
+    assert not (output / "benchmarks" / "retired.js").exists()
+    for filename in ("favicon.svg", "favicon.png"):
+        assert (output / "benchmarks" / filename).is_file()
     assert not (output / "retired-page").exists()
     assert not (output / "assets" / "outdated.js").exists()
     assert (output / "assets" / "favicon.png").read_text() == "current favicon"
@@ -165,3 +178,14 @@ def test_missing_navigation_page_blocks_incomplete_markdown(
     (source / "0.10.1" / "why-protostar" / "index.html").unlink()
     with pytest.raises(ConfigurationError, match="generate all"):
         assemble_pages(source, output, config)
+
+
+def test_benchmarks_are_not_published_without_recorded_data(
+    published_docs: tuple[Path, Path, Path],
+) -> None:
+    source, output, config = published_docs
+    (source / "benchmarks" / "data.js").unlink()
+
+    assemble_pages(source, output, config)
+
+    assert not (output / "benchmarks").exists()

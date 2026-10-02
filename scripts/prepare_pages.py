@@ -20,6 +20,9 @@ sys.path.insert(0, str(_repo_root / "src"))
 
 from protostar.errors import ConfigurationError
 
+BENCHMARK_DIR = _repo_root / "benchmarks"
+BENCHMARK_ASSETS = ("index.html", "dashboard.js", "metrics.mjs")
+
 
 @dataclass(frozen=True)
 class Version:
@@ -159,14 +162,24 @@ def assemble_pages(source: Path, output: Path, config_path: Path) -> str:
         shutil.copytree(tree, output / version.name)
         for alias in version.aliases:
             _write_redirects(tree, output / alias, f"{site_url}{version.name}/")
-    if (source / "benchmarks").is_dir():
-        shutil.copytree(source / "benchmarks", output / "benchmarks")
+    benchmark_data = source / "benchmarks" / "data.js"
+    if benchmark_data.is_file():
+        benchmark_output = output / "benchmarks"
+        benchmark_output.mkdir()
+        shutil.copyfile(benchmark_data, benchmark_output / "data.js")
+        for filename in BENCHMARK_ASSETS:
+            shutil.copyfile(BENCHMARK_DIR / filename, benchmark_output / filename)
+        for filename in ("favicon.svg", "favicon.png"):
+            shutil.copyfile(
+                _repo_root / "docs" / "assets" / filename,
+                benchmark_output / filename,
+            )
     shutil.copyfile(source / "versions.json", output / "versions.json")
     current = output / latest
     _generate_llms(current, config_path, f"{site_url}{latest}/")
     for filename in ("llms.txt", "llms-full.txt", "sitemap.xml"):
         shutil.copyfile(current / filename, output / filename)
-    # The benchmark dashboard links to this root asset.
+    # Preserve the root favicon for permanent entry URLs.
     favicon = current / "assets" / "favicon.png"
     if favicon.is_file():
         (output / "assets").mkdir(exist_ok=True)

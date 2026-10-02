@@ -186,11 +186,21 @@ ignore_errors = true
 
 ## Performance & Latency Testing
 
-Because Protostar is designed for high-velocity initialization, we enforce a strict performance budget to prevent Python's startup overhead from degrading the CLI experience.
+CI tracks help-command startup (`protostar help init`) and the recipe editor's first frame to catch large regressions in the CLI experience. These measurements do not include a completed scaffold or dependency installation.
 
-The recipe editor benchmark sets a hidden environment variable, `PROTOSTAR_BENCHMARK_RECIPE_EDITOR=1`. It treats the session as interactive and makes `protostar init` exit as soon as the recipe editor draws its first frame, so the benchmark measures time to first frame without waiting on input.
+The recipe editor benchmark sets a hidden environment variable, `PROTOSTAR_BENCHMARK_RECIPE_EDITOR=1`. It treats the session as interactive and makes `protostar init` exit as soon as the recipe editor draws its first frame, without waiting on input. Hyperfine measures the whole process, including Python startup and shutdown, in the checked-out repository.
 
-The `justfile` includes predefined recipes leveraging [hyperfine](https://github.com/sharkdp/hyperfine) to track regression thresholds. Ensure you test your changes against the fast-path (e.g., `protostar help`) to verify dynamic module imports haven't bloated the instantiation tree.
+The [CI performance history](https://protostar.jacksonferguson.me/benchmarks/) records main-branch measurements on GitHub Actions Ubuntu runners with Python 3.14. Each recorded point is the mean of 90 executions after 30 warmups. These timings describe the CI environment, not local workstation latency; runner variability and changes to the runner image or project checkout also limit comparisons between commits. Look for sustained trends rather than treating a single increase as a confirmed regression. Older wizard measurements remain in the downloadable history but are excluded from the recipe-editor chart.
+
+The CI regression check uses 30 executions after 5 warmups and fails when a measurement exceeds 250% of the preceding recorded result for the same benchmark. Historical tracking alerts above 200% without failing the run. These are relative checks for large regressions, not an absolute latency budget. The dashboard's comparison with up to 100 preceding benchmark runs is a separate descriptive summary, not the baseline used by either check.
+
+The `justfile` includes predefined recipes using [Hyperfine](https://github.com/sharkdp/hyperfine) to reproduce the measurements locally. Compare changes on the same machine and checkout conditions to check whether dynamic module imports have increased startup time.
+
+The dashboard source lives in `benchmarks/` on `main`. Pages publishing combines that source with the recorded `benchmarks/data.js` from `gh-pages`; it never publishes dashboard code from the data branch. To test its data handling locally, use Node.js 18 or newer:
+
+```bash
+node --test tests/benchmark_metrics.test.mjs
+```
 
 === "Quick Benchmark"
     Runs a 5-iteration warmup and 30 statistical runs.
