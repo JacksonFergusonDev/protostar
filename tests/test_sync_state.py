@@ -5,6 +5,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from protostar import sync_state
 from protostar.errors import (
     ConfigurationError,
     OutdatedProtostarError,
@@ -49,6 +50,13 @@ REF = TemplateReference(
     ref="v1.0.0",
     revision="b" * 40,
 )
+
+
+@pytest.fixture(autouse=True)
+def _fresh_baseline_caches():
+    """Decoding and encoding are cached per text; a test must never see another's result."""
+    sync_state._decode_toml_baseline.cache_clear()
+    sync_state._canonical_baseline.cache_clear()
 
 
 def sample_state():
