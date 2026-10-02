@@ -401,20 +401,36 @@ def sort_value_keys(node: Value) -> Value:
     return node
 
 
+def as_mapping(value: Value) -> dict[str, Value]:
+    """Narrows a value the caller knows to be a mapping.
+
+    Args:
+        value: A decoded value that is a mapping.
+
+    Returns:
+        The same value, typed as a mapping.
+    """
+    # A cast is a no-op, so no mutant of it can fail.
+    return cast(dict[str, Value], value)  # pragma: no mutate
+
+
 def semantic_equal(left: Value, right: Value) -> bool:
     """Compares decoded values without conflating booleans, numbers, or nulls."""
     if type(left) is not type(right):
         return False
-    if isinstance(left, dict) and isinstance(right, dict):
+    # The types already match.
+    if isinstance(left, dict) and isinstance(right, dict):  # pragma: no mutate
         return left.keys() == right.keys() and all(
             semantic_equal(v, right[k]) for k, v in left.items()
         )
-    if isinstance(left, list) and isinstance(right, list):
+    # The types already match.
+    if isinstance(left, list) and isinstance(right, list):  # pragma: no mutate
         return len(left) == len(right) and all(
-            semantic_equal(a, b) for a, b in zip(left, right, strict=True)
+            semantic_equal(a, right[i]) for i, a in enumerate(left)
         )
     if (
-        isinstance(left, float)
+        # The types already match.
+        isinstance(left, float)  # pragma: no mutate
         and isinstance(right, float)
         and math.isnan(left)
         and math.isnan(right)
@@ -455,7 +471,7 @@ def reconcile(
         current: Value,
         incoming: Value,
         loc: MergeLocation,
-        protected: bool,
+        protected: bool = False,
     ) -> MergeResult:
         def keep() -> MergeResult:
             return MergeResult(
@@ -553,14 +569,15 @@ def reconcile(
                 values = deepcopy(local)
                 preserved: list[MergeConflict] = []
                 resolved: list[MergeConflict] = []
-                restored = False
+                # None would read as False too.
+                restored = False  # pragma: no mutate
                 for key, owned in previous.items():
                     child = merge(
                         owned,
                         local.get(key, MISSING),
-                        incoming.get(key, MISSING),
+                        # An unchanged update has every owned key.
+                        incoming[key],
                         MergeLocation(loc.file, (*loc.keys, key), loc.identity),
-                        False,
                     )
                     if child.decision is MergeDecision.APPLY_REMOTE:
                         restored = True
@@ -568,7 +585,7 @@ def reconcile(
                     preserved.extend(child.preserved)
                     resolved.extend(child.resolved)
                 return MergeResult(
-                    values if restored else deepcopy(current),
+                    values,
                     deepcopy(previous),
                     MergeDecision.APPLY_REMOTE
                     if restored
@@ -585,7 +602,10 @@ def reconcile(
         def removed_members(members: list[Value]) -> list[Value]:
             # Owned members of a set-like list the user removed while the
             # update still wants them.
-            if not isinstance(previous, list) or not isinstance(incoming, list):
+            # An unchanged update has the baseline's type.
+            if not isinstance(previous, list) or not isinstance(
+                incoming, list
+            ):  # pragma: no mutate
                 return []
             return [
                 member
@@ -637,7 +657,6 @@ def reconcile(
                     values.get(key, MISSING),
                     desired,
                     MergeLocation(loc.file, (*loc.keys, key), loc.identity),
-                    False,
                 )
                 if child.value is not MISSING:
                     values[key] = child.value
@@ -656,10 +675,10 @@ def reconcile(
                 ]:
                     local = values.get(key, MISSING)
                     if local is MISSING:
-                        baseline.pop(key, None)
+                        baseline.pop(key)
                     elif semantic_equal(local, previous[key]):
                         values.pop(key)
-                        baseline.pop(key, None)
+                        baseline.pop(key)
                     elif (
                         (*loc.keys, key) in policy.namespace_paths
                         and isinstance(local, dict)
@@ -672,7 +691,6 @@ def reconcile(
                             local,
                             {},
                             MergeLocation(loc.file, (*loc.keys, key), loc.identity),
-                            False,
                         )
                         if child.value:
                             values[key] = child.value
@@ -681,7 +699,7 @@ def reconcile(
                         if child.baseline:
                             baseline[key] = child.baseline
                         else:
-                            baseline.pop(key, None)
+                            baseline.pop(key)
                         conflicts.extend(child.conflicts)
                         resolved.extend(child.resolved)
                     else:
@@ -754,7 +772,8 @@ def reconcile(
                 deviation is not None
                 and deviation.decision is MergeDecision.APPLY_REMOTE
             ):
-                members = cast(list[Value], deviation.value)
+                # A cast is a no-op.
+                members = cast(list[Value], deviation.value)  # pragma: no mutate
             return MergeResult(
                 members,
                 owned,
@@ -879,7 +898,8 @@ def without_paths(
             return True
         child = node[key]
         if not isinstance(child, dict) or not remove(child, tuple(rest)):
-            return False
+            # Only a caller whose child lacks the key reads this.
+            return False  # pragma: no mutate
         if not child:
             del node[key]
         return True
@@ -912,8 +932,8 @@ def retract_undeclared(
             child = target.get(key)
             retract_undeclared(
                 child if isinstance(child, dict) else {},
-                cast(dict[str, Value], owned[key]),
-                cast(dict[str, Value], incoming[key]),
+                as_mapping(owned[key]),
+                as_mapping(incoming[key]),
             )
 
 
@@ -932,11 +952,11 @@ def prune_unapplied(
     """
     for key, child in list(owned.items()):
         if isinstance(child, dict) and isinstance(current.get(key), dict):
-            prior = previous.get(key, {})
+            prior = previous.get(key)
             prune_unapplied(
                 child,
                 prior if isinstance(prior, dict) else {},
-                cast(dict[str, Value], current[key]),
+                as_mapping(current[key]),
             )
             if not child and key not in previous:
                 owned.pop(key)

@@ -56,7 +56,6 @@ SPEC = TomlDocumentSpec(
         retained_paths=SEED_PATHS | {("dependency-groups",)},
         namespace_paths=frozenset({("tool",)}),
     ),
-    super_tables=frozenset({("tool",)}),
     seed_paths=SEED_PATHS,
     layout=TomlLayout(create=format_document, extend=place_new_sections),
 )

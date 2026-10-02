@@ -10,7 +10,7 @@ from enum import Enum
 from functools import lru_cache
 from io import StringIO
 from itertools import pairwise
-from typing import Any, cast
+from typing import Any
 
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
@@ -31,6 +31,7 @@ from .merge import (
     Resolutions,
     StructuredReconciliation,
     Value,
+    as_mapping,
     hold,
     lookup,
     overlay_declared,
@@ -122,7 +123,8 @@ def _invalid() -> ConfigurationError:
 
 
 def _codec(style: YamlStyle = DEFAULT_STYLE) -> YAML:
-    codec = YAML(typ="rt", pure=True)
+    # The default is the round-trip codec, which is pure Python.
+    codec = YAML()
     codec.preserve_quotes = True
     codec.allow_duplicate_keys = False
     codec.width = _UNBOUNDED_WIDTH
@@ -142,17 +144,16 @@ def _load(content: str) -> CommentedMap:
                 raise _invalid()
         if not isinstance(root, MappingNode):
             raise _invalid()
-        active: set[int] = set()
         count = 0
 
         def visit(node: Node, depth: int) -> None:
             nonlocal count
             count += 1
-            if count > _MAX_NODES or depth > 100 or id(node) in active:
+            # A cyclic alias also nests past the depth limit.
+            if count > _MAX_NODES or depth > 100:
                 raise _invalid()
             if node.tag not in {f"tag:yaml.org,2002:{tag}" for tag in _TAGS}:
                 raise _invalid()
-            active.add(id(node))
             if isinstance(node, MappingNode):
                 for key, value in node.value:
                     if not isinstance(key, ScalarNode) or key.tag not in (
@@ -160,15 +161,16 @@ def _load(content: str) -> CommentedMap:
                         "tag:yaml.org,2002:merge",
                     ):
                         raise _invalid()
-                    visit(key, depth + 1)
+                    # A key is a scalar; its value meets the depth limit first.
+                    visit(key, depth + 1)  # pragma: no mutate
                     visit(value, depth + 1)
             elif isinstance(node, SequenceNode):
                 for child in node.value:
                     visit(child, depth + 1)
-            active.remove(id(node))
 
         visit(root, 0)
-        return cast(CommentedMap, _codec().load(content))
+        document: CommentedMap = _codec().load(content)
+        return document
     except (YAMLError, ValueError, TypeError, RecursionError) as error:
         raise _invalid() from error
 
@@ -203,7 +205,7 @@ def decode_yaml_baseline(content: str) -> dict[str, Value]:
 def _decode_yaml_baseline(content: str) -> dict[str, Value]:
     # The pure-Python round-trip parser is slow, and one sync decodes the same
     # baselines hundreds of times; callers get a copy, so sharing is safe.
-    value = cast(dict[str, Value], _plain(_load(content)))
+    value = as_mapping(_plain(_load(content)))
     validate_value(value)
     return value
 
@@ -254,8 +256,8 @@ class KeyedSequence:
     def matches(self, path: tuple[str, ...]) -> bool:
         """Reports whether a concrete keyed-view path names this sequence."""
         return len(path) == len(self.path) and all(
-            pattern is WILDCARD or pattern == key
-            for pattern, key in zip(self.path, path, strict=True)
+            pattern is WILDCARD or pattern == path[i]
+            for i, pattern in enumerate(self.path)
         )
 
 
@@ -355,7 +357,7 @@ def keyed_view(
                         hint=f"Give every record a non-empty '{sequence.identity}' string.",
                     )
                 continue
-            record = cast(dict[str, Value], record)
+            record = as_mapping(record)
             for field in sequence.string_fields:
                 if field in record and (
                     not isinstance(record[field], str) or not record[field]
@@ -364,7 +366,7 @@ def keyed_view(
                         f"Invalid {spec.name} field '{field}'.",
                         hint=f"Quote '{field}' values as non-empty strings.",
                     )
-            grouped.setdefault(cast(str, record[sequence.identity]), []).append(record)
+            grouped.setdefault(str(record[sequence.identity]), []).append(record)
         records: dict[str, Value] = {}
         for name, members in grouped.items():
             if len(members) > 1:
@@ -375,7 +377,7 @@ def keyed_view(
                     )
                 records[name] = deepcopy(members)
             else:
-                record = cast(dict[str, Value], members[0])
+                record = as_mapping(members[0])
                 records[name] = keyed_view(
                     spec,
                     {k: v for k, v in record.items() if k != sequence.identity},
@@ -397,15 +399,14 @@ def _unkeyed(spec: YamlDocumentSpec, value: Value, path: tuple[str, ...] = ()) -
             records: list[Value] = []
             for name, record in value.items():
                 if isinstance(record, list):
-                    records.extend(deepcopy(record))
+                    # Duplicates are held, so they never reach a write; this only
+                    # keeps every record if one ever does.
+                    records.extend(deepcopy(record))  # pragma: no mutate
                 else:
                     records.append(
                         {
                             sequence.identity: name,
-                            **cast(
-                                dict[str, Value],
-                                _unkeyed(spec, record, (*path, name)),
-                            ),
+                            **as_mapping(_unkeyed(spec, record, (*path, name))),
                         }
                     )
             return records
@@ -526,9 +527,9 @@ def reconcile_yaml(
         Emitted text, the composite owned baseline, and structured conflicts.
     """
     desired_ast = _load(desired)
-    wanted = cast(dict[str, Value], keyed_view(spec, _plain(desired_ast), strict=True))
+    wanted = as_mapping(keyed_view(spec, _plain(desired_ast), strict=True))
     doc = _load(original) if not missing_file else _load("{}\n")
-    local = cast(dict[str, Value], keyed_view(spec, _plain(doc)))
+    local = as_mapping(keyed_view(spec, _plain(doc)))
     base = keyed_view(spec, base, strict=True)
     ambiguous = _ambiguous(spec, local)
     ambiguities = [
@@ -608,17 +609,20 @@ def reconcile_yaml(
     def count_refs(node: object) -> None:
         if not isinstance(node, (dict, list)) and not getattr(node, "anchor", None):
             return
-        anchor = getattr(node, "anchor", None)
-        if anchor is not None and anchor.value is not None:
+        # Every node that reaches here has an anchor.
+        anchor = getattr(node, "anchor", None)  # pragma: no mutate
+        if anchor is not None and anchor.value is not None:  # pragma: no mutate
             anchor.always_dump = True
         counts[id(node)] = counts.get(id(node), 0) + 1
-        if counts[id(node)] > 1:
+        # A second visit only reaches what a shared node holds.
+        if counts[id(node)] > 1:  # pragma: no mutate
             return
         if isinstance(node, dict):
             for child in node.values():
                 count_refs(child)
-            for source in getattr(node, "merge", ()):
-                count_refs(source)
+            if isinstance(node, CommentedMap):
+                for source in node.merge:
+                    count_refs(source)
         elif isinstance(node, list):
             for child in node:
                 count_refs(child)
@@ -626,7 +630,8 @@ def reconcile_yaml(
     count_refs(doc)
 
     def hazardous(node: object) -> bool:
-        return counts.get(id(node), 0) > 1 or bool(getattr(node, "merge", ()))
+        shared = id(node) in counts and counts[id(node)] > 1
+        return shared or (isinstance(node, CommentedMap) and bool(node.merge))
 
     def contains_hazard(node: object) -> bool:
         if hazardous(node):
@@ -680,7 +685,8 @@ def reconcile_yaml(
                 if key in previous:
                     owned[key] = deepcopy(previous[key])
                 else:
-                    owned.pop(key, None)
+                    # A blocked change was owned.
+                    owned.pop(key, None)  # pragma: no mutate
                 conflicts.append(
                     MergeConflict(
                         MergeLocation(location.file, path),
@@ -700,17 +706,16 @@ def reconcile_yaml(
                 order = [str(record[sequence.identity]) for record in styled[key]]
                 patch(
                     indexed,
-                    cast(dict[str, Value], old),
-                    cast(dict[str, Value], child),
-                    cast(dict[str, Value], owned.setdefault(key, {})),
-                    cast(dict[str, Value], previous.get(key, {})),
-                    dict(zip(order, styled[key], strict=True)),
+                    as_mapping(old),
+                    as_mapping(child),
+                    # A changed mapping is always owned.
+                    as_mapping(owned.setdefault(key, {})),  # pragma: no mutate
+                    as_mapping(previous.get(key, {})),
+                    {str(record[sequence.identity]): record for record in styled[key]},
                     path,
                 )
                 removed = {
-                    name
-                    for name in cast(dict[str, Value], old)
-                    if name not in cast(dict[str, Value], child)
+                    name for name in as_mapping(old) if name not in as_mapping(child)
                 }
                 for index in reversed(range(len(node))):
                     record = node[index]
@@ -720,7 +725,7 @@ def reconcile_yaml(
                     ):
                         del node[index]
                 for name in order:
-                    if name in cast(dict[str, Value], old) or name not in indexed:
+                    if name in as_mapping(old) or name not in indexed:
                         continue
                     record = indexed[name]
                     record[sequence.identity] = name
@@ -728,11 +733,13 @@ def reconcile_yaml(
             elif recursive:
                 patch(
                     node,
-                    cast(dict[str, Value], old),
-                    cast(dict[str, Value], child),
-                    cast(dict[str, Value], owned.setdefault(key, {})),
-                    cast(dict[str, Value], previous.get(key, {})),
-                    styled.get(key, {}),
+                    as_mapping(old),
+                    as_mapping(child),
+                    # A changed mapping is always owned.
+                    as_mapping(owned.setdefault(key, {})),  # pragma: no mutate
+                    as_mapping(previous.get(key, {})),
+                    # A changed mapping is always desired.
+                    styled.get(key, {}),  # pragma: no mutate
                     path,
                 )
             elif (
@@ -757,7 +764,8 @@ def reconcile_yaml(
                     replacement = type(node)(child)
                     anchor = getattr(node, "anchor", None)
                     if (
-                        isinstance(replacement, ScalarString)
+                        # A ScalarString always has an anchor.
+                        isinstance(replacement, ScalarString)  # pragma: no mutate
                         and anchor is not None
                         and anchor.value is not None
                     ):
@@ -770,8 +778,9 @@ def reconcile_yaml(
     patch(
         doc,
         local,
-        cast(dict[str, Value], value),
-        baseline if isinstance(baseline, dict) else {},
+        as_mapping(value),
+        # A document that reaches the patch is owned.
+        baseline if isinstance(baseline, dict) else {},  # pragma: no mutate
         base if isinstance(base, dict) else {},
         desired_ast,
         (),

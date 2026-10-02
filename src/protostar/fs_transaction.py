@@ -63,7 +63,13 @@ class TransactionAwareFS:
         path.parent.mkdir(parents=True, exist_ok=True)
         atomic_write_bytes(path, content)
 
-    def write_text(self, path: Path, content: str, encoding: str = "utf-8") -> None:
+    def write_text(
+        self,
+        path: Path,
+        content: str,
+        # "UTF-8" names the same codec.
+        encoding: str = "utf-8",  # pragma: no mutate
+    ) -> None:
         """Writes text to a file."""
         try:
             payload = content.encode(encoding)

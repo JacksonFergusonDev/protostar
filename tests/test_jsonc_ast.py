@@ -897,3 +897,55 @@ def test_a_cyclic_value_is_rejected():
 def test_an_appended_value_must_be_json():
     with pytest.raises(ConfigurationError, match=r"^Unsupported JSON number\.$"):
         editable('{"a": []}').append(("a",), float("nan"))
+
+
+def test_parsed_values_carry_their_kinds_and_elements_carry_no_key():
+    doc = parse_jsonc('{"s": "x", "n": -1.5, "t": true, "z": null, "l": [1]}')
+
+    assert doc.root is not None
+    kinds = [item.node.kind for item in doc.root.items]
+    assert kinds == [
+        NodeKind.STRING,
+        NodeKind.NUMBER,
+        NodeKind.BOOLEAN,
+        NodeKind.NULL,
+        NodeKind.ARRAY,
+    ]
+    assert [item.key for item in doc.root.items[-1].node.items] == [None]
+
+
+def test_an_emptied_object_keeps_the_documents_indent_for_the_next_member():
+    doc = parse_jsonc('{\n    "a": 1\n}\n')
+
+    edited = doc.delete(("a",)).set(("b",), {"c": 1})
+
+    assert edited.text == '{\n    "b": {\n        "c": 1\n    }\n}\n'
+
+
+def test_a_value_spread_over_lines_is_replaced_spread_over_lines():
+    doc = parse_jsonc('{"a": [\n  1\n]}')
+
+    edited = doc.set(("a",), [1, {"x": 2}])
+
+    assert edited.text == '{"a": [\n  1,\n  {\n    "x": 2\n  }\n]}'
+
+
+@pytest.mark.parametrize(
+    ("text", "edit", "expected"),
+    [
+        pytest.param(
+            '{\n  "a": 1, /* x *//* y */\n  "b": 2\n}\n',
+            lambda doc: doc.delete(("a",)),
+            '{\n  "b": 2\n}\n',
+            id="delete",
+        ),
+        pytest.param(
+            '{\n  "a": 1 /* x *//* y */\n}\n',
+            lambda doc: doc.set(("b",), 2),
+            '{\n  "a": 1, /* x *//* y */\n  "b": 2\n}\n',
+            id="insert",
+        ),
+    ],
+)
+def test_adjacent_block_comments_after_a_value_stay_on_its_line(text, edit, expected):
+    assert edit(parse_jsonc(text)).text == expected

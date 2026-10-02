@@ -960,3 +960,33 @@ def test_prune_unapplied_ignores_a_previous_value_that_was_not_a_table():
     prune_unapplied(owned, {"a": 1}, {"a": {"b": {}}})
 
     assert owned == {"a": {}}
+
+
+def test_conflict_ids_do_not_change_between_releases():
+    """A ``--resolve`` printed by one run must still settle the next one."""
+    conflict = MergeConflict(
+        LOC,
+        ConflictReason.DIVERGED,
+        ConflictSides(
+            MISSING,
+            {"b": [1, 2.5], "a": True},
+            [date(2024, 1, 2), time(3, 4), "s", None],
+        ),
+    )
+
+    assert conflict.id == "f18f9a5ff35a"
+
+
+@pytest.mark.parametrize(("base", "local"), [(1, None), (None, 2)])
+def test_an_edit_to_or_from_null_under_an_unchanged_update_is_preserved(base, local):
+    result = reconcile(base, local, base, LOC)
+
+    assert (result.value, result.baseline) == (local, base)
+    assert result.preserved == (
+        MergeConflict(LOC, ConflictReason.PRESERVED, ConflictSides(base, local, base)),
+    )
+
+
+@pytest.mark.parametrize("value", [{"a": {}}, {"a": {"c": {}}}])
+def test_without_paths_keeps_what_a_path_below_it_never_reached(value):
+    assert without_paths(value, frozenset({("a", "c", "d")})) == value

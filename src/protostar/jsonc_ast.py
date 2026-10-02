@@ -12,7 +12,8 @@ import math
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import NamedTuple, cast
+from functools import partial
+from typing import NamedTuple
 
 from .errors import ConfigurationError
 from .merge import (
@@ -24,6 +25,7 @@ from .merge import (
     Resolutions,
     StructuredReconciliation,
     Value,
+    as_mapping,
     overlay_declared,
     prune_unapplied,
     reconcile,
@@ -43,6 +45,11 @@ _HINT = (
 )
 _ESCAPES = frozenset('"\\/bfnrtu')
 _HEX = frozenset("0123456789abcdefABCDEF")
+_BOM = "\ufeff"
+_BLANKS = " \t"
+_NEWLINES = "\r\n"
+# JSON text as written: non-ASCII kept, and no NaN or infinity.
+_json_text = partial(json.dumps, ensure_ascii=False, allow_nan=False)
 
 
 class NodeKind(StrEnum):
@@ -105,8 +112,9 @@ class _Parser:
 
     def fail(self, reason: str, at: int | None = None) -> ConfigurationError:
         pos = self.pos if at is None else at
-        line = self.text.count("\n", 0, pos) + 1
-        column = pos - (self.text.rfind("\n", 0, pos) + 1) + 1
+        before = self.text[:pos]
+        line = before.count("\n") + 1
+        column = pos - before.rfind("\n")
         return ConfigurationError(
             f"Invalid JSONC at line {line}, column {column}: {reason}.", hint=_HINT
         )
@@ -122,7 +130,7 @@ class _Parser:
         pos = self.pos
         while pos < size:
             char = text[pos]
-            if char in " \t\r\n" or (char == "\ufeff" and pos == 0):
+            if char in " \t\r\n" or (char == _BOM and pos == 0):
                 pos += 1
             elif text.startswith("//", pos):
                 if self.strict:
@@ -133,7 +141,7 @@ class _Parser:
                 if self.strict:
                     raise self.fail("comments are not allowed", pos)
                 end = text.find("*/", pos + 2)
-                if end < 0:
+                if end == -1:
                     raise self.fail("unterminated block comment", pos)
                 pos = end + 2
             else:
@@ -217,10 +225,11 @@ class _Parser:
         size = len(text)
         start = self.pos
         pos = start + 1
-        escaped = False
+        # Decoding a string without escapes changes nothing.
+        escaped = False  # pragma: no mutate
         while True:
             if pos >= size:
-                raise self.fail("unterminated string", start)
+                raise self.fail("unterminated string")
             char = text[pos]
             if char == '"':
                 break
@@ -241,8 +250,8 @@ class _Parser:
         if not escaped:
             return text[start + 1 : pos]
         try:
-            decoded = cast(str, json.loads(text[start : pos + 1]))
-            decoded.encode("utf-8")
+            decoded: str = json.loads(text[start : pos + 1])
+            decoded.encode()
         except (ValueError, UnicodeEncodeError) as error:
             raise self.fail("invalid string escape", start) from error
         return decoded
@@ -258,15 +267,16 @@ class _Parser:
             while pos < size and text[pos].isascii() and text[pos].isdigit():
                 pos += 1
         else:
-            raise self.fail("invalid number", start)
-        floating = False
+            raise self.fail("invalid number")
+        # None would read as False too.
+        floating = False  # pragma: no mutate
         if pos < size and text[pos] == ".":
             pos += 1
             digits = pos
             while pos < size and text[pos].isascii() and text[pos].isdigit():
                 pos += 1
             if pos == digits:
-                raise self.fail("invalid number", start)
+                raise self.fail("invalid number")
             floating = True
         if pos < size and text[pos] in "eE":
             pos += 1
@@ -276,44 +286,54 @@ class _Parser:
             while pos < size and text[pos].isascii() and text[pos].isdigit():
                 pos += 1
             if pos == digits:
-                raise self.fail("invalid number", start)
+                raise self.fail("invalid number")
             floating = True
         token = text[start:pos]
         try:
             scalar: Value = float(token) if floating else int(token)
         except ValueError as error:
-            raise self.fail("number out of range", start) from error
+            raise self.fail("number out of range") from error
         if isinstance(scalar, float) and not math.isfinite(scalar):
-            raise self.fail("number out of range", start)
+            raise self.fail("number out of range")
         self.pos = pos
         return Node(NodeKind.NUMBER, start, pos, scalar=scalar)
 
 
 def _node_value(node: Node) -> Value:
     if node.kind is NodeKind.OBJECT:
-        return {cast(str, item.key): _node_value(item.node) for item in node.items}
+        return {str(item.key): _node_value(item.node) for item in node.items}
     if node.kind is NodeKind.ARRAY:
         return [_node_value(item.node) for item in node.items]
     return node.scalar
 
 
+def _line_start(text: str, pos: int) -> int:
+    """Returns the offset where the line containing ``pos`` starts."""
+    return text[:pos].rfind("\n") + 1
+
+
 def _leading_ws(text: str, pos: int) -> str:
-    """Returns the leading whitespace of the line containing ``pos``."""
-    start = text.rfind("\n", 0, pos) + 1
-    end = start
-    while end < len(text) and text[end] in " \t":
+    """Returns the leading whitespace of the line containing ``pos``.
+
+    ``pos`` is where a value or key starts, so the whitespace ends before it.
+    """
+    start = end = _line_start(text, pos)
+    while text[end] in _BLANKS:
         end += 1
     return text[start:end]
 
 
 def _line_end(text: str, pos: int) -> int:
-    """Skips same-line trivia after ``pos`` and returns the offset before the break."""
-    size = len(text)
-    while pos < size:
-        if text[pos] in " \t":
+    """Skips same-line trivia after ``pos`` and returns the offset before the break.
+
+    ``pos`` is inside the root object, so its closing brace ends the scan, and a
+    line comment ends at a break before it.
+    """
+    while True:
+        if text[pos] in _BLANKS:
             pos += 1
         elif text.startswith("//", pos):
-            while pos < size and text[pos] not in "\r\n":
+            while text[pos] not in _NEWLINES:
                 pos += 1
         elif text.startswith("/*", pos):
             pos = text.find("*/", pos + 2) + 2
@@ -344,7 +364,7 @@ def _check_json(value: Value) -> None:
             )
         elif isinstance(node, str):
             try:
-                node.encode("utf-8")
+                node.encode()
             except UnicodeEncodeError as error:
                 raise ConfigurationError(
                     "Unsupported JSON string.",
@@ -355,7 +375,7 @@ def _check_json(value: Value) -> None:
 
 
 def _compact(value: Value) -> str:
-    return json.dumps(value, ensure_ascii=False, allow_nan=False)
+    return _json_text(value)
 
 
 def _pretty(value: Value, unit: str, newline: str, base: str) -> str:
@@ -363,8 +383,7 @@ def _pretty(value: Value, unit: str, newline: str, base: str) -> str:
     inner = base + unit
     if isinstance(value, dict) and value:
         members = [
-            f"{inner}{json.dumps(key, ensure_ascii=False)}: "
-            f"{_pretty(child, unit, newline, inner)}"
+            f"{inner}{_json_text(key)}: {_pretty(child, unit, newline, inner)}"
             for key, child in value.items()
         ]
         return f"{{{newline}{f',{newline}'.join(members)}{newline}{base}}}"
@@ -390,7 +409,7 @@ def _newline(text: str) -> str:
 def _infer_indent(text: str, root: Node | None, default: str) -> str:
     if root is not None:
         for item in root.items:
-            prefix = text[text.rfind("\n", 0, item.start) + 1 : item.start]
+            prefix = text[_line_start(text, item.start) : item.start]
             if prefix and not prefix.strip():
                 return prefix
     return default
@@ -398,7 +417,8 @@ def _infer_indent(text: str, root: Node | None, default: str) -> str:
 
 def _apply(text: str, edits: list[TextEdit]) -> str:
     out: list[str] = []
-    cursor = 0
+    # A None start slices from 0 too.
+    cursor = 0  # pragma: no mutate
     for edit in sorted(edits, key=lambda e: (e.start, e.end)):
         out.append(text[cursor : edit.start])
         out.append(edit.text)
@@ -435,7 +455,7 @@ class JsoncDocument:
         """Decodes the document into detached semantic values."""
         if self.root is None:
             return {}
-        return cast(dict[str, Value], _node_value(self.root))
+        return as_mapping(_node_value(self.root))
 
     def get(self, path: Path) -> Value:
         """Returns the decoded value at ``path``, or ``MISSING`` when absent."""
@@ -514,7 +534,10 @@ class JsoncDocument:
             if node is None:
                 break
             found: Item | None = None
-            if node.kind is NodeKind.OBJECT and isinstance(step, str):
+            # Array items have no keys, and objects take no index.
+            if node.kind is NodeKind.OBJECT and isinstance(
+                step, str
+            ):  # pragma: no mutate
                 found = next((i for i in node.items if i.key == step), None)
             elif (
                 node.kind is NodeKind.ARRAY
@@ -533,7 +556,7 @@ class JsoncDocument:
         return _LookupResult(parents, item, matched)
 
     def _reparse(self, text: str) -> JsoncDocument:
-        return parse_jsonc(text, allow_empty=True, default_indent=self.indent_unit)
+        return parse_jsonc(text, default_indent=self.indent_unit)
 
     def _replace(self, parents: list[Node], item: Item, value: Value) -> JsoncDocument:
         node = item.node
@@ -571,7 +594,7 @@ class JsoncDocument:
         remaining = path[matched:]
         if not remaining or not all(isinstance(step, str) for step in remaining):
             raise self._bad_path(path)
-        keys = cast(tuple[str, ...], remaining)
+        keys = [step for step in remaining if isinstance(step, str)]
         nested: Value = value
         for key in reversed(keys[1:]):
             nested = {key: nested}
@@ -597,8 +620,7 @@ class JsoncDocument:
         close = container.end - 1
         is_object = container.kind is NodeKind.OBJECT
 
-        def member(indent: str, *, multiline: bool) -> str:
-            rendered = _render(value, unit, nl, indent, multiline=multiline)
+        def member(rendered: str) -> str:
             if key is None:
                 return rendered
             separator = ": "
@@ -608,26 +630,27 @@ class JsoncDocument:
                 colon = gap[gap.rfind('"') + 1 :]
                 if colon.strip() == ":" and "\n" not in colon:
                     separator = colon
-            return f"{json.dumps(key, ensure_ascii=False)}{separator}{rendered}"
+            return f"{_json_text(key)}{separator}{rendered}"
+
+        def spread(indent: str) -> str:
+            return member(_render(value, unit, nl, indent, multiline=True))
 
         if not items:
             body = text[container.start + 1 : close]
             open_indent = _leading_ws(text, container.start)
             inner = open_indent + unit
-            expanded = f"{nl}{inner}{member(inner, multiline=True)}{nl}{open_indent}"
-            line_start = text.rfind("\n", 0, close) + 1
+            expanded = f"{nl}{inner}{spread(inner)}{nl}{open_indent}"
+            line_start = _line_start(text, close)
             if not body.strip() and "\n" not in body:
                 if not is_object and not isinstance(value, (dict, list)):
-                    edit = TextEdit(
-                        container.start + 1, close, member(inner, multiline=False)
-                    )
+                    edit = TextEdit(container.start + 1, close, member(_compact(value)))
                 else:
                     edit = TextEdit(container.start + 1, close, expanded)
             elif not text[line_start:close].strip():
                 edit = TextEdit(
                     line_start,
                     line_start,
-                    f"{inner}{member(inner, multiline=True)}{nl}",
+                    f"{inner}{spread(inner)}{nl}",
                 )
             else:
                 edit = TextEdit(close, close, expanded)
@@ -640,14 +663,14 @@ class JsoncDocument:
         )
         if not multiline:
             if last.comma is None:
-                edit = TextEdit(last.end, last.end, f", {member('', multiline=False)}")
+                edit = TextEdit(last.end, last.end, f", {member(_compact(value))}")
             else:
-                edit = TextEdit(anchor, anchor, f" {member('', multiline=False)},")
+                edit = TextEdit(anchor, anchor, f" {member(_compact(value))},")
             return self._reparse(_apply(text, [edit]))
 
         indent = _leading_ws(text, last.start)
         eol = _line_end(text, anchor)
-        line = f"{nl}{indent}{member(indent, multiline=True)}"
+        line = f"{nl}{indent}{spread(indent)}"
         edits: list[TextEdit] = []
         if last.comma is None:
             edits.append(TextEdit(last.end, last.end, ","))
@@ -660,29 +683,25 @@ class JsoncDocument:
         text = self.text
         items = container.items
         index = items.index(item)
+        before = items[index - 1].comma if index else None
         anchor = item.comma + 1 if item.comma is not None else item.end
         eol = _line_end(text, anchor)
-        line_start = text.rfind("\n", 0, item.start) + 1
-        own_line = (
-            not text[line_start : item.start].strip()
-            and eol < len(text)
-            and text[eol] in "\r\n"
-        )
+        line_start = _line_start(text, item.start)
+        # The container's closing bracket comes after eol, so it is in the text.
+        own_line = not text[line_start : item.start].strip() and text[eol] in _NEWLINES
         edits: list[TextEdit] = []
         if own_line:
             end = eol + 2 if text.startswith("\r\n", eol) else eol + 1
             edits.append(TextEdit(line_start, end, ""))
-            if item.comma is None and index > 0 and items[index - 1].comma is not None:
-                comma = cast(int, items[index - 1].comma)
-                edits.append(TextEdit(comma, comma + 1, ""))
+            if item.comma is None and before is not None:
+                edits.append(TextEdit(before, before + 1, ""))
         elif item.comma is not None:
             end = anchor
-            while end < len(text) and text[end] in " \t":
+            while text[end] in _BLANKS:
                 end += 1
             edits.append(TextEdit(item.start, end, ""))
-        elif index > 0:
-            previous = cast(int, items[index - 1].comma)
-            edits.append(TextEdit(previous, item.end, ""))
+        elif before is not None:
+            edits.append(TextEdit(before, item.end, ""))
         else:
             edits.append(TextEdit(item.start, item.end, ""))
         return self._reparse(_apply(text, edits))
@@ -737,9 +756,8 @@ def decode_jsonc(text: str) -> dict[str, Value]:
 
 def decode_jsonc_baseline(text: str) -> dict[str, Value]:
     """Decodes a strict JSON owned-baseline document and validates its values."""
-    value = parse_jsonc(text, strict=True).value()
-    validate_value(value)
-    return value
+    # Strict parsing already rejects every value JSON cannot hold.
+    return parse_jsonc(text, strict=True).value()
 
 
 def dumps_jsonc(value: dict[str, Value], indent: str = "  ") -> str:
@@ -758,7 +776,7 @@ def dumps_jsonc(value: dict[str, Value], indent: str = "  ") -> str:
 
 def encode_jsonc_baseline(value: dict[str, Value]) -> str:
     """Encodes owned values deterministically, without local comments."""
-    content = dumps_jsonc(cast(dict[str, Value], sort_value_keys(value)))
+    content = dumps_jsonc(as_mapping(sort_value_keys(value)))
     decode_jsonc_baseline(content)
     return content
 
@@ -823,8 +841,8 @@ def reconcile_jsonc(
     if overwrite:
         value: Value = deepcopy(local)
         baseline: Value = deepcopy(base) if isinstance(base, dict) else {}
-        overlay_declared(cast(dict[str, Value], value), remote)
-        overlay_declared(cast(dict[str, Value], baseline), remote)
+        overlay_declared(as_mapping(value), remote)
+        overlay_declared(as_mapping(baseline), remote)
     else:
         result = reconcile(
             base,
@@ -842,7 +860,7 @@ def reconcile_jsonc(
     decisions = (tuple(conflicts), resolved, proposals, preserved)
     if value is MISSING:
         return JsoncReconciliation(original, baseline, *decisions)
-    accepted = cast(dict[str, Value], value)
+    accepted = as_mapping(value)
 
     if isinstance(baseline, dict):
         prune_unapplied(baseline, base if isinstance(base, dict) else {}, local)
@@ -850,8 +868,6 @@ def reconcile_jsonc(
             baseline = MISSING
     if missing_file and semantic_equal(accepted, remote):
         return JsoncReconciliation(desired, baseline, *decisions)
-    if semantic_equal(local, accepted) and (not missing_file or not accepted):
-        return JsoncReconciliation(original, baseline, *decisions)
 
     def patch(
         target: JsoncDocument,

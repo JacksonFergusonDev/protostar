@@ -285,6 +285,7 @@ DIVERGED, UNOWNED, DELETED = (
         pytest.param(b"b\n", None, "a\n", (None, None, UNOWNED), id="unowned"),
         pytest.param(None, "a\n", "a\n", (None, "a\n", None), id="kept-deletion"),
         pytest.param(None, "a\n", "b\n", (None, "a\n", DELETED), id="deleted"),
+        pytest.param(b"a\n", "a\n", "a\n", (None, "a\n", None), id="unchanged"),
         pytest.param(b"a\n", "a\n", "b\n", ("b\n", "b\n", None), id="update"),
         pytest.param(b"b\n", "a\n", "b\n", (None, "b\n", None), id="converged"),
         pytest.param(b"\xff\n", "a\n", "b\n", (None, "a\n", DIVERGED), id="binary"),
@@ -622,3 +623,17 @@ def test_a_hunk_conflict_shows_every_line_of_each_side() -> None:
 
 def test_mixed_endings_are_compared_exactly() -> None:
     assert is_edited(b"a\nb\r\n", "a\nb\n")
+
+
+def test_a_long_repetitive_file_merges_without_junk_heuristics() -> None:
+    """difflib's autojunk would drop lines repeated across 200 lines or more."""
+    lines = ["a\n", "b\n"] * 120
+    base = "".join(lines)
+    remote_lines = list(lines)
+    remote_lines[100] = "c\n"
+    remote = "".join(remote_lines)
+
+    result = reconcile_text(f"x\n{base}z\n".encode(), remote, base, FILE)
+
+    assert result.content == f"x\n{remote}z\n"
+    assert not result.conflicts
