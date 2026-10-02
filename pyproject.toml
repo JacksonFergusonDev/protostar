@@ -201,6 +201,7 @@ also_copy = [
     "LICENSE",
     "README.md",
     "SECURITY.md",
+    "benchmarks/",
     "docs/",
     "justfile",
     "overrides/",
