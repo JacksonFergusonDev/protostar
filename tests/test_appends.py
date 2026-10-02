@@ -9,8 +9,16 @@ from protostar.appends import (
     detach_regions,
     get_comment_markers,
 )
+from protostar.errors import ConfigurationError
 from protostar.intent import AppendContribution, region_tag
-from protostar.merge import ConflictReason, ResolutionChoice
+from protostar.merge import (
+    MISSING,
+    ConflictReason,
+    ConflictSides,
+    MergeConflict,
+    MergeLocation,
+    ResolutionChoice,
+)
 
 
 def test_get_comment_markers_hash_family():
@@ -307,3 +315,192 @@ def test_attaching_a_region_follows_a_blank_line_and_the_file_s_newlines(
     text, block, expected
 ):
     assert attach_regions(text, [block]) == expected
+
+
+@pytest.mark.parametrize(
+    ("markers", "extensions"),
+    [
+        (
+            ("//", ""),
+            ".js .ts .jsx .tsx .c .cpp .h .hpp .java .go .rs .cs .swift .kt .scala",
+        ),
+        (("<!--", "-->"), ".html .htm .xml .svg .md"),
+        (("/*", "*/"), ".css .scss .sass .less"),
+        (("--", ""), ".sql .hs .lua"),
+        (("#", ""), ".py .toml .yaml .sh .gitignore"),
+    ],
+)
+def test_every_listed_extension_takes_its_comment_syntax(markers, extensions):
+    for extension in extensions.split():
+        assert get_comment_markers(Path(f"file{extension}")) == markers
+        assert get_comment_markers(Path(f"FILE{extension.upper()}")) == markers
+
+
+@pytest.mark.parametrize(
+    ("content", "message", "hint"),
+    [
+        (
+            "# region: protostar nothex\n",
+            "Malformed append boundary.",
+            "Repair the region markers.",
+        ),
+        (
+            f"# region: protostar {TAG}\n# region: protostar {region_tag('b')}\n",
+            "Duplicate, nested, or mismatched append boundaries.",
+            "Give each region one unique matching begin/end pair.",
+        ),
+        (
+            f"{_region(chr(10))}\n{_region(chr(10))}\n",
+            "Duplicate, nested, or mismatched append boundaries.",
+            "Give each region one unique matching begin/end pair.",
+        ),
+        (
+            f"# region: protostar {TAG}\nx\n",
+            "Unclosed append region.",
+            "Restore the matching end marker.",
+        ),
+    ],
+    ids=["malformed", "nested", "repeated", "unclosed"],
+)
+def test_broken_boundaries_are_refused(content, message, hint):
+    with pytest.raises(ConfigurationError) as caught:
+        append_marker_blocks(content, [], Path(".envrc"))
+
+    assert str(caught.value) == message
+    assert caught.value.hint == hint
+
+
+@pytest.mark.parametrize(
+    ("identities", "message"),
+    [
+        (("a", "a"), "Duplicate desired region identities."),
+        # Two identities whose tags collide.
+        (("r50007", "r102831"), "Duplicate desired region tags."),
+    ],
+)
+def test_desired_regions_need_unique_identities_and_tags(identities, message):
+    payloads = [AppendContribution(identity, "x") for identity in identities]
+
+    with pytest.raises(ConfigurationError) as caught:
+        append_marker_blocks("", payloads, Path(".envrc"))
+
+    assert str(caught.value) == message
+    assert caught.value.hint == "Use unique stable IDs."
+
+
+def test_a_region_ending_in_a_newline_gets_no_second_one():
+    tag = region_tag("a")
+    result = append_marker_blocks("", [AppendContribution("a", "x\n")], Path(".envrc"))
+
+    assert result.content == (
+        f"# region: protostar {tag}\nx\n# endregion: protostar {tag}\n"
+    )
+
+
+def _framed(identity: str, content: str) -> str:
+    tag = region_tag(identity)
+    return f"# region: protostar {tag}\n{content}\n# endregion: protostar {tag}"
+
+
+def test_a_deleted_owned_file_refuses_every_changed_region():
+    baselines = {"a": _framed("a", "old"), "b": _framed("b", "old")}
+    payloads = [AppendContribution("a", "new"), AppendContribution("b", "new")]
+
+    result = append_marker_blocks(
+        "", payloads, Path(".envrc"), baselines=baselines, missing_owned_file=True
+    )
+
+    assert result.content == ""
+    assert result.baselines == baselines
+    assert result.conflicts == tuple(
+        MergeConflict(
+            MergeLocation(".envrc", identity=identity), ConflictReason.DELETED_ANCESTOR
+        )
+        for identity in ("a", "b")
+    )
+
+
+def test_a_deleted_owned_file_keeps_unchanged_regions_deleted():
+    baselines = {"a": _framed("a", "x"), "b": _framed("b", "y")}
+    payloads = [AppendContribution("a", "x"), AppendContribution("b", "y")]
+
+    def run(resolutions=None):
+        return append_marker_blocks(
+            "",
+            payloads,
+            Path(".envrc"),
+            baselines=baselines,
+            missing_owned_file=True,
+            resolutions=resolutions or {},
+        )
+
+    result = run()
+
+    assert result.content == ""
+    assert result.baselines == baselines
+    assert not result.conflicts
+    assert result.preserved == tuple(
+        MergeConflict(
+            MergeLocation(".envrc", identity=identity),
+            ConflictReason.PRESERVED,
+            ConflictSides(baselines[identity], MISSING, baselines[identity], line=0),
+        )
+        for identity in ("a", "b")
+    )
+    first, second = result.preserved
+
+    kept = run({first.id: ResolutionChoice.LOCAL})
+    assert kept.content == ""
+    assert kept.resolved == (first.settle({first.id: ResolutionChoice.LOCAL}),)
+    assert kept.preserved == (second,)
+
+    restored = run({first.id: ResolutionChoice.DESIRED})
+    assert restored.content == baselines["a"] + "\n"
+    assert restored.preserved == (second,)
+
+
+def test_a_retracted_region_s_conflict_shows_what_is_removed():
+    baselines = {"a": _framed("a", "x"), "b": _framed("b", "y")}
+    edited = f"{_framed('a', 'edited')}\n\n{_framed('b', 'edited')}\n"
+
+    result = append_marker_blocks(edited, [], Path(".envrc"), baselines=baselines)
+
+    assert result.content == edited
+    assert result.conflicts == tuple(
+        MergeConflict(
+            MergeLocation(".envrc", identity=identity),
+            ConflictReason.RETRACTED,
+            ConflictSides(
+                baselines[identity], _framed(identity, "edited"), MISSING, line=0
+            ),
+        )
+        for identity in ("a", "b")
+    )
+
+
+def test_each_retracted_region_is_decided_on_its_own():
+    baselines = {
+        "a": _framed("a", "x"),
+        "b": _framed("b", "y"),
+        "c": _framed("c", "z"),
+    }
+    text = (
+        f"{_framed('a', 'edited')}\n\n{_framed('b', 'edited')}\n\n{_framed('c', 'z')}\n"
+    )
+    first, second = append_marker_blocks(
+        text, [], Path(".envrc"), baselines=baselines
+    ).conflicts
+
+    # Keeping the first edit, leaving the second open, removes the third.
+    result = append_marker_blocks(
+        text,
+        [],
+        Path(".envrc"),
+        baselines=baselines,
+        resolutions={first.id: ResolutionChoice.LOCAL},
+    )
+
+    assert result.content == f"{_framed('a', 'edited')}\n\n{_framed('b', 'edited')}\n"
+    assert result.baselines == {"b": baselines["b"]}
+    assert result.conflicts == (second,)
+    assert [conflict.id for conflict in result.resolved] == [first.id]

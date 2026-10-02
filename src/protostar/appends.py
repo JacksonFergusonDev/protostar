@@ -18,7 +18,7 @@ from .merge import (
     ResolutionChoice,
     Resolutions,
 )
-from .text_merge import is_edited, preserved_text, reconcile_text
+from .text_merge import is_edited, reconcile_text
 
 __all__ = [
     "RegionResult",
@@ -31,25 +31,12 @@ __all__ = [
 
 
 def get_comment_markers(filepath: Path) -> tuple[str, str]:
-    """Returns the appropriate comment syntax (start, end) for a given file extension."""
-    ext = filepath.suffix.lower()
-    name = filepath.name.lower()
+    """Returns the comment syntax (start, end) for a file's extension.
 
-    # Files that use '#' comments
-    if ext in (
-        ".py",
-        ".toml",
-        ".yaml",
-        ".yml",
-        ".sh",
-        ".bash",
-        ".zsh",
-        ".rb",
-        ".pl",
-        ".gitignore",
-        ".dockerignore",
-    ) or name in ("justfile", "makefile", "dockerfile"):
-        return ("#", "")
+    Anything unlisted, which includes Python, TOML, YAML, shell, and files like
+    ``justfile``, takes ``#``.
+    """
+    ext = filepath.suffix.lower()
 
     # Files that use '//' comments
     if ext in (
@@ -83,7 +70,6 @@ def get_comment_markers(filepath: Path) -> tuple[str, str]:
     if ext in (".sql", ".hs", ".lua"):
         return ("--", "")
 
-    # Fallback to standard hash
     return ("#", "")
 
 
@@ -113,8 +99,7 @@ def _marker(filepath: Path, tag: str, end: bool = False) -> str:
     """Returns a region's begin or end marker in the file's comment syntax."""
     c_start, c_end = get_comment_markers(filepath)
     prefix = "endregion" if end else "region"
-    suffix = f" {c_end}" if c_end else ""
-    return f"{c_start} {prefix}: protostar {tag}{suffix}".strip()
+    return f"{c_start} {prefix}: protostar {tag} {c_end}".strip()
 
 
 def _span(text: str, begin: str, end: str) -> tuple[int, int] | None:
@@ -250,7 +235,7 @@ def append_marker_blocks(
             line,
         )
         if not match:
-            if "region: protostar" in line or "endregion: protostar" in line:
+            if "region: protostar" in line:
                 raise ConfigurationError(
                     "Malformed append boundary.",
                     hint="Repair the region markers.",
@@ -289,8 +274,9 @@ def append_marker_blocks(
         validate_region_id(identity)
     result = original_content
     applied = dict(baselines or {})
-    refused: list[tuple[AppendContribution, MergeConflict]] = []
-    settled: list[tuple[AppendContribution, MergeConflict]] = []
+    # Each refused or settled conflict, with the tag of its region.
+    refused: list[tuple[str, MergeConflict]] = []
+    settled: list[tuple[str, MergeConflict]] = []
     preserved: list[MergeConflict] = []
     for contribution in payloads:
         tag = contribution.tag
@@ -299,32 +285,30 @@ def append_marker_blocks(
         if not framed.endswith("\n"):
             framed += "\n"
         framed += end
-        local = None
-        start = stop = 0
-        if (span := _span(result, begin, end)) is not None:
-            start, stop = span
-            local = result[start:stop].encode("utf-8")
+        span = _span(result, begin, end)
+        local = None if span is None else result[slice(*span)].encode()
         baseline = applied.get(contribution.id)
         location = MergeLocation(filepath.as_posix(), identity=contribution.id)
         if missing_owned_file and not overwrite:
             # An owned deleted file protects newly introduced regions too.
             if baseline != framed:
                 refused.append(
-                    (
-                        contribution,
-                        MergeConflict(location, ConflictReason.DELETED_ANCESTOR),
-                    )
+                    (tag, MergeConflict(location, ConflictReason.DELETED_ANCESTOR))
                 )
                 continue
-            deleted = preserved_text(location, None, framed)
-            choice = deleted.settle(resolutions) if deleted is not None else None
-            if choice is None or choice.resolution is not ResolutionChoice.DESIRED:
-                # Restoring one region recreates the file; the merge below reports it.
-                if choice is not None:
-                    settled.append((contribution, choice))
-                elif deleted is not None:
-                    preserved.append(deleted)
+            deleted = MergeConflict(
+                location,
+                ConflictReason.PRESERVED,
+                ConflictSides(framed, MISSING, framed, line=0),
+            )
+            choice = deleted.settle(resolutions)
+            if choice is None:
+                preserved.append(deleted)
                 continue
+            if choice.resolution is not ResolutionChoice.DESIRED:
+                settled.append((tag, choice))
+                continue
+            # Restoring one region recreates the file; the merge below reports it.
         decision = reconcile_text(
             local,
             framed,
@@ -333,14 +317,15 @@ def append_marker_blocks(
             overwrite=overwrite,
             resolutions=resolutions,
         )
-        refused.extend((contribution, conflict) for conflict in decision.conflicts)
-        settled.extend((contribution, conflict) for conflict in decision.resolved)
+        refused.extend((tag, conflict) for conflict in decision.conflicts)
+        settled.extend((tag, conflict) for conflict in decision.resolved)
         preserved.extend(decision.preserved)
         if decision.baseline is not None:
             applied[contribution.id] = decision.baseline
         if decision.content is None:
             continue
-        if local is not None:
+        if span is not None:
+            start, stop = span
             result = result[:start] + decision.content + result[stop:]
         else:
             separator = (
@@ -358,7 +343,7 @@ def append_marker_blocks(
             continue
         start, stop = span
         local_text = result[start:stop]
-        if is_edited(local_text.encode("utf-8"), applied[identity]):
+        if is_edited(local_text.encode(), applied[identity]):
             found = MergeConflict(
                 MergeLocation(filepath.as_posix(), identity=identity),
                 ConflictReason.RETRACTED,
@@ -366,9 +351,9 @@ def append_marker_blocks(
             )
             choice = found.settle(resolutions)
             if choice is None:
-                refused.append((AppendContribution(identity, ""), found))
+                refused.append((tag, found))
                 continue
-            settled.append((AppendContribution(identity, ""), choice))
+            settled.append((tag, choice))
             if choice.resolution is ResolutionChoice.LOCAL:
                 del applied[identity]
                 continue
@@ -377,16 +362,14 @@ def append_marker_blocks(
     if payloads or baselines:
         append_marker_blocks(result, [], filepath)
 
-    def numbered(
-        found: list[tuple[AppendContribution, MergeConflict]],
-    ) -> tuple[MergeConflict, ...]:
+    def numbered(found: list[tuple[str, MergeConflict]]) -> tuple[MergeConflict, ...]:
         # Number lines in the final file, after every accepted region moved them.
         conflicts: list[MergeConflict] = []
-        for contribution, conflict in found:
+        for tag, conflict in found:
             lines = conflict.location.lines
-            begin = marker(contribution.tag)
-            if lines is not None and begin in result:
-                offset = result[: result.index(begin)].count("\n")
+            span = _span(result, marker(tag), marker(tag, True))
+            if lines is not None and span is not None:
+                offset = result[: span[0]].count("\n")
                 lines = LineSpan(lines.start + offset, lines.count)
             conflicts.append(
                 replace(conflict, location=replace(conflict.location, lines=lines))
