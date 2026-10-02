@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790900786771,
+  "lastUpdate": 1790908204414,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20609,6 +20609,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 759.17,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5a79bf68706f93792083e7fc1abd31e797dbaa5d",
+          "message": "test: settle every surviving mutant across the mutated modules (#410)\n\n* test: pin the producer-conflict guard and overwrite owning nothing\n\nTwo branches the earlier PRs called possibly unreachable are reachable:\n\n- aggregate_toml_document raises 'Ambiguous TOML producers' for a\n  producer that is neither a module nor a template. A test already\n  relied on it, but matched only 'Ambiguous', so the hint, the key path,\n  and which pairs may override survived. Module and unknown producers in\n  either order now conflict, and producers that agree never do.\n- reconcile_jsonc records owning nothing (MISSING, not {}) when an\n  overwrite declares nothing; random search shows overwrite is the only\n  way to reach it.\n\n* ci(mutation): copy overrides/ into the mutants tree\n\nThe landing-page rebuild added a test that reads overrides/home.html,\nso mutmut's baseline run inside mutants/ failed before any mutant ran.\n\n* test: settle every surviving mutant across the mutated modules\n\nA full mutation run on this branch left 263 survivors in the seven\nmutated modules. Each is now tested, removed with the code that made it\npossible, or marked as equivalent with the reason on the line above.\n\n- Real gaps, now tested: conflict ids stay the same across releases;\n  an edit to or from null under an unchanged update is preserved;\n  without_paths keeps an already-empty mapping; a long repetitive file\n  merges without difflib's junk heuristic; flat names under nested\n  namespaces (three spellings, a value named like its namespace, an\n  owned name outside every namespace); a key added beside a retraction\n  or a change stays above a closing comment; detect_style finds a\n  mapping after a sequence; duplicates held below the top level; the\n  last line keeps its trailing spaces; JSONC node kinds, indent after\n  emptying an object, multi-line replacement, adjacent block comments,\n  and the safety net that refuses to write lost values.\n- A bug: a table added inside an inline table raised tomlkit's\n  ValueError. Members of an inline table are now written inline, as\n  members of a dotted key already were.\n- Dead code removed: TomlDocumentSpec.super_tables (tomlkit already\n  writes only the children's headers), redundant guards and defaults,\n  the YAML loader's cycle set (the depth limit already catches a cycle),\n  JSONC's unchanged-document shortcut and its baseline's second\n  validation, and explicit \"utf-8\" arguments.\n- Equivalent mutants carry a pragma. mutmut honours a trailing pragma\n  only on a statement's first line, so do_not_mutate_patterns applies\n  it to whatever line it is on. Dict casts go through as_mapping so one\n  pragma covers them all without silencing their arguments.",
+          "timestamp": "2026-10-01T19:26:36-07:00",
+          "tree_id": "3b83038ff4ee3d95d82d2af1df3202181fa32383",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/5a79bf68706f93792083e7fc1abd31e797dbaa5d"
+        },
+        "date": 1790908203285,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 287.19,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1285.3,
             "unit": "ms"
           }
         ]
