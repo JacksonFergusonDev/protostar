@@ -76,11 +76,11 @@ const VERTEX = `
   void main() {
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     float age = aIndex / ${POINTS.toFixed(1)};
-    float tail = exp(-age * 1.6);
+    float tail = exp(-age * 1.2);
     // A slow pulse travels down each strand.
     float phase = age * 6.0 - uTime * 0.18 + aStrand * 0.33;
     float pulse = pow(0.5 + 0.5 * sin(6.2831853 * phase), 6.0);
-    vGlow = (0.45 + 0.55 * tail) * (0.7 + 0.3 * pulse);
+    vGlow = (0.55 + 0.45 * tail) * (0.75 + 0.25 * pulse);
   }
 `;
 
@@ -93,7 +93,7 @@ const FRAGMENT = `
 
   void main() {
     // Keep the hero's copy quiet while the geometry opens out on the right.
-    float space = 0.2 + 0.8 * smoothstep(0.35, 0.72, gl_FragCoord.x / uViewport.x);
+    float space = 0.4 + 0.6 * smoothstep(0.35, 0.72, gl_FragCoord.x / uViewport.x);
     gl_FragColor = vec4(uColor, vGlow * uStrength * mix(1.0, space, uTextGuard));
   }
 `;
@@ -175,7 +175,7 @@ export async function startField(canvas, button) {
   const applyScheme = () => {
     const light = document.body.dataset.mdColorScheme === "default";
     material.uniforms.uColor.value.set(light ? "#0e7490" : "#22d3ee");
-    strength = light ? 0.12 : 0.18;
+    strength = light ? 0.24 : 0.36;
     material.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
     material.needsUpdate = true;
   };
@@ -233,7 +233,7 @@ export async function startField(canvas, button) {
     ).add(focus);
     camera.lookAt(focus);
     camera.rotateZ(interpolate(...view.roll, eased));
-    material.uniforms.uStrength.value = strength * (portrait ? 0.6 : 1);
+    material.uniforms.uStrength.value = strength * (portrait ? 0.75 : 1);
     material.uniforms.uTime.value = time;
     renderer.render(scene, camera);
   }
