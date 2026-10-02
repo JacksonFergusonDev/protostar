@@ -1,0 +1,164 @@
+/* Shared Protostar header: docs landing page and benchmark dashboard.
+   Both pages use this component; page-specific links stay in their markup. */
+:root { --ps-header: 80px; }
+.ps-bar {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    height: var(--ps-header);
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    font-family: var(--sans);
+    line-height: 1.6;
+    font-weight: 400;
+    letter-spacing: normal;
+}
+
+.ps-bar::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bg) 94%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    content: "";
+}
+
+.ps-bar__inner {
+    display: flex;
+    align-items: center;
+    gap: 48px;
+    height: 100%;
+    width: min(1160px, calc(100% - 64px));
+    margin-inline: auto;
+}
+
+.ps-bar__mark {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 12px;
+    color: var(--text);
+    font-size: var(--fs-h4);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+}
+
+.ps-bar__mark img {
+    width: 30px;
+    height: 30px;
+}
+
+.ps-bar .ps-console {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--panel) 75%, transparent);
+}
+
+.ps-bar .ps-console a {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 5px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.ps-bar .ps-console a:hover {
+    color: var(--text);
+    background: color-mix(in srgb, var(--muted) 8%, transparent);
+}
+
+.ps-bar__end {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-left: auto;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.ps-bar__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text);
+    text-decoration: none;
+}
+
+.ps-bar__link .hs-icon {
+    width: 14px;
+    height: 14px;
+    color: inherit;
+}
+
+.ps-bar__link img {
+    width: 18px;
+    height: 18px;
+}
+
+.ps-bar__link+.ps-bar__link {
+    padding-left: 18px;
+    border-left: 1px solid var(--line);
+}
+
+.ps-bar__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    color: var(--muted);
+    background: transparent;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.ps-bar__icon:hover {
+    border-color: var(--muted);
+    color: var(--text);
+}
+
+.ps-bar__icon svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+
+.ps-bar__link:hover { color: var(--accent); }
+.ps-bar__link--accent { color: var(--accent); }
+.ps-bar__context { color: var(--muted); font-size: var(--fs-ui); }
+.ps-bar a:focus-visible, .ps-bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
+@media (max-width: 1100px) {
+    .ps-bar__inner { gap: 24px; }
+}
+@media (max-width: 800px) {
+    .ps-bar .ps-wide, .ps-bar .ps-console .ps-wide { display: none; }
+    .ps-bar__inner { width: calc(100% - 40px); }
+}
+@media (max-width: 560px) {
+    :root { --ps-header: 64px; }
+    .ps-bar__inner { gap: 12px; }
+    .ps-bar__mark { gap: 8px; font-size: 16px; }
+    .ps-bar__mark img { width: 26px; height: 26px; }
+    .ps-bar .ps-console a { padding: 6px 10px; font-size: 13px; }
+    .ps-bar__end { gap: 8px; }
+    .ps-bar__link { display: none; }
+    .ps-bar__link--accent { display: inline-flex; }
+}

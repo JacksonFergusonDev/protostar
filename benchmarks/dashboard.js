@@ -84,18 +84,33 @@ import { metricHistory, precedingAverage, escapeHtml } from './metrics.mjs';
       const link = document.createElement('a');
       link.href = item.url;
       link.textContent = item.shortSha;
+      const icon = document.createElement('span');
+      icon.className = 'hs-icon hs-icon-brand-github';
+      icon.setAttribute('aria-hidden', 'true');
+      link.prepend(icon);
       row.insertCell().appendChild(link);
     }
   }
 
-  // ECharts Custom Theme Factory
-  function createChartOptions(dataset, metricColor, softGradientColor) {
+  // Canvas charts read the same house tokens as the page.
+  const tokens = getComputedStyle(document.documentElement);
+  const theme = {
+    panel: tokens.getPropertyValue('--panel').trim(),
+    text: tokens.getPropertyValue('--text').trim(),
+    muted: tokens.getPropertyValue('--muted').trim(),
+    accent: tokens.getPropertyValue('--accent').trim(),
+    line: tokens.getPropertyValue('--line').trim(),
+    mono: tokens.getPropertyValue('--mono').trim(),
+    uiSize: parseFloat(tokens.getPropertyValue('--fs-ui')),
+    labelSize: parseFloat(tokens.getPropertyValue('--fs-label')),
+  };
+  function createChartOptions(dataset) {
     const xCategories = dataset.map(d => d.shortSha);
     const yValues = dataset.map(d => d.value);
 
     return {
       backgroundColor: 'transparent',
-      animationDuration: 600,
+      animation: false,
       grid: {
         top: 25,
         right: 25,
@@ -105,15 +120,16 @@ import { metricHistory, precedingAverage, escapeHtml } from './metrics.mjs';
       },
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(11, 15, 23, 0.95)',
-        borderColor: metricColor,
+        backgroundColor: theme.panel,
+        borderColor: theme.line,
         borderWidth: 1,
         padding: [10, 14],
         textStyle: {
-          color: '#f8fafc',
-          fontSize: 12
+          color: theme.text,
+          fontSize: theme.uiSize
         },
-        extraCssText: 'box-shadow: 0 10px 25px rgba(0,0,0,0.6); border-radius: 8px; backdrop-filter: blur(8px);',
+        extraCssText: 'box-shadow: none; border-radius: 5px;',
+        confine: true,
         formatter: function(params) {
           if (!params || !params.length) return '';
           const idx = params[0].dataIndex;
@@ -130,7 +146,7 @@ import { metricHistory, precedingAverage, escapeHtml } from './metrics.mjs';
             const pct = ((d.value - prev) / prev) * 100;
 
             const sign = pct > 0 ? '+' : '';
-            diffHtml = `<span style="font-size:0.75rem; font-family:var(--font-mono); color:var(--text-muted); opacity:0.85;">(${sign}${pct.toFixed(1)}%)</span>`;
+            diffHtml = `<span class="tooltip-diff">(${sign}${pct.toFixed(1)}%)</span>`;
           }
 
           const msgEscaped = escapeHtml(d.message.split('\n')[0] || '');
@@ -148,7 +164,7 @@ import { metricHistory, precedingAverage, escapeHtml } from './metrics.mjs';
               <div class="tooltip-msg">${msgEscaped}</div>
               <div class="tooltip-author">
                 <span>by ${escapeHtml(d.author)}</span>
-                <span class="tooltip-action">&rarr; Click to open commit</span>
+                <span class="tooltip-action"><span class="hs-icon hs-icon-brand-github" aria-hidden="true"></span>View commit</span>
               </div>
             </div>
           `;
@@ -158,13 +174,13 @@ import { metricHistory, precedingAverage, escapeHtml } from './metrics.mjs';
         type: 'category',
         data: xCategories,
         axisLine: {
-          lineStyle: { color: 'rgba(255, 255, 255, 0.1)' }
+          lineStyle: { color: theme.line }
         },
         axisTick: { show: false },
         axisLabel: {
-          color: '#64748b',
-          fontFamily: 'JetBrains Mono',
-          fontSize: 11,
+          color: theme.muted,
+          fontFamily: theme.mono,
+          fontSize: theme.labelSize,
           interval: 'auto'
         }
       },
@@ -173,14 +189,14 @@ import { metricHistory, precedingAverage, escapeHtml } from './metrics.mjs';
         scale: true,
         splitLine: {
           lineStyle: {
-            color: 'rgba(255, 255, 255, 0.05)',
+            color: theme.line,
             type: 'dashed'
           }
         },
         axisLabel: {
-          color: '#94a3b8',
-          fontFamily: 'JetBrains Mono',
-          fontSize: 11,
+          color: theme.muted,
+          fontFamily: theme.mono,
+          fontSize: theme.labelSize,
           formatter: '{value} ms'
         }
       },
@@ -191,19 +207,17 @@ import { metricHistory, precedingAverage, escapeHtml } from './metrics.mjs';
           height: 24,
           bottom: 8,
           borderColor: 'transparent',
-          backgroundColor: 'rgba(255, 255, 255, 0.03)',
-          fillerColor: softGradientColor,
+          backgroundColor: theme.panel,
+          fillerColor: theme.line,
           handleStyle: {
-            color: metricColor,
-            borderColor: '#ffffff',
-            borderWidth: 1,
-            shadowBlur: 4,
-            shadowColor: 'rgba(0,0,0,0.5)'
+            color: theme.accent,
+            borderColor: theme.accent,
+            borderWidth: 1
           },
           textStyle: {
-            color: '#64748b',
-            fontFamily: 'JetBrains Mono',
-            fontSize: 10
+            color: theme.muted,
+            fontFamily: theme.mono,
+            fontSize: theme.labelSize
           },
           startValue: Math.max(0, dataset.length - 100),
           endValue: dataset.length - 1
@@ -224,25 +238,17 @@ import { metricHistory, precedingAverage, escapeHtml } from './metrics.mjs';
           symbol: 'circle',
           symbolSize: 6,
           itemStyle: {
-            color: metricColor
+            color: theme.accent
           },
           lineStyle: {
-            width: 2.5,
-            color: metricColor,
-            shadowColor: metricColor,
-            shadowBlur: 6
-          },
-          areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: softGradientColor },
-              { offset: 1, color: 'transparent' }
-            ])
+            width: 2,
+            color: theme.accent
           },
           markLine: {
             silent: true,
             symbol: 'none',
             lineStyle: {
-              color: 'rgba(255, 255, 255, 0.2)',
+              color: theme.muted,
               type: 'dotted'
             },
             data: [
@@ -250,10 +256,11 @@ import { metricHistory, precedingAverage, escapeHtml } from './metrics.mjs';
                 type: 'average',
                 name: 'Avg',
                 label: {
-                  formatter: 'Avg: {c} ms',
-                  fontFamily: 'JetBrains Mono',
-                  fontSize: 10,
-                  color: '#94a3b8'
+                  formatter: 'Mean: {c} ms',
+                  position: 'insideEndTop',
+                  fontFamily: theme.mono,
+                  fontSize: theme.labelSize,
+                  color: theme.muted
                 }
               }
             ]
@@ -281,8 +288,9 @@ import { metricHistory, precedingAverage, escapeHtml } from './metrics.mjs';
   const chartHeadless = echarts.init(headlessDom, null, { renderer: 'canvas' });
   const chartEditor = echarts.init(editorDom, null, { renderer: 'canvas' });
 
-  chartHeadless.setOption(createChartOptions(headlessData, '#22d3ee', 'rgba(34, 211, 238, 0.2)'));
-  chartEditor.setOption(createChartOptions(editorData, '#a78bfa', 'rgba(167, 139, 250, 0.2)'));
+  await document.fonts.ready;
+  chartHeadless.setOption(createChartOptions(headlessData));
+  chartEditor.setOption(createChartOptions(editorData));
 
   // Each metric has a different history length, so ranges stay independent.
 
