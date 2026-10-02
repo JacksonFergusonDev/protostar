@@ -1,5 +1,6 @@
 from dataclasses import replace
 from datetime import UTC, date, datetime, time
+from typing import Any
 
 import pytest
 from hypothesis import given, settings
@@ -27,6 +28,7 @@ from protostar.sync_state import (
     PinProvenance,
     RegionState,
     SyncState,
+    check_one_shot_workspace,
     check_producer_version,
     check_template_identity,
     check_workspace_identity,
@@ -529,3 +531,472 @@ def test_jsonc_baseline_must_be_a_strict_json_object(baseline):
 def test_jsonc_records_hold_only_a_baseline(fields):
     with pytest.raises(ConfigurationError):
         FileState(".github/renovate.json", FilePolicy.JSONC, **fields)
+
+
+HINT = (
+    "Correct the state record before retrying; "
+    "unsupported state cannot be migrated or adopted automatically."
+)
+HEAD = 'schema_version = 1\nproducer_version = "x"\n'
+TEMPLATE = (
+    f'[template]\norigin = "remote"\nlocator = "https://e.org/t"\ndigest = "{DIGEST}"\n'
+)
+FILE = '[[files]]\npath = "justfile"\npolicy = "text"\nbaseline = "x"\n'
+REGION_RECORD = (
+    '[[files]]\npath = ".envrc"\npolicy = "regions"\n[[files.regions]]\n'
+    'tag = "12345678"\nid = "a"\nbaseline = "x"\n'
+)
+DEPENDENCY = (
+    '[[dependencies]]\npath = "pyproject.toml"\ngroup = "dev"\nname = "pytest"\n'
+    'marker = ""\ndeclared = "pytest"\nmaterialized = "pytest"\n'
+)
+PIN = (
+    '[[hook_pins]]\npath = "h.yml"\nrepo = "r"\nrevision = "v1"\n'
+    'provenance = "registry"\n'
+)
+
+
+def wrong(value: object) -> Any:
+    """Passes a value of the wrong type to a constructor that must reject it."""
+    return value
+
+
+def refused(build, detail):
+    with pytest.raises(ConfigurationError) as caught:
+        build()
+    assert str(caught.value) == f"Invalid Protostar state: {detail}"
+    assert caught.value.hint == HINT
+
+
+def blank(section, key):
+    """Returns the section with one of its values set to an empty string."""
+    lines = section.splitlines()
+    return "\n".join(
+        f'{key} = ""' if line.startswith(f"{key} =") else line for line in lines
+    )
+
+
+@pytest.mark.parametrize(
+    ("section", "key", "label"),
+    [
+        (TEMPLATE, "origin", "template origin"),
+        (TEMPLATE, "locator", "template locator"),
+        (TEMPLATE, "digest", "template digest"),
+        (TEMPLATE + 'display_name = "n"\n', "display_name", "display_name"),
+        (TEMPLATE + 'version = "v"\n', "version", "version"),
+        (TEMPLATE + 'path = "p"\n', "path", "template path"),
+        (TEMPLATE + 'ref = "r"\n', "ref", "ref"),
+        (TEMPLATE + 'revision = "r"\n', "revision", "revision"),
+        (TEMPLATE + 'migrated = "m"\n', "migrated", "migrated"),
+        (FILE, "path", "file path"),
+        (FILE, "policy", "file policy"),
+        (
+            FILE.replace("text", "seed-only").replace(
+                'baseline = "x"', f'digest = "{DIGEST}"'
+            ),
+            "digest",
+            "file digest",
+        ),
+        (REGION_RECORD, "tag", "region tag"),
+        (REGION_RECORD, "id", "region id"),
+        (REGION_RECORD, "baseline", "region baseline"),
+        (DEPENDENCY, "path", "dependency path"),
+        (DEPENDENCY, "group", "dependency group"),
+        (DEPENDENCY, "name", "dependency name"),
+        (DEPENDENCY, "declared", "declared requirement"),
+        (DEPENDENCY, "materialized", "materialized requirement"),
+        (PIN, "path", "hook path"),
+        (PIN, "repo", "repository"),
+        (PIN, "revision", "revision"),
+        (PIN, "provenance", "pin provenance"),
+    ],
+)
+def test_every_stored_field_names_itself_when_empty(section, key, label):
+    document = HEAD + blank(section, key) + "\n"
+
+    refused(lambda: deserialize_state(document), f"{label} must be a non-empty string.")
+
+
+def test_a_missing_producer_version_names_itself():
+    refused(
+        lambda: deserialize_state('schema_version = 1\nproducer_version = ""\n'),
+        "producer version must be a non-empty string.",
+    )
+    refused(lambda: SyncState(""), "producer version must be a non-empty string.")
+
+
+def test_a_state_without_records_reads_as_empty():
+    state = deserialize_state(HEAD)
+
+    assert state == SyncState("x")
+    assert (state.files, state.dependencies, state.hook_pins) == ((), (), ())
+    assert deserialize_state(HEAD + FILE).files[0].path == "justfile"
+    assert deserialize_state(HEAD + DEPENDENCY).dependencies[0].name == "pytest"
+    assert deserialize_state(HEAD + PIN).hook_pins[0].repo == "r"
+
+
+def test_a_record_that_is_not_an_array_or_has_other_fields_is_refused():
+    refused(
+        lambda: deserialize_state(HEAD + 'files = "bad"'),
+        "record collection must be an array.",
+    )
+    refused(
+        lambda: deserialize_state(HEAD + FILE + 'extra = "no"\n'),
+        "missing or unknown record fields.",
+    )
+    refused(
+        lambda: deserialize_state(HEAD + '[[files]]\npolicy = "text"\n'),
+        "missing or unknown record fields.",
+    )
+
+
+@pytest.mark.parametrize(
+    ("content", "detail"),
+    [
+        ("not toml", "malformed or unsupported record."),
+        (
+            HEAD + '[[files]]\npath = "f"\npolicy = "text"\nbaseline = 42\n',
+            "baseline must be a document string.",
+        ),
+        (
+            HEAD + DEPENDENCY.replace('marker = ""', "marker = 1"),
+            "dependency marker must be a string.",
+        ),
+        ('schema_version = 2\nproducer_version = "x"\n', "unsupported schema version."),
+        (
+            'schema_version = true\nproducer_version = "x"\n',
+            "unsupported schema version.",
+        ),
+    ],
+)
+def test_corrupt_state_says_what_is_wrong(content, detail):
+    refused(lambda: deserialize_state(content), detail)
+
+
+def test_a_state_must_use_the_current_schema_version():
+    for version in (0, 2, True, "1"):
+        refused(
+            lambda version=version: SyncState("x", schema_version=version),
+            "unsupported schema version.",
+        )
+    assert SyncState("x", schema_version=1).schema_version == 1
+
+
+@pytest.mark.parametrize(
+    ("build", "detail"),
+    [
+        (
+            lambda: RegionState("bad_tag", "a", REGION),
+            "tags must be 8-character lowercase hex strings.",
+        ),
+        (
+            lambda: RegionState("12345678", "a", wrong(None)),
+            "regions record their last applied text.",
+        ),
+        (
+            lambda: FileState("f", FilePolicy.SEED, digest="bad"),
+            "digests must be lowercase SHA-256 hex strings.",
+        ),
+        (
+            lambda: FileState("f", FilePolicy.SEED, digest="A" * 64),
+            "digests must be lowercase SHA-256 hex strings.",
+        ),
+        (lambda: FileState("f", wrong("bogus")), "unknown file policy."),
+        (
+            lambda: FileState(
+                "f", FilePolicy.TOML, "x = 1", (RegionState("12345678", "a", REGION),)
+            ),
+            "structured configuration requires only a baseline document string.",
+        ),
+        (
+            lambda: FileState("f", FilePolicy.YAML, None),
+            "structured configuration requires only a baseline document string.",
+        ),
+        (
+            lambda: FileState(
+                "pyproject.toml", FilePolicy.TOML, "[tool.protostar]\nx = 1\n"
+            ),
+            "tool.protostar cannot be owned.",
+        ),
+        (
+            lambda: FileState("pyproject.toml", FilePolicy.TOML, "tool = 1\n"),
+            "tool.protostar cannot be owned.",
+        ),
+        (
+            lambda: FileState("f", FilePolicy.TEXT),
+            "text policy requires the last applied text.",
+        ),
+        (
+            lambda: FileState("f", FilePolicy.SEED, "x"),
+            "seed-only policy records only the seeded path.",
+        ),
+        (
+            lambda: FileState("f", FilePolicy.REGIONS, "x"),
+            "region policy records only its regions.",
+        ),
+        (
+            lambda: FileState("f", FilePolicy.TEXT, "x", digest=DIGEST),
+            "only a seed records a digest or retirement.",
+        ),
+        (
+            lambda: FileState("f", FilePolicy.TEXT, "x", retired=True),
+            "only a seed records a digest or retirement.",
+        ),
+        (
+            lambda: FileState("f", FilePolicy.SEED, retired=wrong(1)),
+            "retired must be a boolean.",
+        ),
+        (
+            lambda: FileState(
+                "f",
+                FilePolicy.REGIONS,
+                regions=(
+                    RegionState("12345678", "a", REGION),
+                    RegionState("87654321", "a", REGION),
+                ),
+            ),
+            "duplicate region identities.",
+        ),
+        (
+            lambda: FileState(
+                "f",
+                FilePolicy.REGIONS,
+                regions=(
+                    RegionState("12345678", "a", REGION),
+                    RegionState("12345678", "b", REGION),
+                ),
+            ),
+            "duplicate region tags.",
+        ),
+        (
+            lambda: DependencyState(
+                "pyproject.toml", DependencyGroup.MAIN, "Bad", "", "x", "x"
+            ),
+            "dependency name must be canonical.",
+        ),
+        (
+            lambda: DependencyState(
+                "pyproject.toml", wrong("bogus"), "x", "", "x", "x"
+            ),
+            "unsupported dependency group.",
+        ),
+        (
+            lambda: DependencyState(
+                "pyproject.toml", DependencyGroup.MAIN, "x", wrong(1), "x", "x"
+            ),
+            "dependency marker must be a string.",
+        ),
+        (
+            lambda: DependencyState(
+                "pyproject.toml", DependencyGroup.MAIN, "x", "", "!!", "x"
+            ),
+            "malformed dependency requirement.",
+        ),
+        (
+            lambda: DependencyState(
+                "pyproject.toml", DependencyGroup.MAIN, "x", "", "y", "y"
+            ),
+            "dependency requirement does not match its stored name/marker identity.",
+        ),
+        (
+            lambda: DependencyState(
+                "pyproject.toml", DependencyGroup.MAIN, "x", "", "", "x"
+            ),
+            "declared requirement must be a non-empty string.",
+        ),
+        (
+            lambda: DependencyState(
+                "pyproject.toml", DependencyGroup.MAIN, "x", "", "x", ""
+            ),
+            "materialized requirement must be a non-empty string.",
+        ),
+        (
+            lambda: HookPinState("h.yml", "r", "v1", wrong("bogus")),
+            "unsupported hook pin provenance.",
+        ),
+        (
+            lambda: HookPinState("h.yml", "", "v1", PinProvenance.TEMPLATE),
+            "hook repository must be a non-empty string.",
+        ),
+        (
+            lambda: HookPinState("h.yml", "r", "", PinProvenance.TEMPLATE),
+            "hook revision must be a non-empty string.",
+        ),
+        (
+            lambda: FileState("../x", FilePolicy.SEED),
+            "unsafe or reserved workspace path '../x'.",
+        ),
+        (lambda: FileState("", FilePolicy.SEED), "path must be a non-empty string."),
+    ],
+)
+def test_invalid_records_say_what_is_wrong(build, detail):
+    refused(build, detail)
+
+
+@pytest.mark.parametrize(
+    ("ref", "detail"),
+    [
+        (replace(REF, origin=wrong("bogus")), "unsupported template origin."),
+        (replace(REF, locator=""), "template locator must be a non-empty string."),
+        (replace(REF, digest="bad"), "digests must be lowercase SHA-256 hex strings."),
+        (
+            replace(REF, display_name=""),
+            "template provenance must be a non-empty string.",
+        ),
+        (replace(REF, ref=""), "template provenance must be a non-empty string."),
+        (replace(REF, path=wrong(5)), "template path must be a string."),
+        (replace(REF, revision="abc"), "template revision must be a full commit SHA."),
+        (
+            replace(REF, revision="B" * 40),
+            "template revision must be a full commit SHA.",
+        ),
+        (
+            replace(REF, revision=None),
+            "only a remote template records a ref and its commit.",
+        ),
+        (
+            replace(REF, ref=None),
+            "only a remote template records a ref and its commit.",
+        ),
+        (
+            replace(
+                REF, origin=TemplateOrigin.LOCAL, ref=None, revision=None, path="p"
+            ),
+            "only a remote template records a ref and its commit.",
+        ),
+        (
+            replace(REF, origin=TemplateOrigin.LOCAL, revision=None),
+            "only a remote template records a ref and its commit.",
+        ),
+        (
+            replace(
+                REF,
+                origin=TemplateOrigin.BUILT_IN,
+                locator="/abs/api",
+                path="",
+                ref=None,
+                revision=None,
+            ),
+            "built-in identity cannot be an installation path.",
+        ),
+        (
+            replace(
+                REF,
+                origin=TemplateOrigin.BUILT_IN,
+                locator="C:\\api",
+                path="",
+                ref=None,
+                revision=None,
+            ),
+            "built-in identity cannot be an installation path.",
+        ),
+        (
+            replace(REF, locator="https://user:pw@e.org/t"),
+            "template locators cannot contain credentials.",
+        ),
+        (
+            replace(REF, locator="https://user@e.org/t"),
+            "template locators cannot contain credentials.",
+        ),
+        (
+            replace(REF, locator="https://:pw@e.org/t"),
+            "template locators cannot contain credentials.",
+        ),
+        (replace(REF, locator="https://[bad/t"), "malformed remote template locator."),
+    ],
+)
+def test_an_invalid_template_says_what_is_wrong(ref, detail):
+    refused(lambda: SyncState("x", ref), detail)
+
+
+def test_valid_templates_are_accepted():
+    local = replace(REF, origin=TemplateOrigin.LOCAL, ref=None, revision=None, path="")
+    built_in = replace(local, origin=TemplateOrigin.BUILT_IN, locator="api")
+    plain = replace(REF, ref=None, revision=None, path="")
+    sha256 = replace(REF, revision="c" * 64)
+
+    for ref in (REF, local, built_in, plain, sha256):
+        assert SyncState("x", ref).template == ref
+
+
+def test_duplicate_identities_say_so():
+    state = sample_state()
+
+    refused(
+        lambda: replace(state, files=state.files + state.files[:1]),
+        "duplicate file, dependency, or repository identity.",
+    )
+
+
+def test_unsafe_workspace_paths_are_named():
+    refused(
+        lambda: FileState("a/../b", FilePolicy.SEED),
+        "unsafe or reserved workspace path 'a/../b'.",
+    )
+
+
+def test_the_toml_codec_names_what_it_cannot_encode():
+    refused(
+        lambda: encode_toml_baseline({"null": None}),
+        "baseline contains values unsupported by TOML.",
+    )
+    with pytest.raises(ConfigurationError, match="Unsupported semantic value type"):
+        encode_toml_baseline({"unsupported": wrong(object())})
+    with pytest.raises(ConfigurationError, match="malformed TOML baseline") as caught:
+        decode_toml_baseline("not toml")
+    assert caught.value.hint == HINT
+
+
+def test_a_template_switch_is_refused_in_plain_words():
+    with pytest.raises(ConfigurationError) as caught:
+        check_template_identity(sample_state(), None)
+
+    assert (
+        str(caught.value)
+        == "Selected template differs from the tracked project identity."
+    )
+    assert caught.value.hint == (
+        "Select the same template source explicitly; "
+        "template switching and adoption are unsupported."
+    )
+
+
+def test_an_unreadable_state_file_says_how_to_fix_it(tmp_path):
+    (tmp_path / "protostar.lock").write_bytes(b"\xff")
+
+    with pytest.raises(ConfigurationError) as caught:
+        read_workspace_state(tmp_path)
+
+    assert str(caught.value) == "Invalid project ownership state."
+    assert caught.value.hint == "Correct protostar.lock encoding."
+
+
+def test_one_shot_requires_an_untracked_project(tmp_path):
+    check_one_shot_workspace(tmp_path)
+    (tmp_path / "protostar.lock").write_text(serialize_state(sample_state()))
+
+    with pytest.raises(ConfigurationError) as caught:
+        check_one_shot_workspace(tmp_path)
+
+    assert str(caught.value) == "One-shot initialization requires an untracked project."
+    assert (
+        caught.value.hint == "Run init without --one-shot to update a tracked project."
+    )
+
+
+def test_a_recipe_alone_also_marks_a_tracked_project(tmp_path, mocker):
+    mocker.patch("protostar.recipe.read_recipe", return_value=object())
+
+    with pytest.raises(ConfigurationError, match="untracked project"):
+        check_one_shot_workspace(tmp_path)
+
+
+def test_a_state_tomlkit_cannot_write_is_refused(mocker):
+    mocker.patch("protostar.sync_state.tomlkit.dumps", side_effect=ValueError("boom"))
+
+    with pytest.raises(ConfigurationError) as caught:
+        serialize_state(SyncState("x"))
+
+    assert str(caught.value) == "Invalid Protostar state: cannot serialize state."
+    assert caught.value.hint == HINT
+    assert isinstance(caught.value.__cause__, ValueError)

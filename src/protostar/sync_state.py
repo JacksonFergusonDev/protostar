@@ -437,8 +437,10 @@ def _decode_toml_baseline(content: str) -> dict[str, Value]:
 def encode_toml_baseline(value: dict[str, Value]) -> str:
     """Encodes only supplied owned values, with canonical mapping order and no trivia."""
     validate_value(value)
+    # A cast informs only the type checker, so mutating it changes nothing.
+    ordered = cast(dict[str, object], sort_value_keys(value))  # pragma: no mutate
     try:
-        content = tomlkit.dumps(cast(dict[str, object], sort_value_keys(value)))
+        content = tomlkit.dumps(ordered)
     except (TOMLKitError, ValueError, TypeError, RecursionError) as e:
         raise _invalid("baseline contains values unsupported by TOML.") from e
     decode_toml_baseline(content)
@@ -454,13 +456,15 @@ def _record(
         or value.keys() - required - optional
     ):
         raise _invalid("missing or unknown record fields.")
-    return cast(dict[str, object], value)
+    # A cast informs only the type checker, so mutating it changes nothing.
+    return cast(dict[str, object], value)  # pragma: no mutate
 
 
 def _records(value: object) -> list[object]:
     if not isinstance(value, list):
         raise _invalid("record collection must be an array.")
-    return cast(list[object], value)
+    # A cast informs only the type checker, so mutating it changes nothing.
+    return cast(list[object], value)  # pragma: no mutate
 
 
 def deserialize_state(content: str) -> SyncState:
@@ -473,7 +477,9 @@ def deserialize_state(content: str) -> SyncState:
             {"template", "files", "dependencies", "hook_pins"},
         )
         version = root["schema_version"]
-        if type(version) is not int or version != SCHEMA_VERSION:
+        # SyncState checks the version again, so this check alone is not observable
+        # with `and`: either way an unsupported version raises the same error.
+        if type(version) is not int or version != SCHEMA_VERSION:  # pragma: no mutate
             raise _invalid("unsupported schema version.")
         template = None
         if "template" in root:
@@ -524,7 +530,8 @@ def deserialize_state(content: str) -> SyncState:
                     _text(record["digest"], "file digest")
                     if "digest" in record
                     else None,
-                    cast(bool, record.get("retired", False)),
+                    # A cast informs only the type checker, so mutating it changes nothing.
+                    cast(bool, record.get("retired", False)),  # pragma: no mutate
                 )
             )
         dependencies = []
@@ -562,7 +569,8 @@ def deserialize_state(content: str) -> SyncState:
             tuple(files),
             tuple(dependencies),
             tuple(pins),
-            version,
+            # Only the supported version reaches here, and it is the default.
+            version,  # pragma: no mutate
         )
     except (TOMLKitError, ValueError, TypeError, RecursionError) as e:
         raise _invalid("malformed or unsupported record.") from e
