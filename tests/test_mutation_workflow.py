@@ -131,17 +131,21 @@ def test_shards_for_a_module_outside_source_paths_fail(planner, tmp_path):
 def defined_functions(module):
     """Names every function mutmut mutates in a module, as the planner writes them."""
     path = REPO_ROOT / "src/protostar" / (module.replace(".", "/") + ".py")
+    # mutmut runs the suite against a copy of the source that holds its own
+    # generated functions (the originals and mutants, named with "mutmut");
+    # they are not part of the module's functions.
+    functions = ast.FunctionDef | ast.AsyncFunctionDef
     found = []
     for node in ast.parse(path.read_text(encoding="utf-8")).body:
-        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+        if isinstance(node, functions):
             found.append(node.name)
         elif isinstance(node, ast.ClassDef):
             found += [
                 f"{node.name}.{member.name}"
                 for member in node.body
-                if isinstance(member, ast.FunctionDef | ast.AsyncFunctionDef)
+                if isinstance(member, functions)
             ]
-    return found
+    return [name for name in found if "mutmut" not in name]
 
 
 def mutant_name(module, function):
