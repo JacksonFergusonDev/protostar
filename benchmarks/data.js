@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790898544916,
+  "lastUpdate": 1790900786771,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -20575,6 +20575,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1283.46,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "8e00babe3f4cae200528b7c335d7ec6bc2175139",
+          "message": "fix(benchmarks): publish current metrics from reviewed dashboard source\n\nKeep dashboard code on main and assemble it with recorded history from\ngh-pages. Show recipe-editor measurements separately from the retired\nwizard benchmark, use preceding runs for comparisons, and state what\nthe CI timings and regression thresholds actually measure.\n\nAdd accessible measurement links, safe tooltip rendering, and coverage\nfor dashboard data handling and the publishing boundary.",
+          "timestamp": "2026-10-01T17:23:17-07:00",
+          "tree_id": "59ada561d15ad3d27f733351aa46a0ddd88c000e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/8e00babe3f4cae200528b7c335d7ec6bc2175139"
+        },
+        "date": 1790900785472,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 168.59,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 759.17,
             "unit": "ms"
           }
         ]
