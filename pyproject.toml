@@ -177,12 +177,14 @@ fail_under = 85
 # `also_copy` lists what the suite reads from disk; mutmut runs it from a copy.
 [tool.mutmut]
 source_paths = [
+    "src/protostar/appends.py",
     "src/protostar/fs_transaction.py",
     "src/protostar/journal.py",
     "src/protostar/jsonc_ast.py",
     "src/protostar/merge.py",
     "src/protostar/text_merge.py",
     "src/protostar/toml_ast.py",
+    "src/protostar/toml_lines.py",
     "src/protostar/yaml_ast.py",
 ]
 pytest_add_cli_args_test_selection = ["tests/"]
