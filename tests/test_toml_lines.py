@@ -205,10 +205,11 @@ def test_a_needle_found_twice_is_at_its_first_line():
 
 
 def test_a_dotted_key_indexes_its_value_and_each_parent():
-    index = TomlLineIndex('x.y.z = [\n  "needle",\n]\n')
-    assert index.line_in_value(("x", "y", "z"), "needle") == 2
-    assert index.line_in_value(("x",), "needle") == 1
-    assert index.line_in_value(("x", "y"), "needle") == 1
+    index = TomlLineIndex('needle = 1\nx.y.z = [\n  "needle",\n]\n')
+    assert index.line_in_value(("x", "y", "z"), "needle") == 3
+    # A parent has no value, so a needle anywhere else is not in it.
+    assert index.line_in_value(("x",), "needle") == 2
+    assert index.line_in_value(("x", "y"), "needle") == 2
 
 
 def test_brackets_inside_a_value_keep_it_open():
@@ -277,8 +278,15 @@ def test_quoted_keys_and_their_escapes():
 
 
 def test_an_unterminated_string_ends_with_its_line():
-    index = TomlLineIndex('a = "open\nb = "x"\n')
+    index = TomlLineIndex('a = "open\nb = "x"\nc = "[\nd = 1\n')
     assert index.line_of(("b",)) == 2
+    assert index.line_of(("d",)) == 4
+
+
+def test_an_unclosed_multi_line_string_runs_to_the_end():
+    index = TomlLineIndex('a = """\n[t]\nb = 1\n')
+    assert index.line_of(("t", "b")) is None
+    assert index.line_in_string(("a",), ("t", "b")) == 3
 
 
 @pytest.mark.parametrize(
