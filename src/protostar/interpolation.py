@@ -2,9 +2,10 @@
 
 Substitution never escapes. Whoever writes content knows its syntax, so it
 escapes a value exactly where the value sits inside a quoted string, and
-nowhere else. Loading a template renders its TOML source with every value
-escaped (``escaped``), since there each lands inside a TOML string, and its
-``[files]`` with none. Planning renders the rest: a module renders what it
+nowhere else. Loading a template parses its TOML first and renders each
+string's decoded text, so a value means the same in every string style; only
+a ``[dev.pyproject]`` payload escapes (``escaped``), for the TOML document it
+holds. Planning renders the rest: a module renders what it
 generates, quoting each value that sits inside a string (``quoted``), and the
 orchestrator renders the built-ins a template left. Reconciliation renders
 only target paths, which are inside no string.

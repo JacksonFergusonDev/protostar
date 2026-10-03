@@ -1,0 +1,18 @@
+# A template placing one placeholder in every TOML string style.
+[files]
+"literal.py" = '''"""<% PROJECT_NAME %>."""'''
+"single.txt" = '<% PROJECT_NAME %>'
+"basic.md" = "# <% PROJECT_NAME %>"
+"multiline.md" = """
+<% PROJECT_NAME %>"""
+"src/<% PACKAGE_NAME %>/name.txt" = "x"
+
+[dev.pyproject]
+plain = '''
+[tool.plain]
+name = "<% PROJECT_NAME %>"
+'''
+bound = { requires = "ruff", content = "[tool.bound]\nname = \"<% PROJECT_NAME %>\"\n" }
+
+[appends."NOTES.md".named]
+content = '''<% PROJECT_NAME %>'''

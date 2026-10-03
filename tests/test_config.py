@@ -1,4 +1,6 @@
+import tomllib
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 
@@ -197,6 +199,57 @@ def test_variables_table_declares_descriptions(tmp_path):
     assert source.variables == frozenset({"REGION", "TIER"})
     assert source.descriptions == {"REGION": "Deployment region"}
     assert source.render({"REGION": "eu", "TIER": "gold"}).files == {"a.txt": "eu gold"}
+
+
+AWKWARD = {
+    "PROJECT_NAME": 'say "hi" \\ bye',
+    "PACKAGE_NAME": "pkg",
+    "PYTHON_VERSION": "3.13",
+    "CURRENT_YEAR": "2026",
+    "AUTHOR_NAME": "Ada",
+}
+
+STRING_STYLES = Path(__file__).parent / "fixtures" / "string_styles.toml"
+
+
+def test_render_gives_every_string_style_the_value_as_given():
+    """A quote or backslash means the same in a literal string as in a basic one."""
+    name = AWKWARD["PROJECT_NAME"]
+
+    blueprint = TemplateSource.load(str(STRING_STYLES)).render(AWKWARD)
+
+    assert blueprint.files == {
+        "literal.py": f'"""{name}."""',
+        "single.txt": name,
+        "basic.md": f"# {name}",
+        "multiline.md": name,
+        "src/pkg/name.txt": "x",
+    }
+    assert blueprint.appends["NOTES.md"]["named"].content == name
+
+
+@pytest.mark.parametrize("identity", ["plain", "bound"])
+def test_render_escapes_a_payload_for_the_toml_it_holds(identity):
+    blueprint = TemplateSource.load(str(STRING_STYLES)).render(AWKWARD)
+
+    payload = tomllib.loads(blueprint.pyproject_injections[identity].content)
+    assert payload["tool"][identity]["name"] == AWKWARD["PROJECT_NAME"]
+
+
+def test_render_writes_the_project_name_into_built_in_starter_code():
+    lib = Path(__file__).parents[1] / "src" / "protostar" / "templates" / "lib.toml"
+
+    blueprint = TemplateSource.load(str(lib)).render(AWKWARD)
+
+    assert blueprint.files["src/pkg/__init__.py"].startswith('"""say "hi" \\ bye."""\n')
+
+
+def test_render_rejects_keys_that_render_the_same(tmp_path):
+    target = tmp_path / "template.toml"
+    target.write_text('[files]\n"<% A %>.txt" = "a"\n"<% B %>.txt" = "b"\n')
+
+    with pytest.raises(ConfigurationError, match=r"Duplicate key 'same\.txt'"):
+        TemplateSource.load(str(target)).render({"A": "same", "B": "same"})
 
 
 @pytest.mark.parametrize(
