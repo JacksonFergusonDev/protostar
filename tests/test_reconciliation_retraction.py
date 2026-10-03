@@ -266,3 +266,20 @@ def test_an_edited_seed_is_a_retraction_conflict_not_a_kept_edit(workspace):
     ]
     assert reconciliation.preserved == []
     assert paths(reconciliation) == ["zensical.toml"]
+
+
+def test_a_document_is_retracted_under_its_own_specs_spelling_of_names(workspace):
+    # Zensical reads the quoted "pymdownx.details" and the nested table as one.
+    write("zensical.toml", '[project.markdown_extensions."pymdownx.details"]\n')
+    reconciliation = build(
+        workspace,
+        toml_record(
+            "zensical.toml",
+            {"project": {"markdown_extensions": {"pymdownx": {"details": {}}}}},
+        ),
+    )
+
+    reconciliation._release_undeclared_documents()
+
+    assert workspace.removed == {"zensical.toml"}
+    assert reconciliation.diagnostics == []

@@ -645,7 +645,8 @@ class Reconciliation:
                 result = reconcile_toml(
                     replace(
                         spec,
-                        seed_paths=frozenset(),
+                        # A held seed would survive only beside a declaration.
+                        seed_paths=frozenset(),  # pragma: no mutate
                         policy=replace(
                             spec.policy, complete=True, retained_paths=frozenset()
                         ),
@@ -686,7 +687,7 @@ class Reconciliation:
             self._report(result.conflicts, result.resolved)
             # A conflict keeps what it holds owned, so the two tests agree.
             rest = result.baseline
-            owned: dict[str, Value] = {}
+            owned: dict[str, Value] = {}  # pragma: no mutate
             if isinstance(rest, dict):  # pragma: no mutate
                 owned = rest
             if result.conflicts or owned:  # pragma: no mutate
@@ -1329,7 +1330,8 @@ class Reconciliation:
                 # so it is retracted first, and the file regenerates in this run.
                 try:
                     retraction = append_marker_blocks(
-                        (local or b"").decode(),
+                        # A missing file holds no region, so its text is moot.
+                        (local or b"").decode(),  # pragma: no mutate
                         [],
                         target,
                         baselines=omitted,
