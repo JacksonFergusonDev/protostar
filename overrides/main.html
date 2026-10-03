@@ -1,6 +1,26 @@
-{#- Every page's head: the theme's, plus the browser chrome's colour. -#}
+{#- Every page's head: the theme's, plus the browser chrome's colour and the
+    card link previews show (docs/assets/og-card.png, drawn by
+    scripts/render_og_card.py). -#}
 {% extends "base.html" %}
 
 {% block extrahead %}
   <meta name="theme-color" content="#0a0c0e">
+  {% if page and page.meta and page.meta.description %}
+    {% set description = page.meta.description %}
+  {% else %}
+    {% set description = config.site_description %}
+  {% endif %}
+  {% set image = config.site_url ~ "assets/og-card.png" %}
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ config.site_name }}">
+  <meta property="og:title" content="{% block social_title %}{% if page and page.title %}{{ page.title | striptags }}{% else %}{{ config.site_name }}{% endif %}{% endblock %}">
+  <meta property="og:description" content="{{ description }}">
+  {% if page and page.canonical_url %}
+    <meta property="og:url" content="{{ page.canonical_url }}">
+  {% endif %}
+  <meta property="og:image" content="{{ image }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="{{ config.site_name }}: {{ config.site_description }}">
+  <meta name="twitter:card" content="summary_large_image">
 {% endblock %}

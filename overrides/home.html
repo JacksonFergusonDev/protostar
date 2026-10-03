@@ -5,7 +5,7 @@
 {#- Its title says what Protostar is, instead of repeating the site name the
     theme appends to every other page. -#}
 {% block htmltitle %}
-  <title>{{ config.site_name }} — {{ config.site_description | trim(".") }}</title>
+  <title>{% block social_title %}{{ config.site_name }} — {{ config.site_description | trim(".") }}{% endblock %}</title>
 {% endblock %}
 
 {% block extrahead %}
