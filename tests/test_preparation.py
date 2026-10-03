@@ -544,3 +544,23 @@ def test_review_rejects_git_seed_in_committed_state(tmp_path, monkeypatch, direc
         prepare_review(EnvironmentManifest(), UserConfig())
 
     assert snapshot(tmp_path) == before
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="Windows file names cannot hold a quote."
+)
+def test_a_rendered_path_names_the_file_the_manifest_planned(tmp_path, monkeypatch):
+    """A path is not inside a string, so a quote in a name is not escaped."""
+    project = tmp_path / 'say "hi"'
+    project.mkdir()
+    monkeypatch.chdir(project)
+    manifest = EnvironmentManifest()
+    manifest.filesystem.add_directory("docs/<% PROJECT_NAME %>")
+    manifest.filesystem.add_file_injection("docs/<% PROJECT_NAME %>/notes.md", "hi\n")
+
+    review = prepare_review(manifest, UserConfig())
+
+    assert {Path(edit.path) for edit in review.edits} & manifest.planned_files() == {
+        Path('docs/say "hi"/notes.md')
+    }
+    assert review.directories == ('docs/say "hi"',)

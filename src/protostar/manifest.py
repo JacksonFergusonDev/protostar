@@ -21,7 +21,7 @@ from .intent import (
     validate_region_id,
     validate_target,
 )
-from .interpolation import render_template
+from .interpolation import render_path
 from .merge import MergeConflict
 from .metadata import LicenseType
 from .migrations import Migration
@@ -38,12 +38,6 @@ if TYPE_CHECKING:
 
 def _ignore_contribution(path: tuple[str, ...]) -> None:
     """Ignores attribution when assembling a standalone manifest slice."""
-
-
-def _render_path(path: str, context: dict[str, str]) -> str:
-    """Fills a declared path's built-in names in. A path is not TOML: nothing is escaped."""
-    # None is as falsy as False, so no test can tell the two apart.
-    return render_template(path, context, escape_toml=False)  # pragma: no mutate
 
 
 class DiagnosticPhase(enum.StrEnum):
@@ -750,11 +744,11 @@ class EnvironmentManifest:
 
         ctx = self._path_context()
         targets = {pyproject.TARGET} | {
-            Path(_render_path(path, ctx)).as_posix()
+            Path(render_path(path, ctx)).as_posix()
             for path in self.filesystem.structured
         }
         if renovate.TARGET in {
-            Path(_render_path(path, ctx)).as_posix()
+            Path(render_path(path, ctx)).as_posix()
             for path in self.filesystem.file_injections
         }:
             targets.add(renovate.TARGET)
@@ -799,12 +793,12 @@ class EnvironmentManifest:
         ctx = self._path_context()
 
         for filepath in self.filesystem.file_injections:
-            targets.add(Path(_render_path(filepath, ctx)))
+            targets.add(Path(render_path(filepath, ctx)))
 
         for filepath in (
             self.filesystem.structured.keys() | self.filesystem.regions.keys()
         ):
-            targets.add(Path(_render_path(filepath, ctx)))
+            targets.add(Path(render_path(filepath, ctx)))
 
         if self.dependencies.includes:
             targets.add(Path(pyproject.TARGET))
@@ -831,7 +825,7 @@ class EnvironmentManifest:
             A set of Path objects representing target directories.
         """
         ctx = self._path_context()
-        return {Path(_render_path(path, ctx)) for path in self.filesystem.directories}
+        return {Path(render_path(path, ctx)) for path in self.filesystem.directories}
 
     def written_files(self) -> set[Path]:
         """Returns every workspace file execution writes itself, for previews.

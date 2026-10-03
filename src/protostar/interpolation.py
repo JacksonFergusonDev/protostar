@@ -3,7 +3,8 @@
 Rendering happens in two places. Loading a template renders its TOML source
 with escaping, since there a value lands inside a TOML string, and its
 ``[files]`` without. Reconciliation then renders what modules generated,
-whose placeholders name only built-in variables.
+whose placeholders name only built-in variables. A path is never escaped
+(``render_path``): it is not inside any string.
 
 ``toml_escape`` assumes the placeholder sits inside a double-quoted string.
 TOML, JSON, and YAML share those escapes, so one escape serves every
@@ -81,3 +82,20 @@ def render_template(
         return match.group(0)
 
     return VARIABLE_PATTERN.sub(replacement, content)
+
+
+def render_path(path: str, context: dict[str, str]) -> str:
+    """Fills a declared path's placeholders in, escaping nothing.
+
+    A path is not inside a string, so the manifest and reconciliation must
+    render it the same way to agree on which file it names.
+
+    Args:
+        path: The declared workspace path, possibly with placeholders.
+        context: A mapping of variable names to their values.
+
+    Returns:
+        The rendered path.
+    """
+    # None is as falsy as False, so no test can tell the two apart.
+    return render_template(path, context, escape_toml=False)  # pragma: no mutate
