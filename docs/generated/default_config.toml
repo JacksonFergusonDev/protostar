@@ -11,28 +11,49 @@
 python_version = "3.13"
 # supported_os = ["MacOS", "Linux", "Windows"]
 
-# Optional dev tool toggles for Python
-# direnv = true        # Scaffold .envrc and auto-activate virtual environments
-# markdownlint = true  # Scaffold MarkdownLint configuration and hooks
-# rumdl = true         # Scaffold rumdl fast markdown linter and formatter
-# ruff = false         # Disable default Ruff linter and formatter scaffolding
-# mypy = true          # Scaffold Mypy static type checker
-# ty = true            # Scaffold Astral ty type checker
-# pyrefly = true       # Scaffold Pyrefly static type checker
-# pytest = true        # Scaffold Pytest testing framework
-# pre_commit = true    # Scaffold pre-commit git hooks and configuration
-# prek = true          # Scaffold prek git hooks (faster Rust alternative to pre-commit)
-# commitizen = true    # Scaffold Commitizen version bumping and changelog tooling
-# renovate = true      # Scaffold Renovate dependency update configuration
-# codecov = true       # Scaffold Codecov configuration
-# zensical = true      # Scaffold Zensical documentation
-# readthedocs = true   # Scaffold Read the Docs configuration
-# ci = true            # Scaffold standard GitHub Actions CI workflows
-# release = true       # Scaffold GitHub Actions PyPI release workflows
-# docker = true        # Scaffold container artifacts (.dockerignore, Dockerfile)
-# just = true          # Scaffold a justfile for command execution
-# agents = true        # Scaffold a managed AGENTS.md guide for coding agents
-# community = true     # Scaffold community health files and issue templates
+# Tools: uncomment a line to change that default for new projects
+# Activate the project's environment whenever you enter its folder.
+# direnv = true
+# Check Markdown files for formatting mistakes, with relaxed rules.
+# markdownlint = true
+# Check and format Markdown files quickly.
+# rumdl = true
+# Find common bugs and style problems in Python code, and format it.
+# ruff = false
+# Check type hints to catch mistakes before the code runs.
+# mypy = true
+# Check type hints quickly, with Astral's type checker.
+# ty = true
+# Check type hints quickly, with Meta's type checker.
+# pyrefly = true
+# Run the project's tests.
+# pytest = true
+# Run the project's checks automatically each time you commit.
+# pre_commit = true
+# Run the project's checks automatically each time you commit, faster.
+# prek = true
+# Write commit messages in a standard form that sets the next version.
+# commitizen = true
+# Open pull requests that keep dependencies up to date.
+# renovate = true
+# Report how much of the code the tests exercise, on each pull request.
+# codecov = true
+# Build a documentation website from Markdown files.
+# zensical = true
+# Publish the documentation website on Read the Docs.
+# readthedocs = true
+# Run the checks and tests on GitHub for every push and pull request.
+# ci = true
+# Publish the package to PyPI when you push a version tag.
+# release = true
+# Package the project as a container image that runs anywhere.
+# docker = true
+# Give the project's common commands short names, like `just test`.
+# just = true
+# Tell coding assistants how to work on the project.
+# agents = true
+# Add the files GitHub shows people who want to contribute.
+# community = true
 
 # [templates]
 # my-org-api = "https://raw.githubusercontent.com/MyOrg/standards/main/api.toml"

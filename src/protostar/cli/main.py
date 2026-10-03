@@ -22,11 +22,11 @@ from rich.text import Text
 from protostar.cli import parser, schema, ui
 from protostar.cli.docs_links import format_docs_link
 from protostar.config import (
-    DEFAULT_CONFIG_CONTENT,
     TemplateSource,
     UserConfig,
     active_config_source,
     clear_user_config_cache,
+    default_config_content,
     select_config_source,
 )
 from protostar.docs_registry import DocsPage
@@ -369,7 +369,7 @@ def _save_config(config_path: Path, edit: ConfigEdit) -> None:
     current = (
         config_path.read_text(encoding="utf-8")
         if config_path.exists()
-        else DEFAULT_CONFIG_CONTENT
+        else default_config_content()
     )
     if current != edit.before:
         raise ConfigurationError(
@@ -451,7 +451,7 @@ def handle_config(args: argparse.Namespace) -> None:
         logger.debug(
             "Resetting configuration file at %s to default template", config_path
         )
-        atomic_write_text(config_path, DEFAULT_CONFIG_CONTENT)
+        atomic_write_text(config_path, default_config_content())
         ui.console.print(
             Text.assemble(
                 (f"{ui.glyph('✔', '+')} ", "green"),
@@ -472,7 +472,7 @@ def handle_config(args: argparse.Namespace) -> None:
         content = (
             config_path.read_text(encoding="utf-8")
             if config_path.exists()
-            else DEFAULT_CONFIG_CONTENT
+            else default_config_content()
         )
         config = UserConfig.parse(content, str(config_path))
         decision = edit_settings(content, config_path, _config_prefill(config))
@@ -485,7 +485,7 @@ def handle_config(args: argparse.Namespace) -> None:
 
     if not config_path.exists():
         logger.debug("Writing initial default configuration to %s", config_path)
-        atomic_write_text(config_path, DEFAULT_CONFIG_CONTENT)
+        atomic_write_text(config_path, default_config_content())
         ui.console.print(
             Text.assemble(
                 (f"{ui.glyph('✔', '+')} ", "green"),

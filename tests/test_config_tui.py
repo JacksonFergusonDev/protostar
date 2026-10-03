@@ -14,7 +14,7 @@ from protostar.cli.tui.app import DecisionApp
 from protostar.cli.tui.config.screen import ConfigScreen
 from protostar.cli.tui.keys import LeaveScreen
 from protostar.cli.tui.tool_info import ToolInfoScreen
-from protostar.config import DEFAULT_CONFIG_CONTENT, UserConfig
+from protostar.config import UserConfig, default_config_content
 from protostar.config_edit import ConfigEdit, OpenInEditor, SaveConfig
 from protostar.errors import ConfigurationError, InvalidUsageError
 from protostar.modules import MypyModule
@@ -32,7 +32,8 @@ def git(monkeypatch):
     monkeypatch.setattr("protostar.metadata.get_git_config", GIT.get)
 
 
-def make_app(content=DEFAULT_CONFIG_CONTENT):
+def make_app(content=None):
+    content = default_config_content() if content is None else content
     config = UserConfig.parse(content, str(PATH))
     return DecisionApp(ConfigScreen(content, PATH, _config_prefill(config)))
 
@@ -212,7 +213,7 @@ def test_a_missing_file_starts_from_the_default_and_is_written_on_save(
     mocker, config_file
 ):
     def save(content, path, prefill):
-        assert content == DEFAULT_CONFIG_CONTENT
+        assert content == default_config_content()
         return SaveConfig(ConfigEdit(content, content + "mypy = true\n", ("mypy",)))
 
     mocker.patch("protostar.cli.tui.launch.edit_settings", side_effect=save)
@@ -233,7 +234,7 @@ def test_the_form_hands_off_to_the_editor(mocker, config_file):
     run = mocker.patch("subprocess.run")
     handle_config(argparse.Namespace())
     run.assert_called_once_with(["/usr/bin/nano", str(config_file)], check=True)
-    assert config_file.read_text() == DEFAULT_CONFIG_CONTENT
+    assert config_file.read_text() == default_config_content()
 
 
 def test_a_file_changed_while_the_form_was_open_is_not_overwritten(mocker, config_file):

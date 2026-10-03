@@ -21,7 +21,7 @@ from protostar.cli.parser import (
     build_parser,
     maybe_run_interactive_init,
 )
-from protostar.config import DEFAULT_CONFIG_CONTENT, UserConfig
+from protostar.config import UserConfig, default_config_content
 from protostar.docs_registry import DocsPage
 from protostar.errors import (
     CommandExecutionError,
@@ -151,7 +151,7 @@ def test_handle_config_success(mocker, tmp_path):
     handle_config(argparse.Namespace(edit=True))
 
     assert mock_config_file.exists()
-    assert "ide =" in __import__("protostar.config").config.DEFAULT_CONFIG_CONTENT
+    assert "ide =" in __import__("protostar.config").config.default_config_content()
     mock_run.assert_called_once_with(
         ["/usr/bin/nano", str(mock_config_file)], check=True
     )
@@ -170,7 +170,7 @@ def test_handle_config_reset_confirmed(mocker, tmp_path):
     handle_config(args)
 
     assert mock_config_file.exists()
-    assert mock_config_file.read_text() == DEFAULT_CONFIG_CONTENT
+    assert mock_config_file.read_text() == default_config_content()
     mock_run.assert_not_called()
     mock_confirm.assert_called_once_with(
         "Warning: this will erase your current configuration, are you sure you want to do this?",
@@ -246,7 +246,7 @@ def test_handle_config_reset_force(mocker, tmp_path):
     handle_config(args)
 
     assert mock_config_file.exists()
-    assert mock_config_file.read_text() == DEFAULT_CONFIG_CONTENT
+    assert mock_config_file.read_text() == default_config_content()
     mock_run.assert_not_called()
     mock_confirm.assert_not_called()
 
