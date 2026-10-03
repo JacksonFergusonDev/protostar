@@ -16,6 +16,7 @@ from scripts.generate_docs_assets.cli_terminals import (
     generate_cli_dry_run_svg,
     generate_cli_help_svgs,
     generate_cli_init_svg,
+    generate_cli_missing_dependency_svg,
     generate_cli_missing_tools_svg,
     generate_cli_status_svg,
     generate_diagnostic_panel_svg,
@@ -49,6 +50,7 @@ __all__ = [
     "generate_cli_dry_run_svg",
     "generate_cli_help_svgs",
     "generate_cli_init_svg",
+    "generate_cli_missing_dependency_svg",
     "generate_cli_missing_tools_svg",
     "generate_cli_status_svg",
     "generate_cli_tables",
@@ -75,6 +77,7 @@ def generate_docs_assets() -> None:
     generate_cli_help_svgs()
     generate_cli_dry_run_svg()
     generate_cli_init_svg()
+    generate_cli_missing_dependency_svg()
     generate_cli_missing_tools_svg()
     generate_cli_status_svg()
     generate_guide_svgs()

@@ -5,7 +5,7 @@ icon: material/lightbulb-on-outline
 
 # Design Principles
 
-Every architectural constraint — the two-phase engine, the AST merging, the POSIX exit codes — exists because a simpler alternative has a concrete, observable failure mode.
+Every architectural constraint, from the two-phase engine to structured merging and POSIX exit codes, exists because a simpler alternative has a concrete, observable failure mode.
 
 This page explains the vocabulary: what each principle is called, exactly what problem it solves, and what goes wrong when you ignore it.
 
@@ -78,14 +78,14 @@ flowchart TD
 !!! note "The Transaction Boundary"
     Rollback restores every path Protostar recorded before changing it: the files it writes, `pyproject.toml` and `uv.lock` before uv runs, and what its own commands declare, such as the `.git/` directory from `git init`. The virtual environment and global caches fall outside it. See [Automatic Rollback](./usage/rollback.md) for exactly what is and isn't restored, and [Rollback Internals](./mechanics/rollback.md) for how.
 
-!!! tip "The manifest is the source of truth"
-    The `--dry-run --json` output is a direct serialization of the `EnvironmentManifest`. What you see is exactly what would be written to disk — not an approximation.
+!!! tip "The plan you see is the plan that runs"
+    `--dry-run` shows the change review built from the same manifest a live run executes, and `--dry-run --json` returns that manifest with the review. Execution then checks that every file the review read is unchanged, and stops before writing anything if one changed, so a run never applies changes you didn't see.
 
 ## The Headless Core
 
 **The core execution engine is completely headless. All terminal interaction lives outside it.**
 
-The engine's public surface — `Orchestrator.plan()` and `Orchestrator.execute()` — takes and returns pure data objects (`InitRequest` → `EnvironmentManifest` → `ExecutionResult`). It has no knowledge of terminal colors, interactive prompts, spinners, or `--json` formatting. Those concerns belong entirely to `cli.py`.
+The engine's public surface — `Orchestrator.plan()` and `Orchestrator.execute()` — takes and returns pure data objects (`InitRequest` → `EnvironmentManifest` → `ExecutionResult`). It has no knowledge of terminal colors, interactive prompts, spinners, or `--json` formatting. Those belong to the `protostar.cli` package. When the engine needs something only a person can supply, such as a template variable's value, it raises a domain error carrying what's missing (`MissingTemplateVariablesError.variables`), and the CLI decides whether to ask.
 
 Progress is the one thing that must cross the boundary *during* execution, and it crosses as a callback rather than a dependency. `execute()` accepts an optional `progress` hook (`ProgressStep` in `protostar.progress`): the engine enters `progress(label)` around each subprocess and the initial scaffold, naming the work in plain words. Only a fatal failure raises through a step, so a caller can mark it failed knowing rollback follows; non-fatal outcomes still arrive as diagnostics. The reverse holds too: a presenter must never raise on its own, because the engine cannot tell its exception from a failure of the work and would roll that work back. What a step looks like is the caller's business. The CLI renders it as a spinner that leaves a permanent `✔` or `✖` line; library callers and `--json` pass nothing and get a no-op.
 
@@ -94,11 +94,10 @@ flowchart LR
     classDef cli fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
     classDef engine fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
 
-    subgraph CLI ["CLI Presentation Layer (cli.py)"]
+    subgraph CLI ["CLI Layer (protostar.cli)"]
         direction LR
-        TUI["Interactive Setup"]:::cli
+        TUI["Recipe Editor & Change Review"]:::cli
         Trail["Progress Trail"]:::cli
-        Collision["Collision Prompts"]:::cli
         JSON["--json Envelope Serializer"]:::cli
     end
 
@@ -191,18 +190,9 @@ No file has been created. No directory has been staged. The workspace is exactly
 
 === "What Protostar Does"
 
-    ```text
-    $ protostar init --template cli
+    ![Protostar stops before writing anything when uv is missing](./assets/terminals/cli_missing_dependency.svg)
 
-    ✗  Dependency missing: uv
-
-       Protostar uses uv to initialize the project and resolve packages.
-
-       Install uv:
-         curl -LsSf https://astral.sh/uv/install.sh | sh
-    ```
-
-    *Exit code: 69 (os.EX_UNAVAILABLE). Workspace untouched.*
+    *Exit code 69 (`os.EX_UNAVAILABLE`), and the folder is untouched. The install command is the one for the package manager Protostar finds.*
 
 === "What an Imperative Script Does"
 
@@ -218,66 +208,26 @@ No file has been created. No directory has been staged. The workspace is exactly
     ```
 
 !!! note "Fail loud"
-    The word "loud" is deliberate. Protostar doesn't swallow errors into a generic "something failed" message. Domain-specific exceptions carry structured context — which binary is missing, what it's used for, and what command will fix it. When things fail unexpectedly (internal bugs), the crash report surfaces your system environment details and opens a pre-filled GitHub issue automatically.
+    The word "loud" is deliberate. Protostar doesn't swallow errors into a generic "something failed" message. Domain-specific exceptions carry structured context — which binary is missing, what it's used for, and what command will fix it. When something fails unexpectedly (a bug in Protostar), it prints the traceback and a link that opens a pre-filled GitHub issue.
 
-## Non-Destructive AST Merging
+## Merging by Structure
 
-**Configuration files are parsed into Abstract Syntax Trees and surgically updated. Your existing comments, keys, and formatting are preserved.**
+**Configuration files are parsed and updated in place, key by key. Your comments, keys, and formatting stay.**
 
-When Protostar needs to inject tooling configuration into an existing `pyproject.toml`, it does not open the file and write a new one. It parses the file via `tomlkit` into an in-memory AST, merges the incoming payload at the node level, and writes the result back out.
+When Protostar updates an existing `pyproject.toml`, it doesn't write a new one. It parses the file with `tomlkit`, which keeps every comment and the file's formatting, merges the keys it manages, and writes the result back. `protostar.lock` records what it applied to each key, so a later update can tell your edits from its own content; see [How Protostar Tracks Your Files](./usage/tracking.md).
 
-The practical consequence: fields you've customized survive untouched.
+Here is a real change: an ML project, with its own dependencies and Ruff settings, turns on Mypy and runs `init --force-merge` again. The new dependencies come from uv, Mypy's table arrives under its header, and the project's own lines, including the comment on `extend-select`, are untouched:
 
-=== "Before (Your Existing pyproject.toml)"
+```diff
+--8<-- "diff_ml_ml_merged_pyproject_toml.diff"
+```
 
-    ```toml
-    [project]
-    name = "orbital-sim"
-    version = "0.1.0"  # version pinned manually — do not change
+The same idea runs through every file Protostar manages: workflows merge by job and step, the hook configuration by hook, and `.gitignore` only gains the patterns it's missing. Files with no structure of their own, such as the `justfile`, merge line by line, three ways, like Git.
 
-    [tool.ruff]
-    line-length = 100  # non-standard, required for equation alignment
-    ```
+**Why this matters:** A tool that writes files by template substitution can only safely target a *new* repository, and can only update one by regenerating it. Merging by structure, against a record of what was applied, lets Protostar set up a project you already have, and update it for years, without overwriting your work.
 
-=== "After (Protostar injects ruff.lint)"
-
-    ```toml
-    [project]
-    name = "orbital-sim"
-    version = "0.1.0"  # version pinned manually — do not change
-
-    [tool.ruff]
-    line-length = 100  # non-standard, required for equation alignment
-
-    # --- protostar:ruff ---
-    [tool.ruff.lint]
-    select = ["E", "F", "I", "UP"]
-    # --- end:ruff ---
-    ```
-
-    *Your comments and custom `line-length` are untouched. The `[tool.ruff.lint]` table is injected cleanly.*
-
-=== "What Naive Overwrite Does"
-
-    ```toml
-    # All your comments and customizations are gone.
-    [project]
-    name = "orbital-sim"
-    version = "0.1.0"
-
-    [tool.ruff]
-    line-length = 88
-
-    [tool.ruff.lint]
-    select = ["E", "F", "I", "UP"]
-    ```
-
-The same principle applies to `.gitignore` — Protostar appends deduplicated patterns inside delimited marker blocks rather than replacing the file. For supported managed configuration, merge mode uses the recorded ownership baseline to preserve unowned content and local edits.
-
-**Why this matters:** Scaffolding tools that write files by template substitution can only safely target *new* repositories. Ownership-aware reconciliation lets Protostar reinitialize an already managed repository without treating its existing content as template-owned.
-
-!!! tip "Collision strategies"
-    The merge behavior is tunable. The default is `MERGE` (preserve your scalars, inject missing nodes). `--force-replace` switches to `OVERWRITE` (Protostar's baseline takes precedence on conflicts). See [The Environment Manifest](./mechanics/manifest.md#collision-strategies) for the full behavior matrix.
+!!! tip "Overwriting instead"
+    Merging is the default. `--force-replace` replaces existing files with Protostar's version instead, for when you want the template's files exactly. See [Changes to Files You Already Have](./usage/lifecycle.md#changes-to-files-you-already-have).
 
 ## Actionable Diagnostics
 
@@ -285,16 +235,7 @@ The same principle applies to `.gitignore` — Protostar appends deduplicated pa
 
 Diagnostics in Protostar operate at three levels:
 
-**1. Subprocess capture.** Every shell command Protostar executes (via `uv`, `git`, `pre-commit`, etc.) is run with full `stdout` / `stderr` capture. On non-zero exit, the raw streams are surfaced in the terminal panel. You see exactly what `uv sync` printed when it failed — not a generic "installation failed."
-
-```text
-✗  Command failed: uv add numpy scipy
-
-   Diagnostics:
-   --- STDERR ---
-   error: Package `scipy` requires Python >=3.10
-   hint: Your project targets Python 3.9. Update requires-python in pyproject.toml.
-```
+**1. Command output.** Every command Protostar runs, such as `uv add` or `git init`, has its `stdout` and `stderr` captured. When one fails, the error shows what it printed, so you see uv's own explanation rather than a generic "installation failed."
 
 **2. Structured diagnostics.** Non-fatal events during scaffolding (optional binaries not found, skipped steps) are collected into `ExecutionResult.diagnostics` and rendered in a summary panel at the end of the run. Nothing is silently dropped.
 
@@ -303,7 +244,7 @@ Diagnostics in Protostar operate at three levels:
 **3. Automated crash reports.** When Protostar encounters an unexpected internal exception (a genuine bug, not an operational error), it collects non-sensitive system environment details — OS, Python version, command invocation, full traceback — and encodes it into a pre-populated GitHub issue URL. You get one link to click. The debugging back-and-forth doesn't happen.
 
 !!! note "Expected failures vs. unexpected crashes"
-    These are explicitly separated. `ProtostarError` subclasses (missing dependency, network drop, config parse error) are *expected operational failures* — clean, formatted, hinted. Unhandled Python exceptions are *unexpected crashes* — they trigger the crash report URL and exit with `os.EX_SOFTWARE`. You are never shown a raw Python traceback unless you explicitly ask for it with `--verbose`.
+    These are explicitly separated. `ProtostarError` subclasses (missing dependency, network drop, config parse error) are *expected operational failures* — clean, formatted, hinted. Unhandled Python exceptions are *unexpected crashes* — they trigger the crash report URL and exit with `os.EX_SOFTWARE`. An expected failure never shows a Python traceback unless you ask for one with `--verbose`; a crash shows its traceback beside the issue link.
 
 ## POSIX Exit Codes
 
