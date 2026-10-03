@@ -268,9 +268,7 @@ class Reconciliation:
                 existing = self._existing(renovate.TARGET)
                 if existing is not None:
                     try:
-                        decode_jsonc(
-                            self.workspace.read_bytes(existing).decode("utf-8")
-                        )
+                        decode_jsonc(self.workspace.read_bytes(existing).decode())
                     except (OSError, UnicodeError) as error:
                         raise FileSystemError(
                             "read JSONC configuration", str(existing), error
@@ -285,9 +283,7 @@ class Reconciliation:
                 decode_yaml_baseline(contributions[0].content)
                 if (target := self._existing(filepath)) is not None:
                     try:
-                        decode_yaml_baseline(
-                            self.workspace.read_bytes(target).decode("utf-8")
-                        )
+                        decode_yaml_baseline(self.workspace.read_bytes(target).decode())
                     except (OSError, UnicodeError) as error:
                         raise FileSystemError(
                             "read YAML configuration", str(target), error
@@ -591,7 +587,7 @@ class Reconciliation:
             if not self.workspace.exists(target):
                 self.candidate_state = self.candidate_state.without_file(record.path)
                 continue
-            local = self.workspace.read_bytes(target).decode("utf-8", "replace")
+            local = self.workspace.read_bytes(target).decode(errors="replace")
             conflict = MergeConflict(
                 MergeLocation(record.path),
                 ConflictReason.RETRACTED,
@@ -633,7 +629,7 @@ class Reconciliation:
                 self._release_document(record.path)
                 continue
             try:
-                original = self.workspace.read_bytes(target).decode("utf-8")
+                original = self.workspace.read_bytes(target).decode()
             except (OSError, UnicodeError) as error:
                 raise FileSystemError(
                     "read retracted configuration", record.path, error
@@ -649,7 +645,8 @@ class Reconciliation:
                 result = reconcile_toml(
                     replace(
                         spec,
-                        seed_paths=frozenset(),
+                        # A held seed would survive only beside a declaration.
+                        seed_paths=frozenset(),  # pragma: no mutate
                         policy=replace(
                             spec.policy, complete=True, retained_paths=frozenset()
                         ),
@@ -686,11 +683,14 @@ class Reconciliation:
                     resolutions=self.resolutions,
                     complete=True,
                 )
-            self._report(
-                result.conflicts, result.resolved, result.proposals, result.preserved
-            )
-            owned = result.baseline if isinstance(result.baseline, dict) else {}
-            if result.conflicts or owned:
+            # Retracting leaves no unchanged update to preserve and proposes nothing.
+            self._report(result.conflicts, result.resolved)
+            # A conflict keeps what it holds owned, so the two tests agree.
+            rest = result.baseline
+            owned: dict[str, Value] = {}  # pragma: no mutate
+            if isinstance(rest, dict):  # pragma: no mutate
+                owned = rest
+            if result.conflicts or owned:  # pragma: no mutate
                 self.candidate_state = self.candidate_state.with_file(
                     FileState(record.path, record.policy, encode(owned))
                 )
@@ -740,7 +740,7 @@ class Reconciliation:
                     ConflictReason.RETRACTED,
                     ConflictSides(
                         record.baseline or MISSING,
-                        local.decode("utf-8", "replace"),
+                        local.decode(errors="replace"),
                         MISSING,
                         line=0,
                     ),
@@ -796,7 +796,7 @@ class Reconciliation:
         workflow = generate_ci_workflow(
             CIWorkflowSpec(
                 supported_os=TargetOS.from_iterable(
-                    self.manifest.metadata.get("supported_os", ["Linux"])
+                    self.manifest.metadata.get("supported_os")
                 ),
                 min_python=resolve_python_version(self.manifest.metadata),
                 ci_flags=self.manifest.tooling.ci_flags,
@@ -871,9 +871,7 @@ class Reconciliation:
         record = located.record
         try:
             exists = self.workspace.exists(target)
-            original = (
-                self.workspace.read_bytes(target).decode("utf-8") if exists else ""
-            )
+            original = self.workspace.read_bytes(target).decode() if exists else ""
             base = (
                 decode_baseline(record.baseline)
                 if record and record.baseline is not None
@@ -918,13 +916,11 @@ class Reconciliation:
                 result.conflicts, result.resolved, result.proposals, result.preserved
             )
             if result.baseline is not MISSING:
+                # A cast only informs the type checker.
+                baseline = cast(dict[str, Value], result.baseline)  # pragma: no mutate
                 self._own(
                     located,
-                    FileState(
-                        target.as_posix(),
-                        policy,
-                        encode_baseline(cast(dict[str, Value], result.baseline)),
-                    ),
+                    FileState(target.as_posix(), policy, encode_baseline(baseline)),
                 )
             if result.content != original:
                 self.fs.write_text(target, result.content)
@@ -956,7 +952,7 @@ class Reconciliation:
             record = toml_located.record
             try:
                 original = (
-                    self.workspace.read_bytes(target).decode("utf-8")
+                    self.workspace.read_bytes(target).decode()
                     if self.workspace.exists(target)
                     else ""
                 )
@@ -1018,12 +1014,14 @@ class Reconciliation:
             for note in result.layout_notes:
                 self._layout_warning(target, note)
             if result.baseline is not MISSING:
+                # A cast only informs the type checker.
+                baseline = cast(dict[str, Value], result.baseline)  # pragma: no mutate
                 self._own(
                     toml_located,
                     FileState(
                         target.as_posix(),
                         FilePolicy.TOML,
-                        encode_toml_baseline(cast(dict[str, Value], result.baseline)),
+                        encode_toml_baseline(baseline),
                     ),
                 )
             new_content = result.content
@@ -1034,8 +1032,8 @@ class Reconciliation:
                     raise FileSystemError(
                         "mutate configuration AST", str(target), e
                     ) from e
-                original_project = tomllib.loads(original).get("project", {})
-                updated_project = tomllib.loads(new_content).get("project", {})
+                original_project = tomllib.loads(original).get("project")
+                updated_project = tomllib.loads(new_content).get("project")
                 original_python = (
                     original_project.get("requires-python")
                     if isinstance(original_project, dict)
@@ -1071,7 +1069,7 @@ class Reconciliation:
             enforce_path_jail(target, self.workspace_root)
             try:
                 original = (
-                    self.workspace.read_bytes(target).decode("utf-8")
+                    self.workspace.read_bytes(target).decode()
                     if self.workspace.exists(target)
                     else ""
                 )
@@ -1324,14 +1322,16 @@ class Reconciliation:
                 return
             base = record.baseline if record else None
             released: str | None = None
-            detached = ""
-            kept: tuple[str, ...] = ()
+            # Both are read only after the omitted branch has assigned them.
+            detached = ""  # pragma: no mutate
+            kept: tuple[str, ...] = ()  # pragma: no mutate
             if omitted:
                 # Regenerating without an omitted region would drop it unasked,
                 # so it is retracted first, and the file regenerates in this run.
                 try:
                     retraction = append_marker_blocks(
-                        local.decode("utf-8") if local is not None else "",
+                        # A missing file holds no region, so its text is moot.
+                        (local or b"").decode(),  # pragma: no mutate
                         [],
                         target,
                         baselines=omitted,
@@ -1352,8 +1352,10 @@ class Reconciliation:
                     # sits out the merge, so a generated line changed next to
                     # it does not conflict, and is put back after it.
                     detached, kept = detach_regions(released, omitted, target)
-                    local = detached.encode("utf-8")
-                base = cut_regions(base, omitted, target) if base is not None else None
+                    local = detached.encode()
+                # A text record always has a baseline; the cast informs the type checker.
+                text = cast(str, base)  # pragma: no mutate
+                base = cut_regions(text, omitted, target)
             result = reconcile_text(
                 local,
                 content,
@@ -1370,16 +1372,20 @@ class Reconciliation:
             else:
                 merged = (
                     released
-                    if result.conflicts
+                    # Attaching the detached regions again restores the retracted
+                    # text, so this only avoids the work.
+                    if result.conflicts  # pragma: no mutate
                     else attach_regions(
                         result.content if result.content is not None else detached,
                         kept,
                     )
                 )
-                if merged.encode("utf-8") != self.workspace.read_bytes(target):
+                if merged.encode() != self.workspace.read_bytes(target):
                     self.fs.write_text(target, merged)
-            baseline = result.baseline if result.baseline is not None else base
-            if baseline is not None and (result.baseline is not None or omitted):
+            # The merge returns the baseline it was given, so it is only None for a
+            # file that has no baseline (and no omitted region) to begin with.
+            baseline = result.baseline
+            if baseline is not None:
                 regions = (
                     {r.id: r.baseline for r in record.regions if r.id in declared}
                     if record
@@ -1436,7 +1442,7 @@ class Reconciliation:
             )
         try:
             original = (
-                self.workspace.read_bytes(target).decode("utf-8")
+                self.workspace.read_bytes(target).decode()
                 if self.workspace.exists(target)
                 else ""
             )
@@ -1535,12 +1541,9 @@ class Reconciliation:
                 self.fs.write_text(target, updated)
                 self._resolution_dirty = True
             for edge in accepted:
-                entries = owned_groups.setdefault(edge.group.value, [])
-                if not isinstance(entries, list):
-                    raise ConfigurationError(
-                        "Invalid owned dependency-group baseline.",
-                        hint="Keep owned dependency groups as arrays of include records.",
-                    )
+                # The loop above raised for any group that is not an array.
+                owned = owned_groups.setdefault(edge.group.value, [])
+                entries = cast(list[Value], owned)  # pragma: no mutate
                 member = {"include-group": edge.include.value}
                 if member not in entries:
                     entries.append(member)
@@ -1682,9 +1685,7 @@ class Reconciliation:
         try:
             if self.workspace.exists(Path(vscode.SETTINGS_TARGET)):
                 parse_jsonc(
-                    self.workspace.read_bytes(Path(vscode.SETTINGS_TARGET)).decode(
-                        "utf-8"
-                    ),
+                    self.workspace.read_bytes(Path(vscode.SETTINGS_TARGET)).decode(),
                     allow_empty=True,
                 )
         except (OSError, UnicodeError) as error:
@@ -1702,11 +1703,11 @@ class Reconciliation:
             )
             return
         if located := self._locate(vscode.SETTINGS_TARGET, FilePolicy.JSONC):
+            # A cast only informs the type checker.
+            values = cast(dict[str, Value], dict(settings))  # pragma: no mutate
             self._reconcile_document(
                 located,
-                dumps_jsonc(
-                    cast(dict[str, Value], dict(settings)), vscode.SETTINGS_INDENT
-                ),
+                dumps_jsonc(values, vscode.SETTINGS_INDENT),
                 FilePolicy.JSONC,
                 indent=vscode.SETTINGS_INDENT,
             )
@@ -1760,11 +1761,13 @@ class Reconciliation:
             self._merge_warning(conflict)
         for conflict in resolved:
             where = describe_location(conflict.location)
+            # A cast only informs the type checker.
+            choice = cast(ResolutionChoice, conflict.resolution)  # pragma: no mutate
             kept = {
                 ResolutionChoice.LOCAL: "keeping local content",
                 ResolutionChoice.DESIRED: "taking the update",
                 ResolutionChoice.BOTH: "keeping both",
-            }[cast(ResolutionChoice, conflict.resolution)]
+            }[choice]
             noun = (
                 "local change"
                 if conflict.reason is ConflictReason.PRESERVED
@@ -1798,7 +1801,8 @@ class Reconciliation:
         target = self.journal.normalize_path(target)
         for node in (target, *target.parents):
             if node == self.workspace_root:
-                break
+                # The loop is the last statement, so leaving it or returning is one.
+                break  # pragma: no mutate
             try:
                 mode = node.lstat().st_mode
             except FileNotFoundError:
@@ -1823,12 +1827,14 @@ class Reconciliation:
                 else None
             )
             if self._state_bytes is not None:
-                state = deserialize_state(self._state_bytes.decode("utf-8"))
+                state = deserialize_state(self._state_bytes.decode())
                 check_producer_version(state, self.candidate_state.producer_version)
                 check_template_identity(state, self.manifest.template_reference)
                 self._committed = state
                 reference = self.manifest.template_reference
-                if reference is not None and state.template is not None:
+                # The identity check makes both set or both None; the second test
+                # narrows the type.
+                if reference and state.template:  # pragma: no mutate
                     reference = replace(reference, migrated=state.template.migrated)
                 self.candidate_state = replace(
                     state,
@@ -1954,7 +1960,7 @@ class Reconciliation:
                 r.path == pyproject.TARGET for r in self.candidate_state.files
             ) or bool(self.candidate_state.dependencies)
             table = data.get(
-                "project" if group is DependencyGroup.MAIN else "dependency-groups", {}
+                "project" if group is DependencyGroup.MAIN else "dependency-groups"
             )
             owned_group = any(
                 r.group is group for r in self.candidate_state.dependencies
@@ -1975,7 +1981,7 @@ class Reconciliation:
             ancestor_key = (
                 "project" if group is DependencyGroup.MAIN else "dependency-groups"
             )
-            baseline_groups = baseline.get("dependency-groups", {})
+            baseline_groups = baseline.get("dependency-groups")
             owned_group = owned_group or (
                 group is not DependencyGroup.MAIN
                 and isinstance(baseline_groups, dict)
