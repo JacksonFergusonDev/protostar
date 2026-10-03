@@ -588,6 +588,51 @@ def _parse_pyproject_payload(
     )
 
 
+def _render_strings(
+    node: Any,
+    values: dict[str, str],
+    source: str,
+    path: tuple[str, ...] = (),
+) -> Any:
+    """Renders every string in a parsed template, keys included.
+
+    Rendering after parsing puts each value into the string's decoded text, so
+    a quote or backslash means the same in a basic string as in a literal one.
+    Only a ``[dev.pyproject]`` payload escapes its values, for the TOML document
+    it holds.
+
+    Args:
+        node: A parsed TOML value.
+        values: Each variable's raw value.
+        source: The template's locator, for errors.
+        path: The keys leading to ``node``.
+
+    Returns:
+        A rendered copy of ``node``.
+
+    Raises:
+        ConfigurationError: If two keys of one table render the same.
+    """
+    if isinstance(node, str):
+        # A payload is a string, or a table's content: [dev.pyproject] holds both.
+        payload = path[:2] == ("dev", "pyproject") and path[3:] in ((), ("content",))
+        return render_template(node, escaped(values) if payload else values)
+    if isinstance(node, list):
+        return [_render_strings(item, values, source, path) for item in node]
+    if isinstance(node, dict):
+        table: dict[str, Any] = {}
+        for key, value in node.items():
+            rendered = render_template(key, values)
+            if rendered in table:
+                raise ConfigurationError(
+                    f"Duplicate key '{rendered}' in configuration source '{source}'.",
+                    hint="Give each key a name that stays distinct once variables render.",
+                )
+            table[rendered] = _render_strings(value, values, source, (*path, key))
+        return table
+    return node
+
+
 def _string_list(raw: object, location: str, source: str) -> tuple[str, ...]:
     """Returns an array of strings, or raises naming where it belongs."""
     if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
@@ -872,7 +917,10 @@ class TemplateBlueprint:
                 f"Unexpected error while parsing configuration source '{source}'.\n"
                 f"Details: {e}"
             ) from e
+        return cls._from_data(data, source)
 
+    @classmethod
+    def _from_data(cls, data: dict[str, Any], source: str) -> "TemplateBlueprint":
         instance = cls()
 
         # Validate name
@@ -1558,11 +1606,9 @@ class TemplateSource:
             raise MissingTemplateVariablesError(target, missing)
 
         values = dict(context)
-        rendered_toml = render_template(
-            self.template_bytes.decode("utf-8"),
-            escaped(values),
+        blueprint = TemplateBlueprint._from_data(
+            _render_strings(self._data, values, target), target
         )
-        blueprint = TemplateBlueprint._parse(rendered_toml, target)
         blueprint.files.update(
             {
                 render_template(path, values): render_template(content, values)
