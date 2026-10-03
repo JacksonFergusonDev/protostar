@@ -658,7 +658,10 @@ class Reconciliation:
                     resolutions=self.resolutions,
                 )
             elif record.policy is FilePolicy.YAML:
-                yaml = yaml_spec(record.path) or YamlDocumentSpec(record.path)
+                yaml = yaml_spec(record.path) or YamlDocumentSpec(
+                    # A spec's name is read only for keyed sequences, which this lacks.
+                    record.path  # pragma: no mutate
+                )
                 decode, encode = decode_yaml_baseline, encode_yaml_baseline
                 result = reconcile_yaml(
                     replace(
