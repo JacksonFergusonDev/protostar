@@ -22,13 +22,15 @@ from protostar.merge import (
 from protostar.yaml_ast import encode_yaml_baseline
 
 from ..code import CodeSource, DiffLabels, diff_text, source_text
+from ..theme import ACCENT, ERROR, SUCCESS, TEXT_FAINT, WARNING
 
 LOCAL, DESIRED, BOTH = ResolutionChoice
 
 # What each choice does, as the list and the choice buttons say it.
 SAID = {LOCAL: "keep mine", DESIRED: "take update", BOTH: "keep both"}
 KEYS = {LOCAL: "k", DESIRED: "u", BOTH: "b"}
-_TAG_STYLES = {LOCAL: "cyan", DESIRED: "green", BOTH: "yellow"}
+TAG_STYLES = {LOCAL: ACCENT, DESIRED: SUCCESS, BOTH: WARNING}
+"""Each choice's color, wherever a choice made is shown."""
 OPEN = "open"
 """The choice button that leaves a conflict open."""
 
@@ -83,17 +85,19 @@ def side_text(conflict: MergeConflict, side: str) -> Text:
         The side's text or value as literal text, or why it has none.
     """
     if conflict.sides is None:
-        return Text("Protostar can't show this side.", style="dim")
+        return Text("Protostar can't show this side.", style=TEXT_FAINT)
     text = _side(conflict, side)
     if text is None:
         if side == "local":
             proposed = conflict.reason is ConflictReason.PROPOSED
-            return Text("Not in your file." if proposed else "Deleted.", style="dim")
-        return Text("No longer generated.", style="dim")
+            return Text(
+                "Not in your file." if proposed else "Deleted.", style=TEXT_FAINT
+            )
+        return Text("No longer generated.", style=TEXT_FAINT)
     return (
         source_text(CodeSource(text.text.rstrip("\n"), text.path, text.language))
         if text.text
-        else Text("No lines.", style="dim")
+        else Text("No lines.", style=TEXT_FAINT)
     )
 
 
@@ -131,7 +135,7 @@ def describe_conflict(conflict: MergeConflict) -> Text:
         return Text(
             f"{where}: {meaning} It can only be fixed by hand. "
             "Edit the file, then run sync again.",
-            style="dim",
+            style=TEXT_FAINT,
         )
     return Text.assemble((where, "bold"), f"  {meaning}")
 
@@ -148,7 +152,7 @@ def waiting_note(path: str) -> Text:
     return Text(
         f"Choose for every conflict in {path} to apply any of them: "
         "its overlapping lines change together.",
-        style="yellow",
+        style=WARNING,
     )
 
 
@@ -163,18 +167,18 @@ def tag(conflict: MergeConflict, choice: ResolutionChoice | None) -> Text:
         A short colored tag; a decision nobody chose shows its default, dimmed.
     """
     if not conflict.choices:
-        return Text("by hand", "dim")
+        return Text("by hand", TEXT_FAINT)
     if conflict.reason is ConflictReason.PROPOSED:
         # A proposal adds to your file unless kept out; nothing of yours changes.
         if choice is LOCAL:
-            return Text("kept out", _TAG_STYLES[LOCAL])
-        return Text("adds", "green" if choice is DESIRED else "dim")
+            return Text("kept out", TAG_STYLES[LOCAL])
+        return Text("adds", TAG_STYLES[DESIRED] if choice is DESIRED else TEXT_FAINT)
     if choice is not None:
-        return Text(SAID[choice], _TAG_STYLES[choice])
+        return Text(SAID[choice], TAG_STYLES[choice])
     default = default_choice(conflict)
     if default is None:
-        return Text(OPEN, "red")
-    return Text(SAID[default], "dim")
+        return Text(OPEN, ERROR)
+    return Text(SAID[default], TEXT_FAINT)
 
 
 def is_conflict(decision: MergeConflict) -> bool:

@@ -18,6 +18,7 @@ from protostar.modules import TOOLING_MODULES, ToolInfo, ToolModule
 from protostar.recipe import Tool
 
 from .keys import Choice, Toggle, key_label
+from .theme import ACCENT
 
 TOOL_INFO_KEY: tuple[str, str] = ("i", "What the focused tool does to the project")
 """The keybindings row for every screen with tool controls."""
@@ -77,7 +78,7 @@ def prose(text: str) -> Content:
     """
     return Content.assemble(
         *(
-            (part, "$accent") if index % 2 else part
+            (part, ACCENT) if index % 2 else part
             for index, part in enumerate(text.split("`"))
         )
     )
@@ -89,7 +90,7 @@ def _joined(items: tuple[str, ...]) -> list[tuple[str, str] | str]:
     for index, item in enumerate(items):
         if index:
             parts.append(", ")
-        parts.append((item, "$accent"))
+        parts.append((item, ACCENT))
     return parts
 
 
@@ -147,9 +148,7 @@ class ToolInfoScreen(ModalScreen[None]):
             yield Static(Text(self.tool_name.upper()), classes="dialog-title")
             yield Label(prose(info.summary), classes="question")
             if self.found or self.notes:
-                yield Static(
-                    Text("IN THIS PROJECT", style="bold"), classes="info-heading"
-                )
+                yield Static("IN THIS PROJECT", classes="info-heading")
                 if self.found:
                     yield Static(
                         Content.assemble(
@@ -161,11 +160,11 @@ class ToolInfoScreen(ModalScreen[None]):
                     )
                 for note in self.notes:
                     yield Static(Content(note))
-            yield Static(Text("ADDS", style="bold"), classes="info-heading")
+            yield Static("ADDS", classes="info-heading")
             yield Static(prose(info.adds))
-            yield Static(Text("DAY TO DAY", style="bold"), classes="info-heading")
+            yield Static("DAY TO DAY", classes="info-heading")
             yield Static(prose(info.workflow))
-            yield Static(Text(info.docs_url, style="dim"), classes="note")
+            yield Static(Content(info.docs_url), classes="note")
             with Horizontal(classes="dialog-actions"):
                 close = Button(key_label("Close", "esc"), id="close")
                 docs = Button(key_label("Open docs", "o"), id="docs")

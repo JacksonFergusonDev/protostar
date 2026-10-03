@@ -14,6 +14,7 @@ from textual import events
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.content import Content
 from textual.screen import ModalScreen, Screen
 from textual.widget import Widget
 from textual.widgets import (
@@ -29,6 +30,8 @@ from textual.widgets import (
 )
 from textual.widgets._toggle_button import ToggleButton
 
+from .theme import KEY, TEXT_FAINT, TITLE
+
 MOVE = Binding.Group("Move", compact=True)
 """Groups up and down under one footer entry."""
 
@@ -43,9 +46,22 @@ def key_label(label: str, key: str) -> Text:
         key: The key as Textual's footer displays it.
 
     Returns:
-        The label, with the key dimmed after it.
+        The label, with the key faded after it.
     """
-    return Text.assemble(label, "  ", (key, "dim"))
+    return Text.assemble(label, "  ", (key, KEY))
+
+
+def key_hint(action: str, key: str) -> Content:
+    """Returns an action and its key, beside the label of what it acts on.
+
+    Args:
+        action: What the key does.
+        key: The key as Textual's footer displays it.
+
+    Returns:
+        The action, faint, with its key after it as a control shows one.
+    """
+    return Content.assemble((action, TEXT_FAINT), "  ", (key, KEY))
 
 
 class Form(VerticalScroll, can_focus=False):
@@ -346,13 +362,13 @@ class KeybindingsScreen(ModalScreen[None]):
         width = max(len(keys) for keys, _ in self.rows)
         text = Text()
         for keys, description in self.rows:
-            text.append(keys.ljust(width + 3), "bold cyan")
+            text.append(keys.ljust(width + 3), TITLE)
             text.append(description + "\n")
         text.rstrip()
         with Vertical(id="dialog"):
             yield Static("KEYBINDINGS", classes="dialog-title")
             yield Static(text)
-            yield Static(Text("esc to close", style="dim"), classes="note")
+            yield Static("esc to close", classes="note")
 
 
 FORM_KEYS: KeyRows = (

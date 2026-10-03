@@ -12,7 +12,6 @@ from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import VerticalScroll
-from textual.content import Content
 from textual.widgets import (
     Button,
     Checkbox,
@@ -65,6 +64,7 @@ from ..chrome import (
     Section,
     Tab,
     TabbedPanel,
+    error_text,
 )
 from ..code import edit_text
 from ..conflicts.decision_list import DecisionList, Node, open_conflicts
@@ -72,6 +72,7 @@ from ..conflicts.sides import (
     KEYS,
     OPEN,
     SAID,
+    TAG_STYLES,
     describe_conflict,
     is_conflict,
     side_text,
@@ -87,6 +88,7 @@ from ..keys import (
     Toggle,
     key_label,
 )
+from ..theme import ERROR, TEXT_FAINT
 from ..trust import trust_text
 
 
@@ -126,7 +128,9 @@ def describe(
                 Text.assemble(
                     (
                         "  kept out  " if kept else "  adds      ",
-                        "cyan" if kept else "green",
+                        TAG_STYLES[
+                            ResolutionChoice.LOCAL if kept else ResolutionChoice.DESIRED
+                        ],
                     ),
                     (where or "the file", "bold"),
                     (f" {named}" if named else "", "bold"),
@@ -140,7 +144,7 @@ def describe(
             parts.append(
                 Text(
                     f"Resolved {where or 'the file'}: {SAID[conflict.resolution]}.",
-                    "cyan",
+                    TAG_STYLES[conflict.resolution],
                 )
             )
             continue
@@ -154,7 +158,7 @@ def describe(
             message = f"{where[:1].upper()}{where[1:]}: your edit is kept. {meaning}"
         else:
             message = f"Your version of {where or 'the file'} is kept. {meaning}"
-        parts.append(Text(message, "red"))
+        parts.append(Text(message, ERROR))
     if entry.edit is not None:
         parts.append(edit_text(entry.edit))
     elif entry.directory:
@@ -387,7 +391,7 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
             self.review = None
             self._loading = False
             self._status(
-                Text.assemble(str(exc), (f"  {exc.hint}", "dim") if exc.hint else ""),
+                error_text(exc),
                 error=True,
             )
             self._refresh_apply()
@@ -434,7 +438,7 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
             text.append(
                 f" · {verb} {count(collisions, 'existing file')}; "
                 "the recipe editor can change this.",
-                style="dim",
+                style=TEXT_FAINT,
             )
         return text
 
@@ -524,15 +528,12 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         self._describe(entry, only)
 
     def _describe(self, entry: Entry | None, only: MergeConflict | None) -> None:
-        title = Content("DIFF")
-        if entry:
-            # A path is data: Content never reads it as markup.
-            name = entry.path + ("/" if entry.directory else "")
-            title = Content.assemble(title, ("  ", ""), (name, "$foreground"))
-        self.query_one("#diff-panel", Panel).retitle(title)
+        self.query_one("#diff-panel", Panel).name_subject(
+            entry.path + ("/" if entry.directory else "") if entry else None
+        )
         if entry is None:
             self.query_one("#diff", Static).update(
-                Text("Select a file to see its changes.", style="dim")
+                Text("Select a file to see its changes.", TEXT_FAINT)
             )
             return
         parts: list[RenderableType] = []

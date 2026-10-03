@@ -57,6 +57,7 @@ from ..keys import (
     key_label,
 )
 from ..review.screen import ReviewScreen
+from ..theme import TEXT_FAINT, WARNING
 from ..tool_info import (
     TOOL_GROUPS,
     TOOL_INFO_KEY,
@@ -243,16 +244,16 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         # Names pad to one width so every source lines up in a column.
         parts: list[str | tuple[str, str]] = [
             _NAMES[tool].ljust(_NAME_WIDTH),
-            (self.sources[tool], "$text-faint"),
+            (self.sources[tool], TEXT_FAINT),
         ]
         missing = TOOL_REQUIREMENTS.get(tool, frozenset()) - {
             tool for tool, enabled in self.enabled.items() if enabled
         }
         if missing:
             requires = ", ".join(_NAMES[item] for item in sorted(missing))
-            parts.append((f" · requires {requires}", "$text-warning"))
+            parts.append((f" · requires {requires}", WARNING))
         if tool in self.not_installed:
-            parts.append((" · not installed", "$text-faint"))
+            parts.append((" · not installed", TEXT_FAINT))
         return Content.assemble(*parts)
 
     def compose(self) -> ComposeResult:

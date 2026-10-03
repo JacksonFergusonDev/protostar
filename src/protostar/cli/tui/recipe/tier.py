@@ -6,7 +6,6 @@ what each tier turns on for that template, read from the template's own flags.
 
 from typing import ClassVar
 
-from rich.text import Text
 from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
@@ -19,7 +18,8 @@ from textual.widgets import Button, Label, RadioButton, RadioSet, Static
 from protostar.recipe import Tool
 from protostar.tiers import TemplateTiers, Tier
 
-from ..keys import Choice, key_label
+from ..keys import Choice, key_hint, key_label
+from ..theme import TEXT_FAINT
 from ..tool_info import prose, tool_module
 
 TIER_INFO_KEY: tuple[str, str] = ("i", "What each tier turns on, on the tier")
@@ -87,7 +87,7 @@ class TierInfoScreen(ModalScreen[None]):
                 title = tier.value.upper()
                 if tier is self.tiers.default:
                     title += " · DEFAULT"
-                yield Static(Text(title, style="bold"), classes="info-heading")
+                yield Static(Content(title), classes="info-heading")
                 yield Static(_ABOUT[tier])
                 only = sorted(
                     (
@@ -98,15 +98,12 @@ class TierInfoScreen(ModalScreen[None]):
                 )
                 if not only:
                     continue
-                yield Static(Text("Turns on", style="dim"), classes="tier-turns-on")
+                yield Static("Turns on", classes="tier-turns-on note")
                 for name, summary in only:
                     with Horizontal(classes="tier-tool"):
-                        yield Static(Text(name), classes="tier-tool-name")
+                        yield Static(Content(name), classes="tier-tool-name")
                         yield Static(prose(summary))
-            yield Static(
-                Text("Press i on a tool for more about it.", style="dim"),
-                classes="note",
-            )
+            yield Static("Press i on a tool for more about it.", classes="note")
             with Horizontal(classes="dialog-actions"):
                 close = Button(key_label("Close", "esc"), id="close")
                 # Keys answer directly, as in every dialog.
@@ -159,19 +156,17 @@ class TierFields(Vertical):
         if self.tiers is None:
             return
         yield Label(
-            Content.assemble(
-                "Tier  ", ("i", "$text-faint"), "  ", ("what each turns on", "dim")
-            ),
+            Content.assemble("Tier  ", key_hint("Tier info", "i")),
             classes="field-label",
         )
         with TierChoice(self.tiers):
             for tier in Tier:
                 parts: list[str | tuple[str, str]] = [
                     tier.value.capitalize().ljust(_WIDTH),
-                    (_PURPOSE[tier], "$text-faint"),
+                    (_PURPOSE[tier], TEXT_FAINT),
                 ]
                 if tier is self.tiers.default:
-                    parts.append((" · default", "$text-faint"))
+                    parts.append((" · default", TEXT_FAINT))
                 yield RadioButton(
                     Content.assemble(*parts),
                     value=tier is self.tier,

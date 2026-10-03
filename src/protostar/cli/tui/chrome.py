@@ -11,12 +11,18 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from rich.console import RenderableType
+from rich.style import Style
+from rich.text import Text
 from textual.containers import Horizontal, Vertical
 from textual.content import Content
 from textual.widget import Widget
 from textual.widgets import ContentSwitcher, Label, Static
 
 from protostar.cli.palette import MARK
+from protostar.errors import ProtostarError
+
+from .keys import key_hint
+from .theme import ACCENT, FOREGROUND, KEY, RULE, TEXT_FAINT, TITLE
 
 
 class Masthead(Static):
@@ -36,21 +42,35 @@ class Masthead(Static):
     def render(self) -> Content:
         """Render the mark and the product, then the path with its last step lit."""
         parts: list[Content | str | tuple[str, str]] = [
-            (MARK, "bold $accent"),
+            (MARK, TITLE),
             " ",
             ("PROTOSTAR", "bold"),
             ("   ", ""),
         ]
         for index, step in enumerate(self.path):
             if index:
-                parts.append(("  /  ", "$hairline"))
+                parts.append(("  /  ", RULE))
             last = index == len(self.path) - 1
-            parts.append((step, "$foreground" if last else "$text-faint"))
+            parts.append((step, FOREGROUND if last else TEXT_FAINT))
         if self.cramped:
             parts.append(
-                ("   ·   A larger terminal shows more of each change", "$text-faint")
+                ("   ·   A larger terminal shows more of each change", TEXT_FAINT)
             )
         return Content.assemble(*parts)
+
+
+def error_text(error: ProtostarError) -> Text:
+    """Returns an error as a status line says it, its hint fainter after it.
+
+    Args:
+        error: The error to report.
+
+    Returns:
+        The message, then the hint when the error has one.
+    """
+    return Text.assemble(
+        str(error), (f"  {error.hint}", TEXT_FAINT) if error.hint else ""
+    )
 
 
 class Headline(Horizontal):
@@ -89,6 +109,24 @@ class Section(Vertical):
     """A headed group of controls that stands in a column under its panels."""
 
 
+class PanelTitle(Static):
+    """A panel's title row, whose tab names are links in their own colors.
+
+    Textual paints every link in one color, so a shown tab would read like
+    the others. A link under the pointer is underlined instead.
+    """
+
+    @property
+    def link_style(self) -> Style:
+        """Leaves a link's own style alone."""
+        return Style()
+
+    @property
+    def link_style_hover(self) -> Style:
+        """Underlines the link under the pointer."""
+        return Style(underline=True)
+
+
 class Panel(Vertical):
     """A titled panel, ruled above and below, with its title under the top rule.
 
@@ -109,8 +147,21 @@ class Panel(Vertical):
             id: The widget's id.
         """
         super().__init__(
-            Static(Content(title.upper()), classes="panel-title"), *children, id=id
+            PanelTitle(Content(title.upper()), classes="panel-title"), *children, id=id
         )
+        self.label = title.upper()
+
+    def name_subject(self, subject: str | None) -> None:
+        """Name what the panel shows, such as a path, beside its title.
+
+        Args:
+            subject: The name, which is data and never read as markup, or
+                ``None`` to show the title alone.
+        """
+        title = Content(self.label)
+        if subject is not None:
+            title = Content.assemble(title, "  ", (subject, FOREGROUND))
+        self.retitle(title)
 
     def retitle(self, title: Content) -> None:
         """Replace the title, which may carry data such as a path.
@@ -118,7 +169,7 @@ class Panel(Vertical):
         Args:
             title: The new title; Content never reads its text as markup.
         """
-        self.query_one(".panel-title", Static).update(title)
+        self.query_one(PanelTitle).update(title)
 
 
 @dataclass(frozen=True)
@@ -216,12 +267,11 @@ class TabbedPanel(Panel):
                 parts.append("   ")
             click = f" @click=screen.tab('{tab.id}')"
             lit = tab.id == self.active
-            parts.append(
-                (tab.title.upper(), ("$foreground" if lit else "$text-faint") + click)
-            )
+            # The shown tab takes the title's color, which lights with focus.
+            parts.append((tab.title.upper(), ("" if lit else TEXT_FAINT) + click))
             if note := self._notes.get(tab.id):
-                parts.append((f" {note}", "$accent" + click))
-            parts.append((f" {tab.key}", "dim not bold" + click))
+                parts.append((f" {note}", ACCENT + click))
+            parts.append((f" {tab.key}", KEY + click))
         self.retitle(Content.assemble(*parts))
 
 
@@ -246,14 +296,8 @@ class Heading(Static):
     def render(self) -> Content:
         """Render the label, then a hairline across the remaining width."""
         title = self.label.upper()
-        tail = (
-            Content.assemble(
-                " ", (self.key[0], "$text-faint"), "  ", (self.key[1], "dim")
-            )
-            if self.key
-            else Content()
-        )
+        tail = Content.assemble(" ", key_hint(*self.key)) if self.key else Content()
         rule = "─" * max(
             0, self.content_region.width - len(title) - 1 - tail.cell_length
         )
-        return Content.assemble((title, "bold $accent"), " ", (rule, "$hairline"), tail)
+        return Content.assemble((title, TITLE), " ", (rule, RULE), tail)

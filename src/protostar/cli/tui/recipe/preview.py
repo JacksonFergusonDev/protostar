@@ -33,16 +33,12 @@ from protostar.init_draft import InitDraft
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
 from protostar.registry import ResolvedHookRevision
 
+from ..chrome import error_text
+from ..theme import TEXT_FAINT
+
 # A warm plan() takes 1-11 ms and preparing up to ~100 ms, so the pause only
 # folds a burst of changes into one run.
 DEBOUNCE_SECONDS = 0.1
-
-
-def _error(error: ProtostarError) -> Text:
-    message = Text(str(error))
-    if error.hint:
-        message.append(f"  {error.hint}", style="dim")
-    return message
 
 
 class PlanPreview(VerticalScroll):
@@ -134,10 +130,12 @@ class PlanPreview(VerticalScroll):
             self.post_message(self.PlanUpdated(error=None))
             return
         except ProtostarError as exc:
-            self._show(_error(exc), error=True)
+            self._show(error_text(exc), error=True)
             self.post_message(self.PlanUpdated(error=exc))
             return
-        notes = Text("\n".join(event.message for event in manifest.diagnostics), "dim")
+        notes = Text(
+            "\n".join(event.message for event in manifest.diagnostics), TEXT_FAINT
+        )
         if review is None:
             paths, _ = planned_paths(manifest)
             self._show(
@@ -189,7 +187,7 @@ class PlanPreview(VerticalScroll):
         """Show an error the editor found before planning, in place of the plan."""
         self.workers.cancel_group(self, "preview")
         self._review = self._reviewed = None
-        self._show(_error(error), error=True)
+        self._show(error_text(error), error=True)
 
     def _show(
         self,
@@ -259,5 +257,5 @@ def _review_summary(review: Review) -> Text:
     line = summary(review)
     if review.prepared.conflicts or review.prepared.proposals:
         # The editor shows decisions; the next screen is where they are made.
-        line.append("\nSettled on the next screen.", "dim")
+        line.append("\nSettled on the next screen.", TEXT_FAINT)
     return line
