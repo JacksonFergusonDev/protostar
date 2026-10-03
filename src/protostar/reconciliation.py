@@ -1,6 +1,5 @@
 """Shared ownership decisions over workspace reads and accepted byte sinks."""
 
-import datetime
 import hashlib
 import logging
 import stat
@@ -47,7 +46,7 @@ from .intent import (
     region_tag,
     validate_target,
 )
-from .interpolation import render_path, render_template
+from .interpolation import render_template
 from .jsonc_ast import (
     decode_jsonc,
     decode_jsonc_baseline,
@@ -115,8 +114,6 @@ from .workflows import (
     generate_release_workflow,
 )
 from .workspace import (
-    resolve_package_name,
-    resolve_project_name,
     resolve_python_version,
     validate_resolver_workspace,
 )
@@ -218,18 +215,10 @@ class Reconciliation:
 
     @property
     def interpolation_context(self) -> dict[str, str]:
-        """Dynamically generates the context for template interpolation."""
+        """Returns the values that render target paths."""
         if self.manifest.recipe:
             return self.manifest.recipe.rendering_context()
-        return {
-            "PROJECT_NAME": resolve_project_name(self.manifest.metadata),
-            "PACKAGE_NAME": resolve_package_name(self.manifest.metadata),
-            "PYTHON_VERSION": resolve_python_version(
-                self.manifest.metadata, default=self.config.python_version
-            ),
-            "CURRENT_YEAR": str(datetime.date.today().year),
-            "AUTHOR_NAME": self.manifest.metadata.get("author_name") or "your-name",
-        }
+        return self.manifest.rendering_context()
 
     def _validate_targets(self) -> None:
         """Validates the syntax of existing target files before disk I/O begins.
@@ -247,13 +236,13 @@ class Reconciliation:
             | self.manifest.filesystem.regions.keys()
             | self.manifest.filesystem.directories
         ):
-            validate_target(render_path(path, self.interpolation_context))
+            validate_target(render_template(path, self.interpolation_context))
             self._validate_node(
-                Path(render_path(path, self.interpolation_context)),
+                Path(render_template(path, self.interpolation_context)),
                 directory=path in self.manifest.filesystem.directories,
             )
         for path in self.manifest.filesystem.file_injections:
-            if Path(render_path(path, self.interpolation_context)) == Path(
+            if Path(render_template(path, self.interpolation_context)) == Path(
                 pyproject.TARGET
             ):
                 raise ConfigurationError(
@@ -261,10 +250,10 @@ class Reconciliation:
                     hint="Declare structured contributions; tool.protostar is reserved.",
                 )
         for filepath, content in self.manifest.filesystem.file_injections.items():
-            if Path(render_path(filepath, self.interpolation_context)) == (
+            if Path(render_template(filepath, self.interpolation_context)) == (
                 Path(renovate.TARGET)
             ):
-                decode_jsonc(render_template(content, self.interpolation_context))
+                decode_jsonc(content)
                 existing = self._existing(renovate.TARGET)
                 if existing is not None:
                     try:
@@ -289,15 +278,7 @@ class Reconciliation:
                             "read YAML configuration", str(target), error
                         ) from error
                 continue
-            aggregate_toml(
-                [
-                    replace(
-                        c,
-                        content=render_template(c.content, self.interpolation_context),
-                    )
-                    for c in contributions
-                ]
-            )
+            aggregate_toml(contributions)
         deps = self.manifest.dependencies
         if (
             deps.dependencies
@@ -329,7 +310,7 @@ class Reconciliation:
             for package in packages:
                 requirement_identity(package)
         for filepath in sorted(toml_targets):
-            rendered = render_path(filepath, self.interpolation_context)
+            rendered = render_template(filepath, self.interpolation_context)
             resolved = self._resolve(rendered).path
             if resolved is None:
                 continue
@@ -389,8 +370,9 @@ class Reconciliation:
             return
 
         for filepath, content in self.manifest.filesystem.file_injections.items():
-            interpolated_filepath = render_path(filepath, self.interpolation_context)
-            content = render_template(content, self.interpolation_context)
+            interpolated_filepath = render_template(
+                filepath, self.interpolation_context
+            )
             target = Path(interpolated_filepath)
             enforce_path_jail(target, self.workspace_root)
             if target == Path(renovate.TARGET):
@@ -473,13 +455,13 @@ class Reconciliation:
             for rename in migration.rename:
                 self._rename_seed(
                     migration.version,
-                    render_path(rename.source, self.interpolation_context),
-                    render_path(rename.target, self.interpolation_context),
+                    render_template(rename.source, self.interpolation_context),
+                    render_template(rename.target, self.interpolation_context),
                 )
             for path in migration.remove:
                 self._remove_seed(
                     migration.version,
-                    render_path(path, self.interpolation_context),
+                    render_template(path, self.interpolation_context),
                 )
 
     def _seed(self, path: str) -> FileState | None:
@@ -563,7 +545,7 @@ class Reconciliation:
         decided on this run keeps that outcome.
         """
         declared = {
-            Path(render_path(path, self.interpolation_context)).as_posix()
+            Path(render_template(path, self.interpolation_context)).as_posix()
             for path in self.manifest.filesystem.file_injections
         } | {step.path for step in self.migration_steps}
         for record in self.candidate_state.files:
@@ -719,7 +701,7 @@ class Reconciliation:
         receives a declared region is declared, and keeps its generated text.
         """
         declared = self.manifest.generated_files() | {
-            Path(render_path(path, self.interpolation_context)).as_posix()
+            Path(render_template(path, self.interpolation_context)).as_posix()
             for path in self.manifest.filesystem.regions
         }
         for record in [
@@ -778,7 +760,7 @@ class Reconciliation:
             return
 
         for dir_path in self.manifest.filesystem.directories:
-            interpolated_path = render_path(dir_path, self.interpolation_context)
+            interpolated_path = render_template(dir_path, self.interpolation_context)
             path = Path(interpolated_path)
             enforce_path_jail(path, self.workspace_root)
             try:
@@ -943,7 +925,7 @@ class Reconciliation:
                         guard=YAML_GUARDS.get(filepath),
                     )
                 continue
-            rendered = render_path(filepath, self.interpolation_context)
+            rendered = render_template(filepath, self.interpolation_context)
             validate_target(rendered)
             toml_located = self._locate(rendered, FilePolicy.TOML)
             if toml_located is None:
@@ -976,15 +958,7 @@ class Reconciliation:
                     )
                 )
                 continue
-            aggregated = aggregate_toml_document(
-                [
-                    replace(
-                        c,
-                        content=render_template(c.content, self.interpolation_context),
-                    )
-                    for c in contributions
-                ]
-            )
+            aggregated = aggregate_toml_document(contributions)
             if deleted_project and record is None:
                 self._merge_warning(
                     MergeConflict(
@@ -1055,7 +1029,9 @@ class Reconciliation:
         for filepath, regions in self.manifest.filesystem.regions.items():
             # Regions go where the document's tool reads it, so an existing
             # alias is extended instead of a second file created.
-            path = self._follow(render_path(filepath, self.interpolation_context), held)
+            path = self._follow(
+                render_template(filepath, self.interpolation_context), held
+            )
             if path is not None:
                 declared[path] = regions
         # A file whose owned regions nothing declares any more is visited too,
@@ -1077,12 +1053,6 @@ class Reconciliation:
                 raise FileSystemError(
                     "read target append context", str(target), e
                 ) from e
-            region_payloads = [
-                AppendContribution(
-                    c.id, render_template(c.content, self.interpolation_context)
-                )
-                for c in regions
-            ]
             record = next(
                 (r for r in self.candidate_state.files if r.path == target.as_posix()),
                 None,
@@ -1097,7 +1067,7 @@ class Reconciliation:
                 )
             region_result = append_marker_blocks(
                 original,
-                region_payloads,
+                regions,
                 target,
                 overwrite=is_overwrite,
                 baselines={r.id: r.baseline for r in record.regions} if record else {},
@@ -1291,12 +1261,7 @@ class Reconciliation:
             return
         framed = append_marker_blocks(
             content,
-            [
-                AppendContribution(
-                    c.id, render_template(c.content, self.interpolation_context)
-                )
-                for c in contributions
-            ],
+            contributions,
             target,
             overwrite=True,
         )

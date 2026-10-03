@@ -31,6 +31,7 @@ from protostar.templates import builtin_template_aliases
 from protostar.workflows import CIFlag, GuideSpec, HookRunner, generate_agents_md
 
 SPEC = GuideSpec(
+    project_name="orbit",
     python_version="3.12",
     hook_runner=HookRunner.PREK,
     wants_just=True,
@@ -90,7 +91,7 @@ def test_guide_with_just_missing_falls_back_and_reports_it():
 
 
 def test_guide_shows_only_what_the_spec_supports():
-    bare = GuideSpec("3.12", HookRunner.NONE, False, [], [], [], set())
+    bare = GuideSpec("orbit", "3.12", HookRunner.NONE, False, [], [], [], set())
 
     assert build_guide(bare, ()).actions == ()
 

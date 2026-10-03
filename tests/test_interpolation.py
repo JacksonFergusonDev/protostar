@@ -1,4 +1,18 @@
-from protostar.interpolation import extract_variables, render_template, toml_escape
+import json
+import tomllib
+
+import pytest
+from ruamel.yaml import YAML
+
+from protostar.interpolation import (
+    escape,
+    escaped,
+    extract_variables,
+    quoted,
+    render_template,
+)
+
+AWKWARD = 'Line 1\nLine 2 with "quotes", \\backslashes\\, a\ttab, \x01, and \x7f'
 
 
 def test_extract_variables():
@@ -8,15 +22,33 @@ def test_extract_variables():
     assert variables == ["project_name", "description"]
 
 
-def test_toml_escape():
-    """Test that potentially dangerous characters are escaped for TOML strings."""
-    unsafe = 'Line 1\nLine 2 with "quotes" and \\backslashes\\'
-    safe = toml_escape(unsafe)
-    assert safe == 'Line 1\\nLine 2 with \\"quotes\\" and \\\\backslashes\\\\'
+def test_escape_keeps_a_value_inside_its_string():
+    assert escape('say "hi" \\ bye\n') == 'say \\"hi\\" \\\\ bye\\n'
+
+
+def test_escape_leaves_unicode_as_written():
+    assert escape("café ✓") == "café ✓"
+
+
+@pytest.mark.parametrize(
+    "load",
+    [
+        lambda literal: tomllib.loads(f"value = {literal}")["value"],
+        lambda literal: json.loads(literal),
+        lambda literal: YAML(typ="safe").load(f"value: {literal}")["value"],
+    ],
+    ids=["toml", "json", "yaml"],
+)
+def test_quoted_round_trips_through_every_structured_format(load):
+    assert load(quoted(AWKWARD)) == AWKWARD
+
+
+def test_escaped_escapes_every_value():
+    assert escaped({"a": '"', "b": "plain"}) == {"a": '\\"', "b": "plain"}
 
 
 def test_render_template():
-    """Test that placeholders are successfully replaced with escaped context values."""
+    """Test that placeholders are successfully replaced with context values."""
     template = 'name = "<% project_name %>"\ndir = "src/<%project_name%>"\n'
     context = {"project_name": "my_app"}
 
@@ -35,13 +67,11 @@ def test_render_template_preserves_unmatched_placeholders():
     assert 'author = "<% unknown_var %>"' in result
 
 
-def test_render_template_without_toml_escape():
-    """Test rendering template with escape_toml=False."""
-    template = 'raw = "<% value %>"'
-    context = {"value": 'unescaped "quotes"\nand newlines'}
+def test_render_template_substitutes_values_as_given():
+    template = "# Welcome to <% value %>"
+    context = {"value": 'say "hi" \\ bye'}
 
-    result = render_template(template, context, escape_toml=False)
-    assert result == 'raw = "unescaped "quotes"\nand newlines"'
+    assert render_template(template, context) == '# Welcome to say "hi" \\ bye'
 
 
 def test_render_template_multiple_placeholders_and_whitespaces():

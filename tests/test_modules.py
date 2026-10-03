@@ -1,4 +1,6 @@
+import datetime
 import tomllib
+from typing import cast
 
 from protostar.config import UserConfig
 from protostar.intent import StructuredFormat
@@ -7,6 +9,7 @@ from protostar.manifest import (
     EnvironmentManifest,
     HookRunner,
     MissingTool,
+    ProjectMetadata,
     Severity,
 )
 from protostar.modules import (
@@ -564,6 +567,71 @@ def test_python_core_declarative_license_injection():
     assert 'license = { file = "LICENSE" }' in pyproject_appends
     assert "License :: OSI Approved :: MIT License" in pyproject_appends
     assert "LICENSE" in manifest.filesystem.file_injections
+
+
+AWKWARD_NAME = 'Ada "the Countess" \\ Lovelace'
+
+
+def _awkward_manifest(tmp_path, monkeypatch) -> EnvironmentManifest:
+    monkeypatch.chdir(tmp_path)
+    metadata = {
+        "project_name": AWKWARD_NAME,
+        "author_name": AWKWARD_NAME,
+        "description": AWKWARD_NAME,
+        "minimum_python": "3.12",
+    }
+    return EnvironmentManifest(metadata=cast(ProjectMetadata, metadata))
+
+
+def test_python_core_writes_the_author_into_the_license_as_given(tmp_path, monkeypatch):
+    manifest = _awkward_manifest(tmp_path, monkeypatch)
+    manifest.metadata["license"] = "MIT"
+
+    PythonCore().build(manifest)
+
+    license_text = manifest.filesystem.file_injections["LICENSE"]
+    assert f"Copyright (c) {datetime.date.today().year} {AWKWARD_NAME}\n" in (
+        license_text
+    )
+    assert "<%" not in license_text
+
+
+def test_python_core_quotes_metadata_inside_its_strings(tmp_path, monkeypatch):
+    manifest = _awkward_manifest(tmp_path, monkeypatch)
+    manifest.metadata["github_username"] = "ada"
+
+    PythonCore().build(manifest)
+
+    [contribution] = manifest.filesystem.structured["pyproject.toml"]
+    project = tomllib.loads(contribution.content)["project"]
+    assert project["description"] == AWKWARD_NAME
+    assert project["authors"][0]["name"] == AWKWARD_NAME
+    assert project["urls"]["Issues"] == (
+        f"https://github.com/ada/{tmp_path.name}/issues"
+    )
+
+
+def test_mypy_module_renders_the_python_version(tmp_path, monkeypatch):
+    manifest = _awkward_manifest(tmp_path, monkeypatch)
+
+    MypyModule().build(manifest)
+
+    [contribution] = manifest.filesystem.structured["pyproject.toml"]
+    assert tomllib.loads(contribution.content)["tool"]["mypy"]["python_version"] == (
+        "3.12"
+    )
+
+
+def test_zensical_module_quotes_the_name_only_inside_a_string(tmp_path, monkeypatch):
+    manifest = _awkward_manifest(tmp_path, monkeypatch)
+
+    ZensicalModule().build(manifest)
+
+    index = manifest.filesystem.file_injections["docs/index.md"]
+    assert index.startswith(f"# Welcome to {AWKWARD_NAME}\n")
+    [contribution] = manifest.filesystem.structured["zensical.toml"]
+    site = tomllib.loads(contribution.content)["project"]
+    assert site["site_name"] == AWKWARD_NAME
 
 
 def test_system_workspace_module_properties():

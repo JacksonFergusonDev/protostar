@@ -453,6 +453,7 @@ def test_yaml_builder():
 
 def _agents_spec(**overrides):
     base = GuideSpec(
+        project_name="orbit",
         python_version="3.13",
         hook_runner=HookRunner.NONE,
         wants_just=True,
@@ -569,9 +570,16 @@ def test_generate_agents_md_states_the_commit_convention():
 def test_generate_contributing_md_opens_with_the_project_heading():
     content = generate_contributing_md(_agents_spec())
 
-    assert content.startswith("# Contributing to <% PROJECT_NAME %>\n")
+    assert content.startswith("# Contributing to orbit\n")
     assert "Protostar generates and updates this section" in content
     assert "region:" not in content
+
+
+def test_generate_contributing_md_names_the_project_as_given():
+    content = generate_contributing_md(_agents_spec(project_name='say "hi" \\ bye'))
+
+    assert content.startswith('# Contributing to say "hi" \\ bye\n')
+    assert 'Thank you for helping improve say "hi" \\ bye.' in content
 
 
 def test_generate_contributing_md_one_shot_has_no_sync_notice():

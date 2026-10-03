@@ -106,7 +106,9 @@ def test_one_shot_cli_and_agent_guidance():
     _, request = resolve_init(InitDraft(one_shot=args.one_shot), UserConfig())
     assert request.one_shot
     guide = generate_agents_md(
-        GuideSpec("3.13", HookRunner.PREK, False, [], [], [], set(), one_shot=True)
+        GuideSpec(
+            "orbit", "3.13", HookRunner.PREK, False, [], [], [], set(), one_shot=True
+        )
     )
     assert "protostar sync" not in guide
     assert "[tool.protostar]" not in guide
