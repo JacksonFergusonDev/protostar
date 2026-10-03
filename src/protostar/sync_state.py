@@ -17,6 +17,7 @@ from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 from tomlkit.exceptions import TOMLKitError
 
+from .docs_registry import DocsPage
 from .errors import ConfigurationError, OutdatedProtostarError
 from .intent import (
     DependencyGroup,
@@ -325,8 +326,10 @@ def check_template_identity(
         and state.template.identity != desired.identity
     ):
         raise ConfigurationError(
-            "Selected template differs from the tracked project identity.",
-            hint="Select the same template source explicitly; template switching and adoption are unsupported.",
+            "This project follows a different template.",
+            hint="Use the template the project records; `protostar status` names "
+            "it. A project can't switch to another template.",
+            docs_path=DocsPage.TROUBLESHOOTING_TEMPLATE_SWITCH,
         )
 
 

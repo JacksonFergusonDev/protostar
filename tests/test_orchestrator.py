@@ -148,7 +148,7 @@ def test_plan_rejects_a_template_the_project_does_not_record(
         request=InitRequest(template_reference=replace(recorded, locator="cli")),
     )
 
-    with pytest.raises(ConfigurationError, match="differs"):
+    with pytest.raises(ConfigurationError, match="different template"):
         engine.plan()
     engine.request = InitRequest(template_reference=recorded)
     engine.plan()

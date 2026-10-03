@@ -2181,7 +2181,7 @@ async def test_a_review_that_never_prepares_hands_its_error_to_the_cli(
         assert not app.is_running
     assert app.return_value is None
     assert app.failure is not None
-    assert "differs" in str(app.failure)
+    assert "different template" in str(app.failure)
 
 
 def test_decide_raises_the_error_a_screen_left_with(mocker):
@@ -2240,8 +2240,8 @@ async def test_a_review_with_an_editor_behind_it_shows_the_error_and_hint(
         await settle(pilot)
         assert app.is_running
         subtitle = plain(app, "#subtitle")
-        assert "differs" in subtitle
-        assert "Select the same template source" in subtitle
+        assert "different template" in subtitle
+        assert "the template the project records" in subtitle
         assert app.screen.query_one("#apply", Button).disabled
 
 

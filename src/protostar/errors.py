@@ -86,7 +86,9 @@ class StaleReviewError(ConfigurationError):
     def __init__(self, path: str) -> None:
         super().__init__(
             f"Review input changed: {path}.",
-            hint="Prepare a new review against the current workspace before applying changes.",
+            hint="Something changed after the review was shown. Run the command "
+            "again to review the project as it is now.",
+            docs_path=DocsPage.TROUBLESHOOTING_STALE_REVIEW,
         )
 
 

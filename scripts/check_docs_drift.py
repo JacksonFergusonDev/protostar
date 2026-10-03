@@ -157,6 +157,21 @@ def check_error_sections() -> list[str]:
     return problems
 
 
+def check_error_names() -> list[str]:
+    """Every error a page names is a Protostar error or a Python built-in."""
+    import builtins
+
+    known = {cls.__name__ for cls in _error_classes()} | set(dir(builtins))
+    problems: list[str] = []
+    for page in _hand_written_pages():
+        names = set(re.findall(r"`([A-Z]\w*Error)\b", page.read_text(encoding="utf-8")))
+        problems.extend(
+            f"{_rel(page)}: '{name}' is not an error Protostar raises"
+            for name in sorted(names - known)
+        )
+    return problems
+
+
 def check_api_reference_errors() -> list[str]:
     """api-reference.md renders every error, or the whole errors module."""
     text = API_REFERENCE.read_text(encoding="utf-8")
@@ -893,6 +908,7 @@ CHECKS: tuple[Callable[[], list[str]], ...] = (
     check_error_tree,
     check_error_sections,
     check_api_reference_errors,
+    check_error_names,
     check_exit_code_table,
     check_built_in_templates,
     check_quality_flags,

@@ -164,6 +164,42 @@ ruff = true
 1. Set the schema file to the exported `protostar-template.schema.json`.
 1. Add the file pattern `*protostar*.toml`.
 
+## Errors from Status and Sync
+
+### Protostar Is Older Than the Project
+
+```text
+protostar.lock was written by Protostar 0.12.0, but Protostar 0.11.2 is installed.
+```
+
+`OutdatedProtostarError`: someone synced the project with a newer Protostar than yours. Built-in templates come from the installed release, so an older one would plan older files and offer them as an update, quietly undoing the newer work. `init`, `status`, `diff`, and `sync` refuse instead. Upgrade, with `brew upgrade protostar` or `uv tool upgrade protostar`, and run the command again. To keep a team and CI on one release, see [Keep Protostar Versions in Step](automating-updates.md#keep-protostar-versions-in-step).
+
+### The Review Is Out of Date
+
+```text
+Review input changed: pyproject.toml.
+```
+
+`StaleReviewError`: a file changed between the review Protostar showed you and the moment it would apply it, for example because an editor saved it, or a formatter rewrote it. Protostar never applies changes you didn't see, so it stops before writing anything. Run the command again to review the project as it is now.
+
+### No Conflict Matches
+
+```text
+No conflict matches: 3f2a9c1b7d4e.
+```
+
+`UnmatchedResolutionError`: a `--resolve` names a decision the current review doesn't have. A decision's `id` covers both sides, so it stops matching as soon as either side changes: you edited the file, or the template moved. Run `protostar status` again and use the `id`s it prints now. Nothing was written. See [Resolve Conflicts](lifecycle.md#resolve-conflicts).
+
+### A Project Can't Switch Templates
+
+```text
+This project follows a different template.
+```
+
+The template you passed isn't the one the project records. A project follows one template for life: switching would turn every file the old template wrote into a conflict with no sensible owner. Pass the template the project records; `protostar status` names it, and the recipe editor preselects it. To move a repository template to a new release, use `protostar sync --to <ref>`, which is the same template at another version.
+
+To start over with a different template, `protostar eject` the project first; the files stay, and the next `init` treats them as yours.
+
 ## Execution Interruptions & Rollback
 
 If an error occurs or you press `Ctrl+C` mid-run, Protostar automatically restores your workspace.
