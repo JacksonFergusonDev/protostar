@@ -1326,7 +1326,7 @@ class Reconciliation:
                 # so it is retracted first, and the file regenerates in this run.
                 try:
                     retraction = append_marker_blocks(
-                        local.decode() if local is not None else "",
+                        (local or b"").decode(),
                         [],
                         target,
                         baselines=omitted,
@@ -1348,10 +1348,9 @@ class Reconciliation:
                     # it does not conflict, and is put back after it.
                     detached, kept = detach_regions(released, omitted, target)
                     local = detached.encode()
-                # A text record always has a baseline; the guard informs the type checker.
-                base = (
-                    cut_regions(base, omitted, target) if base is not None else None
-                )  # pragma: no mutate
+                # A text record always has a baseline; the cast informs the type checker.
+                text = cast(str, base)  # pragma: no mutate
+                base = cut_regions(text, omitted, target)
             result = reconcile_text(
                 local,
                 content,
@@ -1368,7 +1367,9 @@ class Reconciliation:
             else:
                 merged = (
                     released
-                    if result.conflicts
+                    # Attaching the detached regions again restores the retracted
+                    # text, so this only avoids the work.
+                    if result.conflicts  # pragma: no mutate
                     else attach_regions(
                         result.content if result.content is not None else detached,
                         kept,
@@ -1376,8 +1377,10 @@ class Reconciliation:
                 )
                 if merged.encode() != self.workspace.read_bytes(target):
                     self.fs.write_text(target, merged)
-            baseline = result.baseline if result.baseline is not None else base
-            if baseline is not None and (result.baseline is not None or omitted):
+            # The merge returns the baseline it was given, so it is only None for a
+            # file that has no baseline (and no omitted region) to begin with.
+            baseline = result.baseline
+            if baseline is not None:
                 regions = (
                     {r.id: r.baseline for r in record.regions if r.id in declared}
                     if record
