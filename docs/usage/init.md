@@ -4,21 +4,11 @@ description: "Learn how to use protostar init to safely construct and manage you
 
 # Environment Initialization
 
-The `init` command is Protostar's primary command. It sets up folder structures, wires together tools, and configures dependencies in seconds.
+`protostar init` sets up a project in the current directory: an empty folder, or a project you already have. In a terminal with no template given, it opens the recipe editor; with `--template` or `--from`, it runs headlessly. Either way, nothing is written until you have seen the plan, in the change review or with `--dry-run`, and if anything fails part-way, every change is [rolled back](rollback.md).
 
-Protostar is designed to be run on Day 1 to build your repository foundation. On an already initialized workspace, `--force-merge` safely reconciles contributions that Protostar previously recorded. It can apply unchanged-local template updates and additive tooling, while preserving user edits, deletions, and unowned content. It skips the change review, so a conflict it meets keeps your version; `init` ends by counting those you can still settle, and `protostar sync` lets you choose a side. It does not adopt existing configuration or switch templates, and like `sync` it retracts content Protostar no longer produces. After tracked initialization, use the [project lifecycle](lifecycle.md) commands `status`, `diff`, and `sync` to review and apply the recorded recipe.
+Afterwards the project is tracked: its recipe in `pyproject.toml` records what it asked for (see [Project Recipes](project-recipes.md)), `protostar.lock` records what was applied, and `status`, `diff`, and `sync` keep it current (see [Project Lifecycle](lifecycle.md)).
 
-<div class="grid cards" markdown>
-
-- :material-shield-check: __Safe Merging__
-
-    Protostar doesn't blindly overwrite files. In merge mode it uses recorded ownership baselines for supported TOML and YAML configuration (including GitHub Actions workflows, merged by job and step), line-by-line three-way merges for other generated files, and deduplicated ignore additions. Existing content without state remains unowned.
-
-- :material-clock-fast: __Instant & Repeatable__
-
-    Instead of manually copying boilerplate from old repositories or relying on fragile shell scripts, Protostar creates a clean, consistent environment in fractions of a second.
-
-</div>
+Running `init --force-merge` again in a tracked project reapplies the same template. Content Protostar wrote and you haven't touched takes the template's current version, your edits and deletions stay, and content Protostar no longer produces is removed. It skips the change review, so each conflict keeps your version; `init` ends by counting them, and `protostar sync` lets you settle them. It can't switch the project to another template. To update a tracked project, use `sync`.
 
 ## Built-in Templates
 
@@ -204,7 +194,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
 
 ## Task Runner Orchestration (`justfile`)
 
-Every initialized repository includes a turnkey `justfile` generated from your active tooling configuration. Recipes dynamically adapt to your selected linters, test frameworks, and documentation engines:
+With `just` on, the project gets a `justfile` built from its tools: each recipe runs the linters, type checker, tests, and docs the project has. This is the `cli` template's:
 
 ```just
 --8<-- "cli/justfile"
@@ -216,7 +206,7 @@ Running `just` in your project root provides standard developer workflows immedi
 - __`just lint`__: Executes static analysis with Ruff and rumdl.
 - __`just typecheck`__: Runs static type checking across the project source tree.
 - __`just test` / `just test-cov`__: Executes the test suite with coverage reporting.
-- __`just ci`__: Emulates the GitHub Actions CI pipeline locally.
+- __`just ci`__: Runs the linters, type checker, and tests together, the checks CI runs.
 
 ## Recipe Editor & Metadata
 
@@ -257,7 +247,7 @@ When `init` runs in a directory that already holds a project but has no recipe y
 
 The editor's headline says when it has filled in an existing project, and a note under __Tools__ names any file it could not read. Other GitHub Actions workflows the CI tool would run beside are listed in its `i` popup. `protostar init --dry-run --json` reports the same analysis for agents (see the [machine interface](agent-interface.md)).
 
-The change review that follows lists every change Protostar would make to a file you already have, and each can be kept out; __Keep all mine__ (`K`) adopts the project exactly as it is, and `protostar sync` can take any kept-out change later (see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have)).
+The change review that follows lists every change Protostar would make to a file you already have, and each can be kept out; __Keep all mine__ (`K`) keeps the project exactly as it is, and `protostar sync` can take any kept-out change later (see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have)).
 
 ## Progressive Scaffolding & Collisions
 
@@ -270,7 +260,7 @@ Choosing either re-prepares the review with its diffs. Press __Cancel__ to exit 
 
 Under __Merge__, a file Protostar can't merge into is kept as it is and marked `conflict`, such as an existing `justfile` it has never managed. Highlight it to see your version beside Protostar's and settle it under __Conflicts__: __Keep mine__ (`k`) leaves the file untouched and adopts it, so later updates merge into it three ways; __Take update__ (`u`) replaces it. __Keep both__ (`b`) is offered for overlapping lines, and __Leave open__ (`x`) keeps today's behavior.
 
-Everything else Merge would change in a file you already have is listed too, as __Changes to your file__: each key, table, list member, or dependency it adds. Each applies unless you keep it out with `k`; keeping it out records Protostar's version without writing it, so `protostar sync` can take it later. __Keep all mine__ (`K`) keeps your side of every conflict and change at once, which adopts the project exactly as it is. The review shows the result before anything runs. It covers the files written before setup commands, and the configuration merges and dependencies after them whenever no command creates their files; anything later is listed after setup, and `protostar sync` settles it the same way (see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have)).
+Everything else Merge would change in a file you already have is listed too, as __Changes to your file__: each key, table, list member, or dependency it adds. Each applies unless you keep it out with `k`; keeping it out records Protostar's version without writing it, so `protostar sync` can take it later. __Keep all mine__ (`K`) keeps your side of every conflict and change at once, which keeps the project exactly as it is. The review shows the result before anything runs. It covers the files written before setup commands, and the configuration merges and dependencies after them whenever no command creates their files; anything later is listed after setup, and `protostar sync` settles it the same way (see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have)).
 
 Selecting __Merge__ reconciles declared TOML configuration against `protostar.lock`. A tracked project requires the same explicitly selected template source; switching templates or adding a template to tracked tooling-only state is unsupported.
 
@@ -308,18 +298,7 @@ To view all supported subcommands and flags in your terminal, run `protostar hel
 
 ![Protostar Help Init](../assets/terminals/cli_init_help.svg)
 
-## Next Steps
-
-- __[Templates](./templates.md):__ Learn how to create and share custom TOML blueprints, fetch remote templates, and interpolate variables.
-- __[Tooling & Flags Matrix](./tooling-matrix.md):__ Explore all supported linters, formatters, type checkers, and test runners.
-- __[Global Configuration](./configuration.md):__ Customize your default Python version, licenses, and template aliases.
-- __[Troubleshooting & FAQ](./troubleshooting.md):__ Resolve missing binary dependencies, workspace collisions, and editor configuration issues.
-
-## Persisted project intent
-
-By default, successful initialization records `[tool.protostar]` in `pyproject.toml` alongside the separate ownership ledger. Unspecified flags preserve recorded diversions on reinitialization. See [project recipes](project-recipes.md) for enrollment, selection precedence, and template variables.
-
-## One time scaffolding
+## One-Shot Scaffolding
 
 Use `--one-shot` when you want the generated environment without Protostar managing future updates:
 
@@ -329,4 +308,11 @@ protostar init --template cli --one-shot
 
 Protostar scaffolds the same project files and resolves dependencies, including `uv.lock`, but does not add `[tool.protostar]` to `pyproject.toml` or write `protostar.lock`. Generated agent guidance describes the resulting project without referring to a recorded recipe or `protostar sync`. The run retains normal conflict handling and rollback.
 
-The flag requires a project with neither a recorded recipe nor a `protostar.lock`. Without those files, `protostar status`, `diff`, and `sync` cannot manage the scaffold afterward. A later tracked `init --force-merge` can establish a recipe and ownership state, but existing files remain subject to the normal rules for foreign content.
+The flag requires a project with neither a recorded recipe nor a `protostar.lock`. Without those files, `protostar status`, `diff`, and `sync` cannot manage the scaffold afterward. A later `init --force-merge` can start tracking the project, but the files already there stay yours unless you choose otherwise.
+
+## Next Steps
+
+- __[Templates](./templates.md):__ Learn how to create and share custom TOML blueprints, fetch remote templates, and interpolate variables.
+- __[Tooling & Flags Matrix](./tooling-matrix.md):__ Explore all supported linters, formatters, type checkers, and test runners.
+- __[Global Configuration](./configuration.md):__ Customize your default Python version, licenses, and template aliases.
+- __[Troubleshooting & FAQ](./troubleshooting.md):__ Resolve missing binary dependencies, workspace collisions, and editor configuration issues.
