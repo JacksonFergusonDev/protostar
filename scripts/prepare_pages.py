@@ -1,4 +1,4 @@
-"""Assemble versioned documentation and root redirects for GitHub Pages."""
+"""Assemble GitHub Pages: the latest release at the bare URLs, each under its version."""
 
 from __future__ import annotations
 
@@ -135,15 +135,17 @@ def redirect_html(target: str) -> str:
 """
 
 
+def _route(relative: Path) -> str:
+    """The URL path of a published page, relative to its tree."""
+    return quote(relative.as_posix().removesuffix("index.html"), safe="/")
+
+
 def _write_redirects(source: Path, destination: Path, target_base: str) -> None:
     for page in sorted(source.rglob("*.html")):
         relative = page.relative_to(source)
         if relative == Path("404.html"):
             continue
-        route = relative.as_posix()
-        if route.endswith("index.html"):
-            route = route.removesuffix("index.html")
-        target = target_base + quote(route, safe="/")
+        target = target_base + _route(relative)
         output = destination / relative
         if output.exists():
             raise ConfigurationError(
@@ -151,6 +153,31 @@ def _write_redirects(source: Path, destination: Path, target_base: str) -> None:
             )
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(redirect_html(target), encoding="utf-8")
+
+
+def _point_at_bare_urls(
+    tree: Path, version_url: str, site_url: str, latest: Path
+) -> None:
+    """Make the bare URL canonical for each page the latest release still has.
+
+    A release is built for its versioned URL, so its canonical link, og:url,
+    and structured data name that address. Each page the latest release
+    still has names its bare URL instead, so search engines rank one address
+    across releases; each page it dropped is kept out of search results.
+    """
+    for page in sorted(tree.rglob("*.html")):
+        relative = page.relative_to(tree)
+        if relative == Path("404.html"):
+            continue
+        text = page.read_text(encoding="utf-8")
+        if (latest / relative).is_file():
+            route = _route(relative)
+            text = text.replace(f'"{version_url}{route}"', f'"{site_url}{route}"')
+        else:
+            text = text.replace(
+                "<head>", '<head>\n<meta name="robots" content="noindex">', 1
+            )
+        page.write_text(text, encoding="utf-8")
 
 
 def _generate_llms(source: Path, config_path: Path, site_url: str) -> None:
@@ -192,16 +219,40 @@ def assemble_pages(source: Path, output: Path, config_path: Path) -> str:
         )
     with config_path.open("rb") as stream:
         site_url = tomllib.load(stream)["project"]["site_url"].rstrip("/") + "/"
-    output.mkdir(parents=True)
+    current = source / latest
+    reserved = {
+        *(name for version in versions for name in (version.name, *version.aliases)),
+        "benchmarks",
+        "versions.json",
+        "robots.txt",
+        "CNAME",
+        ".nojekyll",
+    }
+    if collisions := sorted(
+        path.name for path in current.iterdir() if path.name in reserved
+    ):
+        raise ConfigurationError(
+            f"The latest documentation collides with {', '.join(collisions)}."
+        )
     for version in versions:
         tree = source / version.name
         if any(path.is_symlink() for path in (tree, *tree.rglob("*"))):
             raise ConfigurationError(
                 "Published documentation must not contain symbolic links."
             )
+    # The latest release is served at the bare URLs; every release keeps its
+    # versioned copy, and its aliases redirect to wherever it is served.
+    shutil.copytree(current, output)
+    _point_at_bare_urls(output, f"{site_url}{latest}/", site_url, current)
+    for version in versions:
+        tree = source / version.name
         shutil.copytree(tree, output / version.name)
+        _point_at_bare_urls(
+            output / version.name, f"{site_url}{version.name}/", site_url, current
+        )
+        target = site_url if version.name == latest else f"{site_url}{version.name}/"
         for alias in version.aliases:
-            _write_redirects(tree, output / alias, f"{site_url}{version.name}/")
+            _write_redirects(tree, output / alias, target)
     benchmark_data = source / "benchmarks" / "data.js"
     if benchmark_data.is_file():
         benchmark_output = output / "benchmarks"
@@ -221,26 +272,27 @@ def assemble_pages(source: Path, output: Path, config_path: Path) -> str:
                 benchmark_output / filename,
             )
     shutil.copyfile(source / "versions.json", output / "versions.json")
-    current = output / latest
-    _generate_llms(current, config_path, f"{site_url}{latest}/")
-    for filename in ("llms.txt", "llms-full.txt", "sitemap.xml"):
-        shutil.copyfile(current / filename, output / filename)
-    # Preserve the root favicon for permanent entry URLs.
-    favicon = current / "assets" / "favicon.png"
-    if favicon.is_file():
-        (output / "assets").mkdir(exist_ok=True)
-        shutil.copyfile(favicon, output / "assets" / "favicon.png")
-    _write_redirects(current, output, f"{site_url}{latest}/")
+    _generate_llms(output, config_path, site_url)
+    sitemap = output / "sitemap.xml"
+    if sitemap.is_file():
+        sitemap.write_text(
+            sitemap.read_text(encoding="utf-8").replace(
+                f"<loc>{site_url}{latest}/", f"<loc>{site_url}"
+            ),
+            encoding="utf-8",
+        )
     (output / ".nojekyll").touch()
     (output / "robots.txt").write_text(
         ROBOTS.format(sitemap=f"{site_url}sitemap.xml"), encoding="utf-8"
     )
     (output / "CNAME").write_text(f"{urlsplit(site_url).hostname}\n", encoding="utf-8")
+    # The theme's 404 page links its assets relative to the root, which breaks
+    # at the nested paths GitHub Pages serves it from.
     (output / "404.html").write_text(
         '<!DOCTYPE html><html lang="en"><meta charset="utf-8">'
         "<title>Page not found</title><h1>Page not found</h1>"
-        f'<p><a href="{html.escape(site_url + latest + "/", quote=True)}">'
-        "Browse the latest Protostar documentation</a>.</p></html>\n",
+        f'<p><a href="{html.escape(site_url, quote=True)}">'
+        "Browse the Protostar documentation</a>.</p></html>\n",
         encoding="utf-8",
     )
     return latest

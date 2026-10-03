@@ -22,6 +22,17 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def _page(version: str, route: str, body: str) -> str:
+    """A released page, built for its versioned URL as mike builds it."""
+    url = f"https://docs.example/{version}/{route}"
+    return (
+        f'<html><head>\n<link rel="canonical" href="{url}">\n'
+        f'<meta property="og:url" content="{url}">\n'
+        f'<script type="application/ld+json">{{"url":"{url}"}}</script>\n'
+        f"</head><article>{body}</article></html>"
+    )
+
+
 @pytest.fixture
 def published_docs(tmp_path: Path) -> tuple[Path, Path, Path]:
     source = tmp_path / "archive"
@@ -39,14 +50,26 @@ def published_docs(tmp_path: Path) -> tuple[Path, Path, Path]:
     for version in ("0.9.0", "0.10.1"):
         _write(
             source / version / "index.html",
-            f"<html><article><h1>Protostar {version}</h1><p>Home.</p></article></html>",
+            _page(version, "", f"<h1>Protostar {version}</h1><p>Home.</p>"),
         )
         _write(
             source / version / "why-protostar" / "index.html",
-            f"<html><article><h1>Why Protostar?</h1><p>Release {version} comparison.</p></article></html>",
+            _page(
+                version,
+                "why-protostar/",
+                f"<h1>Why Protostar?</h1><p>Release {version} comparison.</p>",
+            ),
         )
-        _write(source / version / "sitemap.xml", f"<sitemap>{version}</sitemap>")
+        _write(
+            source / version / "sitemap.xml",
+            f"<urlset><url><loc>https://docs.example/{version}/</loc></url>"
+            f"<url><loc>https://docs.example/{version}/why-protostar/</loc></url></urlset>",
+        )
         _write(source / version / "404.html", "Old theme's 404 and asset links")
+    _write(
+        source / "0.9.0" / "retired" / "index.html",
+        _page("0.9.0", "retired/", "<h1>Retired</h1>"),
+    )
     _write(source / "0.10.1" / "assets" / "favicon.png", "current favicon")
     _write(source / "why-protostar" / "index.html", "Stale root comparison")
     _write(source / "retired-page" / "index.html", "Stale deleted page")
@@ -65,7 +88,7 @@ def published_docs(tmp_path: Path) -> tuple[Path, Path, Path]:
     return source, output, config
 
 
-def test_latest_content_redirects_and_benchmarks_share_one_clean_artifact(
+def test_latest_content_is_served_at_bare_urls_beside_every_release(
     published_docs: tuple[Path, Path, Path],
 ) -> None:
     source, output, config = published_docs
@@ -77,24 +100,31 @@ def test_latest_content_redirects_and_benchmarks_share_one_clean_artifact(
     ).read_bytes() == HEADER_CSS.read_bytes()
 
     for relative in ("index.html", "why-protostar/index.html"):
-        redirect = (output / relative).read_text(encoding="utf-8")
         route = relative.removesuffix("index.html")
-        target = f"https://docs.example/0.10.1/{route}"
+        bare = f"https://docs.example/{route}"
+        for tree in (output, output / "0.10.1", output / "0.9.0"):
+            page = (tree / relative).read_text(encoding="utf-8")
+            assert f'<link rel="canonical" href="{bare}">' in page
+            assert f'<meta property="og:url" content="{bare}">' in page
+            assert f'{{"url":"{bare}"}}' in page
+            assert "noindex" not in page
+        assert "0.10.1" in (output / relative).read_text()
+        assert "Stale" not in (output / relative).read_text()
+
+        redirect = (output / "latest" / relative).read_text(encoding="utf-8")
         assert (
-            f'window.location.replace("{target}" + window.location.search + window.location.hash)'
+            f'window.location.replace("{bare}" + window.location.search + window.location.hash)'
             in redirect
         )
         assert (
-            f'<noscript><meta http-equiv="refresh" content="0; url={target}">'
-            in redirect
+            f'<noscript><meta http-equiv="refresh" content="0; url={bare}">' in redirect
         )
-        assert f'<a href="{target}">' in redirect
-        assert "Stale" not in redirect
-        assert (output / "latest" / relative).read_text(encoding="utf-8") == redirect
-        for version in ("0.9.0", "0.10.1"):
-            assert (output / version / relative).read_bytes() == (
-                source / version / relative
-            ).read_bytes()
+        assert f'<a href="{bare}">' in redirect
+
+    retired = (output / "0.9.0" / "retired" / "index.html").read_text()
+    assert '<head>\n<meta name="robots" content="noindex">' in retired
+    assert 'href="https://docs.example/0.9.0/retired/"' in retired
+    assert not (output / "retired").exists()
 
     assert (output / "benchmarks" / "data.js").read_bytes() == (
         source / "benchmarks" / "data.js"
@@ -121,24 +151,30 @@ def test_latest_content_redirects_and_benchmarks_share_one_clean_artifact(
     for filename in ("favicon.svg", "favicon.png"):
         assert (output / "benchmarks" / filename).is_file()
     assert not (output / "retired-page").exists()
+    assert (
+        output / "0.9.0" / "404.html"
+    ).read_text() == "Old theme's 404 and asset links"
     assert not (output / "assets" / "outdated.js").exists()
     assert (output / "assets" / "favicon.png").read_text() == "current favicon"
     assert (output / "versions.json").read_bytes() == (
         source / "versions.json"
     ).read_bytes()
-    assert (output / "sitemap.xml").read_text() == "<sitemap>0.10.1</sitemap>"
+    assert (output / "sitemap.xml").read_text() == (
+        "<urlset><url><loc>https://docs.example/</loc></url>"
+        "<url><loc>https://docs.example/why-protostar/</loc></url></urlset>"
+    )
     assert (output / "CNAME").read_text() == "docs.example\n"
     robots = (output / "robots.txt").read_text()
     assert robots.startswith("User-agent: *\nAllow: /\n")
     assert robots.endswith("Sitemap: https://docs.example/sitemap.xml\n")
     assert (output / ".nojekyll").is_file()
-    assert "https://docs.example/0.10.1/" in (output / "404.html").read_text()
+    assert '<a href="https://docs.example/">' in (output / "404.html").read_text()
     assert before == {
         path: path.read_bytes() for path in source.rglob("*") if path.is_file()
     }
 
 
-def test_markdown_is_generated_from_latest_html_with_versioned_links(
+def test_markdown_is_generated_from_latest_html_with_bare_links(
     published_docs: tuple[Path, Path, Path],
 ) -> None:
     source, output, config = published_docs
@@ -146,15 +182,26 @@ def test_markdown_is_generated_from_latest_html_with_versioned_links(
 
     index = (output / "llms.txt").read_text()
     content = (output / "llms-full.txt").read_text()
-    assert "https://docs.example/0.10.1/why-protostar/index.md" in index
+    assert "https://docs.example/why-protostar/index.md" in index
     assert "Release 0.10.1 comparison." in content
     assert "0.9.0" not in content
     assert "Redirecting" not in content
     assert (
         "Release 0.10.1 comparison."
-        in (output / "0.10.1" / "why-protostar" / "index.md").read_text()
+        in (output / "why-protostar" / "index.md").read_text()
     )
-    assert not (output / "why-protostar" / "index.md").exists()
+    assert not (output / "0.10.1" / "why-protostar" / "index.md").exists()
+
+
+@pytest.mark.parametrize("name", ["benchmarks", "robots.txt", "0.9.0"])
+def test_latest_content_cannot_shadow_what_the_root_publishes(
+    published_docs: tuple[Path, Path, Path], name: str
+) -> None:
+    source, output, config = published_docs
+    _write(source / "0.10.1" / name, "Shadowing entry")
+    with pytest.raises(ConfigurationError, match="collides"):
+        assemble_pages(source, output, config)
+    assert not output.exists()
 
 
 @pytest.mark.parametrize("aliases", [([], []), (["latest"], ["latest"])])
