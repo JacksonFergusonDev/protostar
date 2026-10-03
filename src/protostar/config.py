@@ -193,7 +193,9 @@ class TemplateAliasConfig:
         source: Remote URL or local filesystem path to the template.
         name: Human-readable display name for the template.
         description: Brief description of the template stack and purpose.
-        trusted: If True, bypasses interactive execution prompts for remote templates.
+        trusted: Whether the template this alias names may run commands without
+            asking: a local or remote template, on ``init`` and ``sync``. Without
+            it, a headless run of a non-built-in template refuses to run any.
     """
 
     source: str

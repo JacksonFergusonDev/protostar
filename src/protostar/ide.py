@@ -44,8 +44,9 @@ def check_ide_extensions(
 ) -> None:
     """Verifies that the configured IDE has the recommended extensions installed.
 
-    Fails silently if the IDE CLI is unavailable or execution fails. Appends a warning
-    diagnostic only on a successful check that uncovers missing extensions.
+    Does nothing when no editor with an extension CLI is configured or its CLI
+    is not installed. A probe that fails is reported as a skip; a probe that
+    finds extensions missing is reported as a warning.
 
     Args:
         ide: Configured IDE identifier (e.g. IDEType.VSCODE, "cursor").

@@ -438,7 +438,8 @@ def prepare_review(
             hint="Correct pyproject.toml encoding and TOML syntax.",
         ) from error
     decisions._validate_targets()
-    # Validate all direct read/write targets before the first initialization batch.
+    # Capture every file any batch may read or write now, so execution can
+    # revalidate them before it applies the first batch.
     for path in manifest.target_files():
         workspace.capture(path)
     if manifest.filesystem.vcs_ignores:

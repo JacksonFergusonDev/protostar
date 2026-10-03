@@ -196,7 +196,7 @@ class Reconciliation:
         severity: Severity = Severity.INFO,
         detail: str | None = None,
     ) -> None:
-        """Queues a diagnostic event for the post-execution summary panel."""
+        """Queues a non-fatal diagnostic for the review and the run's report."""
         self.diagnostics.append(
             DiagnosticEvent(
                 phase=phase, message=message, severity=severity, detail=detail

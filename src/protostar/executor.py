@@ -172,8 +172,9 @@ class SystemExecutor(Reconciliation):
     def _check_ide_extensions(self) -> None:
         """Verifies that the configured IDE has the recommended extensions installed.
 
-        Fails silently if the IDE CLI is unavailable or execution fails. Appends a warning
-        diagnostic only on a successful check that uncovers missing extensions.
+        Does nothing when no editor with an extension CLI is configured or its
+        CLI is not installed. A probe that fails is reported as a skip; a probe
+        that finds extensions missing is reported as a warning.
         """
         check_ide_extensions(
             ide=self.manifest.recipe.ide if self.manifest.recipe else self.config.ide,

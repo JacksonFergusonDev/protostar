@@ -1,4 +1,15 @@
-"""Interpolation utilities for safely injecting variables into TOML strings."""
+"""``<% NAME %>`` placeholders and the values that replace them.
+
+Rendering happens in two places. Loading a template renders its TOML source
+with escaping, since there a value lands inside a TOML string, and its
+``[files]`` without. Reconciliation then renders what modules generated,
+whose placeholders name only built-in variables.
+
+``toml_escape`` assumes the placeholder sits inside a double-quoted string.
+TOML, JSON, and YAML share those escapes, so one escape serves every
+structured format. Free-form text keeps the escapes literally, so a value
+containing a quote or backslash shows them there.
+"""
 
 import re
 from typing import Final
@@ -17,12 +28,10 @@ BUILT_IN_VARIABLES: Final[frozenset[str]] = frozenset(
 )
 
 
-# --- Design Note: Lightweight Regex Interpolation vs Jinja2 ---
-# Custom regex matching with `<% var %>` delimiters and `toml_escape()` is used instead of Jinja2
-# or string.Template:
-#   1. Zero External Dependencies: Avoids adding heavy templating dependencies to the CLI footprint.
-#   2. TOML Injection Prevention: `toml_escape()` sanitizes input variables against quotes and newline
-#      breakouts before string substitution into target TOML manifests.
+# A regex over `<% var %>` replaces Jinja2 and string.Template: it adds no
+# dependency, has no logic for a template to abuse, and leaves every other
+# `{`, `$`, and `%` in a file alone. `toml_escape()` keeps a value from closing
+# the string it is substituted into.
 def extract_variables(content: str) -> list[str]:
     """Scans a raw string for <% variable %> placeholders.
 

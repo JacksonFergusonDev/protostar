@@ -651,10 +651,12 @@ class TaskManifest:
 
 @dataclass
 class EnvironmentManifest:
-    """The materialized build state of the target environment.
+    """Everything a run declares it wants: the plan, not yet any bytes.
 
-    Modules mutate this declarative object rather than the host system directly. The Executor
-    subsequently reads this object to execute the unified system changes.
+    ``Orchestrator.plan()`` builds it: modules and the template declare files,
+    dependencies, tooling, and tasks here instead of touching the host. It
+    never says what the workspace looks like afterward; ``prepare_review``
+    reconciles it with the workspace into the bytes execution applies.
     """
 
     producer_contributions: tuple[ProducerContribution, ...] = ()
@@ -782,10 +784,11 @@ class EnvironmentManifest:
         return files
 
     def target_files(self) -> set[Path]:
-        """Returns all concrete workspace file paths that this manifest intends to create or mutate.
+        """Returns the files this manifest creates or edits that can collide.
 
-        Excludes directory scaffolding (handled safely via ensure_directory) and
-        .gitignore updates (deduplicated and non-destructive).
+        Leaves out directories, the append-only ``.gitignore``, and the IDE
+        settings, none of which collide; ``written_files`` adds the last two
+        back for previews.
 
         Returns:
             A set of Path objects representing target files.

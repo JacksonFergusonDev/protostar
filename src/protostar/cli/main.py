@@ -243,7 +243,9 @@ def handle_init(args: argparse.Namespace) -> None:
         draft = _edit_variables(draft, user_config, flagged)
         modules, request = resolve_init(draft, user_config)
 
-    # 4. Undocumented Crash Test Injection
+    # The hidden --crash-test flag adds a module whose build raises, so the
+    # crash report can be exercised without breaking the code (see
+    # docs/developer/testing.md).
     if getattr(args, "crash_test", False):
 
         class CrashModule(BootstrapModule):
