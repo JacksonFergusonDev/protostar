@@ -1758,11 +1758,13 @@ class Reconciliation:
             self._merge_warning(conflict)
         for conflict in resolved:
             where = describe_location(conflict.location)
+            # A cast only informs the type checker.
+            choice = cast(ResolutionChoice, conflict.resolution)  # pragma: no mutate
             kept = {
                 ResolutionChoice.LOCAL: "keeping local content",
                 ResolutionChoice.DESIRED: "taking the update",
                 ResolutionChoice.BOTH: "keeping both",
-            }[cast(ResolutionChoice, conflict.resolution)]
+            }[choice]
             noun = (
                 "local change"
                 if conflict.reason is ConflictReason.PRESERVED
@@ -1952,7 +1954,7 @@ class Reconciliation:
                 r.path == pyproject.TARGET for r in self.candidate_state.files
             ) or bool(self.candidate_state.dependencies)
             table = data.get(
-                "project" if group is DependencyGroup.MAIN else "dependency-groups", {}
+                "project" if group is DependencyGroup.MAIN else "dependency-groups"
             )
             owned_group = any(
                 r.group is group for r in self.candidate_state.dependencies
@@ -1973,7 +1975,7 @@ class Reconciliation:
             ancestor_key = (
                 "project" if group is DependencyGroup.MAIN else "dependency-groups"
             )
-            baseline_groups = baseline.get("dependency-groups", {})
+            baseline_groups = baseline.get("dependency-groups")
             owned_group = owned_group or (
                 group is not DependencyGroup.MAIN
                 and isinstance(baseline_groups, dict)
