@@ -90,7 +90,7 @@ Check a template before you publish it: that `protostar init` would accept it, a
 
 ### `protostar completion`
 
-Print the tab-completion script for your shell. See [Shell Autocomplete](../getting-started.md#shell-autocomplete-aliasing) for where to save it.
+Print the tab-completion script for your shell. See [Shell Completion](../getting-started.md#shell-completion-and-an-alias) for where to save it.
 
 --8<-- "cli_completion.md"
 

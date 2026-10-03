@@ -89,7 +89,7 @@ Protostar is self-documenting. You can view the full capabilities matrix and sub
     protostar help init
     ```
 
-## Shell Autocomplete & Aliasing
+## Shell Completion and an Alias
 
 To speed up your workflow, you can enable CLI autocompletion and set up a shorter alias.
 
