@@ -1,18 +1,21 @@
 name: Platforms
 
 # The pytest suite and the template hooks smoke test across the platforms the
-# caller names. Pull requests run the combinations most likely to break, Nightly
-# runs every combination, and a release smoke-tests the wheel it will publish.
+# caller names. Pull requests and Nightly both run the suite everywhere and
+# split the smoke tests between them; a release smoke-tests the wheel it will
+# publish. A smoke job scaffolds several templates in turn, and a test job can
+# smoke-test templates after its suite, so a run uses fewer runners: the account
+# runs 20 jobs at a time, five of them on macOS.
 on:
   workflow_call:
     inputs:
       tests:
-        description: 'pytest matrix as JSON: "os" and "python" axes, plus "coverage": true on at most one entry. Empty skips the suite.'
+        description: 'pytest matrix as JSON: "os" and "python" axes, plus "coverage": true on at most one entry and a "smoke" list of templates to smoke-test after the suite. Empty skips the suite.'
         required: false
         default: ""
         type: string
       smoke:
-        description: 'Template hooks smoke matrix as JSON: "os", "python", and "template" axes. Empty skips it.'
+        description: 'Template hooks smoke matrix as JSON: "os" and "python", and "templates", the list one job scaffolds in turn. Empty skips it.'
         required: false
         default: ""
         type: string
@@ -35,10 +38,10 @@ permissions:
 
 jobs:
   test:
-    name: Test on ${{ matrix.os }} / Python ${{ matrix.python }}
+    name: Test on ${{ matrix.os }} / Python ${{ matrix.python }}${{ matrix.smoke && format(' + smoke ({0})', join(matrix.smoke, ', ')) || '' }}
     if: inputs.tests != ''
     runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ inputs.retry && 10 || 6 }}
+    timeout-minutes: ${{ matrix.smoke && (inputs.retry && 20 || 10) || (inputs.retry && 10 || 6) }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(inputs.tests) }}
@@ -126,19 +129,23 @@ jobs:
         report_type: test_results
         name: test-results-ubuntu-py314
 
+    # After a failed suite too, so the run reports both.
+    - name: Smoke test templates
+      if: ${{ matrix.smoke && !cancelled() }}
+      uses: ./.github/actions/template-smoke
+      with:
+        templates: ${{ join(matrix.smoke, ' ') }}
+        python: ${{ matrix.python }}
+        retry: ${{ inputs.retry }}
+
   template-hooks-smoke:
-    name: Template Hooks Smoke (${{ matrix.os }} / Python ${{ matrix.python }} / ${{ matrix.template }})
+    name: Template Hooks Smoke (${{ matrix.os }} / Python ${{ matrix.python }} / ${{ join(matrix.templates, ', ') }})
     if: inputs.smoke != ''
     runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ inputs.retry && 15 || 10 }}
+    timeout-minutes: ${{ inputs.retry && 20 || 10 }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(inputs.smoke) }}
-
-    env:
-      GIT_TERMINAL_PROMPT: "0"
-      GCM_INTERACTIVE: "never"
-      PREK_COLOR: "never"
 
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -156,44 +163,13 @@ jobs:
         name: ${{ inputs.wheel-artifact }}
         path: dist
 
-    - name: Install Protostar
-      shell: bash
-      env:
-        WHEEL_ARTIFACT: ${{ inputs.wheel-artifact }}
-      run: |
-        if [ -n "$WHEEL_ARTIFACT" ]; then
-          uv tool install dist/*.whl
-        else
-          uv tool install --editable .
-        fi
-        uv tool install prek
-
     - name: Mock direnv
       uses: ./.github/actions/mock-direnv
 
-    - name: Configure Git Identity
-      shell: bash
-      run: |
-        git config --global user.name "Protostar Bot"
-        git config --global user.email "bot@protostar.dev"
-        git config --global init.defaultBranch main
-        git config --global core.autocrlf false
-        git config --global credential.helper ""
-
-    - name: Verify first commit triggers prek hooks
-      shell: bash
-      env:
-        RETRY: ${{ inputs.retry }}
-        TEMPLATE: ${{ matrix.template }}
-        PYTHON: ${{ matrix.python }}
-      run: |
-        smoke=(.github/scripts/template-hooks-smoke.sh "$TEMPLATE" "$PYTHON")
-        if "${smoke[@]}"; then
-          exit 0
-        fi
-        if [ "$RETRY" != true ]; then
-          exit 1
-        fi
-        # Downloads from PyPI and GitHub fail now and then; a real break fails twice.
-        echo "::warning title=Smoke test retried::$TEMPLATE failed once and was retried; see the first attempt's output above"
-        "${smoke[@]}"
+    - name: Smoke test templates
+      uses: ./.github/actions/template-smoke
+      with:
+        templates: ${{ join(matrix.templates, ' ') }}
+        python: ${{ matrix.python }}
+        retry: ${{ inputs.retry }}
+        wheel: ${{ inputs.wheel-artifact != '' }}

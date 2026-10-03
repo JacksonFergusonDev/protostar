@@ -6,49 +6,26 @@ on:
   pull_request:
     branches: [ "main" ]
 
+# A new push to a pull request cancels the run it replaces; every push to a
+# branch keeps its own run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# A run starts 20 jobs, the account's limit, three of them on macOS, which runs
+# five at a time. The quick checks share two runners: each finishes well before
+# the Windows suite, which sets how long a run takes. tests/test_nightly.py
+# holds both limits.
 jobs:
-  lint:
-    name: Lint & Type Check
+  checks:
+    name: Lint, Docs & Secrets
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 8
 
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
       with:
-        enable-cache: true
-        python-version: "3.12"
-
-    - name: Install dependencies
-      run: uv sync --only-group ci --locked
-
-    - name: Run Ruff Linter
-      run: uv run ruff check --output-format=github .
-
-    - name: Run Ruff Formatter
-      run: uv run ruff format --check --output-format=github .
-
-    - name: Lint Markdown with rumdl
-      run: uv run rumdl check --output-format github .
-
-    - name: Check Markdown formatting with rumdl
-      run: uv run rumdl fmt --check --output-format github .
-
-    - name: Run actionlint
-      run: uv run actionlint .github/workflows/*.yml
-
-    - name: Type check with Mypy
-      run: uv run mypy .
-
-  docs:
-    name: Documentation Checks & Schema Validation
-    runs-on: ubuntu-latest
-    timeout-minutes: 6
-
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        fetch-depth: 0
 
     - name: Install uv
       uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
@@ -57,48 +34,71 @@ jobs:
         python-version: "3.14"
 
     - name: Install dependencies
+      id: setup
       run: uv sync --group ci --group docs --locked
 
     - name: Mock direnv
       uses: ./.github/actions/mock-direnv
 
-    - name: Verify snapshots and documentation assets are up-to-date
-      run: uv run python scripts/run_snapshots.py
-
-    - name: Validate embedded documentation links
-      run: uv run python scripts/check_doc_links.py
-
-    - name: Check documentation against the code
-      run: uv run python scripts/check_docs_drift.py
-
-    - name: Check docs/house matches its house-style release
-      run: uv run python scripts/sync_house_style.py --check
-
-    - name: Build documentation (strict)
-      run: uv run zensical build --strict
-
-    - name: Validate schemas
-      run: uv run python scripts/check_schemas.py
-
-  secrets:
-    name: Secret Scanning
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      with:
-        fetch-depth: 0
-
+    # Each check runs after another fails, so a run reports every one that broke.
     - name: Run Gitleaks
+      if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
       uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Run Ruff Linter
+      if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+      run: uv run ruff check --output-format=github .
 
-  # Every OS at the oldest and newest Python, and every template on Linux plus
-  # cli on Windows. Nightly runs every combination. Two macOS jobs at most,
-  # since the account runs five at a time and a third would wait for a runner.
+    - name: Run Ruff Formatter
+      if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+      run: uv run ruff format --check --output-format=github .
+
+    - name: Lint Markdown with rumdl
+      if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+      run: uv run rumdl check --output-format github .
+
+    - name: Check Markdown formatting with rumdl
+      if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+      run: uv run rumdl fmt --check --output-format github .
+
+    - name: Run actionlint
+      if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+      run: uv run actionlint .github/workflows/*.yml
+
+    - name: Type check with Mypy
+      if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+      run: uv run mypy .
+
+    - name: Verify snapshots and documentation assets are up-to-date
+      if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+      run: uv run python scripts/run_snapshots.py
+
+    - name: Validate embedded documentation links
+      if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+      run: uv run python scripts/check_doc_links.py
+
+    - name: Check documentation against the code
+      if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+      run: uv run python scripts/check_docs_drift.py
+
+    - name: Check docs/house matches its house-style release
+      if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+      run: uv run python scripts/sync_house_style.py --check
+
+    - name: Build documentation (strict)
+      if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+      run: uv run zensical build --strict
+
+    - name: Validate schemas
+      if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+      run: uv run python scripts/check_schemas.py
+
+  # Every OS and Python runs the suite; macOS smoke-tests templates after it,
+  # so it takes no runner of its own. Linux smoke-tests every template at every
+  # Python, and Windows every template at the oldest and newest. Nightly runs
+  # the rest.
   platforms:
     name: Platforms
     uses: ./.github/workflows/platforms.yml
@@ -108,96 +108,39 @@ jobs:
       tests: >-
         {
           "os": ["ubuntu-latest", "macos-latest", "windows-latest"],
-          "python": ["3.12", "3.14"],
+          "python": ["3.12", "3.13", "3.14"],
           "include": [
-            {"os": "ubuntu-latest", "python": "3.13"},
-            {"os": "ubuntu-latest", "python": "3.14", "coverage": true}
+            {"os": "ubuntu-latest", "python": "3.14", "coverage": true},
+            {"os": "macos-latest", "python": "3.12", "smoke": ["ml"]},
+            {"os": "macos-latest", "python": "3.13", "smoke": ["api", "astro"]},
+            {"os": "macos-latest", "python": "3.14", "smoke": ["cli", "lib"]}
           ]
         }
       smoke: >-
         {
           "os": ["ubuntu-latest"],
-          "python": ["3.12"],
-          "template": ["cli", "api", "lib", "astro", "ml"],
+          "python": ["3.12", "3.13", "3.14"],
+          "templates": [["api", "astro", "cli", "lib", "ml"]],
           "include": [
-            {"os": "windows-latest", "python": "3.12", "template": "cli"}
+            {"os": "windows-latest", "python": "3.12", "templates": ["cli", "astro"]},
+            {"os": "windows-latest", "python": "3.12", "templates": ["api", "lib"]},
+            {"os": "windows-latest", "python": "3.12", "templates": ["ml"]},
+            {"os": "windows-latest", "python": "3.14", "templates": ["cli", "astro"]},
+            {"os": "windows-latest", "python": "3.14", "templates": ["api", "lib"]},
+            {"os": "windows-latest", "python": "3.14", "templates": ["ml"]}
           ]
         }
 
-  template-docker-build:
-    name: Template Docker Build (${{ matrix.template }})
+  # The benchmark runs first, alone on the runner, and the images build after it.
+  benchmark-and-images:
+    name: Benchmark & Docker Images
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        template: [cli, api]
-
-    env:
-      GIT_TERMINAL_PROMPT: "0"
-      GCM_INTERACTIVE: "never"
-      IMAGE: protostar-smoke-${{ matrix.template }}
-
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
-      with:
-        enable-cache: true
-        python-version: "3.12"
-
-    - name: Install Protostar
-      run: uv tool install --editable .
-
-    - name: Mock direnv
-      uses: ./.github/actions/mock-direnv
-
-    - name: Configure Git Identity
-      run: |
-        git config --global user.name "Protostar Bot"
-        git config --global user.email "bot@protostar.dev"
-        git config --global init.defaultBranch main
-
-    - name: Scaffold ${{ matrix.template }} with a Dockerfile
-      run: |
-        mkdir "$RUNNER_TEMP/docker_${{ matrix.template }}"
-        cd "$RUNNER_TEMP/docker_${{ matrix.template }}"
-        protostar init --template ${{ matrix.template }} --docker --no-prek --python-version 3.12
-        test -f Dockerfile
-        test -f .dockerignore
-        test -f uv.lock
-
-    - name: Build image
-      working-directory: ${{ runner.temp }}/docker_${{ matrix.template }}
-      run: docker build --tag "$IMAGE" .
-
-    - name: Smoke test cli image
-      if: matrix.template == 'cli'
-      run: docker run --rm "$IMAGE" --help
-
-    - name: Smoke test api image
-      if: matrix.template == 'api'
-      run: |
-        docker run --detach --name "$IMAGE" --publish 8000:8000 "$IMAGE"
-        for _ in $(seq 1 30); do
-          if curl --fail --silent --show-error http://localhost:8000/health; then
-            echo
-            exit 0
-          fi
-          sleep 1
-        done
-        echo "ERROR: api container never answered /health"
-        docker logs "$IMAGE"
-        exit 1
-
-  benchmark-gate:
-    name: Benchmark Regression Check
-    runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 8
 
     env:
       PYTHONIOENCODING: "utf-8"
+      GIT_TERMINAL_PROMPT: "0"
+      GCM_INTERACTIVE: "never"
 
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -215,6 +158,7 @@ jobs:
       uses: taiki-e/install-action@d8055f5aa4515e0781b947765fa3d1559d2d3f45 # hyperfine
 
     - name: Install dependencies
+      id: setup
       run: uv sync --no-dev --locked
 
     - name: Run benchmarks
@@ -239,3 +183,57 @@ jobs:
         alert-threshold: '250%'
         comment-on-alert: true
         auto-push: false
+
+    - name: Install Protostar
+      id: protostar
+      if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+      run: uv tool install --editable .
+
+    - name: Mock direnv
+      if: ${{ !cancelled() && steps.protostar.outcome == 'success' }}
+      uses: ./.github/actions/mock-direnv
+
+    - name: Configure Git Identity
+      if: ${{ !cancelled() && steps.protostar.outcome == 'success' }}
+      run: |
+        git config --global user.name "Protostar Bot"
+        git config --global user.email "bot@protostar.dev"
+        git config --global init.defaultBranch main
+
+    - name: Build and run the cli image
+      if: ${{ !cancelled() && steps.protostar.outcome == 'success' }}
+      env:
+        UV_PYTHON: "3.12"
+      run: |
+        mkdir "$RUNNER_TEMP/docker_cli"
+        cd "$RUNNER_TEMP/docker_cli"
+        protostar init --template cli --docker --no-prek --python-version 3.12
+        test -f Dockerfile
+        test -f .dockerignore
+        test -f uv.lock
+        docker build --tag protostar-smoke-cli .
+        docker run --rm protostar-smoke-cli --help
+
+    - name: Build and run the api image
+      if: ${{ !cancelled() && steps.protostar.outcome == 'success' }}
+      env:
+        UV_PYTHON: "3.12"
+      run: |
+        mkdir "$RUNNER_TEMP/docker_api"
+        cd "$RUNNER_TEMP/docker_api"
+        protostar init --template api --docker --no-prek --python-version 3.12
+        test -f Dockerfile
+        test -f .dockerignore
+        test -f uv.lock
+        docker build --tag protostar-smoke-api .
+        docker run --detach --name protostar-smoke-api --publish 8000:8000 protostar-smoke-api
+        for _ in $(seq 1 30); do
+          if curl --fail --silent --show-error http://localhost:8000/health; then
+            echo
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "ERROR: api container never answered /health"
+        docker logs protostar-smoke-api
+        exit 1

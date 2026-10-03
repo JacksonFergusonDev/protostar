@@ -79,17 +79,19 @@ Repeatability and semantic-reconciliation acceptance live in `tests/test_templat
 
 ### Template Hooks Smoke Matrix (CI)
 
-End-to-end template validation is offloaded to a dedicated parallel matrix job (`template-hooks-smoke`). This job scaffolds each built-in template across operating systems, verifies that `prek` hooks are installed, runs a canary check ensuring non-conventional commit messages are rejected, and asserts that the first commit triggers and cleanly passes all pre-commit hooks.
+End-to-end template validation runs through the `template-smoke` action (`.github/actions/template-smoke`). It scaffolds each built-in template it is given in turn, verifies that `prek` hooks are installed, runs a canary check ensuring non-conventional commit messages are rejected, and asserts that the first commit triggers and cleanly passes all pre-commit hooks. A `template-hooks-smoke` job runs it for a list of templates, and a test job can run it after the suite through its matrix entry's `smoke` list, which is how macOS smoke-tests templates without a runner of its own.
 
 ### Pull Request, Nightly, and Release Platforms
 
 The pytest suite and the smoke matrix are defined once, in `.github/workflows/platforms.yml`, and each caller hands it the matrix to run:
 
-- **Pull requests** (`ci.yml`) run every operating system at the oldest and newest supported Python, every template on Linux, and `cli` on Windows.
-- **Nightly** (`nightly.yml`) runs every operating system, supported Python, and built-in template each day on `main`. It skips a day when `main` hasn't changed since its last pass.
-- **A release** (`release.yml`) publishes only when Nightly has passed on the tagged commit, or on its parent when the tagged commit only changes `pyproject.toml` and `uv.lock` (the version bump). It also smoke-tests the wheel it is about to publish on each operating system, and publishes that same wheel.
+- **Pull requests** (`ci.yml`) run the suite on every operating system and supported Python. They smoke-test every template at every Python on Linux, at the oldest and newest on Windows, and once on macOS, where each test job scaffolds a template or two after its suite.
+- **Nightly** (`nightly.yml`) runs, each day on `main`, the smoke tests pull requests leave out, so the two together scaffold every template on every operating system and Python exactly once. It also runs the suite everywhere again, with retries, which is how a flaky test is found. It skips a day when `main` hasn't changed since its last pass.
+- **A release** (`release.yml`) publishes only when CI and Nightly have both passed on the tagged commit, or on its parent when the tagged commit only changes `pyproject.toml` and `uv.lock` (the version bump). It also smoke-tests the wheel it is about to publish on each operating system, and publishes that same wheel.
 
-`tests/test_nightly.py` checks that Nightly covers every combination, that pull requests run nothing Nightly doesn't, and that a release can't publish before both checks pass.
+The account runs 20 jobs at a time, five of them on macOS, across every open pull request and push. A pull request starts 20, three on macOS. The quick checks share two runners (`Lint, Docs & Secrets` and `Benchmark & Docker Images`), since each finishes well before the Windows suite that sets how long a run takes. A new push to a pull request cancels the run it replaces.
+
+`tests/test_nightly.py` checks that both test every operating system and Python, that together they smoke-test every template on every platform once, that a pull request stays within the runner limits, and that a release can't publish before CI, Nightly, and its smoke test pass.
 
 Nightly retries a failed test or smoke run once. A test that then passes doesn't fail the run; it is filed as flaky instead. Nightly Report (`nightly-report.yml`) opens a `nightly-failure` issue when the run fails, naming the failing jobs and the commits since the last pass, and closes it when a later run passes. Flaky tests go to a separate `flaky-test` issue that stays open until they are fixed.
 

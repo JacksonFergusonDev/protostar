@@ -137,7 +137,7 @@ A payload that configures a tool declares it with `requires`, so `protostar init
 **Adding one.** Open an issue that answers the three [admission questions](#admission-criteria) and names the tier. Then:
 
 1. Write `src/protostar/templates/<name>.toml`, following the conventions above.
-1. Add it to the `template` lists of the `smoke` matrices in `.github/workflows/ci.yml` (Linux, every pull request) and `.github/workflows/nightly.yml` (every operating system and Python, nightly).
+1. Add it to the smoke lists in `.github/workflows/ci.yml` and `.github/workflows/nightly.yml`: the `templates` lists of the `smoke` matrices and the `smoke` lists of the macOS test entries. `tests/test_nightly.py` fails until pull requests and Nightly together scaffold it once on every operating system and Python, and pull requests at every Python on Linux and once on each operating system.
 1. Add a `RegressionScenario` to `scripts/run_snapshots.py` and its name to `SCENARIO_FIXTURES` in `tests/test_snapshots.py`, then run `just check-snapshots` and review every generated file by hand.
 
 The contract tests, template discovery, the template picker, shell completion, and the generated template table pick it up automatically.
@@ -164,7 +164,7 @@ Most of the contract is checked by tests, parametrized over discovered built-ins
 | No trailing whitespace in scaffolded files | `test_builtin_templates_no_trailing_whitespace` in `tests/test_blueprint_loader.py` |
 | The `api` Dockerfile targets an importable app | `test_api_dockerfile_targets_an_importable_app` in `tests/test_integration.py` |
 | A fresh default scaffold passes its commit hooks | The `template-hooks-smoke` CI job |
-| The `cli` and `api` images build and run | The `template-docker-build` CI job |
+| The `cli` and `api` images build and run | The `benchmark-and-images` CI job |
 
 Unless another file is named, the tests live in `tests/test_builtin_template_contract.py`. The strict template check is the one [`protostar check-template`](../usage/authoring-templates.md#checking-a-template) runs for any author: it covers the name and description, flags that name real tools, payloads that state only the delta from module baselines, and tool configuration and packages bound to their tool with `requires`. It plans a default `init` in each tier, so a tier that cannot be planned fails the contract.
 
