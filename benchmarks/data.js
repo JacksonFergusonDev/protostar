@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790984564541,
+  "lastUpdate": 1790996833313,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21119,6 +21119,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 828.86,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "93a19645acafdcb723bd78787009f8bb021a4978",
+          "message": "refactor(tui): draw every color from the theme (#423)\n\nThe TUI styled text three ways (theme variables, palette hex, Rich's ANSI\nnames and dim), which drifted off the palette: dim blended into a grey per\nbackground, Content read \"cyan\" as #00ffff, link styling repainted the\nreview's tabs alike, and Textual's auto variables and disabled fade added\ncolors of their own.\n\ntheme.py now names each role once for the stylesheet and inline code, and\nPaletteColors lands ANSI names and dim on the palette. Shared helpers\nreplace duplicated error, key-hint, and panel-subject code, and duplicated\nstylesheet rules are merged. tests/test_tui_theme.py enforces the rule.",
+          "timestamp": "2026-10-02T20:03:57-07:00",
+          "tree_id": "d391da4c40e5e0fb0692890aa86953bb6981d104",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/93a19645acafdcb723bd78787009f8bb021a4978"
+        },
+        "date": 1790996832211,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 178.04,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1266.64,
             "unit": "ms"
           }
         ]
