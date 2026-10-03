@@ -1320,8 +1320,9 @@ class Reconciliation:
                 return
             base = record.baseline if record else None
             released: str | None = None
-            detached = ""
-            kept: tuple[str, ...] = ()
+            # Both are read only after the omitted branch has assigned them.
+            detached = ""  # pragma: no mutate
+            kept: tuple[str, ...] = ()  # pragma: no mutate
             if omitted:
                 # Regenerating without an omitted region would drop it unasked,
                 # so it is retracted first, and the file regenerates in this run.
@@ -1348,8 +1349,11 @@ class Reconciliation:
                     # sits out the merge, so a generated line changed next to
                     # it does not conflict, and is put back after it.
                     detached, kept = detach_regions(released, omitted, target)
-                    local = detached.encode("utf-8")
-                base = cut_regions(base, omitted, target) if base is not None else None
+                    local = detached.encode()
+                # A text record always has a baseline; the guard informs the type checker.
+                base = (
+                    cut_regions(base, omitted, target) if base is not None else None
+                )  # pragma: no mutate
             result = reconcile_text(
                 local,
                 content,
@@ -1372,7 +1376,7 @@ class Reconciliation:
                         kept,
                     )
                 )
-                if merged.encode("utf-8") != self.workspace.read_bytes(target):
+                if merged.encode() != self.workspace.read_bytes(target):
                     self.fs.write_text(target, merged)
             baseline = result.baseline if result.baseline is not None else base
             if baseline is not None and (result.baseline is not None or omitted):
@@ -1798,7 +1802,8 @@ class Reconciliation:
         target = self.journal.normalize_path(target)
         for node in (target, *target.parents):
             if node == self.workspace_root:
-                break
+                # The loop is the last statement, so leaving it or returning is one.
+                break  # pragma: no mutate
             try:
                 mode = node.lstat().st_mode
             except FileNotFoundError:

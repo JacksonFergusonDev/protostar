@@ -9,6 +9,7 @@ from protostar.config import UserConfig
 from protostar.intent import DependencyGroup, ResolverFootprint
 from protostar.manifest import (
     CollisionStrategy,
+    DependencyManifest,
     DiagnosticEvent,
     DiagnosticPhase,
     EnvironmentManifest,
@@ -322,3 +323,67 @@ def test_a_kept_requirement_replaces_its_record_and_leaves_the_others(workspace)
         ("click", "click>=8", "click>=8"),
         ("requests", "requests>=3", "requests>=1"),
     ]
+
+
+def materialized_pyproject():
+    Path(TARGET).write_text(
+        '[project]\nname = "app"\ndependencies = ["requests>=3"]\n'
+        '[dependency-groups]\ndev = ["pytest>=8", "ruff>=0.5"]\n',
+        encoding="utf-8",
+    )
+
+
+def test_a_blocked_group_does_not_stop_the_groups_after_it(reconciliation, workspace):
+    materialized_pyproject()
+    own(reconciliation, owned_state(DEV, "pytest", "pytest>=7"))
+    reconciliation.manifest.dependencies.add("requests>=3")
+    reconciliation.manifest.dependencies.add_dev("pytest>=8")
+    accepted, blocked = DependencyManifest(), {MAIN}
+
+    reconciliation._materialize_dependencies(accepted, blocked)
+
+    assert reconciliation.candidate_state.dependencies == (
+        owned_state(DEV, "pytest", "pytest>=8"),
+    )
+
+
+def test_a_requirement_the_resolver_moved_updates_only_its_own_record(
+    reconciliation, workspace
+):
+    materialized_pyproject()
+    ruff = owned_state(DEV, "ruff", "ruff>=0.4", "ruff>=0.4")
+    own(reconciliation, owned_state(DEV, "pytest", "pytest>=7"), ruff)
+    reconciliation.manifest.dependencies.add_dev("pytest>=8")
+
+    reconciliation._materialize_dependencies(DependencyManifest(), set())
+
+    assert reconciliation.candidate_state.dependencies == (
+        owned_state(DEV, "pytest", "pytest>=8"),
+        ruff,
+    )
+
+
+def test_a_moved_requirement_records_what_the_file_now_holds(reconciliation, workspace):
+    Path(TARGET).write_text(
+        '[project]\nname = "app"\n[dependency-groups]\ndev = ["pytest >= 8"]\n',
+        encoding="utf-8",
+    )
+    own(reconciliation, owned_state(DEV, "pytest", "pytest>=7"))
+    reconciliation.manifest.dependencies.add_dev("pytest>=8")
+
+    reconciliation._materialize_dependencies(DependencyManifest(), set())
+
+    [record] = reconciliation.candidate_state.dependencies
+    assert (record.declared, record.materialized) == ("pytest>=8", "pytest >= 8")
+
+
+def test_releasing_undeclared_requirements_reads_a_missing_file_as_empty(workspace):
+    reconciliation = Reconciliation(
+        EnvironmentManifest(), UserConfig(), LiveWorkspace(), workspace, workspace
+    )
+    own(reconciliation, owned_state(MAIN, "requests", "requests>=2"))
+
+    reconciliation._release_undeclared_dependencies()
+
+    assert reconciliation.candidate_state.dependencies == ()
+    assert workspace.contents == {}

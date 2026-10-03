@@ -545,3 +545,151 @@ def test_migration_paths_are_rendered_with_the_project_context(workspace):
     ]
     assert workspace.contents == {"demo.new": b"seed"}
     assert workspace.removed == {"demo.old", "demo.gone"}
+
+
+# ---- generated files that hold regions ---- #
+
+
+def generated_text_record(identity="template:notes", body="region body\n"):
+    """A generated file whose text holds one region, and the record owning both."""
+    text, baseline = framed(body, identity)
+    return text, FileState(
+        NOTES.as_posix(),
+        FilePolicy.TEXT,
+        "generated\n" + text,
+        regions=(RegionState(region_tag(identity), identity, baseline),),
+    )
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        FileState("notes.md", FilePolicy.TOML, encode_toml_baseline({})),
+        FileState("notes.md", FilePolicy.SEED, digest="a" * 64),
+    ],
+)
+def test_a_generated_file_owned_under_another_policy_is_a_configuration_error(
+    reconciliation, record
+):
+    reconciliation.candidate_state = reconciliation.candidate_state.with_file(record)
+
+    with pytest.raises(ConfigurationError) as caught:
+        reconciliation._write_generated(NOTES, "generated\n")
+
+    assert str(caught.value) == "Conflicting generated ownership policy."
+    assert caught.value.hint == "Keep the tracked file policy unchanged."
+
+
+def test_a_file_owned_only_for_regions_is_left_to_the_region_step(
+    reconciliation, workspace
+):
+    text, _ = framed("desired\n")
+    NOTES.write_text(text, encoding="utf-8")
+    record = region_record()
+    reconciliation.candidate_state = reconciliation.candidate_state.with_file(record)
+
+    reconciliation._write_generated(NOTES, "generated\n")
+
+    assert workspace.contents == {}
+    assert reconciliation.candidate_state.files == (record,)
+
+
+def test_a_region_declared_in_a_generated_file_is_rendered_with_the_project_context(
+    reconciliation, workspace
+):
+    reconciliation.manifest.metadata["project_name"] = "demo"
+    region_of(reconciliation, "name: <% PROJECT_NAME %>\n")
+
+    reconciliation._write_generated(NOTES, "generated\n")
+
+    assert "name: demo\n" in accepted(workspace, "notes.md")
+
+
+def test_a_region_already_in_the_generated_text_is_replaced_by_the_declared_one(
+    reconciliation, workspace
+):
+    old, _ = framed("old\n")
+    region_of(reconciliation, "new\n")
+
+    reconciliation._write_generated(NOTES, "generated\n" + old)
+
+    assert accepted(workspace, "notes.md") == "generated\n" + framed("new\n")[0]
+
+
+def test_an_owned_file_the_user_deleted_stays_deleted_unless_overwritten(
+    reconciliation, workspace
+):
+    record = region_record()
+    region_of(reconciliation)
+    reconciliation.candidate_state = reconciliation.candidate_state.with_file(record)
+
+    reconciliation._write_generated(NOTES, "generated\n")
+
+    assert workspace.contents == {}
+    assert reconciliation.diagnostics == [
+        DiagnosticEvent(
+            DiagnosticPhase.EXECUTOR,
+            "Kept your version of notes.md: it conflicts with the update.",
+            Severity.WARNING,
+            conflict=MergeConflict(
+                MergeLocation("notes.md"), ConflictReason.DELETED_ANCESTOR
+            ),
+        )
+    ]
+
+    reconciliation.manifest.collision_strategy = CollisionStrategy.OVERWRITE
+    reconciliation._write_generated(NOTES, "generated\n")
+
+    assert "generated\n" in accepted(workspace, "notes.md")
+
+
+def test_an_undecodable_file_cannot_have_its_omitted_regions_retracted(
+    reconciliation, workspace
+):
+    _, record = generated_text_record()
+    NOTES.write_bytes(b"caf\xe9\n")
+    reconciliation.candidate_state = reconciliation.candidate_state.with_file(record)
+
+    with pytest.raises(FileSystemError) as caught:
+        reconciliation._write_generated(NOTES, "generated v2\n")
+
+    assert caught.value.operation == "read generated file"
+    assert caught.value.path == "notes.md"
+    assert isinstance(caught.value.original, UnicodeDecodeError)
+
+
+def test_a_generated_file_deleted_with_an_omitted_region_stays_deleted(
+    reconciliation, workspace
+):
+    _, record = generated_text_record()
+    reconciliation.candidate_state = reconciliation.candidate_state.with_file(record)
+
+    reconciliation._write_generated(NOTES, "generated v2\n")
+
+    assert workspace.contents == {}
+    assert [d.conflict.reason for d in reconciliation.diagnostics] == [
+        ConflictReason.DELETED_ANCESTOR
+    ]
+    [owned] = reconciliation.candidate_state.files
+    assert (owned.baseline, owned.regions) == ("generated\n", ())
+
+
+def test_an_omitted_region_leaves_the_record_when_the_generated_text_conflicts(
+    reconciliation, workspace
+):
+    text, record = generated_text_record()
+    other = FileState("other.txt", FilePolicy.TEXT, "kept\n")
+    NOTES.write_text("mine\n" + text, encoding="utf-8")
+    reconciliation.candidate_state = reconciliation.candidate_state.with_file(record)
+    reconciliation.candidate_state = reconciliation.candidate_state.with_file(other)
+
+    reconciliation._write_generated(NOTES, "generated v2\n")
+
+    # The retraction went through, and the record forgot the region it cut.
+    assert accepted(workspace, "notes.md") == "mine\n"
+    [_, owned] = reconciliation.candidate_state.files
+    assert (owned.path, owned.baseline, owned.regions) == (
+        "notes.md",
+        "generated\n",
+        (),
+    )

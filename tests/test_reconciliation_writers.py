@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from protostar.config import UserConfig
+from protostar.errors import UnsupportedFilesystemNodeError
 from protostar.manifest import (
     DiagnosticEvent,
     DiagnosticPhase,
@@ -23,7 +24,7 @@ from protostar.merge import (
     ResolutionChoice,
 )
 from protostar.reconciliation import Reconciliation
-from protostar.review_workspace import ReviewWorkspace
+from protostar.review_workspace import LiveWorkspace, ReviewWorkspace
 from protostar.sync_state import FilePolicy, FileState
 
 
@@ -208,3 +209,55 @@ def test_writers_check_the_explicit_root_not_the_callers_directory(
         reconciliation._create_directories()
 
     assert (root / name).exists()
+
+
+# ---- node validation on the live disk ---- #
+
+
+@pytest.fixture
+def live(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    boundary = ReviewWorkspace(tmp_path)
+    return Reconciliation(
+        EnvironmentManifest(), UserConfig(), LiveWorkspace(), boundary, boundary
+    )
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Requires unprivileged symlinks")
+@pytest.mark.parametrize("case", ["leaf", "ancestor", "directory-expected-file"])
+def test_a_node_that_cannot_be_transacted_names_itself(live, tmp_path, case):
+    (tmp_path / "real").mkdir()
+    (tmp_path / "real/file.txt").write_text("x", encoding="utf-8")
+    if case == "leaf":
+        (tmp_path / "link").symlink_to(tmp_path / "real/file.txt")
+        target, bad, directory = Path("link"), tmp_path / "link", False
+    elif case == "ancestor":
+        # The leaf does not exist yet; the directory above it is a link.
+        (tmp_path / "link").symlink_to(tmp_path / "real", target_is_directory=True)
+        target, bad, directory = Path("link/new.txt"), tmp_path / "link", False
+    else:
+        target, bad, directory = Path("real"), tmp_path / "real", False
+
+    with pytest.raises(UnsupportedFilesystemNodeError) as caught:
+        live._validate_node(target, directory=directory)
+
+    assert caught.value.path == bad
+    assert caught.value.node_type == "unsupported transaction target"
+
+
+def test_a_regular_file_and_a_directory_are_valid_nodes(live, tmp_path):
+    (tmp_path / "real").mkdir()
+    (tmp_path / "real/file.txt").write_text("x", encoding="utf-8")
+
+    live._validate_node(Path("real/file.txt"))
+    live._validate_node(Path("real"), directory=True)
+    live._validate_node(Path("real/missing.txt"))
+
+
+def test_a_file_where_a_directory_is_expected_is_refused(live, tmp_path):
+    (tmp_path / "file.txt").write_text("x", encoding="utf-8")
+
+    with pytest.raises(UnsupportedFilesystemNodeError) as caught:
+        live._validate_node(Path("file.txt"), directory=True)
+
+    assert caught.value.path == tmp_path / "file.txt"
