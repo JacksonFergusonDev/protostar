@@ -122,6 +122,26 @@ def test_a_subset_that_leaves_out_a_sharded_module_runs_no_shard_of_it(planner):
     assert names(matrix) == ["journal"]
 
 
+def test_module_colon_shard_runs_only_that_shard_once(planner):
+    matrix = planner(
+        "merge:tail,journal,merge:tail",
+        ["src/protostar/journal.py", "src/protostar/merge.py"],
+        shards={"merge": {"head": ["hold"], "tail": ["Joiner._seal"]}},
+    )
+    assert names(matrix) == ["merge (tail)", "journal"]
+
+
+@pytest.mark.parametrize("requested", ["merge:nope", "journal:head"])
+def test_an_unknown_shard_fails_without_writing_matrix(planner, tmp_path, requested):
+    with pytest.raises(SystemExit, match=r"Unknown shards.*choose from"):
+        planner(
+            requested,
+            ["src/protostar/journal.py", "src/protostar/merge.py"],
+            shards={"merge": {"head": ["hold"]}},
+        )
+    assert not (tmp_path / "output").exists()
+
+
 def test_shards_for_a_module_outside_source_paths_fail(planner, tmp_path):
     with pytest.raises(SystemExit, match=r"Shards for \['merge'\]"):
         planner("all", ["src/protostar/journal.py"], shards={"merge": {"a": ["f"]}})

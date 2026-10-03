@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       modules:
-        description: "Comma-separated modules to mutate (journal, merge, text_merge, ...), or 'all'"
+        description: "Comma-separated modules to mutate (journal, merge, text_merge, ...), or 'all'. A sharded module takes module:shard to run one shard."
         required: true
         default: all
         type: string
@@ -46,10 +46,22 @@ jobs:
         if orphaned:
             sys.exit(f"Shards for {orphaned}, which are not in source_paths {known}.")
         requested = os.environ["REQUESTED"].replace(" ", "")
-        chosen = known if requested == "all" else requested.split(",")
-        unknown = sorted(set(chosen) - set(known))
+        # An item is a module, or module:shard to run one shard of a sharded module.
+        if requested == "all":
+            items = [(module, "") for module in known]
+        else:
+            items = [
+                (module, shard)
+                for module, _, shard in (item.partition(":") for item in requested.split(","))
+            ]
+        unknown = sorted({m for m, _ in items} - set(known))
         if unknown:
             sys.exit(f"Unknown modules {unknown}; choose from {known} or 'all'.")
+        missing = sorted(
+            f"{m}:{s}" for m, s in items if s and s not in shards.get(m, {})
+        )
+        if missing:
+            sys.exit(f"Unknown shards {missing}; choose from {shards}.")
 
         def pattern(module, function):
             # mutmut names a mutant x_<function> or x<ǁ>Class<ǁ>method.
@@ -57,23 +69,22 @@ jobs:
             body = f"xǁ{cls}ǁ{name}" if cls else f"x_{name}"
             return f"protostar.{module}.{body}__mutmut_*"
 
-        include = []
-        for module in chosen:
+        include = {}
+        for module, only in items:
             if module not in shards:
-                include.append(
-                    {"name": module, "artifact": module, "patterns": f"protostar.{module}.*"}
-                )
+                include[module] = {
+                    "name": module, "artifact": module, "patterns": f"protostar.{module}.*"
+                }
                 continue
             for shard, functions in shards[module].items():
-                include.append(
-                    {
+                if only in ("", shard):
+                    include[f"{module}-{shard}"] = {
                         "name": f"{module} ({shard})",
                         "artifact": f"{module}-{shard}",
                         "patterns": " ".join(pattern(module, f) for f in functions),
                     }
-                )
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
-            out.write(f"matrix={json.dumps({'include': include}, ensure_ascii=False)}\n")
+            out.write(f"matrix={json.dumps({'include': list(include.values())}, ensure_ascii=False)}\n")
         EOF
 
   mutate:
