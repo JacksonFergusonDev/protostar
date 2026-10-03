@@ -268,9 +268,7 @@ class Reconciliation:
                 existing = self._existing(renovate.TARGET)
                 if existing is not None:
                     try:
-                        decode_jsonc(
-                            self.workspace.read_bytes(existing).decode("utf-8")
-                        )
+                        decode_jsonc(self.workspace.read_bytes(existing).decode())
                     except (OSError, UnicodeError) as error:
                         raise FileSystemError(
                             "read JSONC configuration", str(existing), error
@@ -285,9 +283,7 @@ class Reconciliation:
                 decode_yaml_baseline(contributions[0].content)
                 if (target := self._existing(filepath)) is not None:
                     try:
-                        decode_yaml_baseline(
-                            self.workspace.read_bytes(target).decode("utf-8")
-                        )
+                        decode_yaml_baseline(self.workspace.read_bytes(target).decode())
                     except (OSError, UnicodeError) as error:
                         raise FileSystemError(
                             "read YAML configuration", str(target), error
@@ -633,7 +629,7 @@ class Reconciliation:
                 self._release_document(record.path)
                 continue
             try:
-                original = self.workspace.read_bytes(target).decode("utf-8")
+                original = self.workspace.read_bytes(target).decode()
             except (OSError, UnicodeError) as error:
                 raise FileSystemError(
                     "read retracted configuration", record.path, error
@@ -871,9 +867,7 @@ class Reconciliation:
         record = located.record
         try:
             exists = self.workspace.exists(target)
-            original = (
-                self.workspace.read_bytes(target).decode("utf-8") if exists else ""
-            )
+            original = self.workspace.read_bytes(target).decode() if exists else ""
             base = (
                 decode_baseline(record.baseline)
                 if record and record.baseline is not None
@@ -956,7 +950,7 @@ class Reconciliation:
             record = toml_located.record
             try:
                 original = (
-                    self.workspace.read_bytes(target).decode("utf-8")
+                    self.workspace.read_bytes(target).decode()
                     if self.workspace.exists(target)
                     else ""
                 )
@@ -1018,12 +1012,14 @@ class Reconciliation:
             for note in result.layout_notes:
                 self._layout_warning(target, note)
             if result.baseline is not MISSING:
+                # A cast only informs the type checker.
+                baseline = cast(dict[str, Value], result.baseline)  # pragma: no mutate
                 self._own(
                     toml_located,
                     FileState(
                         target.as_posix(),
                         FilePolicy.TOML,
-                        encode_toml_baseline(cast(dict[str, Value], result.baseline)),
+                        encode_toml_baseline(baseline),
                     ),
                 )
             new_content = result.content
@@ -1034,8 +1030,8 @@ class Reconciliation:
                     raise FileSystemError(
                         "mutate configuration AST", str(target), e
                     ) from e
-                original_project = tomllib.loads(original).get("project", {})
-                updated_project = tomllib.loads(new_content).get("project", {})
+                original_project = tomllib.loads(original).get("project")
+                updated_project = tomllib.loads(new_content).get("project")
                 original_python = (
                     original_project.get("requires-python")
                     if isinstance(original_project, dict)
@@ -1071,7 +1067,7 @@ class Reconciliation:
             enforce_path_jail(target, self.workspace_root)
             try:
                 original = (
-                    self.workspace.read_bytes(target).decode("utf-8")
+                    self.workspace.read_bytes(target).decode()
                     if self.workspace.exists(target)
                     else ""
                 )
@@ -1331,7 +1327,7 @@ class Reconciliation:
                 # so it is retracted first, and the file regenerates in this run.
                 try:
                     retraction = append_marker_blocks(
-                        local.decode("utf-8") if local is not None else "",
+                        local.decode() if local is not None else "",
                         [],
                         target,
                         baselines=omitted,
@@ -1436,8 +1432,7 @@ class Reconciliation:
             )
         try:
             original = (
-                # "UTF-8" names the same codec.
-                self.workspace.read_bytes(target).decode("utf-8")  # pragma: no mutate
+                self.workspace.read_bytes(target).decode()
                 if self.workspace.exists(target)
                 else ""
             )
@@ -1826,7 +1821,7 @@ class Reconciliation:
                 else None
             )
             if self._state_bytes is not None:
-                state = deserialize_state(self._state_bytes.decode("utf-8"))
+                state = deserialize_state(self._state_bytes.decode())
                 check_producer_version(state, self.candidate_state.producer_version)
                 check_template_identity(state, self.manifest.template_reference)
                 self._committed = state
