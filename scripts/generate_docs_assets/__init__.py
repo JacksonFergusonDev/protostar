@@ -28,6 +28,7 @@ from scripts.generate_docs_assets.common import (
     SNAPSHOTS_DIR,
 )
 from scripts.generate_docs_assets.diffs import generate_diff_fixtures
+from scripts.generate_docs_assets.key_tables import generate_key_tables
 from scripts.generate_docs_assets.payloads import generate_agent_payloads
 from scripts.generate_docs_assets.schemas import generate_schema_tables
 from scripts.generate_docs_assets.tables import (
@@ -56,6 +57,7 @@ __all__ = [
     "generate_diff_fixtures",
     "generate_docs_assets",
     "generate_guide_svgs",
+    "generate_key_tables",
     "generate_manifest_state",
     "generate_schema_tables",
     "generate_template_schema_fixture",
@@ -80,6 +82,7 @@ def generate_docs_assets() -> None:
     generate_default_config()
     generate_capability_tables()
     generate_cli_tables()
+    generate_key_tables()
     generate_manifest_state()
     generate_agent_payloads()
     generate_schema_tables()

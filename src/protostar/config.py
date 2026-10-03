@@ -755,8 +755,8 @@ class TemplateBlueprint:
     dev_dependencies: list[str] = field(
         default_factory=list,
         metadata={
-            "description": "Development packages not shipped to production.",
-            "example": ["pytest", "mypy", "ruff"],
+            "description": "Development packages installed whichever tools are on. A tool's own packages go in an [[optional]] block that requires it.",
+            "example": ["ipython"],
         },
     )
     docs_dependencies: list[str] = field(
@@ -783,14 +783,14 @@ class TemplateBlueprint:
     system_tasks: list[list[str]] = field(
         default_factory=list,
         metadata={
-            "description": "Commands executed before dependency installation.",
-            "example": [["git", "init"]],
+            "description": "Commands run once the project's files are written, before its dependencies are installed.",
+            "example": [["git", "lfs", "install", "--local"]],
         },
     )
     post_install_tasks: list[list[str]] = field(
         default_factory=list,
         metadata={
-            "description": "Commands executed after dependencies are installed.",
+            "description": "Commands run after the project's dependencies are installed.",
             "example": [["uv", "run", "nbdime", "config-git", "--enable"]],
         },
     )
@@ -801,6 +801,7 @@ class TemplateBlueprint:
             "example": {
                 "README.md": "# <% PROJECT_NAME %>\n\nAuto-scaffolded using custom template.",
                 "src/<% PACKAGE_NAME %>/__init__.py": '"""<% PROJECT_NAME %> package."""\n__version__ = "0.1.0"',
+                "src/<% PACKAGE_NAME %>/config.py": '"""Settings for <% PROJECT_NAME %>, maintained by <% ORGANIZATION %>."""',
                 "compose.yaml": "services: {}\n",
             },
         },
@@ -808,7 +809,7 @@ class TemplateBlueprint:
     pyproject_injections: dict[str, PyprojectPayload] = field(
         default_factory=dict,
         metadata={
-            "description": "Managed TOML configuration; personal metadata is seed-only; dependency tables and tool.protostar are forbidden. A payload is a TOML string, or a table with `content` and an optional `requires` condition that injects it only while the condition holds.",
+            "description": "Named pyproject.toml payloads. A payload is a TOML string, or a table with `content` and an optional `requires` condition that injects it only while the condition holds. Project fields such as description and authors are written once and then belong to the project; dependency tables and tool.protostar can't be set here.",
             "example": {
                 "custom_linting": {
                     "requires": "ruff",

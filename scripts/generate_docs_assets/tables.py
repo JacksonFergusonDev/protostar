@@ -206,6 +206,9 @@ def generate_template_schema_fixture() -> None:
     )
     variables = tomlkit.table(is_super_table=True)
     variables.add("REGION", {"description": "Deployment region, e.g. eu-west-1"})
+    variables.add(
+        "ORGANIZATION", {"description": "The team that maintains the project"}
+    )
     doc.add("variables", variables)
 
     out_str = doc.as_string().strip() + "\n"

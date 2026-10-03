@@ -21,6 +21,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import textwrap
 import tomllib
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -600,6 +601,129 @@ def check_documented_commands() -> list[str]:
     return problems
 
 
+def _option_strings() -> set[str]:
+    """Every option any command accepts, such as ``--tier`` and ``--no-ruff``."""
+    from protostar.cli.parser import build_parser
+    from scripts.generate_docs_assets.cli_tables import subcommands
+
+    parser = build_parser()
+    parsers = [parser, *subcommands(parser).values()]
+    return {
+        flag for each in parsers for a in each._actions for flag in a.option_strings
+    }
+
+
+def _prose(text: str) -> str:
+    """Drops fenced blocks, leaving the text a reader reads as prose."""
+    return re.sub(r"^[ \t]*```.*?^[ \t]*```", "", text, flags=re.DOTALL | re.MULTILINE)
+
+
+def check_inline_commands() -> list[str]:
+    """Every ``protostar`` command and option a sentence names still exists."""
+    from protostar.cli.parser import build_parser
+    from protostar.errors import InvalidUsageError
+
+    parser = build_parser()
+    options = _option_strings()
+    problems: list[str] = []
+    for page in _hand_written_pages():
+        if page in MAINTAINER_PAGES:
+            continue
+        prose = _prose(page.read_text(encoding="utf-8"))
+        for span in sorted(set(re.findall(r"`([^`\n]+)`", prose))):
+            if span.startswith("--"):
+                flag = re.split(r"[ =]", span, maxsplit=1)[0]
+                if "<" not in flag and flag not in options:
+                    problems.append(f"{_rel(page)}: '{span}' is not an option")
+                continue
+            if not span.startswith("protostar ") or re.search(
+                r"[\[\]<>{}$]|\.\.\.", span
+            ):
+                continue
+            args = shlex.split(span)[1:]
+            try:
+                with (
+                    contextlib.redirect_stdout(io.StringIO()),
+                    contextlib.redirect_stderr(io.StringIO()),
+                ):
+                    parser.parse_args(args)
+            except SystemExit as exit_:
+                if exit_.code not in (0, None):
+                    problems.append(f"{_rel(page)}: '{span}' doesn't parse")
+            except InvalidUsageError as usage:
+                problems.append(f"{_rel(page)}: '{span}': {usage}")
+    return problems
+
+
+def check_tui_keys() -> list[str]:
+    """Every key a page tells the reader to press is one a screen lists under ``?``."""
+    from scripts.generate_docs_assets.key_tables import key_tokens, screen_keys
+
+    keys = {
+        token
+        for rows in screen_keys().values()
+        for row_keys, _ in rows
+        for token in key_tokens(row_keys)
+    }
+    problems: list[str] = []
+    for page in _hand_written_pages():
+        prose = _prose(page.read_text(encoding="utf-8"))
+        named = re.findall(r"\(`([A-Za-z])`\)|[Pp]ress `([A-Za-z])`", prose)
+        for key in sorted({a or b for a, b in named}):
+            if key not in keys:
+                problems.append(
+                    f"{_rel(page)}: no screen has the key '{key}' (keys are case-sensitive)"
+                )
+    return problems
+
+
+def _template_examples() -> Iterator[tuple[Path, str]]:
+    """Yields every complete template a page shows: a TOML block with a root ``name``."""
+    yield (
+        DOCS_DIR / "generated" / "template_schema.toml",
+        (DOCS_DIR / "generated" / "template_schema.toml").read_text(encoding="utf-8"),
+    )
+    for page in _hand_written_pages():
+        for block in re.findall(
+            r"^([ \t]*)```toml\n(.*?)^\1```",
+            page.read_text(encoding="utf-8"),
+            re.DOTALL | re.MULTILINE,
+        ):
+            body = textwrap.dedent(block[1])
+            root = re.split(r"^\[", body, maxsplit=1, flags=re.MULTILINE)[0]
+            if re.search(r"^name = ", root, re.MULTILINE) and "--8<--" not in body:
+                yield page, body
+
+
+def check_template_examples() -> list[str]:
+    """Every complete template a page shows passes ``check-template --strict``."""
+    from protostar.template_check import check_template
+
+    problems: list[str] = []
+    with tempfile.TemporaryDirectory() as scratch:
+        for page, body in _template_examples():
+            target = Path(scratch) / "protostar.toml"
+            target.write_text(body, encoding="utf-8")
+            for finding in check_template(scratch).findings:
+                problems.append(f"{_rel(page)}: {finding.rule}: {finding.message}")
+    return problems
+
+
+def check_payload_versions() -> list[str]:
+    """JSON a page writes by hand carries the current ``api_version``."""
+    from protostar.cli.schema import CLI_API_VERSION
+
+    problems: list[str] = []
+    for page in _hand_written_pages():
+        text = page.read_text(encoding="utf-8")
+        for version in re.findall(r'"api_version":\s*(\d+)', text):
+            if int(version) != CLI_API_VERSION:
+                problems.append(
+                    f"{_rel(page)}: api_version {version}, but the CLI writes {CLI_API_VERSION}"
+                )
+    return problems
+
+
 def _walkthrough_steps() -> list[str]:
     """Returns the progress steps a run of Astro's workbench tier prints."""
     from protostar.intent import DependencyGroup
@@ -770,6 +894,10 @@ CHECKS: tuple[Callable[[], list[str]], ...] = (
     check_site_links,
     check_cli_reference_sections,
     check_documented_commands,
+    check_inline_commands,
+    check_tui_keys,
+    check_template_examples,
+    check_payload_versions,
     check_walkthrough_output,
     check_generated_fixtures_are_used,
 )

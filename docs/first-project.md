@@ -49,11 +49,11 @@ Press `Ctrl+S` to continue.
 
 ## 4. Review and Apply
 
-The change review lists every file Protostar will create, with its contents; press `S` for the commands and packages that follow. Use `↑` and `↓` to look through the files. Nothing has happened yet.
+The change review lists every file Protostar will create, with its contents; press `s` for the commands and packages that follow. Use `↑` and `↓` to look through the files. Nothing has happened yet.
 
 ![The change review](assets/terminals/tui_change_review.svg)
 
-Press `A` to apply. Protostar writes the files and runs each step in turn:
+Press `a` to apply. Protostar writes the files and runs each step in turn:
 
 ```text
   ✔ Writing project files

@@ -89,7 +89,9 @@ Choosing `local` is also how you finish a hand edit: change the file however you
 
 Conflicts caused by document policy (`duplicate-identity`, `shared-structure`, `unsafe-pin`), a table outside the file's root, and a dependency listed more than once offer no choices. Fix those by hand.
 
-In an interactive terminal, `sync` opens its review screen before it applies anything whenever a conflict can be settled or it proposes a change to a file you already have. It lists them by file, with your preserved edits, showing your side, the update's side, and a preview of the file each choice produces. Press `k` to keep yours, `u` to take the update, `b` to keep both, `x` to leave a conflict open, and `n` for the next open one; on a file's row, a choice applies to every conflict and proposal in that file, but never to a preserved edit. `a` applies the sync with those choices, and open conflicts keep your content as before. `esc` asks before leaving without applying anything. The screen never opens for `--dry-run`, `--check`, `--json`, `--resolve`, or a non-interactive terminal, and never for preserved edits alone.
+In an interactive terminal, `sync` opens its review screen before it applies anything whenever a conflict can be settled or it proposes a change to a file you already have. It lists them by file, with your preserved edits, showing your side, the update's side, and a preview of the file each choice produces. On a file's row, a choice applies to every conflict and proposal in that file, but never to a preserved edit. Applying keeps your content for any conflict left open. The screen never opens for `--dry-run`, `--check`, `--json`, `--resolve`, or a non-interactive terminal, and never for preserved edits alone.
+
+--8<-- "keys_sync_conflicts.md"
 
 ![Protostar sync conflict screen](../assets/terminals/tui_sync_conflicts.svg)
 

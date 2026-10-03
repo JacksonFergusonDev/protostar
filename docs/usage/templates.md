@@ -277,11 +277,15 @@ To address this, Protostar asks for confirmation before running any command for 
 
 1. __Built-in Templates:__ Trusted implicitly (shipped within the validated Protostar package).
 1. __Explicitly Trusted Aliases:__ Trusted when configured with `trusted = true` under `[templates.<alias>]` in your global `config.toml`.
-1. __Untrusted External Templates (`--from` or untrusted aliases):__ If the run executes any command, nothing is written and nothing runs until you confirm. The change review lists every command under __Untrusted template__, and __Apply__ stays disabled until you tick the checkbox confirming them (`T`). Only the commands you confirmed run. `--trust` runs them without asking, for that run only, and lists them as it does.
+1. __Untrusted External Templates (`--from` or untrusted aliases):__ If the run executes any command, nothing is written and nothing runs until you confirm. The change review lists every command under __Untrusted template__, and __Apply__ stays disabled until you tick the checkbox confirming them (`t`). Only the commands you confirmed run. `--trust` runs them without asking, for that run only, and lists them as it does.
 
 Almost every `init` runs a command, so in practice an untrusted template always asks. In non-interactive environments (e.g., CI/CD or `--json` mode), it aborts immediately with `SecurityViolationError` (exit code `77`) instead of hanging. To run it headlessly, pass `--trust` for one run, or configure it as an alias with `trusted = true` in your global configuration to trust it every time.
 
-`protostar sync` never runs a template's tasks, but an update can still need commands: `uv add` or `uv lock` when its dependencies change, and a hook install when the hooks do. For a template you haven't trusted, `sync` confirms them the same way. In a terminal it lists them on a confirmation screen after you settle any conflicts; elsewhere it stops with exit code `77` before writing anything, unless you pass `--trust`. `status`, `diff`, `sync --dry-run`, and `sync --check` never run a command, so they never ask. A template counts as trusted when it's built in, or when an alias with `trusted = true` names the same template: the same local `protostar.toml`, or the same repository and path. The project's recipe and lock never grant trust.
+`protostar sync` never runs a template's tasks, but an update can still need commands: `uv add` or `uv lock` when its dependencies change, and a hook install when the hooks do. For a template you haven't trusted, `sync` confirms them the same way. In a terminal it lists them on a confirmation screen after you settle any conflicts, with these keys:
+
+--8<-- "keys_trust.md"
+
+Without a terminal, it stops with exit code `77` before writing anything, unless you pass `--trust`. `status`, `diff`, `sync --dry-run`, and `sync --check` never run a command, so they never ask. A template counts as trusted when it's built in, or when an alias with `trusted = true` names the same template: the same local `protostar.toml`, or the same repository and path. The project's recipe and lock never grant trust.
 
 ## Ready to Author Your Own Templates?
 

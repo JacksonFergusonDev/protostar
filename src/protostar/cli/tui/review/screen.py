@@ -688,9 +688,14 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
 
     def key_rows(self) -> KeyRows:
         """The review's keys; escape goes back only when there is an editor."""
+        return self.keys(can_go_back=self.can_go_back)
+
+    @staticmethod
+    def keys(*, can_go_back: bool) -> KeyRows:
+        """The review's keys, with or without an editor to go back to."""
         leave = (
             (("esc", "Back to the editor"), ("q", "Cancel, after asking"))
-            if self.can_go_back
+            if can_go_back
             else (("esc", "Cancel, after asking"),)
         )
         return (

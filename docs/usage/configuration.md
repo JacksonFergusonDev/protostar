@@ -12,7 +12,9 @@ protostar config
 
 The form covers your identity (name, email, and GitHub username), your editor, the default Python version, and which tools a new project starts with. Name and email start from your Git configuration when the file leaves them unset; Protostar reads Git's configuration but never writes it. Press `i` on a tool to see what it does, as in the recipe editor. A template's own tool choices still win over these defaults.
 
-Beside the form, the **Changes** panel shows exactly what saving will change in the file. `Ctrl+S` saves; only the settings whose values changed are written, and comments, other keys, and your `[templates]` stay as they are. `Esc` leaves without saving, asking first if you changed anything.
+Beside the form, the **Changes** panel shows exactly what saving will change in the file. Saving writes only the settings whose values changed; comments, other keys, and your `[templates]` stay as they are.
+
+--8<-- "keys_config.md"
 
 The file stays the source of truth and is always yours to edit by hand. For everything the form doesn't cover, such as `[templates]` aliases, `license`, and `supported_os`, open it in your system's default `$EDITOR`, either with `e` in the form or directly:
 
