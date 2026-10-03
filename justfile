@@ -204,6 +204,12 @@ demo-all trials="5": (demo-init-interactive trials) (demo-init-headless trials) 
 demo-all-draft: demo-init-interactive-draft demo-init-headless-draft demo-sync-draft
     @printf "\n{{ blue }}=== All demo drafts generated ==={{ nc }}\n"
 
+# Re-render the docs' social share card (docs/assets/og-card.png)
+og-card:
+    @printf "\n{{ blue }}=== Rendering the share card ==={{ nc }}\n"
+    uv run --with playwright python -m playwright install chromium
+    uv run --with playwright python scripts/render_og_card.py
+
 # Build documentation site in strict mode
 docs: sync
     @printf "\n{{ blue }}=== Building Documentation ==={{ nc }}\n"

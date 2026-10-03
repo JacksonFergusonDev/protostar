@@ -152,6 +152,11 @@ disallow_incomplete_defs = false
 disallow_untyped_calls = false
 warn_return_any = false
 
+# scripts/render_og_card.py runs under `uv run --with playwright`.
+[[tool.mypy.overrides]]
+module = ["playwright.*"]
+ignore_missing_imports = true
+
 # ---- pytest ---- #
 
 [tool.pytest.ini_options]
