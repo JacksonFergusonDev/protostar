@@ -1,76 +1,80 @@
 ---
-description: "What Protostar records in [tool.protostar], how tools, variables, options, and tiers are stored, and how to enroll or eject a project."
+description: "What a project's recipe in pyproject.toml records: its template, tools, variables, options, and tier, and which choice wins."
 ---
 
-# Project recipes
+# Project Recipes
 
-A successful `protostar init` records what you asked for in `[tool.protostar]` inside `pyproject.toml`. This table is the project's **recipe**. Commit it alongside `protostar.lock`.
+`protostar init` records what you asked for in `[tool.protostar]` in `pyproject.toml`. This table is the project's **recipe**: the template it follows and every choice you made. `protostar.lock` records what Protostar actually wrote; see [How Protostar Tracks Your Files](tracking.md). Commit both.
 
-The two files answer different questions:
+The recipe says what the project should be, so `status` and `sync` compare the project against it. You can edit it by hand, and `sync` applies the change.
 
-| File | Records |
+## What the Recipe Records
+
+This is the recipe of a new `cli` project:
+
+```toml
+[tool.protostar]
+version = 1
+mode = "template"
+python = "3.13"
+ide = "none"
+
+[tool.protostar.source]
+origin = "built-in"
+locator = "cli"
+
+[tool.protostar.fallback]
+mypy = false
+ruff = true
+# ...one entry per tool
+
+[tool.protostar.context]
+PROJECT_NAME = "demo-project"
+PACKAGE_NAME = "demo_project"
+PYTHON_VERSION = "3.13"
+CURRENT_YEAR = "2026"
+AUTHOR_NAME = "your-name"
+
+[tool.protostar.metadata]
+supported_os = ["MacOS", "Linux", "Windows"]
+```
+
+| Key | What it holds |
 | :--- | :--- |
-| Recipe (`[tool.protostar]`) | What you request: the template, tools, variables, and other choices. |
-| `protostar.lock` | What was actually applied: the contributions accepted by [reconciliation](../developer/reconciliation/kernel.md). |
+| `version` | The recipe format's version. |
+| `mode` | `template`, or `tooling-only` for a project set up with tools and no template. |
+| `python`, `ide` | The Python version and editor the project was set up for. |
+| `source` | The template: built-in, local, or a repository, with its `path` inside the repository and the `ref` it follows (see [template versions](templates.md#template-versions)). An alias is recorded as the template it named, so the recipe works on any machine. |
+| `tools` | The tools you turned on or off yourself; see [below](#tool-selections). |
+| `fallback` | Your configuration's tool defaults when the project was set up. |
+| `context` | The values placeholders such as `<% PROJECT_NAME %>` rendered with. They're recorded so files render the same way later, even after your Git settings, your configuration, or the year change. |
+| `metadata` | Project details such as the author email and supported systems. |
+| `variables` | The template's custom variables; see [below](#template-variables). |
+| `options`, `tier` | The template options and tier the project chose; see [below](#template-options). |
 
-A conflict can therefore leave the recipe ahead of what was applied. The lock's ownership ledger stays at schema v1.
+`tools`, `metadata`, `variables`, and `options` are left out until they have an entry. Unknown keys and tools are an error, so a typo never passes silently.
 
-## What the recipe records
+In a `pyproject.toml` Protostar creates, the recipe is the last section, under its own `# ---- Protostar ---- #` header, below every tool's settings; see [The pyproject.toml Layout](../developer/pyproject-layout.md). A `pyproject.toml` you already had keeps your own order.
 
-A schema-v1 recipe captures:
+The recipe belongs to the project: no template or tool can write to it. In a project that had no recipe, `init` fills the Python version, author, and year from what the project states (see [existing projects](init.md#existing-projects)), and from your configuration otherwise.
 
-- The resolved template origin and locator, or an explicit `mode = "tooling-only"`.
-- For a repository template, its `path` inside the repository and the `ref` it follows (see [template versions](templates.md#template-versions)).
-- The Python version, Docker selection, IDE, and the original tooling fallbacks.
-- The built-in rendering context, template variable values, the chosen tier, and non-secret project metadata.
+## Tool Selections
 
-Template aliases are resolved when a project is enrolled, so the recipe records the exact source rather than the alias. Local relative locators resolve against the project directory. Unknown fields, versions, tools, and unsafe source paths are rejected.
+`[tool.protostar.tools]` records the tools you turned on or off yourself:
 
-`[tool.protostar.tools]`, `[tool.protostar.metadata]`, `[tool.protostar.variables]`, and `[tool.protostar.options]` are written only while they have entries, and an absent table means empty. `fallback` and `context` are always present.
-
-### Where it lives
-
-In a `pyproject.toml` that Protostar creates, the recipe is the last section, under its own `# ---- Protostar ---- #` header, like every other tool's configuration. Everything that is not tool configuration sits above the `# Tool Configuration` banner:
-
-- `[project]`
-- `[build-system]`
-- `[dependency-groups]`
-- Build-backend tables such as `[tool.hatch...]`
-
-A `pyproject.toml` you already had keeps your own order.
-
-### Where values come from
-
-For a new uv project, the captured project name uses uv normalization (`Demo_Project` becomes `demo-project`) while the package identifier remains `demo_project`. This keeps early file rendering and later TOML rendering consistent.
-
-In a project that had no recipe, the Python version, author, and year come from the project itself where it states them (see [existing projects](init.md#existing-projects)), and from your configuration otherwise.
-
-### What owns the table
-
-The recipe belongs to the project. Templates and modules cannot contribute to, replace, or own any part of `tool.protostar`. Use structured TOML contributions for `pyproject.toml`: free-form replacement is rejected even with `--force-replace`.
-
-Recipe edits use round-trip TOML manipulation, which preserves unrelated content and comments. Recipe and ownership updates share one filesystem transaction, so a late write failure rolls both back, including original bytes and modes. `init --dry-run` remains a manifest preview and writes neither file.
-
-## One-shot and eject
-
-`init --one-shot` uses the recipe and ownership decisions only during the run. It writes neither the recipe nor `protostar.lock`, so lifecycle commands cannot update that scaffold. It still generates the separate `uv.lock` dependency lockfile.
-
-`protostar eject` takes a tracked project out of the lifecycle. It removes the recipe and `protostar.lock` in one transaction and keeps `uv.lock` and every other project file.
-
-- The CLI shows the pending changes and asks for confirmation.
-- `--dry-run` previews the `pyproject.toml` diff.
-- `--yes` confirms a noninteractive run.
-
-After ejection, `status`, `diff`, and `sync` are unavailable for that project.
-
-## Tool selections
-
-`[tool.protostar.tools]` records the tools you turned on or off yourself.
+```toml
+[tool.protostar.tools]
+mypy = true
+renovate = false
+```
 
 - `true` turns a tool on.
-- `false` turns it off, and removes what it added.
+- `false` turns it off, and takes back what it added: what you never edited is removed, and what you edited becomes a conflict for you to settle.
 
-### Which choice wins
+!!! warning "Don't list every tool"
+    Leave a tool out unless you mean to override the template. A tool you leave out follows the template as it evolves, while an entry fixes your choice.
+
+### Which Choice Wins
 
 Each tool is decided by the first of these that says anything about it:
 
@@ -79,41 +83,18 @@ Each tool is decided by the first of these that says anything about it:
 1. **The template:** the tool's flag at the template's root.
 1. **Your defaults when the project was set up:** your [global configuration](configuration.md)'s tool settings, recorded in the recipe's `fallback` at `init`. Changing your configuration later never changes an existing project.
 
-So a template's later release can change a tool the project never chose, and an entry in `[tool.protostar.tools]` stays fixed until you edit it. `sync --tier` changes which tier the template's opinions come from, and never removes your own entries.
+So a template's later release can change a tool the project never chose, while an entry in `[tool.protostar.tools]` stays fixed until you edit it. `sync --tier` changes which tier the template's choices come from, and never removes your own entries. A later `init` keeps the entries you don't pass a flag for.
 
-An opt-out affects that module only: an independent template or another module can still contribute to the same file or dependency group. Disabling a tool also retracts what it contributed. Unedited files, dependencies, configuration tables, and regions are removed, and edited ones become `retracted` conflicts.
+Turning a tool off affects only what that tool added: a template or another tool can still write to the same file or dependency group.
 
-The table is omitted while it has no entries, so a new project has none. To record a diversion, add the table:
+## Template Variables
 
-```toml
-[tool.protostar.tools]
-mypy = true
-renovate = false
-```
-
-!!! warning "Don't list every tool"
-    Leave a tool out unless you mean to override the template. Absence lets template opinions evolve, while an entry pins your choice.
-
-Later explicit initialization flags update their corresponding entries, and unspecified flags preserve existing diversions. `--docker` and `--no-docker` explicitly change Docker intent. Metadata and `CURRENT_YEAR` are captured, so repeat initialization keeps the same rendering context even when Git settings, global defaults, or the clock change.
-
-## Enrolling a project without a recipe
-
-A project scaffolded before recipes existed has a lock but no recipe. Rerun the original explicit selection with safe merging:
-
-```bash
-protostar init --template cli --force-merge
-```
-
-This establishes a recipe without reconstructing the original command from the lock and without adopting equal foreign content. Template identity checks still apply. Afterwards, use `status`, `diff`, and `sync`; see the [lifecycle walkthrough](lifecycle.md).
-
-## Template variables
-
-A template's custom variables (every `<% NAME %>` placeholder that isn't a built-in) get their values when you initialize, and the recipe records them:
+A template's custom variables, every `<% NAME %>` placeholder that isn't built in, get their values when you set up the project, and the recipe records them:
 
 === "Command"
 
     ```bash
-    protostar init --from ./blueprint.toml --var REGION=eu-west-1 --var TIER=gold
+    protostar init --from ./blueprint.toml --var REGION=eu-west-1 --var SERVICE=billing
     ```
 
 === "Recipe"
@@ -121,40 +102,32 @@ A template's custom variables (every `<% NAME %>` placeholder that isn't a built
     ```toml
     [tool.protostar.variables]
     REGION = "eu-west-1"
-    TIER = "gold"
+    SERVICE = "billing"
     ```
-
-### Where values come from
 
 Each source overrides the one before it:
 
-1. The recipe from an earlier `init`.
+1. The recipe, from an earlier run.
 1. `--var NAME=VALUE` flags.
-1. In an interactive terminal, a prompt for anything still missing.
+1. In a terminal, a screen asking for anything still missing.
 
-A `--var` that names no variable of the template is an error, and so is a mistyped flag. Values the template no longer uses are dropped the next time you run `init`.
+A `--var` that names no variable of the template is an error. Values the template no longer uses are dropped the next time `init` writes the recipe.
 
-### Missing values
+Without a terminal, including under `--json`, a missing value stops the run before anything is written, with a `MissingTemplateVariablesError` naming every missing variable at once (`error.missing_variables` in JSON). When a template release adds a variable, `sync` asks for its value in a terminal, and otherwise takes `--var NAME=VALUE`. You can also add the value under `[tool.protostar.variables]` yourself.
 
-Without a terminal, including under `--json`, a missing value stops `init` before anything is written. The `MissingTemplateVariablesError` names every missing variable at once (`error.missing_variables` in JSON).
+### Variables Are Not Secrets
 
-When a template gains a variable, `sync` asks for its value in a terminal, and otherwise takes `--var NAME=VALUE`; without either, it stops before writing anything. You can also add the value under `[tool.protostar.variables]` yourself.
+The recipe is committed, so variable values are never secret:
 
-### Variables are not secrets
+- Each newly entered value passes the [secret check](authoring-templates.md#variables-are-not-secrets). A value that looks like a credential is held back until you confirm it isn't a secret.
+- Values already in the recipe are not checked again.
+- Keep secrets in the environment the project reads when it runs.
 
-Template variables are non-secret by definition, because the recipe is committed.
+Files a template renders contain their variables' values, and so do reviews and diffs of them.
 
-- Each newly entered value passes the [secret guard](authoring-templates.md#variables-are-not-secrets). A value that looks like a credential is held back until you confirm it isn't a secret.
-- Recorded values are not checked again.
-- Keep secrets in the environment the project reads at runtime.
-- Trust permissions and command lines are never serialized.
+## Template Options
 
-!!! note
-    Generated project files and ownership baselines contain rendered content. Diffs are not a secret-redaction system.
-
-## Template options
-
-A template's [options](authoring-templates.md#template-options) record only the values a project chose. Every value passed with `--option` is recorded as given. From the recipe editor, only values that differ from the template's defaults are recorded.
+The recipe records the [options](authoring-templates.md#template-options) a project chose. Every value passed with `--option` is recorded as given; from the recipe editor, only values that differ from the template's defaults are.
 
 === "Command"
 
@@ -169,31 +142,29 @@ A template's [options](authoring-templates.md#template-options) record only the 
     database = "postgres"
     ```
 
-An option the table leaves out follows the template's default, the way an omitted tool follows the template's opinion. A template that changes a default therefore changes those projects on their next `sync`.
+An option the recipe leaves out follows the template's default, as a tool it leaves out follows the template. A template that changes a default changes those projects on their next `sync`.
 
 - `sync --option NAME=VALUE` changes a value and records it.
 - A value for an option the template no longer offers is dropped on the next `sync`.
 - A value the option no longer offers stops `sync` with an `InvalidOptionValueError` naming the values it does offer (`error.values` in JSON).
 
-## Template tier
+### Template Tier
 
-A template that declares [tiers](authoring-templates.md#template-tiers) lets a project follow its `workbench` or `production` tool opinions. The recipe records the tier only when it was passed with `--tier` (even when that is the template's default), or chosen in the recipe editor away from the template's default.
+A template that declares [tiers](authoring-templates.md#template-tiers) lets a project follow its `workbench` or `production` tool choices. The recipe records the tier when it was passed with `--tier` (even if it's the template's default), or chosen in the recipe editor away from the template's default:
 
-=== "Command"
+```toml
+[tool.protostar]
+tier = "production"
+```
 
-    ```bash
-    protostar init --from ./blueprint.toml --tier production
-    ```
-
-=== "Recipe"
-
-    ```toml
-    [tool.protostar]
-    tier = "production"
-    ```
-
-Without a recorded tier, a project follows the template's default tier, so a template that changes its default changes those projects on their next `sync`. Tool diversions in `[tool.protostar.tools]` are measured against the tier's opinions and still win over them.
+Without a recorded tier, a project follows the template's default tier, so a template that changes its default changes those projects on their next `sync`.
 
 - `sync --tier NAME` changes the tier and records it.
 - A recorded tier is dropped on the next `sync` once the template stops declaring tiers.
-- A tooling-only recipe never holds one.
+- A tooling-only recipe never has one.
+
+## One-Shot and Eject
+
+`init --one-shot` sets up a project without writing a recipe or `protostar.lock`, so `status`, `diff`, and `sync` can't update it later. It still writes `uv.lock`.
+
+`protostar eject` stops tracking a project: it removes the recipe and `protostar.lock` together, and keeps every other file, including `uv.lock`. It shows the change and asks first; `--dry-run` previews the `pyproject.toml` diff, and `--yes` confirms without a terminal. A project whose recipe is missing but whose lock remains needs its recipe back before `sync` works; see [When the Recipe Is Missing](lifecycle.md#when-the-recipe-is-missing).

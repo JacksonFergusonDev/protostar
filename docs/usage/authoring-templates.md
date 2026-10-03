@@ -4,9 +4,9 @@ description: "Author custom single-file blueprints and multi-file repository tem
 
 # Authoring Custom Templates
 
-Protostar templates allow platform engineers, team leads, and open-source maintainers to define reusable, declarative environment blueprints. By abstracting away the boilerplate of configuring linters, type checkers, and directory hierarchies, templates ensure that new projects adhere to organizational standards from initialization.
+A template describes one kind of project: the tools it turns on, its dependencies, the settings that differ from each tool's defaults, and its starter files. Protostar writes everything else those tools need, and keeps every project made from the template current as you release new versions.
 
-Templates scale gracefully from a single declarative TOML file to complex, multi-file repository archives.
+A template starts as a single TOML file, and grows into a directory or repository when its starter files get big.
 
 ## Level 1: The Single-File Blueprint
 
@@ -31,48 +31,95 @@ Below is the complete annotated schema for a Protostar template. It defines how 
     protostar export-schema --json > protostar-template.schema.json
     ```
 
-### Template Metadata (`name` & `description`)
-
-Templates can declare self-documenting metadata at the root of the file:
+### Name and Description
 
 ```toml
-# Display name of the template
 name = "Enterprise FastAPI"
-
-# Brief explanation of the stack and purpose
-description = "FastAPI web application scaffold with Uvicorn, Pydantic, and Docker"
+description = "FastAPI service with the team's quality gate"
 ```
 
-Protostar's zero-network template discovery engine reads these top-level fields locally to populate `protostar init --list-templates`, shell autocompletion hints, and interactive template picker options.
+`protostar init --list-templates`, shell completion, and the recipe editor's template picker show both. `check-template` warns when either is missing.
 
-### AST Injections & Appends
+### `pyproject.toml` Settings (`[dev.pyproject]`)
 
-Declare named TOML payloads under `[dev.pyproject]`. Tooling and build configuration are managed contributions; personal project fields such as description, authors, license, classifiers, keywords, and repository URLs are seed-only during merge initialization. Existing free-form `[files]` content is preserved unless explicit overwrite is selected.
+Settings for `pyproject.toml` go in named payloads under `[dev.pyproject]`. Each is a TOML string, merged into the project's `pyproject.toml` key by key:
 
 ```toml
 [dev.pyproject]
-linting = '''
-[tool.ruff.lint]
-extend-select = ["I", "UP", "B"]
+build_system = '''
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 '''
+```
 
+Protostar keeps a payload's keys current: when a later release changes one, projects that haven't edited it take the change, and projects that have keep their edit. A payload that configures a tool should say so with `requires`, so it leaves with the tool; see [Optional Content](#optional-content). Name each payload once and keep the name, since that is how a project's record finds it again.
+
+Project fields such as `description`, `authors`, `license`, `classifiers`, `keywords`, and the repository URLs are different: a payload writes them once, when the project doesn't have them, and they belong to the project from then on. A payload can't set dependencies, `dependency-groups`, `tool.uv.sources`, or `[tool.protostar]`.
+
+### Text Blocks in Other Files (`[appends]`)
+
+To add text to a file that isn't TOML, such as `.envrc`, `AGENTS.md`, or the `justfile`, declare a named block:
+
+```toml
 [appends.".envrc".project_environment]
 content = "export PROJECT=example"
 ```
 
-Non-TOML appends use a stable named record containing a string `content` field and, optionally, a [`requires`](#optional-content) condition. Keep the record ID unchanged when its payload changes. The engine namespaces template IDs by their canonical source identity and module IDs by module identity. Merge initialization preserves an existing unowned named region and warns when its desired content differs. Once owned, a region merges its desired updates line by line with local edits inside it, and keeps the local block whole when they overlap; explicit overwrite replaces only that region while retaining surrounding bytes. Delimiters use subtle editor-folding comments (`# region: protostar <tag>` and `# endregion: protostar <tag>`) with deterministic 8-character hex tags, while the expanded logical identity and each region's last applied text are preserved in `protostar.lock`.
+Protostar writes the block between two marker comments, `# region: protostar <tag>` and `# endregion: protostar <tag>`, and leaves the rest of the file alone. A later release that changes `content` updates the block, merging line by line with any edits the project made inside it, and keeps the project's version when they overlap. As with payloads, keep the block's name when its content changes. A block takes `requires` beside its `content`.
 
-Anonymous strings/arrays under `[appends]`, TOML append regions, append regions targeting a structurally merged YAML file (`.pre-commit-config.yaml`, `.github/codecov.yml`, `.readthedocs.yaml`, and the generated `.github/workflows/ci.yml` and `release.yml`, under any other name their tool reads them from), and the `__replace__`/`__remove__` control keys are rejected. Do not combine `[files]` with structured configuration or named regions targeting the same path. `protostar.lock` is reserved for engine state; `uv.lock` belongs to the resolver. Neither filename nor its descendants can be a template target.
+Blocks can't go into TOML files, which merge key by key instead, or into the files Protostar merges as YAML: the hook configuration, `.github/codecov.yml`, `.readthedocs.yaml`, and the generated `ci.yml` and `release.yml` workflows. To add ignore patterns, use `vcs_ignores`.
 
-Dependency declarations belong in `dependencies`, `[dev].dev_dependencies`, and `docs_dependencies`. Keep `docs_dependencies` for a documentation toolchain: `uv sync` installs the `dev` group by default but not `docs`, so anything else placed there (notebook tooling, for example) is removed by the next sync. Put development tooling in `[dev].dev_dependencies`. Generic TOML payloads cannot write `project.dependencies`, `project.optional-dependencies`, `dependency-groups`, or `tool.uv.sources`. Declare supported group wiring explicitly at the root:
+### Starter Files (`[files]`)
+
+```toml
+[files]
+"src/<% PACKAGE_NAME %>/main.py" = '''
+"""Entry point for <% PROJECT_NAME %>."""
+'''
+```
+
+A starter file is written once, when the project doesn't have it, and then belongs to the project: later releases never change it. To move or retire one in a later release, declare a [migration](#migrations). A path can't be both a starter file and a target of payloads or blocks. No file may be written to `protostar.lock`, `uv.lock`, or anywhere inside `.git/`.
+
+### Dependencies
+
+```toml
+dependencies = ["fastapi", "uvicorn"]
+docs_dependencies = ["zensical"]
+
+[dev]
+dev_dependencies = ["ipython"]
+```
+
+Protostar adds each list with `uv add`, which resolves current versions and writes `uv.lock`, so templates name packages without version pins. `dependencies` are the project's own requirements; `dev_dependencies` go in the `dev` group, and `docs_dependencies` in the `docs` group. Keep `docs` for a documentation toolchain: `uv sync` installs the `dev` group by default but not `docs`. A package only one tool needs, such as `pytest-cov`, goes in an [`[[optional]]`](#optional-content) block that requires the tool, so `--no-pytest` doesn't install it.
+
+To have `dev` include `docs`, so `uv sync` installs both, declare it at the root:
 
 ```toml
 dependency_includes = [{ group = "dev", include = "docs" }]
 ```
 
-Includes support the `dev` and `docs` groups and reject cycles. Execution applies them before `uv add`; include-only changes declare a conditional `uv lock` action. Dependency resolver writes are bounded to `pyproject.toml` and `uv.lock` and journaled before invocation. Ordinary dependency additions need no extra lock action.
+### Commands (`system_tasks` and `post_install_tasks`)
 
-Templates may declare an informational root `version` string. CLI and template picker resolution retain the origin, canonical locator, and SHA-256 of the selected TOML bytes before interpolation. Built-in locators are stable IDs, local locators are normalized TOML paths, and a repository template's locator is its canonical repository URL, with its path inside the repository alongside. The ref it was applied at and the commit that ref named are recorded separately, so they never change the template's identity. Remote source URLs must omit credentials and query parameters so provenance cannot persist secrets. Display aliases are descriptive; trust authorization and interpolation answers are excluded from serialized provenance.
+```toml
+system_tasks = [["git", "lfs", "install", "--local"]]
+post_install_tasks = [["uv", "run", "nbdime", "config-git", "--enable"]]
+```
+
+Each command is a list of arguments, never a shell string. `system_tasks` run once the project's files are written, after Protostar's own `git init` and `uv init`, and before dependencies are installed. `post_install_tasks` run after dependencies are installed, so they can use the project's packages through `uv run`.
+
+- Commands run only during `init`. `sync` never runs them.
+- Each command's program must be one of `uv`, `git`, `npm`, `yarn`, `pnpm`, `pre-commit`, `prek`, `direnv`, or `just`.
+- Unless your template is trusted, the user confirms every command first; see [Trusting a Template](templates.md#trusting-a-template).
+- Protostar doesn't know what files a template's command writes, so they appear in no preview and stay behind if the run fails and rolls back.
+
+Prefer a tool flag, a payload, or a starter file wherever one can do the job: they show up in every preview, work the same on every platform, and need no confirmation.
+
+### Version and Identity
+
+A template may declare a root `version`, such as `"1.2.0"`. It's informational unless the template declares [migrations](#migrations), which require it.
+
+A project records which template it follows: the built-in name, the local file's path, or the repository and the path inside it. The release or commit it applied is recorded separately, so moving to a new release never makes it a different template, and a project can never switch to a different one. A template URL may not contain credentials or a query string.
 
 ### Optional Content
 
