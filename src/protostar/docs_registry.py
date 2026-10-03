@@ -41,6 +41,14 @@ class DocsPage(Enum):
         "usage/troubleshooting/#remote-template-security-alerts",
         "Remote Template Security",
     )
+    TROUBLESHOOTING_STALE_REVIEW = (
+        "usage/troubleshooting/#the-review-is-out-of-date",
+        "The Review Is Out of Date",
+    )
+    TROUBLESHOOTING_TEMPLATE_SWITCH = (
+        "usage/troubleshooting/#a-project-cant-switch-templates",
+        "A Project Can't Switch Templates",
+    )
     ROLLBACK = ("usage/rollback/", "Rollback")
     RESOLVE_CONFLICTS = ("usage/lifecycle/#resolve-conflicts", "Resolve Conflicts")
     VERSION_SKEW = (

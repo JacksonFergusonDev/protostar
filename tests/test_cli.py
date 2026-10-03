@@ -1630,7 +1630,7 @@ def test_template_switch_fails_before_any_screen(mocker, tmp_path, monkeypatch):
     ]
     run = mocker.patch("protostar.cli.ui._run_engine")
 
-    with pytest.raises(ConfigurationError, match="differs"):
+    with pytest.raises(ConfigurationError, match="different template"):
         handle_init(argparse.Namespace(from_path=str(blueprint)))
     for screen in screens:
         screen.assert_not_called()

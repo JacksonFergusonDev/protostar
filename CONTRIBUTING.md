@@ -64,9 +64,8 @@ To guarantee that the workspace remains deterministic, error management follows 
   - `ConfigurationError`: For invalid/malformed configuration files or invalid CLI configuration options.
   - `NetworkFetchError`: For remote template downloads, network timeouts, or insecure protocol violations.
   - `TemplateResolutionError`: For template archive extraction failures, unsupported formats, or missing template variables.
-  - `WorkspaceCollisionError`: For detected collisions with existing workspace configuration markers during `plan()`.
-  - `MissingDependencyError`: For pre-flight binary checks when a required system tool is absent.
-  - `AggregatedDependencyError`: For pre-flight checks when multiple required system tools are absent.
+  - `WorkspaceCollisionError`: When `execute()` meets files the plan writes that already exist, with no collision strategy chosen.
+  - `MissingDependencyError`: When `uv` or `git` is missing during planning; it names every missing one, with one command that installs them all.
   - `CommandExecutionError`: For non-zero return codes from managed subprocesses.
   - `CommandTimeoutError`: For subprocesses exceeding allocated runtime limits.
   - `ProcessTerminationError`: For failures when stopping or reaping an active managed subprocess tree before rollback.
