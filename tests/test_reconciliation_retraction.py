@@ -250,3 +250,19 @@ def test_a_document_is_checked_against_the_explicit_root_not_the_callers_directo
     reconciliation._release_undeclared_documents()
 
     assert text(workspace, "custom.toml") == "[mine]\nx = 1\n"
+
+
+def test_an_edited_seed_is_a_retraction_conflict_not_a_kept_edit(workspace):
+    write("zensical.toml", '[project]\nsite_name = "mine"\n')
+    reconciliation = build(
+        workspace,
+        toml_record("zensical.toml", {"project": {"site_name": "docs"}}),
+    )
+
+    reconciliation._release_undeclared_documents()
+
+    assert [e.conflict.reason for e in reconciliation.diagnostics] == [
+        ConflictReason.RETRACTED
+    ]
+    assert reconciliation.preserved == []
+    assert paths(reconciliation) == ["zensical.toml"]

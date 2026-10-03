@@ -682,11 +682,14 @@ class Reconciliation:
                     resolutions=self.resolutions,
                     complete=True,
                 )
-            self._report(
-                result.conflicts, result.resolved, result.proposals, result.preserved
-            )
-            owned = result.baseline if isinstance(result.baseline, dict) else {}
-            if result.conflicts or owned:
+            # Retracting leaves no unchanged update to preserve and proposes nothing.
+            self._report(result.conflicts, result.resolved)
+            # A conflict keeps what it holds owned, so the two tests agree.
+            rest = result.baseline
+            owned: dict[str, Value] = {}
+            if isinstance(rest, dict):  # pragma: no mutate
+                owned = rest
+            if result.conflicts or owned:  # pragma: no mutate
                 self.candidate_state = self.candidate_state.with_file(
                     FileState(record.path, record.policy, encode(owned))
                 )
@@ -792,7 +795,7 @@ class Reconciliation:
         workflow = generate_ci_workflow(
             CIWorkflowSpec(
                 supported_os=TargetOS.from_iterable(
-                    self.manifest.metadata.get("supported_os", ["Linux"])
+                    self.manifest.metadata.get("supported_os")
                 ),
                 min_python=resolve_python_version(self.manifest.metadata),
                 ci_flags=self.manifest.tooling.ci_flags,
@@ -1829,9 +1832,7 @@ class Reconciliation:
                 reference = self.manifest.template_reference
                 # The identity check makes both set or both None; the second test
                 # narrows the type.
-                if (
-                    reference is not None and state.template is not None
-                ):  # pragma: no mutate
+                if reference and state.template:  # pragma: no mutate
                     reference = replace(reference, migrated=state.template.migrated)
                 self.candidate_state = replace(
                     state,
