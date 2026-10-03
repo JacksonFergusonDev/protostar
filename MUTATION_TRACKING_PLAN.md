@@ -9,7 +9,7 @@ Widen mutation testing to the rest of the engine, then run it on a schedule, rec
 | Phase | Work | Status |
 |---|---|---|
 | 1 | One module list for mutation testing | Finished (#413) |
-| 2 | Expand coverage to the target set | In progress (reconciliation first) |
+| 2 | Expand coverage to the target set | Finished (#415, #417, #418, #425, #428) |
 | 3 | Record scores on `gh-pages` on a schedule | Planned |
 | 4 | Dashboard graph and README badge | Planned |
 | 5 | Score on jacksonferguson.me | Planned |
@@ -18,7 +18,7 @@ Widen mutation testing to the rest of the engine, then run it on a schedule, rec
 ## Settled Decisions
 
 - **Expand coverage before tracking starts.** The public score (badge and website) begins with the expanded set, so it opens near its long-run value instead of dropping each time a module joins. The expanded set's cost also decides the schedule and how runners are split, so Phase 3 is designed after Phase 2 is measured.
-- **The target set is fixed.** Phase 2 ends when the modules listed under it are mutated and have had a survivor pass. Anything else is Phase 6 and does not hold up tracking.
+- **The target set is fixed.** Phase 2 ended when its seven modules (listed under "Finished") were mutated and had a survivor pass. Anything else is Phase 6 and does not hold up tracking.
 - **Engine logic only, never the whole codebase.** Leave out `cli/` and `cli/tui/` (their mutants mostly change labels, styles, and layout, and snapshot tests catch them slowly or not at all), `_secret_rules.py` (generated), `errors.py` (mostly message text), and modules whose behavior the suite reaches only through mocked boundaries, such as `system.py` and `network.py` (their mutants survive whatever the tests do).
 - **Scheduled, gated by change.** No run on every commit. A scheduled run first checks whether the mutated modules, `tests/`, or `pyproject.toml` changed since the last recorded commit, and stops if not. Quiet periods cost nothing, and a busy period gets one point per scheduled run. The manual trigger stays for development.
 - **Only complete runs publish.** A run publishes a score only if every module in the set succeeded. Manual runs on a subset never publish.
@@ -26,27 +26,6 @@ Widen mutation testing to the rest of the engine, then run it on a schedule, rec
 - **Our own JSON, not github-action-benchmark.** That action writes a JS file built for speed regressions. Mutation results go in their own files under `benchmarks/` on `gh-pages`: a history file for the graph and a small latest-score file in shields.io's endpoint format, which the badge and the website both read.
 - **The website reads the score when it builds.** jacksonferguson.me (Astro, `~/Developer/JacksonFergusonDev.github.io`) already fetches remote files at build time through `config/remote-assets.json`, and its `deploy.yml` already rebuilds on `repository_dispatch` of type `remote-assets-updated`, plus weekly. Protostar sends that dispatch after the Pages deploy finishes, not just after the `gh-pages` push, so the site never fetches a stale file.
 - **Say what the score covers.** It covers the mutated modules, not the whole codebase. The dashboard says which modules, and the badge label doesn't imply full coverage.
-
-## Phase 2: Expand coverage to the target set
-
-Add each module (or a small group) in its own PR:
-
-1. Add it to `source_paths`.
-1. Run it through the manual workflow, and note its survivors in the PR.
-1. Kill the survivors worth killing, following #407–#409: strengthen tests, and mark only mutants that cannot change behavior with `# pragma: no mutate` and a reason on the line above.
-1. Run the workflow again on the finished tests, and report the runtime of both runs. The second one is what Phase 3 plans with: a surviving mutant runs every test that reaches its function, while a killed one stops at its first failure, so a first run can take ten times longer (`appends` took 76 minutes before its survivor pass and 7 after, #415).
-
-Before the survivor pass, check for two things that hide mutants:
-
-- **State built before a test runs.** mutmut forks each mutant from a process that has already imported the tests and run the module once, so an `lru_cache` in the module (like `sync_state`'s decoders) or an object built at import in a test file means the mutated code never runs. Clear caches in an autouse fixture (#409) and build test objects in fixtures (#415).
-- **Local runs on macOS.** Forked workers there crash on mutants in widely reached functions, which then count as suspicious instead of surviving. Trust the workflow's counts.
-
-The target set, roughly in order of value:
-
-- `reconciliation.py`: the most important module not yet covered and by far the largest. Measure it first. It did not fit in one runner (a run passed four hours without finishing), so it is split by function across six runners through `[tool.mutmut-shards]` in `pyproject.toml`; the workflow runs one runner per shard and `mutation_report.py combine` adds each module's shards back together. Shards must cover every function once, and `tests/test_mutation_workflow.py` checks that. A run of one shard takes `reconciliation:<shard>` in the workflow's modules input. Its survivor pass took the score from 84.0% (438 survivors) to 99.9% (2 left, both equivalent: the spec lookup in `_release_undeclared_documents` for a YAML document), and the runtime with it: the six shards ran in 2h30m (longest shard) and 8h40m of runner time before the pass, and 36 minutes and 1h55m after it. Plan Phase 3 with the second pair, and expect the same drop for the modules after it.
-- `manifest.py`, `sync_state.py`, `appends.py`, `toml_lines.py`, `dependencies.py`, `documents/pyproject_layout.py`.
-
-Already covered: `fs_transaction`, `journal`, `jsonc_ast`, `merge`, `text_merge`, `toml_ast`, `yaml_ast`.
 
 ## Phase 3: Record scores on `gh-pages` on a schedule
 
@@ -69,8 +48,28 @@ The first PR is in the site's repo; the second is in Protostar.
 
 ## Phase 6: Further coverage (ongoing)
 
-After tracking starts, add more engine modules the same way as Phase 2, one or a few at a time, each with its survivor pass. Candidates include `executor.py`, `workspace.py`, `migrations.py`, `options.py`, `secret_guard.py`, and `recipe.py`. The graph marks each change of scope.
+After tracking starts, add more engine modules the same way as Phase 2, one or a few at a time: add the module to `source_paths`, run it through the manual workflow, kill the survivors worth killing (strengthen tests, and mark only mutants that cannot change behavior with `# pragma: no mutate` and a reason on the line above), and run it again on the finished tests.
+
+Before the survivor pass, check for two things that hide mutants:
+
+- **State built before a test runs.** mutmut forks each mutant from a process that has already imported the tests and run the module once, so an `lru_cache` in the module or an object built at import in a test file means the mutated code never runs. Clear caches in an autouse fixture (#409) and build test objects in fixtures (#415).
+- **Local runs on macOS.** Forked workers there crash on mutants in widely reached functions, which then count as suspicious instead of surviving. Trust the workflow's counts.
+
+A module too large for one runner is split by function through `[tool.mutmut-shards]` in `pyproject.toml`, as `reconciliation` is.
+
+Candidates include `executor.py`, `workspace.py`, `migrations.py`, `options.py`, `secret_guard.py`, and `recipe.py`. The graph marks each change of scope.
 
 ## Finished
 
 - Phase 1 (#413): The workflow derives its module list and `all` selection from `[tool.mutmut].source_paths`, including nested modules. `just mutate <module>` continues to work.
+- Phase 2 (#415, #417, #418, #425, #428): `appends`, `toml_lines`, `dependencies`, `sync_state`, `manifest`, `documents/pyproject_layout`, and `reconciliation` joined `source_paths`, and every survivor was killed or marked as equivalent. `reconciliation` runs as six shards. Each module's first run took far longer than its run on the finished tests, because a surviving mutant runs every test that reaches its function while a killed one stops at its first failure. Plan Phase 3 with the runs on the finished tests:
+
+  | Module | First run | Finished tests |
+  |---|---|---|
+  | `appends` | 76m | 7m |
+  | `toml_lines` | 8m | 10m |
+  | `dependencies` | 58m | 7m |
+  | `sync_state` | 2h55m | 8m |
+  | `documents/pyproject_layout` | 37m | 28m |
+  | `manifest` | 3h38m | 11m |
+  | `reconciliation` (6 shards) | 2h30m wall, 8h40m runner | 36m wall, 1h55m runner |

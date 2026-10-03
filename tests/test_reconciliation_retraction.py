@@ -117,6 +117,30 @@ def test_a_yaml_document_without_a_spec_is_retracted_under_a_generic_one(workspa
     assert paths(reconciliation) == []
 
 
+def test_a_yaml_document_is_retracted_under_its_own_spec(workspace):
+    # pre-commit's spec matches repos by identity, so reordering them is no
+    # edit; a generic spec would read the reordered list as one edited value.
+    write(
+        ".pre-commit-config.yaml",
+        "repos:\n"
+        "- repo: y\n  rev: '1'\n  hooks:\n  - id: k\n"
+        "- repo: x\n  rev: '1'\n  hooks:\n  - id: h\n",
+    )
+    owned = {
+        "repos": [
+            {"repo": "x", "rev": "1", "hooks": [{"id": "h"}]},
+            {"repo": "y", "rev": "1", "hooks": [{"id": "k"}]},
+        ]
+    }
+    reconciliation = build(workspace, yaml_record(".pre-commit-config.yaml", owned))
+
+    reconciliation._release_undeclared_documents()
+
+    assert workspace.removed == {".pre-commit-config.yaml"}
+    assert reconciliation.diagnostics == []
+    assert paths(reconciliation) == []
+
+
 def test_a_retained_yaml_path_is_retracted_when_the_document_goes(
     workspace, monkeypatch
 ):
