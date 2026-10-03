@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791044569759,
+  "lastUpdate": 1791045866063,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21255,6 +21255,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1277.58,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "868c673f2f75b10982c75a3287268dd0f0b35bc0",
+          "message": "fix(interpolation): escape a value only inside a quoted string (#426)\n\nReconciliation rendered every module's content with TOML escaping, so a\nproject or author name holding a quote or backslash came out as \\\" in\nMarkdown files and licenses. Producers now render their own content while\nplanning and quote a value only where it sits inside a string;\nreconciliation renders only paths.",
+          "timestamp": "2026-10-03T09:41:04-07:00",
+          "tree_id": "ea0c130a143fd96eb822e5a86e911850ee3baba2",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/868c673f2f75b10982c75a3287268dd0f0b35bc0"
+        },
+        "date": 1791045864588,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 181.83,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1321.49,
             "unit": "ms"
           }
         ]
