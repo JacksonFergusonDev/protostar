@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791045866063,
+  "lastUpdate": 1791048567526,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21289,6 +21289,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1321.49,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7851386621f4d6ef780eedeb42f21d99712ed6cd",
+          "message": "ci: fill pull requests with platform coverage by sharing runners (#429)\n\nQuick checks share two runners and smoke jobs scaffold several templates\nin turn, so a pull request runs the full test matrix and smoke-tests every\ntemplate on every OS within 20 jobs, three on macOS. Nightly runs only the\nsmoke tests pull requests leave out, plus the suite with retries, and a\nrelease now requires CI and Nightly to have passed.",
+          "timestamp": "2026-10-03T10:25:15-07:00",
+          "tree_id": "4d4e27503d50567ca032b44279b8f1d72ef0e03d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/7851386621f4d6ef780eedeb42f21d99712ed6cd"
+        },
+        "date": 1791048566169,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 127.12,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 864.65,
             "unit": "ms"
           }
         ]
