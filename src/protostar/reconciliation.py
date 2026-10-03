@@ -591,7 +591,7 @@ class Reconciliation:
             if not self.workspace.exists(target):
                 self.candidate_state = self.candidate_state.without_file(record.path)
                 continue
-            local = self.workspace.read_bytes(target).decode("utf-8", "replace")
+            local = self.workspace.read_bytes(target).decode(errors="replace")
             conflict = MergeConflict(
                 MergeLocation(record.path),
                 ConflictReason.RETRACTED,
@@ -740,7 +740,7 @@ class Reconciliation:
                     ConflictReason.RETRACTED,
                     ConflictSides(
                         record.baseline or MISSING,
-                        local.decode("utf-8", "replace"),
+                        local.decode(errors="replace"),
                         MISSING,
                         line=0,
                     ),
