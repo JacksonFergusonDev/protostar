@@ -930,12 +930,6 @@ class EnvironmentManifest:
             "PACKAGE_NAME": resolve_package_name(self.metadata),
         }
 
-    def should_skip_file(self, target: Path) -> bool:
-        """Returns True if the file exists and collision strategy is not OVERWRITE."""
-        return (
-            target.exists() and self.collision_strategy != CollisionStrategy.OVERWRITE
-        )
-
     def to_dict(self) -> dict[str, Any]:
         """Serializes the full environment manifest to a JSON-safe dictionary.
 

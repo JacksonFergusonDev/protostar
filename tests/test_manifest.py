@@ -262,24 +262,6 @@ def test_add_pre_commit_hook_type(manifest):
     assert "pre-push" in manifest.tooling.pre_commit_install_hook_types
 
 
-def test_should_skip_file_pure(tmp_path):
-    """Test that should_skip_file is a pure boolean check based on existence and collision strategy."""
-
-    manifest = EnvironmentManifest()
-    existing_file = tmp_path / "exists.txt"
-    existing_file.touch()
-    non_existing_file = tmp_path / "missing.txt"
-
-    # Default collision strategy is MERGE: existing file returns True, missing returns False
-    assert manifest.should_skip_file(existing_file) is True
-    assert manifest.should_skip_file(non_existing_file) is False
-
-    # OVERWRITE collision strategy: existing file returns False
-    manifest.collision_strategy = CollisionStrategy.OVERWRITE
-    assert manifest.should_skip_file(existing_file) is False
-    assert manifest.should_skip_file(non_existing_file) is False
-
-
 def test_add_ide_extension_aggregates_uniquely():
     manifest = EnvironmentManifest()
     manifest.tooling.add_ide_extension("charliermarsh.ruff")
@@ -1443,15 +1425,6 @@ def test_planned_files_add_the_reconciliation_state_unless_one_shot() -> None:
     assert (
         Path("protostar.lock") not in EnvironmentManifest(one_shot=True).planned_files()
     )
-
-
-def test_a_file_is_skipped_unless_the_run_overwrites_it(tmp_path: Path) -> None:
-    existing = tmp_path / "a.txt"
-    existing.write_text("x", encoding="utf-8")
-    manifest = EnvironmentManifest(collision_strategy=None)
-
-    assert manifest.should_skip_file(existing) is True
-    assert manifest.should_skip_file(tmp_path / "missing.txt") is False
 
 
 def test_the_manifest_serializes_its_state_for_machines() -> None:
