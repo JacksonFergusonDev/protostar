@@ -390,3 +390,22 @@ def test_a_released_seed_is_checked_against_the_explicit_root_not_the_callers_di
     reconciliation._release_undeclared_seeds()
 
     assert workspace.removed == {"a.txt"}
+
+
+@pytest.mark.parametrize(
+    "declare",
+    [
+        lambda d: d.add("requests>=2"),
+        lambda d: d.add_dev("pytest>=8"),
+        lambda d: d.add_docs("zensical>=1"),
+        lambda d: d.add_include(DependencyGroup.DEV, DependencyGroup.DOCS),
+    ],
+)
+def test_any_dependency_declaration_checks_the_project_file_for_syntax_errors(
+    reconciliation, declare
+):
+    Path("pyproject.toml").write_text("[broken", encoding="utf-8")
+    declare(reconciliation.manifest.dependencies)
+
+    with pytest.raises(ConfigurationError, match="Syntax error in existing workspace"):
+        reconciliation._validate_targets()
