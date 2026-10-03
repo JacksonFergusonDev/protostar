@@ -38,7 +38,7 @@ Every proposed built-in must answer yes to all three questions:
 
 The default answer to a new-template proposal is therefore "publish it as a `--from` template". The bar is high on purpose:
 
-- **Built-ins are trusted implicitly.** They skip the [remote trust dialog](../usage/templates.md#security-model-the-remote-trust-dialog), so every task a built-in declares runs without confirmation.
+- **Built-ins are trusted implicitly.** They skip the [remote trust dialog](../usage/templates.md#trusting-a-template), so every task a built-in declares runs without confirmation.
 - **Built-ins are maintained forever.** Each one adds a snapshot, a scaffold in the CI smoke matrix, and continuous integration time.
 - **Built-ins set expectations.** Users infer what "the Protostar way" means from what ships.
 

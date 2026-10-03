@@ -155,7 +155,7 @@ def generate_template_schema_fixture() -> None:
         if f.name == "tooling_overrides":
             doc.add(
                 tomlkit.comment(
-                    "Dynamic precedence: CLI Flags > Template Opinions > Global UserConfig"
+                    "A project's own choices win over the tier, the tier over these, and these over the user's defaults."
                 )
             )
             # A tool the tiers set is set there, never also at the root.

@@ -65,10 +65,21 @@ After ejection, `status`, `diff`, and `sync` are unavailable for that project.
 
 ## Tool selections
 
-`[tool.protostar.tools]` records explicit diversions. A tool you omit follows the current same-source template opinion, then the fallback captured on enrollment.
+`[tool.protostar.tools]` records the tools you turned on or off yourself.
 
-- `true` requests a tool.
-- `false` opts out of its contributions and warnings.
+- `true` turns a tool on.
+- `false` turns it off, and removes what it added.
+
+### Which choice wins
+
+Each tool is decided by the first of these that says anything about it:
+
+1. **The project's own choice:** an entry in `[tool.protostar.tools]`. A `--<tool>` or `--no-<tool>` flag on `init` writes one, and so does switching a tool in the recipe editor away from the template's choice.
+1. **The template's tier:** the tool's flag in `[tiers.<tier>]`, for the tier the project follows.
+1. **The template:** the tool's flag at the template's root.
+1. **Your defaults when the project was set up:** your [global configuration](configuration.md)'s tool settings, recorded in the recipe's `fallback` at `init`. Changing your configuration later never changes an existing project.
+
+So a template's later release can change a tool the project never chose, and an entry in `[tool.protostar.tools]` stays fixed until you edit it. `sync --tier` changes which tier the template's opinions come from, and never removes your own entries.
 
 An opt-out affects that module only: an independent template or another module can still contribute to the same file or dependency group. Disabling a tool also retracts what it contributed. Unedited files, dependencies, configuration tables, and regions are removed, and edited ones become `retracted` conflicts.
 
@@ -127,7 +138,7 @@ A `--var` that names no variable of the template is an error, and so is a mistyp
 
 Without a terminal, including under `--json`, a missing value stops `init` before anything is written. The `MissingTemplateVariablesError` names every missing variable at once (`error.missing_variables` in JSON).
 
-`sync` never prompts. When a template gains a variable, add its value under `[tool.protostar.variables]` or rerun `init` with `--var`.
+When a template gains a variable, `sync` asks for its value in a terminal, and otherwise takes `--var NAME=VALUE`; without either, it stops before writing anything. You can also add the value under `[tool.protostar.variables]` yourself.
 
 ### Variables are not secrets
 

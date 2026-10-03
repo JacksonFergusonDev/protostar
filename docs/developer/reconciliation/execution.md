@@ -98,7 +98,7 @@ Immediately before applying a batch, execution checks the desired manifest and a
 
 `init --force-merge` is safe reinitialization, not an update product. It requires the same selected template identity for a tracked project and reconciles only recorded contributions. It does not:
 
-- Adopt pre-existing files.
+- Adopt pre-existing files on its own. Only a `local` resolution of an `unowned` conflict adopts one.
 - Restore user-deleted content.
 - Switch templates.
 - Reconstruct or rerun a request from the lock state.

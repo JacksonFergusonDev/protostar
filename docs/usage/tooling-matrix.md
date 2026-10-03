@@ -7,7 +7,7 @@ description: "Every tool Protostar can set up, the flag that turns it on, and th
 Protostar provides a modular matrix of tooling modules and built-in templates. Tooling modules inject static analysis, testing frameworks, and continuous integration workflows, safely deep-merging configurations into existing project files like `pyproject.toml`.
 
 !!! note "Design Decision: Configuration Portability"
-    Even when using `--prek`, Protostar generates a `.pre-commit-config.yaml` file instead of `prek.toml`. Because `prek` fully supports the standard YAML configuration, this strategy ensures maximum ecosystem compatibility. Your repository remains decoupled from the specific hook engine, meaning CI/CD pipelines, IDE plugins (like Dependabot/Renovate), and collaborators using legacy `pre-commit` will still be able to run and update your hooks flawlessly.
+    Even when using `--prek`, Protostar generates a `.pre-commit-config.yaml` file instead of `prek.toml`. Because `prek` fully supports the standard YAML configuration, this strategy ensures maximum ecosystem compatibility. The project isn't tied to one hook runner: collaborators who use `pre-commit`, editor integrations, and Renovate's hook updates all read the same file.
 
 !!! tip "Design Decision: Markdown Tooling Architecture"
     Protostar adopts `rumdl` as the default markdown linter and formatter in every built-in template's production tier. Because `rumdl` is a fast Rust binary, it installs cleanly as a dev dependency via `uv` (tracked in `uv.lock`) and keeps all configuration consolidated inside `pyproject.toml` (`[tool.rumdl]`). This avoids external Node.js/npx runtime requirements and prevents configuration file sprawl. For projects requiring legacy MarkdownLint tooling, `--markdownlint` remains available as an optional module.
@@ -61,7 +61,7 @@ GitHub reads a contributing guide, code of conduct, security policy, or pull req
 
 ## Built-in Templates
 
-Built-in templates are project shapes that build on a base language footprint. They inject structural scaffolding, directories, and domain-specific dependencies into the environment manifest, and they add only the tooling configuration that defines their shape on top of each tool's casual-user defaults.
+Built-in templates are project shapes: a command-line app, a library, a web service, an analysis workbench. Each brings its directories, starter files, and dependencies, and adds only the tool settings that define its shape on top of each tool's defaults.
 
 !!! tip "Dynamic Resolution"
     Templates do not hardcode package versions. They pass the library requirements directly to the package manager (`uv`), allowing your environment to resolve the latest compatible machine learning, astrophysics, or API packages at runtime.

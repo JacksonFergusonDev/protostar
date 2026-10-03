@@ -68,10 +68,7 @@ Container scaffolding follows the same rules. A template can opt in with `docker
 protostar init -t api --no-docker
 ```
 
-!!! tip "Precedence Cascade (Highest to Lowest)"
-    1. __CLI Flags__ – Explicit terminal arguments (e.g., `--mypy`).
-    1. __Template Blueprint__ – Settings declared in your active template.
-    1. __Global UserConfig__ – Your fallback defaults in `~/.config/protostar/config.toml`.
+A flag wins over the template, and the template wins over your global configuration. The full order, including the template's tiers and what the project records, is in [which choice wins](project-recipes.md#which-choice-wins).
 
 ## External & Remote Templates (`--from`)
 
@@ -152,46 +149,27 @@ source = "https://github.com/YourOrg/standards/tree/v2.0.0/backend"
 
 Built-in templates follow the installed Protostar version, and local templates follow their files, so neither has revisions for `--to` to move between.
 
-## The Global Alias Registry
+## Template Aliases
 
-Instead of memorizing long URLs or local paths, you can register templates in your global configuration file (`~/.config/protostar/config.toml`). Protostar supports both shorthand string aliases and rich configuration tables:
+An alias gives a template a short name in your [global configuration](configuration.md#global-template-aliases-templates), so you never retype its URL or path:
 
 ```toml
-# Run `protostar config --edit` to edit this file
-
-# Shorthand string aliases:
 [templates]
-simple-api = "https://raw.githubusercontent.com/YourOrg/standards/main/backend.toml"
 local-ds = "~/Developer/templates/data-science.toml"
 
-# Rich configuration tables with explicit metadata and trust:
-[templates.enterprise-api]
-name = "Enterprise API"
-source = "https://github.com/YourOrg/enterprise-template"
-description = "Internal enterprise microservice scaffold with auth & tracing"
+[templates.backend]
+source = "https://github.com/YourOrg/standards"
+description = "The team's FastAPI service"
 trusted = true
 ```
 
-### Table Metadata Fields
-
-When declaring a template via `[templates.<alias>]`, you can specify:
-
-- __`source`__ *(required)*: The remote URL (`https://`, `git@`) or local filesystem path (`~/...`).
-- __`name`__ *(optional)*: A human-readable display name for the template.
-- __`description`__ *(optional)*: A short explanation of the stack, displayed in `protostar init --list-templates`, shell auto-completion, and the interactive template picker.
-- __`trusted`__ *(optional, default: `false`)*: Set to `true` to explicitly trust this template and bypass the interactive remote execution warning dialog.
-
-Alias names are case-insensitive and must be unique: an alias may not reuse a built-in template name (`api`, `astro`, `cli`, `lib`, `ml`), and two aliases may not differ only by letter case. Protostar rejects either collision when it loads your configuration, because the alias would otherwise resolve to a different template depending on how it was looked up.
-
-Once registered, you can reference them directly by alias with `--template` (or `-t`):
+Use it wherever a built-in name goes:
 
 ```bash
-protostar init --template enterprise-api
-# Or using shorthand:
-protostar init -t enterprise-api
+protostar init --template backend
 ```
 
-In the interactive template picker, your aliases are automatically discovered and displayed under a dedicated __External Aliases__ category with their custom descriptions. You can also run `protostar init --list-templates` to view all configured aliases alongside built-in templates.
+The recipe editor's template picker lists your aliases after the built-in templates, each with its description, and `protostar init --list-templates` lists them too, with whether each is trusted. An alias is also the only way to trust a template permanently; see [the trust model](#trusting-a-template). [Global Configuration](configuration.md#global-template-aliases-templates) lists every field an alias takes.
 
 ## Supplying Template Parameters
 
@@ -236,56 +214,37 @@ Standard project variables—such as the human-readable project name, PEP 8 sani
 !!! tip "Defining Template Variables"
     If you are authoring your own template and want to embed `<% VARIABLE_NAME %>` placeholders or inspect all built-in late-binding variables, see the [Authoring Custom Templates: Variable Interpolation](authoring-templates.md#level-3-variable-interpolation) guide.
 
-## Security Model: The Remote Trust Dialog
+## Trusting a Template
 
-A template you haven't marked trusted can't run anything without your confirmation. That covers more than its own `system_tasks` and `post_install_tasks`. Protostar's own commands run in the files the template writes, and those files can make them run its code: `uv add` builds the project through its build backend and any build hooks the template configured, and `direnv allow` authorizes the `.envrc` it ships. So the gate lists every command the run executes: setup commands such as `git init` and `uv init`, each dependency install, and the commands that run after install.
+This is the one place the trust rules are written down; other pages link here.
 
-```mermaid
-flowchart TD
-    classDef terminal fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
-    classDef process fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
-    classDef security fill:#7f1d1d,stroke:#f87171,stroke-width:2px,color:#fff;
-    classDef decision fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
+A template you haven't trusted runs no command until you confirm it. That covers more than its own `system_tasks` and `post_install_tasks`. Protostar's own commands run in the files the template writes, and those files can make them run its code: `uv add` builds the project through the build backend and any build hooks the template configured, and `direnv allow` authorizes the `.envrc` it ships. So the confirmation lists every command the run executes: setup commands such as `git init` and `uv init`, each dependency install, and the commands after install.
 
-    Start([Template Requested]):::terminal --> ResolveTarget{Target Source}:::decision
+### Which templates are trusted
 
-    ResolveTarget -- Built-in Template --> ParseBuiltin[Parse Local TOML]:::process
-    ResolveTarget -- Global Alias --> FetchAlias[Resolve Alias Config]:::process
-    ResolveTarget -- Remote URL / Archive --> FetchRemote[Fetch External Target]:::process
+- __Built-in templates__ are trusted, because they ship inside Protostar.
+- __An alias with `trusted = true`__ in your [global configuration](configuration.md#global-template-aliases-templates) trusts the template it names, wherever you use it: the same local `protostar.toml`, or the same repository and path, even through `--from`.
+- __Everything else__ is untrusted: a `--from` path or URL, and an alias without `trusted = true`.
 
-    FetchAlias --> ParseRemote[Parse TOML Blueprint]:::process
-    FetchRemote --> ParseRemote
+A project's recipe and `protostar.lock` never grant trust, so cloning a project never trusts its template for you.
 
-    ParseBuiltin --> HasTasks
-    ParseRemote --> HasTasks{Run Executes\nAny Command?}:::decision
+### What happens with an untrusted template
 
-    HasTasks -- No --> Execute([Proceed to Execution]):::terminal
-    HasTasks -- Yes --> TrustCheck{Trust Boundary Eval}:::decision
+| Command | In a terminal | Without a terminal, or with `--json` |
+| :--- | :--- | :--- |
+| `init` | The change review lists the commands under __Untrusted template__, and __Apply__ stays off until you tick the box confirming them (`t`). | Stops with `SecurityViolationError` (exit code `77`) before writing anything. |
+| `sync` | After you settle any conflicts, a confirmation screen lists the commands `uv add`, `uv lock`, or a hook install the update needs. | Stops with exit code `77` before writing anything. |
+| `status`, `diff`, `--dry-run`, `sync --check` | Never ask: they never run a command. | The same. |
 
-    TrustCheck -- "Built-in OR trusted = true" --> Execute
-    TrustCheck -- "Untrusted External Source" --> Dialog[Remote Trust Intercept]:::security
+Only the commands you confirmed run. `--trust` runs them without asking, for that one run, and still lists them; it is never saved. To trust a template every time, give it an alias with `trusted = true`. Almost every `init` runs a command, so an untrusted template almost always asks.
 
-    Dialog -- You Accept --> Execute
-    Dialog -- You Reject OR Headless CI --> Abort([Execution Aborted]):::security
-```
-
-### Sandboxing & Security Prompts
-
-While Protostar enforces filesystem path jailing (preventing templates from writing outside your workspace) and binary safelisting (disallowing direct calls to shells like `/bin/sh`), developer tools like `uv run`, `git`, and `npm` can still execute scripts provided within the repository.
-
-To address this, Protostar asks for confirmation before running any command for a template it doesn't trust:
-
-1. __Built-in Templates:__ Trusted implicitly (shipped within the validated Protostar package).
-1. __Explicitly Trusted Aliases:__ Trusted when configured with `trusted = true` under `[templates.<alias>]` in your global `config.toml`.
-1. __Untrusted External Templates (`--from` or untrusted aliases):__ If the run executes any command, nothing is written and nothing runs until you confirm. The change review lists every command under __Untrusted template__, and __Apply__ stays disabled until you tick the checkbox confirming them (`t`). Only the commands you confirmed run. `--trust` runs them without asking, for that run only, and lists them as it does.
-
-Almost every `init` runs a command, so in practice an untrusted template always asks. In non-interactive environments (e.g., CI/CD or `--json` mode), it aborts immediately with `SecurityViolationError` (exit code `77`) instead of hanging. To run it headlessly, pass `--trust` for one run, or configure it as an alias with `trusted = true` in your global configuration to trust it every time.
-
-`protostar sync` never runs a template's tasks, but an update can still need commands: `uv add` or `uv lock` when its dependencies change, and a hook install when the hooks do. For a template you haven't trusted, `sync` confirms them the same way. In a terminal it lists them on a confirmation screen after you settle any conflicts, with these keys:
+The confirmation screen `sync` shows takes these keys:
 
 --8<-- "keys_trust.md"
 
-Without a terminal, it stops with exit code `77` before writing anything, unless you pass `--trust`. `status`, `diff`, `sync --dry-run`, and `sync --check` never run a command, so they never ask. A template counts as trusted when it's built in, or when an alias with `trusted = true` names the same template: the same local `protostar.toml`, or the same repository and path. The project's recipe and lock never grant trust.
+### What else protects you
+
+Whether or not a template is trusted, Protostar writes nothing outside the project directory or into `.git/`, and runs only these programs: `uv`, `git`, `npm`, `yarn`, `pnpm`, `pre-commit`, `prek`, `direnv`, and `just`. A template can't call a shell such as `/bin/sh` directly. Those programs can still run code the template ships, which is why trust exists.
 
 ## Ready to Author Your Own Templates?
 
