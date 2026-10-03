@@ -4,9 +4,7 @@ description: "How Protostar's tests stay isolated from your machine, and the rul
 
 # Testing Architecture & Philosophy
 
-Protostar enforces a strict separation between state definition (the `EnvironmentManifest`) and state execution (the `SystemExecutor`). This decoupling allows the test suite to validate complex environment configurations rapidly without incurring the I/O penalty of actual disk writes or network requests.
-
-As a contributor, you must adhere to our strict isolation boundaries. Tests that leak state to the host filesystem or execute unmocked system binaries outside of explicit integration markers will fail in CI.
+Planning is pure and execution is the only phase that touches the disk, so most of Protostar can be tested without writing a file outside a sandbox or running a real command. This page covers the rules a test follows, the fixtures that help, the checks that guard Protostar's own boundaries, and how CI runs it all.
 
 ## Core Principles
 
@@ -30,15 +28,44 @@ Unless a test is marked `integration`, it runs no real command. Mock at the boun
 
 This executes a real plan in a sandboxed workspace, with `ProcessRunner.run` mocked, and checks that a missing `direnv` skips only the step that runs it.
 
-## Test Categories
+### 3. Integration Tests Are Few and Isolated
 
-The test suite is unified and runs rapidly (~30 seconds) across all platforms.
+A test marked `@pytest.mark.integration` may run real `uv`, `git`, and hook commands, to check what mocks can't: that a scaffold actually installs, or that a hook really runs. Keep them few, and isolate them with the `real_tool_env` fixture, which gives the process a `HOME` and configuration under `tmp_path`. Its one deliberate write outside `tmp_path` is uv's shared package cache, so repeated runs don't download everything again. They may use the network.
+
+Integration tests stay in the full suite, in pre-push and CI. Leaving them out isn't a useful shortcut: there are few of them.
+
+## Fixtures Worth Knowing
+
+`tests/conftest.py` holds the fixtures most tests need:
+
+| Fixture | What it does |
+| :--- | :--- |
+| `missing_executables` | Every test sees each program on `PATH`; add one to this set to simulate it missing. Automatic. |
+| `isolate_git_repository` | Drops git's repository variables, so a test run from a git hook can't touch this repository. Automatic. |
+| `progress` | A progress hook that records each execution step's start and outcome, for testing what the engine reports. |
+| `real_tool_env` | An isolated environment for an integration test's real processes. |
+| `run_cli` | Runs the CLI as a real process in `tmp_path`, with `real_tool_env`, and returns its exit code and output. For integration tests. |
+| `seed_global_config` | Writes a global configuration file under the sandboxed home, for integration tests. |
+| `forge` | Routes every template download and ref listing to an in-memory repository host, for testing repository templates without the network. |
+| `snap_compare` | Takes a TUI snapshot, and checks the screen's spacing with `check_layout`. |
+
+## Tests That Guard a Boundary
+
+Some tests exist to keep a rule from AGENTS.md true:
+
+- **`tests/test_headless_boundary.py`** fails if importing any module outside `protostar.cli` loads `rich` or `textual`.
+- **`tests/test_cli_startup.py`** checks in fresh interpreters that `--help` and `--version` import no project analysis, execution, or format engine.
+- **`tests/test_legacy_encoding.py`** renders output to a strict cp1252 stream, as Windows does for redirected output. Test new output there; macOS and Linux never hit it.
+- **`tests/test_tui_theme.py`** fails when TUI code names a color outside the theme.
+- **TUI snapshots** compare each screen's rendering, and `check_layout` measures its spacing against the layout rule, so every new screen needs a snapshot. Drive TUI tests with `pilot.press`, and use `pilot.click` only in tests about the mouse.
+
+## Test Categories
 
 ### Core Test Suite (`tests/test_*.py`)
 
-The test suite validates AST TOML and JSONC merging algorithms, manifest deduplication logic, parser routing, generator string formatting, and transactional execution lifecycles in `tmp_path` sandboxes.
+The suite runs in parallel with `just test` (`pytest -n auto --dist worksteal`). It covers the format engines, the reconciliation kernel, planning, the CLI and TUI, and transactional execution in `tmp_path` sandboxes.
 
-Repeatability and semantic-reconciliation acceptance live in `tests/test_template_repeatability.py` and the focused reconciliation suites (see the [acceptance suite](reconciliation/execution.md#acceptance-suite)): a tracked workspace is re-run with the same template, not a different template. Template switching is intentionally rejected rather than treated as a generic deep merge.
+Repeatability and reconciliation acceptance live in `tests/test_template_repeatability.py` and the focused reconciliation suites (see the [acceptance suite](reconciliation/execution.md#acceptance-suite)): a tracked project is run again with the same template, never a different one, since switching templates is rejected.
 
 ### Template Hooks Smoke Matrix (CI)
 
@@ -72,7 +99,7 @@ This guarantees the crash reporter is invoked, allowing you to inspect the URL-e
 
 ## Running the Suite
 
-We utilize `just` to standardize test execution, abstracting the underlying `uv`, `ruff`, and `pytest` invocations. This is the recommended approach for local development to ensure parity with the GitHub Actions CI runners.
+The `justfile` holds the commands CI runs, so local runs match it.
 
 !!! tip "Self-Documenting Tooling"
     For the complete list of available development, formatting, and benchmarking commands, simply run `just` in the root of the repository.
@@ -94,8 +121,8 @@ Use `just sandbox-sync-conflict` to practice the interactive sync screen. The pr
 
 Pass Protostar arguments to run one command without entering a shell, such as `just sandbox-sync status`. Each recipe invocation creates a new sandbox, so use the interactive shell when testing a sequence of commands against one project.
 
-=== "Pre-Push CI Emulation"
-    Runs the exact pipeline executed by GitHub Actions, sequentially triggering `lint`, `typecheck`, and `test-cov`. Run this before opening a pull request.
+=== "Everything CI Runs"
+    Runs every check CI and the push hooks run, one after another: `lint`, `typecheck`, `test`, `docs`, `check-snapshots`, `check-doc-links`, `check-docs-drift`, `check-schemas`, and `secrets`. The pre-commit and pre-push hooks already run these, so reach for it only to debug a difference from CI.
     ```bash
     just ci
     ```
@@ -139,35 +166,21 @@ Pass Protostar arguments to run one command without entering a shell, such as `j
 
 ### TOML Merge Fixture Reference
 
-The test runner utilizes the following messy baseline configuration (injected dynamically from a dummy `pyproject.toml`) to validate AST deep-merging behavior:
+The TOML merge tests start from this deliberately messy `pyproject.toml`, `tests/fixtures/base_complex.toml`, with inline tables, comments inside arrays, and nested tables, to check that merging keeps all of it:
 
 ```toml
-[project]
-name = "protostar-test"
-version = "0.1.0"
-description = "A messy baseline TOML file"
-authors = [
-    { name = "Test User", email = "test@example.com" } # Inline table
-]
-requires-python = ">=3.11"
-dependencies = [
-    "requests>=2.31.0",
-    "numpy", # A random comment inside an array
-]
-
-[tool.ruff]
-line-length = 120 # Overly long default
-target-version = "py310"
-ignore = ["E501"]
-
-# We expect this comment to survive the merge
-[tool.ruff.lint]
-select = ["E", "F"]
-
-[[tool.mypy.overrides]]
-module = "tests.*"
-ignore_errors = true
+--8<-- "tests/fixtures/base_complex.toml"
 ```
+
+## Mutation Testing
+
+Mutation testing checks that the tests would notice a bug: [mutmut](https://github.com/boxed/mutmut) changes the code one small edit at a time, such as `<` to `<=`, and reports each edit the suite still passes. `[tool.mutmut]` in `pyproject.toml` lists the modules it covers.
+
+```bash
+just mutate journal
+```
+
+This runs one module (here `protostar.journal`) and writes what to fix to `mutants/survivors.md`: each surviving edit, as a diff. A full run takes hours, so it never runs on a commit; the manual **Mutation Testing** workflow (`mutation.yml`) runs chosen modules, or all of them, in parallel on CI.
 
 ## Performance & Latency Testing
 
@@ -203,16 +216,16 @@ node --test tests/benchmark_metrics.test.mjs
     just test-benchmark-slower
     ```
 
-## Related Developer Guides
-
-- **[Developer Overview & Contributing](./overview.md):** Setup instructions, coding standards, and PR workflows.
-- **[Extending Protostar](./extending-protostar.md):** Build new tooling modules to accompany your tests.
-- **[The Orchestrator](../mechanics/orchestrator.md):** Understand the headless core and execution lifecycle under test.
-
-## TUI source presentation
+## TUI Source Presentation
 
 All TUI code and structured configuration use `src/protostar/cli/tui/code.py`. Use `source_text(CodeSource(...))` for a source pane, `diff_text` for two sources, and `edit_text` for a prepared edit. These renderers share Protostar's palette; screens must not select independent syntax themes. Pass a Pygments language alias when the displayed serialization differs from the filename (for example, a TOML conflict value displayed as JSON). Unknown languages remain plain text. The Pygments adapter and token theme in `syntax.py` load on the first source render; keep that import lazy so opening the recipe editor loads no Pygments.
 
 Highlighting is presentation-only: it never reads project files, changes merge policy, or modifies prepared bytes. Source display normalizes CRLF and CR to LF, preserves indentation and literal markup-like text, and highlights complete sources before selecting diff hunks. Added and removed lines retain syntax colors; their markers and subtle backgrounds communicate the change.
 
 Run `uv run pytest tests/test_tui_code.py tests/test_conflict_tui.py tests/test_tui.py` when changing these renderers. Review the Textual snapshots as well as the text assertions, including the narrow conflict screen. Use `--snapshot-update` only when accepting an intentional visual change.
+
+## Related Developer Guides
+
+- **[Developer Overview & Contributing](./overview.md):** Setup instructions, coding standards, and PR workflows.
+- **[Extending Protostar](./extending-protostar.md):** Build new tooling modules to accompany your tests.
+- **[The Orchestrator](../mechanics/orchestrator.md):** Understand the headless core and execution lifecycle under test.
