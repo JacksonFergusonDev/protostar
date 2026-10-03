@@ -37,7 +37,7 @@ def reconciliation(workspace):
 def reconcile(reconciliation, path, policy, desired, local=None):
     if local is not None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        Path(path).write_text(local, encoding="utf-8")
+        Path(path).write_text(local, encoding="utf-8", newline="")
     located = reconciliation._locate(path, policy)
     return reconciliation._reconcile_document(located, desired, policy)
 
@@ -114,7 +114,9 @@ def test_a_change_into_a_file_it_owns_is_no_proposal(
 
 
 def lock(workspace, state):
-    Path("protostar.lock").write_text(serialize_state(state), encoding="utf-8")
+    Path("protostar.lock").write_text(
+        serialize_state(state), encoding="utf-8", newline=""
+    )
 
 
 def test_a_lock_from_a_newer_protostar_is_refused(reconciliation, workspace):
@@ -165,7 +167,7 @@ def test_a_workflow_for_a_project_without_supported_systems_targets_linux(
 def test_appending_ignores_logs_how_many_were_missing(
     reconciliation, workspace, caplog
 ):
-    Path(".gitignore").write_text("a/\n", encoding="utf-8")
+    Path(".gitignore").write_text("a/\n", encoding="utf-8", newline="")
     reconciliation.manifest.filesystem.vcs_ignores = {"a/", "b/", "c/"}
     caplog.set_level(logging.DEBUG, logger="protostar")
 

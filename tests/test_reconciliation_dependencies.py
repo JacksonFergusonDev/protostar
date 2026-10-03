@@ -176,7 +176,7 @@ def test_only_the_same_groups_record_makes_a_requirement_unchanged(reconciliatio
 def test_an_owned_group_the_project_removed_is_kept_out(
     reconciliation, workspace, group, pyproject, files
 ):
-    Path(TARGET).write_text(pyproject, encoding="utf-8")
+    Path(TARGET).write_text(pyproject, encoding="utf-8", newline="")
     own(reconciliation, owned_state(DEV, "pytest", "pytest>=8"))
     reconciliation.manifest.dependencies.add_dev("pytest>=9")
 
@@ -202,7 +202,7 @@ def test_an_owned_group_the_project_removed_is_kept_out(
 def test_an_owned_table_the_project_removed_blocks_its_groups(
     reconciliation, workspace, baseline, pyproject, blocked
 ):
-    Path(TARGET).write_text(pyproject, encoding="utf-8")
+    Path(TARGET).write_text(pyproject, encoding="utf-8", newline="")
     own(
         reconciliation,
         files=(FileState(TARGET, FilePolicy.TOML, encode_toml_baseline(baseline)),),
@@ -219,7 +219,9 @@ def test_an_owned_group_in_the_ownership_baseline_is_blocked_when_gone(
     reconciliation, workspace
 ):
     Path(TARGET).write_text(
-        '[project]\nname = "app"\n[dependency-groups]\ndocs = []\n', encoding="utf-8"
+        '[project]\nname = "app"\n[dependency-groups]\ndocs = []\n',
+        encoding="utf-8",
+        newline="",
     )
     own(
         reconciliation,
@@ -241,7 +243,9 @@ def test_an_owned_group_in_the_ownership_baseline_is_blocked_when_gone(
 
 def test_overwrite_selects_requirements_the_project_replaced(reconciliation, workspace):
     Path(TARGET).write_text(
-        '[project]\nname = "app"\ndependencies = ["requests>=1"]\n', encoding="utf-8"
+        '[project]\nname = "app"\ndependencies = ["requests>=1"]\n',
+        encoding="utf-8",
+        newline="",
     )
     own(reconciliation, owned_state(MAIN, "requests", "requests>=2"))
     reconciliation.manifest.dependencies.add("requests>=3")
@@ -257,7 +261,9 @@ def test_a_merge_keeps_requirements_the_project_replaced_and_reports_them(
     reconciliation, workspace
 ):
     Path(TARGET).write_text(
-        '[project]\nname = "app"\ndependencies = ["requests>=1"]\n', encoding="utf-8"
+        '[project]\nname = "app"\ndependencies = ["requests>=1"]\n',
+        encoding="utf-8",
+        newline="",
     )
     own(reconciliation, owned_state(MAIN, "requests", "requests>=2"))
     reconciliation.manifest.dependencies.add("requests>=3")
@@ -274,7 +280,9 @@ def test_an_edit_kept_under_an_unchanged_update_is_reported_without_warning(
     reconciliation, workspace
 ):
     Path(TARGET).write_text(
-        '[project]\nname = "app"\ndependencies = ["requests>=3"]\n', encoding="utf-8"
+        '[project]\nname = "app"\ndependencies = ["requests>=3"]\n',
+        encoding="utf-8",
+        newline="",
     )
     own(reconciliation, owned_state(MAIN, "requests", "requests>=2"))
     reconciliation.manifest.dependencies.add("requests>=2")
@@ -307,6 +315,7 @@ def test_a_kept_requirement_replaces_its_record_and_leaves_the_others(workspace)
     Path(TARGET).write_text(
         '[project]\nname = "app"\ndependencies = ["requests>=1", "click>=8"]\n',
         encoding="utf-8",
+        newline="",
     )
     first = fresh()
     first._select_dependencies()
@@ -330,6 +339,7 @@ def materialized_pyproject():
         '[project]\nname = "app"\ndependencies = ["requests>=3"]\n'
         '[dependency-groups]\ndev = ["pytest>=8", "ruff>=0.5"]\n',
         encoding="utf-8",
+        newline="",
     )
 
 
@@ -367,6 +377,7 @@ def test_a_moved_requirement_records_what_the_file_now_holds(reconciliation, wor
     Path(TARGET).write_text(
         '[project]\nname = "app"\n[dependency-groups]\ndev = ["pytest >= 8"]\n',
         encoding="utf-8",
+        newline="",
     )
     own(reconciliation, owned_state(DEV, "pytest", "pytest>=7"))
     reconciliation.manifest.dependencies.add_dev("pytest>=8")

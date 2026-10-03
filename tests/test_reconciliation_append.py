@@ -124,7 +124,7 @@ def test_a_held_document_does_not_stop_the_documents_after_it(
 def test_a_document_whose_settings_sit_outside_its_root_table_is_kept_and_reported(
     reconciliation, workspace
 ):
-    Path("zensical.toml").write_text("[other]\nx = 1\n", encoding="utf-8")
+    Path("zensical.toml").write_text("[other]\nx = 1\n", encoding="utf-8", newline="")
     declare(reconciliation, "zensical.toml", '[project]\nsite_name = "docs"\n')
     declare(reconciliation, "custom.toml")
 
@@ -174,7 +174,7 @@ def test_an_owned_project_file_the_user_deleted_stays_deleted(
 
 
 def test_an_owned_document_is_updated_without_proposals(reconciliation, workspace):
-    Path("custom.toml").write_text(OWNED, encoding="utf-8")
+    Path("custom.toml").write_text(OWNED, encoding="utf-8", newline="")
     reconciliation.candidate_state = reconciliation.candidate_state.with_file(
         FileState(
             "custom.toml",
@@ -248,7 +248,7 @@ PYTHON = '[project]\nname = "app"\nrequires-python = ">=3.12"\n'
 def test_a_moved_python_requirement_marks_the_resolver_output_stale(
     reconciliation, workspace, local, desired, dirty
 ):
-    Path("pyproject.toml").write_text(local, encoding="utf-8")
+    Path("pyproject.toml").write_text(local, encoding="utf-8", newline="")
     declare(reconciliation, "pyproject.toml", desired)
     reconciliation.manifest.collision_strategy = CollisionStrategy.OVERWRITE
 
@@ -264,7 +264,7 @@ def test_a_located_document_is_checked_against_the_explicit_root_not_the_callers
 ):
     root = tmp_path / "project"
     root.mkdir()
-    (root / "custom.toml").write_text(OWNED, encoding="utf-8")
+    (root / "custom.toml").write_text(OWNED, encoding="utf-8", newline="")
     caller = tmp_path / "caller"
     caller.mkdir()
     # An unrelated symlink in the caller's directory must not affect this project.
@@ -329,7 +329,7 @@ def test_a_region_in_a_held_document_keeps_the_ownership_it_has(
     # Two other copies exist, so no one knows which the tool reads.
     for held in ("docs/CONTRIBUTING.md", ".github/CONTRIBUTING.md"):
         Path(held).parent.mkdir(exist_ok=True)
-        Path(held).write_text("mine\n", encoding="utf-8")
+        Path(held).write_text("mine\n", encoding="utf-8", newline="")
     owned = FileState(
         "CONTRIBUTING.md",
         FilePolicy.REGIONS,
@@ -352,7 +352,7 @@ def test_a_region_target_is_checked_against_the_explicit_root_not_the_callers_di
 ):
     root = tmp_path / "project"
     root.mkdir()
-    (root / "notes.md").write_text("mine\n", encoding="utf-8")
+    (root / "notes.md").write_text("mine\n", encoding="utf-8", newline="")
     caller = tmp_path / "caller"
     caller.mkdir()
     # An unrelated symlink in the caller's directory must not affect this project.
@@ -397,7 +397,7 @@ def test_overwrite_replaces_an_edited_region_and_merge_keeps_the_edit(
     for strategy in (CollisionStrategy.MERGE, CollisionStrategy.OVERWRITE):
         monkeypatch.chdir(tmp_path)
         workspace = ReviewWorkspace(tmp_path)
-        NOTES.write_text(edited, encoding="utf-8")
+        NOTES.write_text(edited, encoding="utf-8", newline="")
         reconciliation = Reconciliation(
             EnvironmentManifest(), UserConfig(), workspace, workspace, workspace
         )
@@ -419,7 +419,7 @@ def test_a_retracted_region_is_cut_from_a_generated_files_text_and_the_file_stay
     reconciliation, workspace
 ):
     text, _ = framed("desired\n")
-    NOTES.write_text(text, encoding="utf-8")
+    NOTES.write_text(text, encoding="utf-8", newline="")
     reconciliation.candidate_state = reconciliation.candidate_state.with_file(
         region_record(policy=FilePolicy.TEXT)
     )
@@ -437,7 +437,7 @@ def test_a_region_still_in_the_file_is_not_cut_from_its_text_baseline(
     reconciliation, workspace
 ):
     text, baseline = framed("desired\n")
-    NOTES.write_text(text, encoding="utf-8")
+    NOTES.write_text(text, encoding="utf-8", newline="")
     reconciliation.candidate_state = reconciliation.candidate_state.with_file(
         region_record(policy=FilePolicy.TEXT)
     )
@@ -454,7 +454,7 @@ def test_a_file_whose_regions_are_all_retracted_is_no_longer_owned(
     reconciliation, workspace
 ):
     text, _ = framed("desired\n")
-    NOTES.write_text(text, encoding="utf-8")
+    NOTES.write_text(text, encoding="utf-8", newline="")
     reconciliation.candidate_state = reconciliation.candidate_state.with_file(
         region_record()
     )
@@ -584,7 +584,7 @@ def test_a_file_owned_only_for_regions_is_left_to_the_region_step(
     reconciliation, workspace
 ):
     text, _ = framed("desired\n")
-    NOTES.write_text(text, encoding="utf-8")
+    NOTES.write_text(text, encoding="utf-8", newline="")
     record = region_record()
     reconciliation.candidate_state = reconciliation.candidate_state.with_file(record)
 
@@ -679,7 +679,7 @@ def test_an_omitted_region_leaves_the_record_when_the_generated_text_conflicts(
 ):
     text, record = generated_text_record()
     other = FileState("other.txt", FilePolicy.TEXT, "kept\n")
-    NOTES.write_text("mine\n" + text, encoding="utf-8")
+    NOTES.write_text("mine\n" + text, encoding="utf-8", newline="")
     reconciliation.candidate_state = reconciliation.candidate_state.with_file(record)
     reconciliation.candidate_state = reconciliation.candidate_state.with_file(other)
 

@@ -74,7 +74,7 @@ def deleted_seed(path, content):
 
 def test_an_existing_seed_is_skipped_and_the_next_one_is_written(workspace):
     reconciliation = build(workspace)
-    Path("a.txt").write_text("mine\n", encoding="utf-8")
+    Path("a.txt").write_text("mine\n", encoding="utf-8", newline="")
     inject(reconciliation, "a.txt", "seed a\n")
     inject(reconciliation, "b.txt", "seed b\n")
 
@@ -137,7 +137,7 @@ def test_a_deleted_seed_is_restored_only_when_the_update_is_chosen(
 def test_a_seed_held_between_aliases_is_not_written(workspace):
     for held in ("docs/CONTRIBUTING.md", ".github/CONTRIBUTING.md"):
         Path(held).parent.mkdir(exist_ok=True)
-        Path(held).write_text("mine\n", encoding="utf-8")
+        Path(held).write_text("mine\n", encoding="utf-8", newline="")
     reconciliation = build(workspace)
     own(reconciliation, seeded("CONTRIBUTING.md", "seed\n"))
     inject(reconciliation, "CONTRIBUTING.md", "seed\n")
@@ -190,7 +190,7 @@ def test_writers_check_the_explicit_root_not_the_callers_directory(
     if writer == "directory":
         (root / name).mkdir()
     else:
-        (root / name).write_text("mine\n", encoding="utf-8")
+        (root / name).write_text("mine\n", encoding="utf-8", newline="")
     caller = tmp_path / "caller"
     caller.mkdir()
     # An unrelated symlink in the caller's directory must not affect this project.
@@ -227,7 +227,7 @@ def live(tmp_path, monkeypatch):
 @pytest.mark.parametrize("case", ["leaf", "ancestor", "directory-expected-file"])
 def test_a_node_that_cannot_be_transacted_names_itself(live, tmp_path, case):
     (tmp_path / "real").mkdir()
-    (tmp_path / "real/file.txt").write_text("x", encoding="utf-8")
+    (tmp_path / "real/file.txt").write_text("x", encoding="utf-8", newline="")
     if case == "leaf":
         (tmp_path / "link").symlink_to(tmp_path / "real/file.txt")
         target, bad, directory = Path("link"), tmp_path / "link", False
@@ -247,7 +247,7 @@ def test_a_node_that_cannot_be_transacted_names_itself(live, tmp_path, case):
 
 def test_a_regular_file_and_a_directory_are_valid_nodes(live, tmp_path):
     (tmp_path / "real").mkdir()
-    (tmp_path / "real/file.txt").write_text("x", encoding="utf-8")
+    (tmp_path / "real/file.txt").write_text("x", encoding="utf-8", newline="")
 
     live._validate_node(Path("real/file.txt"))
     live._validate_node(Path("real"), directory=True)
@@ -255,7 +255,7 @@ def test_a_regular_file_and_a_directory_are_valid_nodes(live, tmp_path):
 
 
 def test_a_file_where_a_directory_is_expected_is_refused(live, tmp_path):
-    (tmp_path / "file.txt").write_text("x", encoding="utf-8")
+    (tmp_path / "file.txt").write_text("x", encoding="utf-8", newline="")
 
     with pytest.raises(UnsupportedFilesystemNodeError) as caught:
         live._validate_node(Path("file.txt"), directory=True)

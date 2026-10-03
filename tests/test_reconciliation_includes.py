@@ -68,7 +68,7 @@ def apply(
 ):
     """Declares ``edges``, writes ``pyproject``, records ``owned``, and applies."""
     if pyproject is not None:
-        Path(TARGET).write_text(pyproject, encoding="utf-8")
+        Path(TARGET).write_text(pyproject, encoding="utf-8", newline="")
     reconciliation.manifest.dependencies.includes.extend(edges)
     reconciliation.manifest.collision_strategy = strategy
     if owned is not None:
@@ -119,7 +119,7 @@ def kept(group, include, reason):
 
 
 def test_no_declared_include_touches_nothing(reconciliation, workspace):
-    Path(TARGET).write_text(BOTH_GROUPS, encoding="utf-8")
+    Path(TARGET).write_text(BOTH_GROUPS, encoding="utf-8", newline="")
 
     reconciliation._apply_dependency_includes()
 
@@ -183,7 +183,7 @@ def test_the_project_file_is_checked_against_the_explicit_root_not_the_callers_d
 ):
     root = tmp_path / "project"
     root.mkdir()
-    (root / TARGET).write_text(BOTH_GROUPS, encoding="utf-8")
+    (root / TARGET).write_text(BOTH_GROUPS, encoding="utf-8", newline="")
     caller = tmp_path / "caller"
     caller.mkdir()
     # An unrelated symlink in the caller's directory must not affect this project.

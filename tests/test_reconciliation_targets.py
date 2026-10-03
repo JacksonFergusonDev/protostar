@@ -124,7 +124,7 @@ def test_a_held_document_does_not_stop_the_documents_after_it(
     structured = reconciliation.manifest.filesystem.structured
     structured["a.toml"] = [StructuredContribution("t", "x = 1\n")]
     structured["b.toml"] = [StructuredContribution("t", "y = 1\n")]
-    Path("b.toml").write_text("[broken", encoding="utf-8")
+    Path("b.toml").write_text("[broken", encoding="utf-8", newline="")
     resolve = reconciliation._resolve
     monkeypatch.setattr(
         reconciliation,
@@ -142,7 +142,7 @@ def test_a_malformed_existing_document_is_reported_with_the_parser_detail(
     reconciliation,
 ):
     Path("conf").mkdir()
-    Path("conf/demo.toml").write_text("[broken", encoding="utf-8")
+    Path("conf/demo.toml").write_text("[broken", encoding="utf-8", newline="")
     reconciliation.manifest.metadata["project_name"] = "demo"
     reconciliation.manifest.filesystem.structured["conf/<% PROJECT_NAME %>.toml"] = [
         StructuredContribution("t", "x = 1\n")
@@ -173,7 +173,7 @@ def test_a_malformed_existing_document_is_reported_with_the_parser_detail(
 def test_any_dependency_declaration_checks_for_an_ancestor_workspace(
     tmp_path, monkeypatch, declare
 ):
-    (tmp_path / "pyproject.toml").write_text("[broken", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text("[broken", encoding="utf-8", newline="")
     root = tmp_path / "project"
     root.mkdir()
     monkeypatch.chdir(root)
@@ -187,7 +187,7 @@ def test_any_dependency_declaration_checks_for_an_ancestor_workspace(
 def test_a_contribution_that_moves_the_resolver_checks_for_an_ancestor_workspace(
     tmp_path, monkeypatch
 ):
-    (tmp_path / "pyproject.toml").write_text("[broken", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text("[broken", encoding="utf-8", newline="")
     root = tmp_path / "project"
     root.mkdir()
     monkeypatch.chdir(root)
@@ -203,7 +203,7 @@ def test_a_contribution_that_moves_the_resolver_checks_for_an_ancestor_workspace
 
 
 def test_nothing_declared_checks_nothing_above_the_project(tmp_path, monkeypatch):
-    (tmp_path / "pyproject.toml").write_text("[broken", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text("[broken", encoding="utf-8", newline="")
     root = tmp_path / "project"
     root.mkdir()
     monkeypatch.chdir(root)
@@ -296,7 +296,7 @@ def test_writing_the_container_artifacts_is_logged(workspace, caplog):
 def test_a_failed_dockerignore_names_the_operation_path_and_cause(
     workspace, monkeypatch, failing
 ):
-    Path(".dockerignore").write_text("mine\n", encoding="utf-8")
+    Path(".dockerignore").write_text("mine\n", encoding="utf-8", newline="")
     reconciliation = docker(workspace)
     error = OSError("denied")
 
@@ -337,7 +337,7 @@ def test_a_failed_dockerfile_names_the_operation_path_and_cause(workspace, monke
 
 
 def test_overwrite_ignores_the_dockerignore_the_project_has(workspace):
-    Path(".dockerignore").write_text("mine\n", encoding="utf-8")
+    Path(".dockerignore").write_text("mine\n", encoding="utf-8", newline="")
     reconciliation = docker(workspace)
     reconciliation.manifest.collision_strategy = CollisionStrategy.OVERWRITE
 
@@ -351,7 +351,7 @@ def test_overwrite_ignores_the_dockerignore_the_project_has(workspace):
 
 def test_ide_settings_are_indented_by_four_spaces_in_an_empty_object(workspace):
     Path(".vscode").mkdir()
-    Path(".vscode/settings.json").write_text("{}\n", encoding="utf-8")
+    Path(".vscode/settings.json").write_text("{}\n", encoding="utf-8", newline="")
     reconciliation = build(workspace)
     reconciliation.manifest.ide_settings = {"a": {"b": 1}}
 
@@ -373,7 +373,7 @@ def test_a_released_seed_is_checked_against_the_explicit_root_not_the_callers_di
 ):
     root = tmp_path / "project"
     root.mkdir()
-    (root / "a.txt").write_text("seed\n", encoding="utf-8")
+    (root / "a.txt").write_text("seed\n", encoding="utf-8", newline="")
     caller = tmp_path / "caller"
     caller.mkdir()
     # An unrelated symlink in the caller's directory must not affect this project.
@@ -404,7 +404,7 @@ def test_a_released_seed_is_checked_against_the_explicit_root_not_the_callers_di
 def test_any_dependency_declaration_checks_the_project_file_for_syntax_errors(
     reconciliation, declare
 ):
-    Path("pyproject.toml").write_text("[broken", encoding="utf-8")
+    Path("pyproject.toml").write_text("[broken", encoding="utf-8", newline="")
     declare(reconciliation.manifest.dependencies)
 
     with pytest.raises(ConfigurationError, match="Syntax error in existing workspace"):

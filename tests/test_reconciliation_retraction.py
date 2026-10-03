@@ -57,7 +57,7 @@ def jsonc_record(path="custom.json", owned=None):
 
 
 def write(path, text):
-    Path(path).write_text(text, encoding="utf-8")
+    Path(path).write_text(text, encoding="utf-8", newline="")
 
 
 def paths(reconciliation):
@@ -238,7 +238,7 @@ def test_a_document_is_checked_against_the_explicit_root_not_the_callers_directo
 ):
     root = tmp_path / "project"
     root.mkdir()
-    (root / "custom.toml").write_text(TOML_FILE, encoding="utf-8")
+    (root / "custom.toml").write_text(TOML_FILE, encoding="utf-8", newline="")
     caller = tmp_path / "caller"
     caller.mkdir()
     # An unrelated symlink in the caller's directory must not affect this project.

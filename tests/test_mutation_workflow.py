@@ -101,13 +101,13 @@ def test_a_sharded_module_gets_one_runner_per_shard(planner):
             "name": "merge (head)",
             "artifact": "merge-head",
             "patterns": (
-                "protostar.merge.xǁJoinerǁadd__mutmut_* protostar.merge.x_hold__mutmut_*"
+                "protostar.merge.x\u01c1Joiner\u01c1add__mutmut_* protostar.merge.x_hold__mutmut_*"
             ),
         },
         {
             "name": "merge (tail)",
             "artifact": "merge-tail",
-            "patterns": "protostar.merge.xǁJoinerǁ_seal__mutmut_*",
+            "patterns": "protostar.merge.x\u01c1Joiner\u01c1_seal__mutmut_*",
         },
     ]
     assert names(matrix)[0] == "journal"
@@ -170,7 +170,7 @@ def defined_functions(module):
 
 def mutant_name(module, function):
     cls, _, name = function.rpartition(".")
-    body = f"xǁ{cls}ǁ{name}" if cls else f"x_{name}"
+    body = f"x\u01c1{cls}\u01c1{name}" if cls else f"x_{name}"
     return f"protostar.{module}.{body}__mutmut_1"
 
 

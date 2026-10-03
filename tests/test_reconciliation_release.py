@@ -113,7 +113,7 @@ def test_a_file_record_is_returned_for_its_own_policy_and_none_without_one(works
 def test_a_retired_seed_the_project_deleted_is_forgotten_and_the_rest_are_settled(
     workspace,
 ):
-    Path("kept.txt").write_text("my edits\n", encoding="utf-8")
+    Path("kept.txt").write_text("my edits\n", encoding="utf-8", newline="")
     reconciliation = build(workspace, seed("gone.txt"), seed("kept.txt"))
 
     reconciliation._settle_retired()
@@ -125,8 +125,8 @@ def test_a_retired_seed_the_project_deleted_is_forgotten_and_the_rest_are_settle
 
 
 def test_every_unsettled_retired_seed_is_reported_and_kept(workspace):
-    Path("a.txt").write_text("a edits\n", encoding="utf-8")
-    Path("b.txt").write_text("b edits\n", encoding="utf-8")
+    Path("a.txt").write_text("a edits\n", encoding="utf-8", newline="")
+    Path("b.txt").write_text("b edits\n", encoding="utf-8", newline="")
     reconciliation = build(workspace, seed("a.txt"), seed("b.txt"))
 
     reconciliation._settle_retired()
@@ -148,7 +148,7 @@ def test_a_retired_seed_reads_undecodable_bytes_with_replacement_characters(
     reconciliation._settle_retired()
 
     assert reconciliation.diagnostics == [
-        open_warning(retracted("a.txt", MISSING, "caf�\n"))
+        open_warning(retracted("a.txt", MISSING, "caf\ufffd\n"))
     ]
 
 
@@ -162,8 +162,8 @@ def test_a_retired_seed_reads_undecodable_bytes_with_replacement_characters(
 def test_a_settled_retired_seed_is_released_and_taking_the_update_deletes_it(
     workspace, choice, kept, removed
 ):
-    Path("a.txt").write_text("a edits\n", encoding="utf-8")
-    Path("b.txt").write_text("b edits\n", encoding="utf-8")
+    Path("a.txt").write_text("a edits\n", encoding="utf-8", newline="")
+    Path("b.txt").write_text("b edits\n", encoding="utf-8", newline="")
     conflict = retracted("a.txt", MISSING, "a edits\n")
     reconciliation = build(
         workspace,
@@ -186,8 +186,8 @@ def test_a_settled_retired_seed_is_released_and_taking_the_update_deletes_it(
 
 
 def test_an_unedited_generated_file_is_deleted_and_the_rest_are_released(workspace):
-    Path("a.txt").write_text("generated\n", encoding="utf-8")
-    Path("b.txt").write_text("generated\n", encoding="utf-8")
+    Path("a.txt").write_text("generated\n", encoding="utf-8", newline="")
+    Path("b.txt").write_text("generated\n", encoding="utf-8", newline="")
     reconciliation = build(workspace, generated("a.txt"), generated("b.txt"))
 
     reconciliation._release_undeclared_generated()
@@ -200,7 +200,7 @@ def test_an_unedited_generated_file_is_deleted_and_the_rest_are_released(workspa
 def test_a_generated_file_the_project_deleted_is_forgotten_and_the_rest_continue(
     workspace,
 ):
-    Path("b.txt").write_text("generated\n", encoding="utf-8")
+    Path("b.txt").write_text("generated\n", encoding="utf-8", newline="")
     reconciliation = build(workspace, generated("a.txt"), generated("b.txt"))
 
     reconciliation._release_undeclared_generated()
@@ -210,10 +210,10 @@ def test_a_generated_file_the_project_deleted_is_forgotten_and_the_rest_continue
 
 
 def test_a_declared_generated_file_is_left_alone(workspace):
-    Path("justfile").write_text("edited\n", encoding="utf-8")
+    Path("justfile").write_text("edited\n", encoding="utf-8", newline="")
     reconciliation = build(workspace, generated("justfile"), generated("a.txt"))
     reconciliation.manifest.tooling.wants_just = True
-    Path("a.txt").write_text("generated\n", encoding="utf-8")
+    Path("a.txt").write_text("generated\n", encoding="utf-8", newline="")
 
     reconciliation._release_undeclared_generated()
 
@@ -223,7 +223,7 @@ def test_a_declared_generated_file_is_left_alone(workspace):
 
 def test_a_file_that_receives_a_region_is_declared_at_its_rendered_path(workspace):
     Path("docs").mkdir()
-    Path("docs/demo.md").write_text("edited\n", encoding="utf-8")
+    Path("docs/demo.md").write_text("edited\n", encoding="utf-8", newline="")
     reconciliation = build(workspace, generated("docs/demo.md"))
     reconciliation.manifest.metadata["project_name"] = "demo"
     reconciliation.manifest.filesystem.regions["docs/<% PROJECT_NAME %>.md"] = {
@@ -247,8 +247,8 @@ def test_a_file_that_receives_a_region_is_declared_at_its_rendered_path(workspac
 def test_an_edited_generated_file_is_a_whole_file_retraction_until_settled(
     workspace, baseline, local, base
 ):
-    Path("a.txt").write_text(local, encoding="utf-8")
-    Path("b.txt").write_text("b edits\n", encoding="utf-8")
+    Path("a.txt").write_text(local, encoding="utf-8", newline="")
+    Path("b.txt").write_text("b edits\n", encoding="utf-8", newline="")
     reconciliation = build(workspace, generated("a.txt", baseline), generated("b.txt"))
 
     reconciliation._release_undeclared_generated()
@@ -280,7 +280,7 @@ def test_an_edited_generated_file_reads_undecodable_bytes_with_replacement(
     reconciliation._release_undeclared_generated()
 
     assert reconciliation.diagnostics == [
-        open_warning(retracted("a.txt", "generated\n", "caf�\n", line=0))
+        open_warning(retracted("a.txt", "generated\n", "caf\ufffd\n", line=0))
     ]
 
 
@@ -294,8 +294,8 @@ def test_an_edited_generated_file_reads_undecodable_bytes_with_replacement(
 def test_a_settled_generated_file_is_released_and_taking_the_update_deletes_it(
     workspace, choice, kept, removed
 ):
-    Path("a.txt").write_text("my edits\n", encoding="utf-8")
-    Path("b.txt").write_text("b edits\n", encoding="utf-8")
+    Path("a.txt").write_text("my edits\n", encoding="utf-8", newline="")
+    Path("b.txt").write_text("b edits\n", encoding="utf-8", newline="")
     conflict = retracted("a.txt", "generated\n", "my edits\n", line=0)
     reconciliation = build(
         workspace,
@@ -315,7 +315,7 @@ def test_a_settled_generated_file_is_released_and_taking_the_update_deletes_it(
 
 
 def test_a_failed_removal_names_the_operation_path_and_cause(workspace, monkeypatch):
-    Path("a.txt").write_text("generated\n", encoding="utf-8")
+    Path("a.txt").write_text("generated\n", encoding="utf-8", newline="")
     reconciliation = build(workspace, generated("a.txt"))
     error = OSError("denied")
 
@@ -339,7 +339,7 @@ def test_a_generated_file_is_checked_against_the_explicit_root_not_the_callers_d
 ):
     root = tmp_path / "project"
     root.mkdir()
-    (root / "a.txt").write_text("generated\n", encoding="utf-8")
+    (root / "a.txt").write_text("generated\n", encoding="utf-8", newline="")
     caller = tmp_path / "caller"
     caller.mkdir()
     # An unrelated symlink in the caller's directory must not affect this project.
