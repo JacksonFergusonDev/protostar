@@ -12,7 +12,7 @@ By preventing modules from writing to disk directly during planning, Protostar k
 
 - :material-atom: __Atomicity__
 
-    If `uv` or `git` is missing or an invalid configuration is evaluated in the final loaded module, the process aborts cleanly. No partial directories are created; no half-written `.toml` files are left behind.
+    Nothing is written while planning, so a plan that fails, because `uv` or `git` is missing or a template is invalid, leaves the project exactly as it was.
 
 - :material-test-tube: __Testability__
 
@@ -35,7 +35,7 @@ Rather than storing all state in a monolithic structure, `EnvironmentManifest` d
 During the `build()` phase, modules route their state declarations through these explicit domain namespaces (e.g., `manifest.dependencies`, `manifest.filesystem`, `manifest.tooling`, `manifest.tasks`). This structure allows the `SystemExecutor` to run setup tasks and write files in the correct dependency order.
 
 === "Dependency Resolution (`manifest.dependencies`)"
-    Managed by `DependencyManifest`. Holds the required packages for your project setup. These are passed to the package manager (e.g., `uv`, `pip`, `npm`) at the end of the run to install dependencies in a single step and prevent fragmented lockfiles.
+    Managed by `DependencyManifest`. Holds the packages the project needs, by group. Execution adds them with uv, one `uv add` per group, after the merged configuration is written, so uv resolves them against the final `pyproject.toml` and writes `uv.lock` itself.
 
     * `dependencies`: Core application or scientific libraries (`manifest.dependencies.add()`).
     * `dev_dependencies`: Tooling, linters, and testing frameworks (`manifest.dependencies.add_dev()`).
@@ -72,9 +72,11 @@ During the `build()` phase, modules route their state declarations through these
     * `metadata`: Structured `ProjectMetadata` dictionary defining author, licensing, and package specs.
     * `ide_settings`: Key-value dictionaries mapped directly to local IDE workspace configs via `manifest.add_ide_setting()`.
     * `collision_strategy`: Chosen `CollisionStrategy` (`MERGE` or `OVERWRITE`), or `null` while a collision decision is pending.
+    * `template_reference`: The template's identity (origin, locator, and the SHA-256 of its TOML), or `null` for a tooling-only run. Trust and variable values are never part of it.
     * `one_shot`: Whether execution omits the recorded recipe and Protostar ownership state after scaffolding.
     * `collisions`: Existing workspace paths that intersect planned file writes.
     * `target_files()`: Pure method returning the complete set of concrete `Path` objects Protostar intends to create or mutate (file injections, TOML targets, Dockerfiles, lockfiles, `.gitignore`, and templated blueprint files). Used by the Orchestrator for dynamic collision detection.
+    * `planned_files()`: Every file a run leaves behind: the files Protostar writes, plus each command's declared outputs, the resolver's `pyproject.toml` and `uv.lock`, and `protostar.lock`. The dry-run tree, the recipe editor's preview, the change review, and the dry-run JSON `entries` all read it, and `check-snapshots` fails when a scaffold differs from it.
 
 ## State Serialization
 
@@ -97,16 +99,12 @@ Below is an example JSON representation of an aggregate state during a dry-run o
 
 ## Collision Strategies
 
-Template references retain source identity and raw-template SHA-256 through request and manifest serialization. Tooling-only runs carry no template reference. Template secrets and trust authorization are excluded.
+The Orchestrator records existing files the plan would write in `manifest.collisions`, and `plan()` returns them even before any strategy is chosen. `--force-merge` and `--force-replace` choose one in advance; otherwise the recipe editor's Existing files panel does. `execute()` raises `WorkspaceCollisionError` before writing anything while collisions remain and no strategy is set.
 
-The Orchestrator records existing files that intersect planned targets in `manifest.collisions`. `plan()` returns this data even when no decision has been made. `--force-merge` and `--force-replace` choose a strategy in advance; otherwise the CLI can ask for one. `execute()` raises `WorkspaceCollisionError` before any mutation if collisions remain unresolved.
+- __`MERGE`:__ Reconciles each file against `protostar.lock`. Protostar's own content takes the update, the user's content stays, and each disagreement becomes a conflict, proposed change, or kept edit. Lists with set semantics, such as Ruff's rule lists, gain new members; other lists change as a whole. Project fields such as `description` are written only when missing. See [How Protostar Tracks Your Files](../usage/tracking.md).
+- __`OVERWRITE`:__ Writes Protostar's version over each declared target.
 
-The `SystemExecutor` reads this enum to govern its AST mutation logic:
-
-- __`MERGE`:__ Safely injects missing configurations. If you have a custom line-length defined in your `pyproject.toml`, it is preserved. Previously applied tooling values can update when local content still matches the owned baseline in `protostar.lock`. Local edits and deletions survive; conflicts produce structured warnings. Known lint lists accept new members, while other arrays are atomic. Personal project metadata remains seed-only.
-- __`OVERWRITE`:__ Forces Protostar's configuration onto the AST. Keys conflicting with Protostar's payload will be updated to match the tool's baseline.
-
-Aborting is a CLI outcome and leaves the workspace untouched.
+Cancelling is a CLI outcome and leaves the project untouched.
 
 ## API Reference
 
