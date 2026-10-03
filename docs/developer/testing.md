@@ -12,60 +12,23 @@ As a contributor, you must adhere to our strict isolation boundaries. Tests that
 
 ### 1. Disk I/O Isolation
 
-Protostar's primary function is generating and modifying files. To prevent the test suite from polluting the host machine or overwriting your local configurations, all disk I/O must be sandboxed.
-
-Use the `tmp_path` fixture provided by `pytest` for any test requiring an actual filesystem hierarchy, or patch `pathlib.Path` for purely logical validation.
-
-=== "Logical Validation (Mocked)"
-
-    ```python
-    def test_missing_direnv_is_reported(missing_executables, tmp_path, monkeypatch):
-        # Every test finds each executable on PATH unless it adds it to this set
-        monkeypatch.chdir(tmp_path)
-        missing_executables.add(GlobalExecutable.DIRENV)
-
-        manifest = Orchestrator([DirenvModule()], UserConfig()).plan()
-        assert manifest.missing_tools == {
-            MissingTool(GlobalExecutable.DIRENV, Tool.DIRENV)
-        }
-    ```
-
-=== "Physical Sandbox (`tmp_path`)"
-
-    ```python
-    def test_executor_writes_vscode_settings_empty_file(monkeypatch, tmp_path, mock_config):
-        # Anchor the execution context to the ephemeral tmp_path
-        monkeypatch.chdir(tmp_path)
-
-        vscode_dir = tmp_path / ".vscode"
-        vscode_dir.mkdir()
-        settings_file = vscode_dir / "settings.json"
-        settings_file.write_text("   \n  \t")
-
-        manifest = EnvironmentManifest()
-        manifest.add_ide_setting("files.exclude", {"**/.venv": True})
-
-        # Executor acts on the sandboxed tmp_path hierarchy
-        SystemExecutor(manifest, mock_config)._write_ide_settings()
-    ```
-
-### 2. Subprocess Mocking
-
-Many modules queue shell commands (e.g., `git init`, `uv init`). Unless a test is explicitly marked for integration, **all `subprocess.run` calls must be mocked**.
-
-We utilize `pytest-mock` (the `mocker` fixture) to intercept the `execute_subprocess` wrapper. This ensures tests run in milliseconds and do not require the CI runner to have heavy binary toolchains installed.
+Protostar's job is writing and changing files, so a test that writes outside a sandbox could overwrite your own projects. Ordinary tests write only under `pytest`'s `tmp_path`, usually by changing into it, since Protostar works on the current directory:
 
 ```python
-def test_pre_commit_module_build_initializes_git(manifest, mocker):
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
-
-    mod = PreCommitModule()
-    mod.build(manifest)
-
-    # Assert declarative intent rather than evaluating the shell execution
-    assert any(t.command == ["git", "init"] for t in manifest.tasks.system_tasks)
-
+--8<-- "tests/test_modules.py:git_init"
 ```
+
+Planning is pure, so most tests stop at the manifest: they build modules and assert what was declared, without executing anything.
+
+### 2. Mock Commands at the Boundary
+
+Unless a test is marked `integration`, it runs no real command. Mock at the boundary the test exercises: `ProcessRunner.run` for a test of planning and execution, or `subprocess.run` and `subprocess.Popen` for a test of `ProcessRunner` itself. Every test finds each program on `PATH` unless it adds the program to the `missing_executables` fixture:
+
+```python
+--8<-- "tests/test_missing_tools.py:missing_tools"
+```
+
+This executes a real plan in a sandboxed workspace, with `ProcessRunner.run` mocked, and checks that a missing `direnv` skips only the step that runs it.
 
 ## Test Categories
 

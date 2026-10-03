@@ -84,6 +84,7 @@ class DirenvModule(ToolModule):
         )
 
         manifest.filesystem.add_file_injection(".envrc", content)
+        # --8<-- [start:missing_executable]
         if manifest.is_missing(GlobalExecutable.DIRENV):
             manifest.diagnostics.append(
                 DiagnosticEvent(
@@ -97,6 +98,7 @@ class DirenvModule(ToolModule):
         manifest.tasks.add_post_install_task(
             ["direnv", "allow"], description="Authorizing direnv workspace"
         )
+        # --8<-- [end:missing_executable]
 
 
 class MarkdownLintModule(ToolModule):
@@ -428,6 +430,8 @@ ignore = [
         self.add_pyproject_config(manifest, config)
 
 
+# The docs show this module whole, as the example of a tool module.
+# --8<-- [start:mypy_module]
 class MypyModule(ToolModule):
     """Configures the Mypy static type checker with a sensible baseline.
 
@@ -499,6 +503,9 @@ explicit_package_bases = true
         self.add_pyproject_config(
             manifest, render_template(config, escaped(manifest.rendering_context()))
         )
+
+
+# --8<-- [end:mypy_module]
 
 
 class TyModule(ToolModule):

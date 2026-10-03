@@ -108,11 +108,13 @@ class PythonCore(BootstrapModule):
             )
             if version:
                 cmd.extend(["--python", version])
+            # --8<-- [start:owned_files]
             manifest.tasks.add_system_task(
                 cmd,
                 description="Initializing uv project",
                 owned_files=["pyproject.toml", ".python-version"],
             )
+            # --8<-- [end:owned_files]
 
         desc = manifest.metadata.get("description") or "Add your description here."
         name = manifest.metadata.get("author_name") or "your-name"
