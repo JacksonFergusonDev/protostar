@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790996833313,
+  "lastUpdate": 1790997053393,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21153,6 +21153,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1266.64,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c9264130b16e6c1787cb4cbcf8805c5d221e180b",
+          "message": "docs: correct drifted comments and explain the code that needed it (#419)\n\n* docs: correct comments that drifted from the code\n\nPhase comments in Orchestrator.plan() skipped Phase 3 and named a\n\"diversion ledger\" that no longer exists. The IDE check claimed to fail\nsilently on a failed probe, which it now reports as a skip. Others named\na removed summary panel, a test file that moved into conftest, the\nregistry snapshot's old timing, trust as remote-only, and a numbered\nlist item whose siblings are gone.\n\n* fix(reconciliation): render target paths without TOML escaping\n\nThe manifest rendered declared paths unescaped, but reconciliation\nrendered them with render_template's TOML-escaping default. A project\nnamed after a folder with a quote in it planned docs/say \"hi\" and then\nreconciled docs/say \\\"hi\\\", which the state codec rejects as an unsafe\npath, so preparation failed. Both now render paths through one\nrender_path.\n\n* refactor(config): describe tools in the config from their modules\n\nThe default configuration and the UserConfig docstring each carried a\nhand-written description of every tool, which the generated docs table\nthen copied. AGENTS.md makes ToolInfo the only place a tool is\ndescribed, so the default configuration (now default_config_content())\nand the docs table both take each tool's summary from its module.\n\n* docs: explain the rollback rules, the init pipeline, and subtle code\n\nThe journal's docstrings said \"Records a path.\" and \"Rolls back the\njournal.\" for the code that makes rollback exact. It now states the\nrules rollback depends on: first capture wins, reverse order removes\nchildren before parents, and a created directory is deleted only once\nempty again. Also documented: the order of the init batches and their\nPreparationPhase, every PreparedReview field, the branches of\nreconcile_text, why archive extraction accepts mode-0 zip members and\nskips pax headers, the uv glob matcher, the descriptor handoff in\natomic_write_bytes, and the lazy sys.modules lookups.\n\n* docs: give every engine and CLI module a docstring that says what it holds\n\nFifteen modules had no module docstring (D100 is ignored), including\nmanifest.py, cli/main.py, and the tool modules, and several older ones\nhad generic lines such as \"Workspace context and environment utilities\"\nthat no longer described what lives there.\n\n* refactor(manifest): delete the unused should_skip_file\n\nNothing in the engine or CLI calls it; only its own tests did.",
+          "timestamp": "2026-10-02T20:07:44-07:00",
+          "tree_id": "15fd877bb7f92f768efabba2a3aacf3770e41447",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/c9264130b16e6c1787cb4cbcf8805c5d221e180b"
+        },
+        "date": 1790997051184,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 174.37,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1220.38,
             "unit": "ms"
           }
         ]
