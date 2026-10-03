@@ -1,3 +1,8 @@
+"""The argument parser for every subcommand, and dispatch to their handlers.
+
+Each tool's ``--flag`` and help come from its module's ``ToolInfo``.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -841,6 +846,8 @@ def maybe_run_interactive_init(parser: argparse.ArgumentParser) -> None:
         modules, request = resolve_init(decision.draft, user_config)
         ui.print_recipe_summary(request)
         ui.print_review_summary(decision)
+        # Through the module, so the lazy __getattr__ imports Orchestrator on
+        # first use and a test's patch of it is the one that runs.
         orchestrator_cls: type[Orchestrator] = sys.modules[__name__].Orchestrator
         engine = orchestrator_cls(modules, user_config, request=request)
         ui._run_engine(engine, request, decision)

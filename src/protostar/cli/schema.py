@@ -1,3 +1,9 @@
+"""JSON schemas Protostar publishes: templates, capabilities, and review output.
+
+``protostar export-schema`` prints the template schema; the others document
+the ``--json`` payloads agents read.
+"""
+
 import argparse
 import json
 import sys

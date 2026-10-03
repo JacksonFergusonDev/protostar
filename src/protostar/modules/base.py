@@ -1,3 +1,10 @@
+"""What a module is: the contract every bootstrap and tool module implements.
+
+A module declares what it wants into the manifest during ``plan()`` and
+never touches the disk. A tool module also says how to recognise its tool in
+an existing project (its signals) and how to describe it (``ToolInfo``).
+"""
+
 from __future__ import annotations
 
 import abc

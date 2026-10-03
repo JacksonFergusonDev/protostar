@@ -4,27 +4,27 @@
 | `author_name` | `str` \| `None` | Default author name for project metadata. |
 | `author_email` | `str` \| `None` | Default author email for project metadata. |
 | `github_username` | `str` \| `None` | Default GitHub username for repository URL formatting. |
-| `direnv` | `bool` | Whether to auto-scaffold .envrc shell bindings. |
 | `python_version` | `str` \| `None` | The specific Python version to scaffold. |
 | `license` | `str` \| `None` | Default project license identifier (e.g., 'MIT', 'Apache-2.0'). |
 | `supported_os` | `list[str]` | The supported operating systems to scaffold CI for. |
-| `markdownlint` | `bool` | Whether to auto-scaffold MarkdownLint configs. |
-| `rumdl` | `bool` | Whether to auto-scaffold rumdl fast markdown linter and formatter. |
-| `ruff` | `bool` | Whether to auto-scaffold Ruff dependencies and configs. |
-| `mypy` | `bool` | Whether to auto-scaffold Mypy dependencies and configs. |
-| `ty` | `bool` | Whether to auto-scaffold Astral ty type checker. |
-| `pyrefly` | `bool` | Whether to auto-scaffold Pyrefly type checker. |
-| `pytest` | `bool` | Whether to auto-scaffold Pytest dependencies and configs. |
-| `pre_commit` | `bool` | Whether to auto-scaffold pre-commit hooks. |
-| `prek` | `bool` | Whether to auto-scaffold prek git hooks. |
-| `commitizen` | `bool` | Whether to auto-scaffold commitizen version bumping and changelog tooling. |
-| `renovate` | `bool` | Whether to auto-scaffold Renovate dependency update configuration. |
-| `codecov` | `bool` | Whether to auto-scaffold Codecov configuration. |
-| `zensical` | `bool` | Whether to auto-scaffold Zensical documentation. |
-| `readthedocs` | `bool` | Whether to auto-scaffold Read the Docs configuration. |
-| `ci` | `bool` | Whether to auto-scaffold standard GitHub Actions CI workflows. |
-| `release` | `bool` | Whether to auto-scaffold GitHub Actions PyPI release workflows. |
-| `docker` | `bool` | Whether to auto-scaffold container artifacts (.dockerignore, Dockerfile). |
-| `just` | `bool` | Whether to auto-scaffold a justfile for command execution. |
-| `agents` | `bool` | Whether to auto-scaffold a managed AGENTS.md guide for coding agents. |
-| `community` | `bool` | Whether to auto-scaffold community health files and issue templates. |
+| `direnv` | `bool` | Activate the project's environment whenever you enter its folder. Default: `false`. |
+| `markdownlint` | `bool` | Check Markdown files for formatting mistakes, with relaxed rules. Default: `false`. |
+| `rumdl` | `bool` | Check and format Markdown files quickly. Default: `false`. |
+| `ruff` | `bool` | Find common bugs and style problems in Python code, and format it. Default: `true`. |
+| `mypy` | `bool` | Check type hints to catch mistakes before the code runs. Default: `false`. |
+| `ty` | `bool` | Check type hints quickly, with Astral's type checker. Default: `false`. |
+| `pyrefly` | `bool` | Check type hints quickly, with Meta's type checker. Default: `false`. |
+| `pytest` | `bool` | Run the project's tests. Default: `false`. |
+| `pre_commit` | `bool` | Run the project's checks automatically each time you commit. Default: `false`. |
+| `prek` | `bool` | Run the project's checks automatically each time you commit, faster. Default: `false`. |
+| `commitizen` | `bool` | Write commit messages in a standard form that sets the next version. Default: `false`. |
+| `renovate` | `bool` | Open pull requests that keep dependencies up to date. Default: `false`. |
+| `codecov` | `bool` | Report how much of the code the tests exercise, on each pull request. Default: `false`. |
+| `zensical` | `bool` | Build a documentation website from Markdown files. Default: `false`. |
+| `readthedocs` | `bool` | Publish the documentation website on Read the Docs. Default: `false`. |
+| `ci` | `bool` | Run the checks and tests on GitHub for every push and pull request. Default: `false`. |
+| `release` | `bool` | Publish the package to PyPI when you push a version tag. Default: `false`. |
+| `docker` | `bool` | Package the project as a container image that runs anywhere. Default: `false`. |
+| `just` | `bool` | Give the project's common commands short names, like `just test`. Default: `false`. |
+| `agents` | `bool` | Tell coding assistants how to work on the project. Default: `false`. |
+| `community` | `bool` | Add the files GitHub shows people who want to contribute. Default: `false`. |

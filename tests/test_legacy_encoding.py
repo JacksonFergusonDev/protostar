@@ -313,14 +313,14 @@ def test_the_saved_configuration_summary_is_cp1252_safe(
     import argparse
 
     from protostar.cli.main import handle_config
-    from protostar.config import DEFAULT_CONFIG_CONTENT
+    from protostar.config import default_config_content
     from protostar.config_edit import ConfigEdit, SaveConfig
 
     path = tmp_path / "protostar" / "config.toml"
     mocker.patch("protostar.config.CONFIG_FILE", path)
     mocker.patch("protostar.cli.main.is_interactive", return_value=True)
     edit = ConfigEdit(
-        DEFAULT_CONFIG_CONTENT, DEFAULT_CONFIG_CONTENT + "mypy = true\n", ("mypy",)
+        default_config_content(), default_config_content() + "mypy = true\n", ("mypy",)
     )
     mocker.patch(
         "protostar.cli.tui.launch.edit_settings", return_value=SaveConfig(edit)

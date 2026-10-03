@@ -1,3 +1,5 @@
+"""The workspace baseline: ignore rules for host artifacts, and ``git init``."""
+
 from __future__ import annotations
 
 import logging

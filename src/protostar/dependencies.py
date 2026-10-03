@@ -1,4 +1,8 @@
-"""Dependency resolution and package installation via uv."""
+"""Requirements: which a run adds, keeps, or retracts, and the uv commands that add them.
+
+Selection and retraction are pure and report every kept local edit; only
+``install_dependencies`` runs a process.
+"""
 
 from collections import defaultdict
 from collections.abc import Mapping, Sequence

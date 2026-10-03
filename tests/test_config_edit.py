@@ -4,7 +4,7 @@ import tomllib
 
 import pytest
 
-from protostar.config import DEFAULT_CONFIG_CONTENT, UserConfig
+from protostar.config import UserConfig, default_config_content
 from protostar.config_edit import EDITABLE_KEYS, config_values, edit_config
 from protostar.errors import ConfigurationError
 
@@ -33,9 +33,11 @@ def test_only_values_that_change_are_written():
     unchanged = config_values(UserConfig.parse(CUSTOM, "c"))
     assert edit_config(CUSTOM, unchanged, source="c").after == CUSTOM
     # Ruff is on by default, so the default file gains no `ruff = true`.
-    edit = edit_config(DEFAULT_CONFIG_CONTENT, {"ruff": True, "mypy": True}, source="c")
+    edit = edit_config(
+        default_config_content(), {"ruff": True, "mypy": True}, source="c"
+    )
     assert edit.changed == ("mypy",)
-    added = set(edit.after.splitlines()) - set(DEFAULT_CONFIG_CONTENT.splitlines())
+    added = set(edit.after.splitlines()) - set(default_config_content().splitlines())
     assert added == {"mypy = true"}
 
 
@@ -47,7 +49,7 @@ def test_nothing_to_change_leaves_the_text_as_it_is():
 
 def test_a_new_key_follows_its_commented_example():
     edit = edit_config(
-        DEFAULT_CONFIG_CONTENT, {"author_name": "Ada", "prek": True}, source="c"
+        default_config_content(), {"author_name": "Ada", "prek": True}, source="c"
     )
     lines = edit.after.splitlines()
     assert (
@@ -84,7 +86,7 @@ def test_clearing_a_value_removes_its_key(cleared):
 )
 def test_an_invalid_result_is_a_configuration_error(values, message):
     with pytest.raises(ConfigurationError, match=message):
-        edit_config(DEFAULT_CONFIG_CONTENT, values, source="c")
+        edit_config(default_config_content(), values, source="c")
 
 
 def test_every_editable_key_is_a_user_config_field():

@@ -1,4 +1,4 @@
-"""Filesystem helpers for safe disk mutation operations."""
+"""Atomic file writes, and the archive formats a template can arrive in."""
 
 import enum
 import os
@@ -59,6 +59,8 @@ def atomic_write_bytes(path: Path, content: bytes, *, mode: int | None = None) -
         )
         temp_path = Path(temp_name)
         with os.fdopen(file_descriptor, "wb") as temp_file:
+            # The file object closes the descriptor now; the cleanup below
+            # must not close it a second time.
             file_descriptor = -1
             temp_file.write(content)
             temp_file.flush()

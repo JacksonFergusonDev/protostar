@@ -1,4 +1,10 @@
-"""Configuration management and schema definitions for Protostar."""
+"""The user's configuration, and the templates it and the built-ins name.
+
+``UserConfig`` is the ``[env]`` defaults and ``[templates]`` aliases, read
+from the file ``active_config_source()`` selects. ``TemplateSource`` and
+``TemplateBlueprint`` load, validate, and render a template's
+``protostar.toml``.
+"""
 
 import enum
 import functools
@@ -137,7 +143,7 @@ def active_config_source() -> ConfigSource:
     return ConfigSource.explicit(Path(raw).expanduser())
 
 
-DEFAULT_CONFIG_CONTENT = f"""[env]
+_CONFIG_HEADER = f"""[env]
 # Preferred IDE: 'vscode', 'cursor', or 'none'
 # ide = "vscode"
 
@@ -150,30 +156,9 @@ DEFAULT_CONFIG_CONTENT = f"""[env]
 python_version = "{DEFAULT_PYTHON_VERSION}"
 # supported_os = ["MacOS", "Linux", "Windows"]
 
-# Optional dev tool toggles for Python
-# direnv = true        # Scaffold .envrc and auto-activate virtual environments
-# markdownlint = true  # Scaffold MarkdownLint configuration and hooks
-# rumdl = true         # Scaffold rumdl fast markdown linter and formatter
-# ruff = false         # Disable default Ruff linter and formatter scaffolding
-# mypy = true          # Scaffold Mypy static type checker
-# ty = true            # Scaffold Astral ty type checker
-# pyrefly = true       # Scaffold Pyrefly static type checker
-# pytest = true        # Scaffold Pytest testing framework
-# pre_commit = true    # Scaffold pre-commit git hooks and configuration
-# prek = true          # Scaffold prek git hooks (faster Rust alternative to pre-commit)
-# commitizen = true    # Scaffold Commitizen version bumping and changelog tooling
-# renovate = true      # Scaffold Renovate dependency update configuration
-# codecov = true       # Scaffold Codecov configuration
-# zensical = true      # Scaffold Zensical documentation
-# readthedocs = true   # Scaffold Read the Docs configuration
-# ci = true            # Scaffold standard GitHub Actions CI workflows
-# release = true       # Scaffold GitHub Actions PyPI release workflows
-# docker = true        # Scaffold container artifacts (.dockerignore, Dockerfile)
-# just = true          # Scaffold a justfile for command execution
-# agents = true        # Scaffold a managed AGENTS.md guide for coding agents
-# community = true     # Scaffold community health files and issue templates
+"""
 
-# [templates]
+_CONFIG_TEMPLATES = """# [templates]
 # my-org-api = "https://raw.githubusercontent.com/MyOrg/standards/main/api.toml"
 # data-science-base = "~/Developer/templates/ds_base.toml"
 #
@@ -185,6 +170,25 @@ python_version = "{DEFAULT_PYTHON_VERSION}"
 """
 
 
+@functools.cache
+def default_config_content() -> str:
+    """Returns the configuration file ``protostar config`` writes when none exists.
+
+    Each tool's toggle is commented out, set to the opposite of its default,
+    under its module's ``ToolInfo`` summary, so the file describes a tool in
+    the same words as ``--help`` and the editor.
+    """
+    from .modules import TOOLING_MODULES
+
+    defaults = UserConfig()
+    toggles = "".join(
+        f"# {module.info.summary}.\n"
+        f"# {module.config_key} = {str(not getattr(defaults, module.config_key)).lower()}\n"
+        for module in TOOLING_MODULES
+    )
+    return f"{_CONFIG_HEADER}# Tools: uncomment a line to change that default for new projects\n{toggles}\n{_CONFIG_TEMPLATES}"
+
+
 @dataclass(frozen=True)
 class TemplateAliasConfig:
     """Configuration metadata for an external or custom template alias.
@@ -193,7 +197,9 @@ class TemplateAliasConfig:
         source: Remote URL or local filesystem path to the template.
         name: Human-readable display name for the template.
         description: Brief description of the template stack and purpose.
-        trusted: If True, bypasses interactive execution prompts for remote templates.
+        trusted: Whether the template this alias names may run commands without
+            asking: a local or remote template, on ``init`` and ``sync``. Without
+            it, a headless run of a non-built-in template refuses to run any.
     """
 
     source: str
@@ -251,35 +257,19 @@ def _validate_template_aliases(templates: dict[str, TemplateAliasConfig]) -> Non
 class UserConfig:
     """Global configuration settings for the Protostar CLI.
 
+    Every tool also has a boolean field named by its ``Tool`` value
+    (``ruff``, ``mypy``, ...): whether a new project enables it. Its module's
+    ``ToolInfo`` describes it.
+
     Attributes:
         ide (IDEType | str | None): The preferred IDE (e.g., 'vscode', 'cursor', 'none').
         author_name (str | None): Default author name for project metadata.
         author_email (str | None): Default author email for project metadata.
         github_username (str | None): Default GitHub username for repository URL formatting.
-        direnv (bool): Whether to auto-scaffold .envrc shell bindings.
         python_version (str | None): The specific Python version to scaffold.
         license (str | None): Default project license identifier (e.g., 'MIT', 'Apache-2.0').
         supported_os (list[str]): The supported operating systems to scaffold CI for.
-        markdownlint (bool): Whether to auto-scaffold MarkdownLint configs.
-        rumdl (bool): Whether to auto-scaffold rumdl fast markdown linter and formatter.
-        ruff (bool): Whether to auto-scaffold Ruff dependencies and configs.
-        mypy (bool): Whether to auto-scaffold Mypy dependencies and configs.
-        ty (bool): Whether to auto-scaffold Astral ty type checker.
-        pyrefly (bool): Whether to auto-scaffold Pyrefly type checker.
-        pytest (bool): Whether to auto-scaffold Pytest dependencies and configs.
-        pre_commit (bool): Whether to auto-scaffold pre-commit hooks.
-        prek (bool): Whether to auto-scaffold prek git hooks.
-        commitizen (bool): Whether to auto-scaffold commitizen version bumping and changelog tooling.
-        renovate (bool): Whether to auto-scaffold Renovate dependency update configuration.
-        codecov (bool): Whether to auto-scaffold Codecov configuration.
-        zensical (bool): Whether to auto-scaffold Zensical documentation.
-        readthedocs (bool): Whether to auto-scaffold Read the Docs configuration.
-        ci (bool): Whether to auto-scaffold standard GitHub Actions CI workflows.
-        release (bool): Whether to auto-scaffold GitHub Actions PyPI release workflows.
-        docker (bool): Whether to auto-scaffold container artifacts (.dockerignore, Dockerfile).
-        just (bool): Whether to auto-scaffold a justfile for command execution.
-        agents (bool): Whether to auto-scaffold a managed AGENTS.md guide for coding agents.
-        community (bool): Whether to auto-scaffold community health files and issue templates.
+        templates (dict[str, TemplateAliasConfig]): Template aliases by name.
     """
 
     ide: IDEType | str | None = None

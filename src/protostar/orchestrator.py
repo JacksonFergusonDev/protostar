@@ -122,7 +122,7 @@ class Orchestrator:
         """
         req = self.request
 
-        # Phase 1: Manifest instantiation & recipe selection
+        # Phase 1: A fresh manifest and the recipe it plans.
         manifest = EnvironmentManifest(
             template_reference=req.template_reference
             or (req.template_blueprint.reference if req.template_blueprint else None),
@@ -150,7 +150,8 @@ class Orchestrator:
 
         manifest.recipe = decode_recipe(manifest.recipe.to_dict())
 
-        # Phase 2: Resolve the diversion ledger before module validation/build
+        # Phase 2: Select the tools the recipe and the template's opinions
+        # enable, and record which of their executables are missing.
         from .recipe import ProducerContribution, Tool, validate_tools
 
         opinions = (
@@ -181,6 +182,9 @@ class Orchestrator:
             if not system_deps.installed(executable)
         )
 
+        # Phase 3: Each enabled module builds into the manifest. While it does,
+        # every declaration is attributed to the module (and its tool) through
+        # ``observe``, which the review reports as its ``producers``.
         producer = ""
         tool: Tool | None = None
         contributions: list[ProducerContribution] = []
@@ -230,7 +234,7 @@ class Orchestrator:
                 if before_ide.get(key) != value:
                     observe("ide_settings", (key,))
 
-        # Phase 3b: Documents and tasks derived from the aggregated tooling state.
+        # Phase 4: Documents and tasks derived from the aggregated tooling state.
         # Rendered after every module builds so no module inspects its siblings,
         # and before template appends so a template's own AGENTS.md regions follow it.
         if manifest.tooling.wants_hooks:
@@ -265,7 +269,7 @@ class Orchestrator:
                 community.PULL_REQUEST_TARGET, generate_pull_request_template(guide)
             )
 
-        # Phase 4: Blueprint injection
+        # Phase 5: The template's own declarations, attributed to the template.
         blueprint = req.template_blueprint
         if blueprint:
             template_id = (
@@ -382,7 +386,8 @@ class Orchestrator:
         manifest.tasks.observe = _ignore_contribution
         manifest.tooling.observe = _ignore_contribution
 
-        # Phase 5: Manifest-First Collision Intercept
+        # Phase 6: Existing files the plan would edit, for the caller to settle
+        # before execute() refuses them.
         manifest.collisions = frozenset(self._detect_collisions(manifest))
 
         return manifest
@@ -398,7 +403,8 @@ class Orchestrator:
         """Realizes the pre-built manifest on disk.
 
         Takes an already-built manifest from plan() and executes it. Performs no
-        planning, collision detection, template resolution, or user interaction.
+        template resolution or user interaction, and refuses the collisions
+        plan() found unless a collision strategy settles them.
 
         Args:
             manifest: The populated EnvironmentManifest to execute.
@@ -409,8 +415,10 @@ class Orchestrator:
                 showed, keyed by conflict identity.
 
         Raises:
-            ExecutionInterruptedError: If the user interrupts execution after
-                disk mutations have already begun.
+            WorkspaceCollisionError: If the manifest has collisions and no
+                collision strategy.
+            ExecutionInterruptedError: If the user interrupts execution; the
+                rollback context says what had been touched.
 
         Returns:
             An ExecutionResult describing what was touched and any diagnostics.
@@ -422,6 +430,8 @@ class Orchestrator:
         if manifest.collisions and manifest.collision_strategy is None:
             raise WorkspaceCollisionError(paths=manifest.collisions)
 
+        # Through the module, so the lazy __getattr__ imports SystemExecutor on
+        # first use and a test's patch of it is the one that runs.
         executor_cls: type[SystemExecutor] = sys.modules[__name__].SystemExecutor
         executor = executor_cls(
             manifest,

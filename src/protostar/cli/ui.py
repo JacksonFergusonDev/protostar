@@ -1,3 +1,9 @@
+"""Shared terminal presentation: the console, glyphs, headings, and reports.
+
+Everything printed for a person goes through here, so JSON mode keeps stdout
+for the payload and a legacy-encoded stream never crashes on a glyph.
+"""
+
 from __future__ import annotations
 
 import io

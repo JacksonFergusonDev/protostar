@@ -1,3 +1,5 @@
+"""Shell completion: generated scripts, template-name completion, and setup help."""
+
 import argparse
 import logging
 import os

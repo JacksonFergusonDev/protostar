@@ -4,7 +4,8 @@ Spacing belongs to the layout, never to what it holds. A screen's body is
 ``Columns`` of ``Column`` stacks and panels, and every gap between blocks is
 one cell across or one row down. A panel's rule is drawn in that row, so a
 panel stacked on a panel shares its rule instead of adding a second one.
-``tests/test_tui_layout.py`` measures every screen against this.
+``check_layout`` in ``tests/conftest.py`` measures every screen snapshot
+against this.
 """
 
 from collections.abc import Sequence

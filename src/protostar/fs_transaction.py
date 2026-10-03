@@ -1,4 +1,8 @@
-"""Transaction-aware filesystem operations."""
+"""The only way execution writes to disk: every mutation journaled first.
+
+Each write, directory, and removal records its path (and any missing parent)
+in the ``MutationJournal`` before touching it, so rollback can restore it.
+"""
 
 import stat
 from pathlib import Path

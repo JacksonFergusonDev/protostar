@@ -1,3 +1,11 @@
+"""The manifest: what a run declares it wants, before anything is reconciled.
+
+``EnvironmentManifest`` aggregates the dependency, filesystem, tooling, and
+task declarations modules and templates make during ``plan()``, and answers
+which files a run reads, writes, and leaves behind. Its ``to_dict`` is the
+dry-run's JSON and the digest a review is checked against.
+"""
+
 from __future__ import annotations
 
 import enum
@@ -21,7 +29,7 @@ from .intent import (
     validate_region_id,
     validate_target,
 )
-from .interpolation import render_template
+from .interpolation import render_path
 from .merge import MergeConflict
 from .metadata import LicenseType
 from .migrations import Migration
@@ -38,12 +46,6 @@ if TYPE_CHECKING:
 
 def _ignore_contribution(path: tuple[str, ...]) -> None:
     """Ignores attribution when assembling a standalone manifest slice."""
-
-
-def _render_path(path: str, context: dict[str, str]) -> str:
-    """Fills a declared path's built-in names in. A path is not TOML: nothing is escaped."""
-    # None is as falsy as False, so no test can tell the two apart.
-    return render_template(path, context, escape_toml=False)  # pragma: no mutate
 
 
 class DiagnosticPhase(enum.StrEnum):
@@ -651,10 +653,12 @@ class TaskManifest:
 
 @dataclass
 class EnvironmentManifest:
-    """The materialized build state of the target environment.
+    """Everything a run declares it wants: the plan, not yet any bytes.
 
-    Modules mutate this declarative object rather than the host system directly. The Executor
-    subsequently reads this object to execute the unified system changes.
+    ``Orchestrator.plan()`` builds it: modules and the template declare files,
+    dependencies, tooling, and tasks here instead of touching the host. It
+    never says what the workspace looks like afterward; ``prepare_review``
+    reconciles it with the workspace into the bytes execution applies.
     """
 
     producer_contributions: tuple[ProducerContribution, ...] = ()
@@ -748,11 +752,11 @@ class EnvironmentManifest:
 
         ctx = self._path_context()
         targets = {pyproject.TARGET} | {
-            Path(_render_path(path, ctx)).as_posix()
+            Path(render_path(path, ctx)).as_posix()
             for path in self.filesystem.structured
         }
         if renovate.TARGET in {
-            Path(_render_path(path, ctx)).as_posix()
+            Path(render_path(path, ctx)).as_posix()
             for path in self.filesystem.file_injections
         }:
             targets.add(renovate.TARGET)
@@ -782,10 +786,11 @@ class EnvironmentManifest:
         return files
 
     def target_files(self) -> set[Path]:
-        """Returns all concrete workspace file paths that this manifest intends to create or mutate.
+        """Returns the files this manifest creates or edits that can collide.
 
-        Excludes directory scaffolding (handled safely via ensure_directory) and
-        .gitignore updates (deduplicated and non-destructive).
+        Leaves out directories, the append-only ``.gitignore``, and the IDE
+        settings, none of which collide; ``written_files`` adds the last two
+        back for previews.
 
         Returns:
             A set of Path objects representing target files.
@@ -796,12 +801,12 @@ class EnvironmentManifest:
         ctx = self._path_context()
 
         for filepath in self.filesystem.file_injections:
-            targets.add(Path(_render_path(filepath, ctx)))
+            targets.add(Path(render_path(filepath, ctx)))
 
         for filepath in (
             self.filesystem.structured.keys() | self.filesystem.regions.keys()
         ):
-            targets.add(Path(_render_path(filepath, ctx)))
+            targets.add(Path(render_path(filepath, ctx)))
 
         if self.dependencies.includes:
             targets.add(Path(pyproject.TARGET))
@@ -828,7 +833,7 @@ class EnvironmentManifest:
             A set of Path objects representing target directories.
         """
         ctx = self._path_context()
-        return {Path(_render_path(path, ctx)) for path in self.filesystem.directories}
+        return {Path(render_path(path, ctx)) for path in self.filesystem.directories}
 
     def written_files(self) -> set[Path]:
         """Returns every workspace file execution writes itself, for previews.
@@ -924,12 +929,6 @@ class EnvironmentManifest:
             "PROJECT_NAME": resolve_project_name(self.metadata),
             "PACKAGE_NAME": resolve_package_name(self.metadata),
         }
-
-    def should_skip_file(self, target: Path) -> bool:
-        """Returns True if the file exists and collision strategy is not OVERWRITE."""
-        return (
-            target.exists() and self.collision_strategy != CollisionStrategy.OVERWRITE
-        )
 
     def to_dict(self) -> dict[str, Any]:
         """Serializes the full environment manifest to a JSON-safe dictionary.

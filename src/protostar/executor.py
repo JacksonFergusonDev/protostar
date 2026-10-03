@@ -131,6 +131,18 @@ class SystemExecutor(Reconciliation):
                 self._resolve_review(prepared)
                 self._apply_hooks(prepared.hooks)
             else:
+                # Initialization interleaves prepared batches with the commands
+                # whose output later batches read, so each batch is prepared
+                # only once the files it depends on exist:
+                #   1. Project files, before any command runs.
+                #   2. Initializers (`uv init`, `git init`), which create files.
+                #   3. Merged configuration and dependency selection, then the
+                #      resolver (`uv add`, or `uv lock` alone).
+                #   4. Files that depend on the resolved project, then the
+                #      post-install commands and the editor extension probe.
+                #   5. The recipe, unless the run is one-shot.
+                # The protostar.lock state is written last, then the journal
+                # commits. Any failure on the way rolls all of it back.
                 if review is not None:
                     raise ConfigurationError(
                         "Initialization requires phased preparation.",
@@ -172,8 +184,9 @@ class SystemExecutor(Reconciliation):
     def _check_ide_extensions(self) -> None:
         """Verifies that the configured IDE has the recommended extensions installed.
 
-        Fails silently if the IDE CLI is unavailable or execution fails. Appends a warning
-        diagnostic only on a successful check that uncovers missing extensions.
+        Does nothing when no editor with an extension CLI is configured or its
+        CLI is not installed. A probe that fails is reported as a skip; a probe
+        that finds extensions missing is reported as a warning.
         """
         check_ide_extensions(
             ide=self.manifest.recipe.ide if self.manifest.recipe else self.config.ide,

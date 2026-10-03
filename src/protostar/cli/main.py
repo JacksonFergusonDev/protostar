@@ -1,3 +1,12 @@
+"""``protostar``'s entry point, ``init``, and ``config``.
+
+``main()`` parses arguments, dispatches to a command's handler, and turns a
+``ProtostarError`` into its human or JSON report and exit code. ``init``
+gathers the draft from flags, configuration, and the TUI before the engine
+plans or runs anything; the other commands' handlers live in their own
+modules, such as ``reviews`` for ``sync``, ``status``, and ``diff``.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -22,11 +31,11 @@ from rich.text import Text
 from protostar.cli import parser, schema, ui
 from protostar.cli.docs_links import format_docs_link
 from protostar.config import (
-    DEFAULT_CONFIG_CONTENT,
     TemplateSource,
     UserConfig,
     active_config_source,
     clear_user_config_cache,
+    default_config_content,
     select_config_source,
 )
 from protostar.docs_registry import DocsPage
@@ -243,7 +252,9 @@ def handle_init(args: argparse.Namespace) -> None:
         draft = _edit_variables(draft, user_config, flagged)
         modules, request = resolve_init(draft, user_config)
 
-    # 4. Undocumented Crash Test Injection
+    # The hidden --crash-test flag adds a module whose build raises, so the
+    # crash report can be exercised without breaking the code (see
+    # docs/developer/testing.md).
     if getattr(args, "crash_test", False):
 
         class CrashModule(BootstrapModule):
@@ -256,6 +267,8 @@ def handle_init(args: argparse.Namespace) -> None:
 
         modules.append(CrashModule())
 
+    # Through the module, so the lazy __getattr__ imports Orchestrator on
+    # first use and a test's patch of it is the one that runs.
     orchestrator_cls: type[Orchestrator] = sys.modules[__name__].Orchestrator
     engine = orchestrator_cls(modules, user_config, request=request)
 
@@ -367,7 +380,7 @@ def _save_config(config_path: Path, edit: ConfigEdit) -> None:
     current = (
         config_path.read_text(encoding="utf-8")
         if config_path.exists()
-        else DEFAULT_CONFIG_CONTENT
+        else default_config_content()
     )
     if current != edit.before:
         raise ConfigurationError(
@@ -449,7 +462,7 @@ def handle_config(args: argparse.Namespace) -> None:
         logger.debug(
             "Resetting configuration file at %s to default template", config_path
         )
-        atomic_write_text(config_path, DEFAULT_CONFIG_CONTENT)
+        atomic_write_text(config_path, default_config_content())
         ui.console.print(
             Text.assemble(
                 (f"{ui.glyph('✔', '+')} ", "green"),
@@ -470,7 +483,7 @@ def handle_config(args: argparse.Namespace) -> None:
         content = (
             config_path.read_text(encoding="utf-8")
             if config_path.exists()
-            else DEFAULT_CONFIG_CONTENT
+            else default_config_content()
         )
         config = UserConfig.parse(content, str(config_path))
         decision = edit_settings(content, config_path, _config_prefill(config))
@@ -483,7 +496,7 @@ def handle_config(args: argparse.Namespace) -> None:
 
     if not config_path.exists():
         logger.debug("Writing initial default configuration to %s", config_path)
-        atomic_write_text(config_path, DEFAULT_CONFIG_CONTENT)
+        atomic_write_text(config_path, default_config_content())
         ui.console.print(
             Text.assemble(
                 (f"{ui.glyph('✔', '+')} ", "green"),

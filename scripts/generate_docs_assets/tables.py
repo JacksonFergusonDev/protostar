@@ -13,10 +13,10 @@ import tomlkit
 from tomlkit.items import String, StringType, Trivia
 
 from protostar.config import (
-    DEFAULT_CONFIG_CONTENT,
     TemplateBlueprint,
     TemplateSource,
     UserConfig,
+    default_config_content,
 )
 from protostar.documents import community, pyproject
 from protostar.fs import atomic_write_text
@@ -41,7 +41,7 @@ from scripts.generate_docs_assets.common import (
 
 def generate_default_config() -> None:
     """Writes the default global TOML configuration to a generated documentation fixture."""
-    _write_generated_doc("default_config.toml", DEFAULT_CONFIG_CONTENT)
+    _write_generated_doc("default_config.toml", default_config_content())
 
 
 def generate_template_schema_fixture() -> None:
@@ -404,6 +404,18 @@ def generate_capability_tables() -> None:
                             config_env_rows.append(
                                 [f"`{attr_name}`", typ_formatted, desc]
                             )
+
+    # Tools are described once, by their modules.
+    defaults = UserConfig()
+    for module in TOOLING_MODULES:
+        default = str(getattr(defaults, module.config_key)).lower()
+        config_env_rows.append(
+            [
+                f"`{module.config_key}`",
+                "`bool`",
+                f"{module.info.summary}. Default: `{default}`.",
+            ]
+        )
 
     _write_generated_doc(
         "table_config_env.md",

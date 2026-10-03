@@ -4,7 +4,7 @@ import dataclasses
 
 import pytest
 
-from protostar.config import DEFAULT_CONFIG_CONTENT, UserConfig
+from protostar.config import UserConfig, default_config_content
 from protostar.config_edit import EDITABLE_KEYS, TOOL_KEYS, config_values
 from protostar.modules import TOOLING_MODULES
 from protostar.recipe import Tool
@@ -32,11 +32,11 @@ def test_user_config_has_all_tool_fields() -> None:
 
 
 def test_default_config_content_has_all_tools() -> None:
-    """Verifies that DEFAULT_CONFIG_CONTENT includes commented toggle entries for all tools."""
+    """Verifies that default_config_content() includes commented toggle entries for all tools."""
     for tool in Tool:
         expected = f"# {tool.value} ="
-        assert expected in DEFAULT_CONFIG_CONTENT, (
-            f"Tool toggle '{expected}' is missing from DEFAULT_CONFIG_CONTENT"
+        assert expected in default_config_content(), (
+            f"Tool toggle '{expected}' is missing from default_config_content()"
         )
 
 

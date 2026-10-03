@@ -6,11 +6,13 @@ as a post-install task. This approach scaled poorly: for every remote repository
 the CLI halted while the machine performed full `git fetch` operations just to read
 a semantic version tag.
 
-To eliminate this client-side bottleneck, we shifted to an asynchronous static registry model:
+To eliminate this client-side bottleneck, we shifted to a static registry model:
 1. An auxiliary repository (`protostar-hook-registry`) tracks upstream tools via Renovate Bot.
 2. A GitHub Actions pipeline catches version bumps, compiles them, and deploys a lightweight `registry.json` payload to an edge CDN.
-3. At executor construction, this module takes one registry snapshot with per-pin
-   provenance. Pure reconciliation consumes that snapshot without network access.
+3. Before the change review, the caller takes one registry snapshot with per-pin
+   provenance, and execution reuses it so it writes the pins the review showed
+   (the executor takes its own only when it is given none). Pure reconciliation
+   consumes that snapshot without network access.
 
 This decoupling provides zero-dependency churn in core, maximum determinism, and graceful offline degradation.
 """
