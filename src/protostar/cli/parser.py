@@ -90,6 +90,23 @@ class JsonAwareParser(argparse.ArgumentParser):
         print_table_help(self, file)
 
 
+def format_invocation(action: argparse.Action) -> str:
+    """Returns how a command line writes an argument, such as ``-t, --template NAME``.
+
+    Help screens and the CLI reference both show arguments this way.
+    """
+    if not action.option_strings:
+        metavar = action.metavar or action.dest
+        return " ".join(metavar) if isinstance(metavar, tuple) else metavar
+    invocation = ", ".join(action.option_strings)
+    if action.nargs != 0 and not isinstance(action, argparse.BooleanOptionalAction):
+        metavar = action.metavar or action.dest.upper()
+        invocation += " " + (
+            " ".join(metavar) if isinstance(metavar, tuple) else metavar
+        )
+    return invocation
+
+
 def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
     """Custom help printer that formats action groups as bordered Rich tables."""
     console = ui.console if file in (None, sys.stdout) else Console(file=file)
@@ -141,34 +158,7 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
                         table.add_row(name, sub_help)
                 continue
 
-            # Build the invocation string (e.g., "-p, --python")
-            if action.option_strings:
-                invocation = ", ".join(action.option_strings)
-
-                # Append metavars for arguments that take values
-                if (
-                    action.nargs != 0
-                    and action.dest != "help"
-                    and not isinstance(action, argparse.BooleanOptionalAction)
-                ):
-                    if action.metavar:
-                        metavar_str = (
-                            " ".join(action.metavar)
-                            if isinstance(action.metavar, tuple)
-                            else action.metavar
-                        )
-                    else:
-                        metavar_str = action.dest.upper()
-                    invocation += f" {metavar_str}"
-            else:
-                if action.metavar:
-                    invocation = (
-                        " ".join(action.metavar)
-                        if isinstance(action.metavar, tuple)
-                        else action.metavar
-                    )
-                else:
-                    invocation = action.dest
+            invocation = format_invocation(action)
 
             # Extract help payload, prioritizing native Rich renderables if available
             help_text: Any = action.help or ""
@@ -266,13 +256,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--verbose",
         action="store_true",
         default=argparse.SUPPRESS,  # Prevents subparser from overwriting root namespace
-        help="Enable verbose debug output and rich tracebacks.",
+        help="Show debug logs and full tracebacks.",
     )
     base_parser.add_argument(
         "--json",
         action="store_true",
         default=argparse.SUPPRESS,
-        help=argparse.SUPPRESS,  # Hide from human help output
+        help="Print one JSON payload on stdout and never prompt.",
     )
     base_parser.add_argument(
         "--config",
@@ -347,11 +337,11 @@ def build_parser() -> argparse.ArgumentParser:
     for command, description in (
         (
             "status",
-            "Summarize accepted updates, conflicts, and preserved local intent.",
+            "Show what an update would change, every conflict, and each edit of yours that stays.",
         ),
         (
             "diff",
-            "Review accepted file diffs, conflicts, and proposed resolver actions.",
+            "Show an update's changes line by line, with every conflict and the packages it adds.",
         ),
     ):
         review_parser = subparsers.add_parser(
@@ -359,16 +349,16 @@ def build_parser() -> argparse.ArgumentParser:
             help=description,
             description=description,
             parents=[base_parser],
-            epilog="Inspects the current directory. Requires [tool.protostar] and protostar.lock; never executes tasks or writes files.",
+            epilog="Reads the project in the current directory, which needs its recipe in pyproject.toml and protostar.lock. Never runs a command or writes a file.",
         )
         review_parser.set_defaults(func=dispatch_operation, operation=Operation.REVIEW)
 
     sync_parser = subparsers.add_parser(
         "sync",
-        help="Apply safe project updates and retain conflicting local content.",
-        description="Apply accepted lifecycle updates transactionally in the current directory.",
+        help="Apply the update: safe changes land, and conflicts wait for your choice.",
+        description="Apply the template's and Protostar's updates to the project in the current directory, keeping your edits.",
         parents=[base_parser],
-        epilog="Requires the project recipe in pyproject.toml and protostar.lock. Never replays initialization tasks or IDE probes. In an interactive terminal, conflicts you can settle open a screen before anything is applied. Unresolved conflicts commit safe changes with exit 1.",
+        epilog="Needs the project's recipe in pyproject.toml and protostar.lock, and never reruns init's setup commands. In a terminal, conflicts you can settle open a screen before anything is applied. With conflicts left open, the safe changes still apply and sync exits 1.",
     )
     sync_parser.add_argument(
         "--resolve",
@@ -421,12 +411,12 @@ def build_parser() -> argparse.ArgumentParser:
     sync_modes.add_argument(
         "--dry-run",
         action="store_true",
-        help="Review accepted diffs without writing files or running subprocesses.",
+        help="Show the changes sync would make, without writing a file or running a command.",
     )
     sync_modes.add_argument(
         "--check",
         action="store_true",
-        help="Read-only check; exit 1 when accepted work, state advancement, or conflicts remain.",
+        help="Exit 1 when the project is behind its recipe or has an open conflict. Writes nothing, and edits you kept don't fail it.",
     )
     sync_parser.set_defaults(func=dispatch_operation, operation=Operation.SYNC)
 
@@ -441,7 +431,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     eject_parser = subparsers.add_parser(
         "eject",
-        help="Remove Protostar tracking while keeping the scaffolded project.",
+        help="Stop Protostar managing the project, keeping every file it made.",
         description="Remove protostar.lock and the project recipe from pyproject.toml.",
         parents=[base_parser],
         epilog="Keeps uv.lock and every other project file. Interactive runs ask before applying; automation must pass --yes.",
@@ -454,15 +444,15 @@ def build_parser() -> argparse.ArgumentParser:
     eject_parser.add_argument(
         "--yes",
         action="store_true",
-        help="Confirm ejection without an interactive prompt.",
+        help="Eject without asking. Needed where there is no terminal to ask in.",
     )
     eject_parser.set_defaults(func=dispatch_operation, operation=Operation.EJECT)
 
     # --- Init Subparser ---
     init_parser = subparsers.add_parser(
         "init",
-        help="Initialize a new Python environment and aggregate manifest configurations.",
-        description="Scaffolds base Python configurations, dependencies, and environment files.",
+        help="Set up a new project, or bring Protostar into one you already have.",
+        description="Choose a template and tools, preview every file, and review the changes before anything is written.",
         usage=argparse.SUPPRESS,
         epilog="[bold]Example:[/bold]\n  protostar init --template astro --mypy",
         parents=[base_parser],
@@ -476,7 +466,7 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Plan the execution and print the resulting manifest without mutating the disk.",
+        help="Show the change review: every file, command, and decision, without writing a file or running a command.",
     )
     base_group = init_parser.add_argument_group("Base Configuration")
 
@@ -485,7 +475,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--template",
         type=str,
         dest="template_name",
-        help="Name of a template to apply (run with --list-templates to view available).",
+        help="A built-in template or one of your aliases; --list-templates shows them.",
         metavar="NAME",
     )
     template_action.completer = completion.template_completer  # type: ignore[attr-defined]
@@ -493,18 +483,18 @@ def build_parser() -> argparse.ArgumentParser:
     base_group.add_argument(
         "--list-templates",
         action="store_true",
-        help="List all available built-in and global alias templates.",
+        help="List the built-in templates and your aliases.",
     )
     base_group.add_argument(
         "--one-shot",
         action="store_true",
-        help="Scaffold once without recording a Protostar recipe or ownership state; uv.lock remains separate.",
+        help="Set up the project without recording a recipe or protostar.lock, so sync can't update it later.",
     )
     from_action = base_group.add_argument(
         "--from",
         type=str,
         dest="from_path",
-        help="Path or URL to an external template (TOML file, directory, or archive).",
+        help="A template file or directory, a repository on GitHub, GitLab, Bitbucket, Codeberg, or Sourcehut, or any HTTPS file or archive.",
         metavar="PATH",
     )
     from_action.completer = argcomplete.completers.FilesCompleter(  # type: ignore[attr-defined]
@@ -553,7 +543,7 @@ def build_parser() -> argparse.ArgumentParser:
     python_version_action = base_group.add_argument(
         "--python-version",
         type=str,
-        help="Specify the Python version to scaffold (e.g., 3.13). Overrides global configuration.",
+        help="The Python version the project targets, such as 3.13. Overrides your configuration.",
         dest="python_version",
         metavar="VERSION",
     )
@@ -568,13 +558,13 @@ def build_parser() -> argparse.ArgumentParser:
     tooling_group.add_argument(
         "--force-merge",
         action="store_true",
-        help="Bypass interactive prompts and safely merge on file collisions.",
+        help="Merge into files that already exist without asking: keep your values and add what's missing.",
     )
 
     tooling_group.add_argument(
         "--force-replace",
         action="store_true",
-        help="Bypass interactive prompts and forcibly overwrite file collisions.",
+        help="Replace files that already exist with Protostar's version, without asking.",
     )
 
     tooling_group.add_argument(
@@ -601,7 +591,7 @@ def build_parser() -> argparse.ArgumentParser:
     export_schema_parser = subparsers.add_parser(
         "export-schema",
         help="Export the JSON Schema for the TOML template format.",
-        description="Generates and prints the JSON Schema representing the layout of Protostar template files. Intended for IDE tooling and programmatic interrogation.",
+        description="Print the JSON Schema for template files, for editors and validators. With --json, prints plain JSON to save to a file.",
         usage=argparse.SUPPRESS,
         parents=[suppressed_base_parser],
     )
@@ -657,7 +647,7 @@ def build_parser() -> argparse.ArgumentParser:
         "-f",
         "--force",
         action="store_true",
-        help="Bypass confirmation prompt when resetting configuration.",
+        help="With --reset, reset without asking.",
     )
     config_parser.add_argument(
         "--reset",
@@ -669,8 +659,8 @@ def build_parser() -> argparse.ArgumentParser:
     # --- Completion Subparser ---
     completion_parser = subparsers.add_parser(
         "completion",
-        help="Generate shell autocompletion scripts.",
-        description="Generates dynamic autocompletion scripts for supported shells (Bash, Zsh, Fish, PowerShell).",
+        help="Print the tab-completion script for your shell.",
+        description="Print the tab-completion script for Bash, Zsh, Fish, or PowerShell.",
         usage=argparse.SUPPRESS,
         epilog=(
             "[bold]Examples:[/bold]\n"
@@ -694,7 +684,7 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="?",
         choices=[s.value for s in Shell],
         metavar="<shell>",
-        help=f"Target shell ({', '.join(s.value for s in Shell)}). If omitted, displays configuration instructions.",
+        help=f"The shell to print the script for: {', '.join(s.value for s in Shell)}. Without it, shows how to set up completion.",
     )
     completion_parser.set_defaults(func=completion.handle_completion)
 
@@ -702,7 +692,7 @@ def build_parser() -> argparse.ArgumentParser:
     help_parser = subparsers.add_parser(
         "help",
         help="Show this help message or a subcommand's manual.",
-        description="Displays the CLI help manual.",
+        description="Show the commands, or one command's options.",
         usage=argparse.SUPPRESS,
         parents=[suppressed_base_parser],
     )
@@ -715,7 +705,7 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="?",
         choices=available_commands,
         metavar="<command>",
-        help="The specific subcommand to explain.",
+        help="The command to show options for.",
     )
 
     def dispatch_help(parsed_args: argparse.Namespace) -> None:

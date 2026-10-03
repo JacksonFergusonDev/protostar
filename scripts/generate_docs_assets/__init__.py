@@ -11,6 +11,7 @@ if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
 from scripts._common import OutputStyle, report
+from scripts.generate_docs_assets.cli_tables import generate_cli_tables
 from scripts.generate_docs_assets.cli_terminals import (
     generate_cli_dry_run_svg,
     generate_cli_help_svgs,
@@ -49,6 +50,7 @@ __all__ = [
     "generate_cli_init_svg",
     "generate_cli_missing_tools_svg",
     "generate_cli_status_svg",
+    "generate_cli_tables",
     "generate_default_config",
     "generate_diagnostic_panel_svg",
     "generate_diff_fixtures",
@@ -77,6 +79,7 @@ def generate_docs_assets() -> None:
     generate_tui_svgs()
     generate_default_config()
     generate_capability_tables()
+    generate_cli_tables()
     generate_manifest_state()
     generate_agent_payloads()
     generate_schema_tables()
