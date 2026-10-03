@@ -57,8 +57,10 @@ def test_executor_writes_injected_files(mocker, mock_config):
     mock_write.assert_called_once_with(Path(".test_config.yaml"), "mock content")
 
 
-def test_executor_append_files_late_binding(tmp_path, monkeypatch, mock_config):
-    """Test that configuration payloads are interpolated with the active python version."""
+def test_executor_writes_structured_content_as_declared(
+    tmp_path, monkeypatch, mock_config
+):
+    """Producers render their own content, so reconciliation substitutes nothing."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nrequires-python = ">=3.11"\n', encoding="utf-8"
@@ -76,8 +78,7 @@ def test_executor_append_files_late_binding(tmp_path, monkeypatch, mock_config):
     written_data = (tmp_path / "pyproject.toml").read_text(encoding="utf-8")
     parsed_toml = tomllib.loads(written_data)
 
-    # Assert structural integrity rather than string presence
-    assert parsed_toml["python_version"] == "3.11"
+    assert parsed_toml["python_version"] == "<% PYTHON_VERSION %>"
 
 
 def test_executor_writes_pre_commit_config(mocker, mock_config):
@@ -557,9 +558,6 @@ def test_executor_append_files_ast_merge(tmp_path, monkeypatch, mock_config):
     assert parsed_toml["tool"]["mypy"]["strict"] is True
     assert parsed_toml["tool"]["ruff"]["line-length"] == 120
     assert parsed_toml["tool"]["ruff"]["target-version"] == "py310"  # Preserved!
-
-    # Verify the late-binding variable <% PYTHON_VERSION %> was interpolated correctly
-    # based on the `requires-python = ">=3.11"` in base_complex.toml
     assert parsed_toml["tool"]["mypy"]["python_version"] == "3.11"
 
 
@@ -1073,10 +1071,10 @@ def test_write_docker_artifacts_handles_os_error(mocker):
     assert ".dockerignore" in exc_info.value.path
 
 
-def test_executor_interpolates_package_name_in_injected_files(
+def test_executor_renders_injected_paths_but_not_their_content(
     tmp_path, mock_config, monkeypatch
 ):
-    """Test that <% PACKAGE_NAME %> and <% PROJECT_NAME %> are interpolated into injected files and paths."""
+    """Paths render with the project's values; content arrives already rendered."""
     monkeypatch.chdir(tmp_path)
     manifest = EnvironmentManifest()
     manifest.metadata = cast(ProjectMetadata, {"project_name": "my-cool-tool"})
@@ -1089,7 +1087,9 @@ def test_executor_interpolates_package_name_in_injected_files(
 
     target_file = tmp_path / "src" / "my_cool_tool" / "__init__.py"
     assert target_file.exists()
-    assert target_file.read_text() == '"""my-cool-tool package (my_cool_tool)."""\n'
+    assert target_file.read_text() == (
+        '"""<% PROJECT_NAME %> package (<% PACKAGE_NAME %>)."""\n'
+    )
 
 
 def test_executor_interpolates_package_name_in_directories(
@@ -1106,18 +1106,11 @@ def test_executor_interpolates_package_name_in_directories(
     assert (tmp_path / "src" / "my_cool_tool").is_dir()
 
 
-def test_executor_interpolates_package_name_in_file_appends(
-    tmp_path, mock_config, monkeypatch
-):
-    """Test that <% PACKAGE_NAME %> and <% PROJECT_NAME %> are interpolated into TOML and text file appends."""
+def test_executor_writes_regions_as_declared(tmp_path, mock_config, monkeypatch):
+    """Producers render their own regions, so reconciliation substitutes nothing."""
     monkeypatch.chdir(tmp_path)
     manifest = EnvironmentManifest()
     manifest.metadata = cast(ProjectMetadata, {"project_name": "my-cool-tool"})
-    manifest.filesystem.add_structured(
-        "pyproject.toml",
-        '[project.scripts]\n<% PROJECT_NAME %> = "<% PACKAGE_NAME %>.cli:app"\n',
-        producer="module:test_executor",
-    )
     manifest.filesystem.add_region(
         "script.sh",
         'echo "Running <% PROJECT_NAME %> from <% PACKAGE_NAME %>"\n',
@@ -1126,11 +1119,8 @@ def test_executor_interpolates_package_name_in_file_appends(
     executor = SystemExecutor(manifest, mock_config)
     executor._append_files()
 
-    pyproject_content = (tmp_path / "pyproject.toml").read_text()
-    assert 'my-cool-tool = "my_cool_tool.cli:app"' in pyproject_content
-
     script_content = (tmp_path / "script.sh").read_text()
-    assert 'echo "Running my-cool-tool from my_cool_tool"' in script_content
+    assert 'echo "Running <% PROJECT_NAME %> from <% PACKAGE_NAME %>"' in script_content
 
 
 def test_executor_append_files_cli_template_full_lifecycle(

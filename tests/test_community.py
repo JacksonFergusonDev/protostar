@@ -1,5 +1,6 @@
 """Community health files: their content, where they land, and who renders them."""
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -26,11 +27,14 @@ from protostar.sync_state import deserialize_state
 from protostar.workflows import TargetOS
 
 HOSTED = CommunitySpec(
+    project_name="engine",
     contact_email="ada@example.com",
     repository_url="https://github.com/ada/engine",
     supported_os=(TargetOS.LINUX, TargetOS.MACOS),
 )
-UNHOSTED = CommunitySpec(contact_email=None, repository_url=None, supported_os=())
+UNHOSTED = CommunitySpec(
+    project_name="engine", contact_email=None, repository_url=None, supported_os=()
+)
 STATE = Path("protostar.lock")
 
 
@@ -78,7 +82,15 @@ def test_bug_report_form_offers_the_supported_platforms():
     assert platform["type"] == "dropdown"
     assert platform["attributes"]["options"] == ["Linux", "MacOS", "Other"]
     [version] = [field for field in form["body"] if field.get("id") == "version"]
-    assert version["attributes"]["label"] == "<% PROJECT_NAME %> version"
+    assert version["attributes"]["label"] == "engine version"
+
+
+def test_bug_report_form_quotes_a_project_name_that_holds_quotes():
+    spec = replace(HOSTED, project_name='say "hi" \\ bye')
+    form = load_yaml(generate_bug_report_form(spec))
+
+    [version] = [field for field in form["body"] if field.get("id") == "version"]
+    assert version["attributes"]["label"] == 'say "hi" \\ bye version'
 
 
 def test_bug_report_form_asks_for_a_platform_without_supported_ones():
@@ -173,7 +185,8 @@ def test_plan_renders_the_guide_and_template_from_every_module(
 
     [region] = manifest.filesystem.regions[community.CONTRIBUTING_TARGET]
     assert region.id == CONTRIBUTING_REGION_ID
-    assert region.content.startswith("# Contributing to <% PROJECT_NAME %>")
+    name = manifest.rendering_context()["PROJECT_NAME"]
+    assert region.content.startswith(f"# Contributing to {name}\n")
     assert "## Commit Messages" in region.content
     template = manifest.filesystem.file_injections[community.PULL_REQUEST_TARGET]
     assert "- [ ] Commit messages follow Conventional Commits." in template

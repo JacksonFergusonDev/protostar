@@ -179,6 +179,7 @@ class GuideSpec:
     one spec, so they state the same commands.
     """
 
+    project_name: str
     python_version: str
     hook_runner: HookRunner
     wants_just: bool
@@ -898,8 +899,7 @@ def generate_contributing_md(spec: GuideSpec) -> str:
     """Assembles the Protostar-managed CONTRIBUTING.md section.
 
     Like AGENTS.md, it states only facts about the project's tooling, so it
-    stays accurate while Protostar keeps it in sync. The project name is left as
-    a placeholder for the executor to render.
+    stays accurate while Protostar keeps it in sync.
 
     Args:
         spec: The aggregated tooling state to describe.
@@ -907,7 +907,7 @@ def generate_contributing_md(spec: GuideSpec) -> str:
     Returns:
         The Markdown section, opening with the document's top-level heading.
     """
-    lines = ["# Contributing to <% PROJECT_NAME %>", ""]
+    lines = [f"# Contributing to {spec.project_name}", ""]
     if not spec.one_shot:
         # A comment, so the notice reaches editors without showing on GitHub.
         lines.extend(
@@ -929,7 +929,7 @@ def generate_contributing_md(spec: GuideSpec) -> str:
         )
     lines.extend(
         [
-            "Thank you for helping improve <% PROJECT_NAME %>. This guide covers "
+            f"Thank you for helping improve {spec.project_name}. This guide covers "
             "setting up a development environment and the checks every change "
             "passes.",
             "",

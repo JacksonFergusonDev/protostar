@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from protostar.ide import IDEType
+from protostar.interpolation import quoted, render_template
 from protostar.metadata import LicenseType
 from protostar.workflows import TargetOS
 
@@ -121,8 +122,8 @@ class PythonCore(BootstrapModule):
         supported_os: list[TargetOS | str] = manifest.metadata.get("supported_os", [])
 
         project_metadata_payload = f"""[project]
-description = "{desc}"
-authors = [{{ name = "{name}", email = "{email}" }}]
+description = {quoted(str(desc))}
+authors = [{{ name = {quoted(str(name))}, email = {quoted(str(email))} }}]
 """
         project_license = manifest.metadata.get("license")
         license_classifier = None
@@ -132,10 +133,11 @@ authors = [{{ name = "{name}", email = "{email}" }}]
             and project_license in LICENSE_MAP
         ):
             filename, license_classifier = LICENSE_MAP[project_license]
-            license_content = (
+            license_content = render_template(
                 importlib.resources.files("protostar.licenses")
                 .joinpath(filename)
-                .read_text(encoding="utf-8")
+                .read_text(encoding="utf-8"),
+                manifest.rendering_context(),
             )
             manifest.filesystem.add_file_injection("LICENSE", license_content)
             project_metadata_payload += 'license = { file = "LICENSE" }\n'
@@ -170,11 +172,11 @@ authors = [{{ name = "{name}", email = "{email}" }}]
 """
 
         if github:
-            repo_name = Path.cwd().name
+            repository = f"https://github.com/{github}/{Path.cwd().name}"
             project_metadata_payload += f"""
 [project.urls]
-Repository = "https://github.com/{github}/{repo_name}"
-Issues = "https://github.com/{github}/{repo_name}/issues"
+Repository = {quoted(repository)}
+Issues = {quoted(f"{repository}/issues")}
 """
 
         manifest.filesystem.add_structured(

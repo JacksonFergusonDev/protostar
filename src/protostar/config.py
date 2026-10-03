@@ -39,7 +39,12 @@ from .intent import (
     validate_region_id,
     validate_target,
 )
-from .interpolation import BUILT_IN_VARIABLES, extract_variables, render_template
+from .interpolation import (
+    BUILT_IN_VARIABLES,
+    escaped,
+    extract_variables,
+    render_template,
+)
 from .metadata import validate_github_username
 from .migrations import Migration, parse_migrations
 from .network import RemoteTemplate, fetch_remote_template
@@ -1530,8 +1535,8 @@ class TemplateSource:
     def render(self, context: Mapping[str, str]) -> TemplateBlueprint:
         """Renders the template entirely in memory.
 
-        Built-in variables absent from ``context`` stay as placeholders and are
-        filled in later, when the project's own values are known.
+        Built-in variables absent from ``context`` stay as placeholders, and
+        planning fills them in once the project's own values are known.
 
         Args:
             context: Values for the template's custom variables, and optionally
@@ -1554,14 +1559,13 @@ class TemplateSource:
 
         values = dict(context)
         rendered_toml = render_template(
-            self.template_bytes.decode("utf-8"), values, escape_toml=True
+            self.template_bytes.decode("utf-8"),
+            escaped(values),
         )
         blueprint = TemplateBlueprint._parse(rendered_toml, target)
         blueprint.files.update(
             {
-                render_template(path, values, escape_toml=False): render_template(
-                    content, values, escape_toml=False
-                )
+                render_template(path, values): render_template(content, values)
                 for path, content in self.files.items()
             }
         )

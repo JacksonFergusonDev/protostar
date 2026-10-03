@@ -89,6 +89,7 @@ class CommunityModule(ToolModule):
         email = manifest.metadata.get(MetadataKey.AUTHOR_EMAIL.value)
         github = manifest.metadata.get(MetadataKey.GITHUB_USERNAME.value)
         spec = CommunitySpec(
+            project_name=manifest.rendering_context()["PROJECT_NAME"],
             contact_email=str(email) if email else None,
             repository_url=(
                 f"https://github.com/{github}/{Path.cwd().name}" if github else None

@@ -10,6 +10,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from protostar.intent import DependencyGroup, StructuredFormat
+from protostar.interpolation import escaped, render_template
 from protostar.metadata import MetadataKey
 from protostar.registry import RemoteHook
 from protostar.system_deps import GlobalExecutable
@@ -495,7 +496,9 @@ warn_unused_configs = true
 check_untyped_defs = true
 explicit_package_bases = true
 """
-        self.add_pyproject_config(manifest, config)
+        self.add_pyproject_config(
+            manifest, render_template(config, escaped(manifest.rendering_context()))
+        )
 
 
 class TyModule(ToolModule):
@@ -1080,7 +1083,10 @@ class ZensicalModule(ToolModule):
 
 Add your project overview and documentation here.
 """
-        manifest.filesystem.add_file_injection("docs/index.md", index_content)
+        manifest.filesystem.add_file_injection(
+            "docs/index.md",
+            render_template(index_content, manifest.rendering_context()),
+        )
 
         zensical_content = """[project]
 site_name = "<% PROJECT_NAME %>"
@@ -1165,7 +1171,9 @@ handlers.python.options.show_source = true
 generator = false
 """
         manifest.filesystem.add_structured(
-            zensical.TARGET, zensical_content, producer="module:ZensicalModule"
+            zensical.TARGET,
+            render_template(zensical_content, escaped(manifest.rendering_context())),
+            producer="module:ZensicalModule",
         )
 
 

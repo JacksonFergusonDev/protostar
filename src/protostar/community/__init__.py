@@ -8,6 +8,7 @@ who maintains the project and where it lives.
 import importlib.resources
 from dataclasses import dataclass
 
+from ..interpolation import quoted
 from ..workflows import TargetOS
 
 __all__ = [
@@ -27,11 +28,13 @@ class CommunitySpec:
     """Who maintains the project, and where it is hosted.
 
     Attributes:
+        project_name: The project's name.
         contact_email: The maintainer's email address, if known.
         repository_url: The project's GitHub URL, if the owner is known.
         supported_os: The operating systems a bug report may name.
     """
 
+    project_name: str
     contact_email: str | None
     repository_url: str | None
     supported_os: tuple[TargetOS, ...]
@@ -171,7 +174,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: "<% PROJECT_NAME %> version"
+      label: {quoted(f"{spec.project_name} version")}
       placeholder: "e.g., 0.1.0"
     validations:
       required: true

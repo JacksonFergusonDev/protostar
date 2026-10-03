@@ -1,17 +1,19 @@
 """``<% NAME %>`` placeholders and the values that replace them.
 
-Rendering happens in two places. Loading a template renders its TOML source
-with escaping, since there a value lands inside a TOML string, and its
-``[files]`` without. Reconciliation then renders what modules generated,
-whose placeholders name only built-in variables. A path is never escaped
-(``render_path``): it is not inside any string.
+Substitution never escapes. Whoever writes content knows its syntax, so it
+escapes a value exactly where the value sits inside a quoted string, and
+nowhere else. Loading a template renders its TOML source with every value
+escaped (``escaped``), since there each lands inside a TOML string, and its
+``[files]`` with none. Planning renders the rest: a module renders what it
+generates, quoting each value that sits inside a string (``quoted``), and the
+orchestrator renders the built-ins a template left. Reconciliation renders
+only target paths, which are inside no string.
 
-``toml_escape`` assumes the placeholder sits inside a double-quoted string.
-TOML, JSON, and YAML share those escapes, so one escape serves every
-structured format. Free-form text keeps the escapes literally, so a value
-containing a quote or backslash shows them there.
+TOML, JSON, and YAML share the escapes JSON defines, so one escape serves
+every structured format.
 """
 
+import json
 import re
 from typing import Final
 
@@ -31,8 +33,7 @@ BUILT_IN_VARIABLES: Final[frozenset[str]] = frozenset(
 
 # A regex over `<% var %>` replaces Jinja2 and string.Template: it adds no
 # dependency, has no logic for a template to abuse, and leaves every other
-# `{`, `$`, and `%` in a file alone. `toml_escape()` keeps a value from closing
-# the string it is substituted into.
+# `{`, `$`, and `%` in a file alone.
 def extract_variables(content: str) -> list[str]:
     """Scans a raw string for <% variable %> placeholders.
 
@@ -47,55 +48,61 @@ def extract_variables(content: str) -> list[str]:
     return list(dict.fromkeys(matches))
 
 
-def toml_escape(value: str) -> str:
-    """Escapes a string for safe injection into a TOML document.
+def escape(value: str) -> str:
+    """Escapes a value to sit inside a double-quoted TOML, JSON, or YAML string.
 
-    Ensures that injected strings do not prematurely terminate TOML strings
-    or inject invalid control characters that crash tomllib.
+    The value can then neither close the string it lands in nor carry a
+    control character the format rejects.
+
+    Args:
+        value: The raw value.
+
+    Returns:
+        The value's escaped form, without surrounding quotes.
     """
-    value = value.replace("\\", "\\\\")
-    value = value.replace('"', '\\"')
-    value = value.replace("\n", "\\n")
-    value = value.replace("\r", "\\r")
-    return value.replace("\t", "\\t")
+    # JSON leaves DEL unescaped; TOML and YAML both reject it raw.
+    return json.dumps(value, ensure_ascii=False)[1:-1].replace("\x7f", "\\u007f")
 
 
-def render_template(
-    content: str, context: dict[str, str], escape_toml: bool = True
-) -> str:
+def escaped(context: dict[str, str]) -> dict[str, str]:
+    """Escapes every value in a context, for placeholders inside quoted strings.
+
+    Args:
+        context: A mapping of variable names to their raw values.
+
+    Returns:
+        The same names, each mapped to its escaped value.
+    """
+    return {name: escape(value) for name, value in context.items()}
+
+
+def quoted(value: str) -> str:
+    """Returns a value as a double-quoted TOML, JSON, or YAML string.
+
+    Args:
+        value: The raw value.
+
+    Returns:
+        The string literal, quotes included.
+    """
+    return f'"{escape(value)}"'
+
+
+def render_template(content: str, context: dict[str, str]) -> str:
     """Replaces placeholders in the content with context values in a single pass.
+
+    Values are substituted as given. To place them inside quoted strings,
+    escape them first.
 
     Args:
         content: The raw text content.
-        context: A mapping of variable names to their raw substitution values.
-        escape_toml: Whether to escape the values for safe TOML injection.
+        context: A mapping of variable names to their substitution values.
 
     Returns:
-        The interpolated string.
+        The interpolated string, with placeholders absent from ``context`` kept.
     """
 
     def replacement(match: re.Match[str]) -> str:
-        key = match.group(1)
-        if key in context:
-            val = context[key]
-            return toml_escape(val) if escape_toml else val
-        return match.group(0)
+        return context.get(match.group(1), match.group(0))
 
     return VARIABLE_PATTERN.sub(replacement, content)
-
-
-def render_path(path: str, context: dict[str, str]) -> str:
-    """Fills a declared path's placeholders in, escaping nothing.
-
-    A path is not inside a string, so the manifest and reconciliation must
-    render it the same way to agree on which file it names.
-
-    Args:
-        path: The declared workspace path, possibly with placeholders.
-        context: A mapping of variable names to their values.
-
-    Returns:
-        The rendered path.
-    """
-    # None is as falsy as False, so no test can tell the two apart.
-    return render_template(path, context, escape_toml=False)  # pragma: no mutate

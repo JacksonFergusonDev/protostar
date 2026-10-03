@@ -8,6 +8,7 @@ dry-run's JSON and the digest a review is checked against.
 
 from __future__ import annotations
 
+import datetime
 import enum
 import hashlib
 from collections.abc import Callable
@@ -29,7 +30,7 @@ from .intent import (
     validate_region_id,
     validate_target,
 )
-from .interpolation import render_path
+from .interpolation import render_template
 from .merge import MergeConflict
 from .metadata import LicenseType
 from .migrations import Migration
@@ -37,7 +38,11 @@ from .sync_state import STATE_FILE, FilePolicy
 from .system_deps import GlobalExecutable
 from .workflows import DOCKERFILE, CIFlag, GuideSpec, TargetOS
 from .workflows import HookRunner as HookRunner
-from .workspace import resolve_package_name, resolve_project_name
+from .workspace import (
+    resolve_package_name,
+    resolve_project_name,
+    resolve_python_version,
+)
 
 if TYPE_CHECKING:
     from .documents.locations import DocumentLocations
@@ -702,6 +707,7 @@ class EnvironmentManifest:
             raise ConfigurationError("The guide needs a planned recipe.")
         tooling = self.tooling
         return GuideSpec(
+            project_name=self.rendering_context()["PROJECT_NAME"],
             python_version=self.recipe.python,
             hook_runner=tooling.hook_runner,
             wants_just=tooling.wants_just,
@@ -750,13 +756,13 @@ class EnvironmentManifest:
             vscode,
         )
 
-        ctx = self._path_context()
+        ctx = self.rendering_context()
         targets = {pyproject.TARGET} | {
-            Path(render_path(path, ctx)).as_posix()
+            Path(render_template(path, ctx)).as_posix()
             for path in self.filesystem.structured
         }
         if renovate.TARGET in {
-            Path(render_path(path, ctx)).as_posix()
+            Path(render_template(path, ctx)).as_posix()
             for path in self.filesystem.file_injections
         }:
             targets.add(renovate.TARGET)
@@ -798,15 +804,15 @@ class EnvironmentManifest:
         from .documents import github_workflows, pre_commit, pyproject
 
         targets: set[Path] = set()
-        ctx = self._path_context()
+        ctx = self.rendering_context()
 
         for filepath in self.filesystem.file_injections:
-            targets.add(Path(render_path(filepath, ctx)))
+            targets.add(Path(render_template(filepath, ctx)))
 
         for filepath in (
             self.filesystem.structured.keys() | self.filesystem.regions.keys()
         ):
-            targets.add(Path(render_path(filepath, ctx)))
+            targets.add(Path(render_template(filepath, ctx)))
 
         if self.dependencies.includes:
             targets.add(Path(pyproject.TARGET))
@@ -832,8 +838,10 @@ class EnvironmentManifest:
         Returns:
             A set of Path objects representing target directories.
         """
-        ctx = self._path_context()
-        return {Path(render_path(path, ctx)) for path in self.filesystem.directories}
+        ctx = self.rendering_context()
+        return {
+            Path(render_template(path, ctx)) for path in self.filesystem.directories
+        }
 
     def written_files(self) -> set[Path]:
         """Returns every workspace file execution writes itself, for previews.
@@ -921,13 +929,23 @@ class EnvironmentManifest:
             if Path(path).exists()
         }
 
-    def _path_context(self) -> dict[str, str]:
-        """Returns the built-in names that render target paths."""
+    def rendering_context(self) -> dict[str, str]:
+        """Returns the built-in variables' values for this project.
+
+        Modules render what they generate with them while planning, and
+        target paths render with them wherever they are compared.
+
+        Returns:
+            Each built-in variable's name and value.
+        """
         if self.recipe:
             return dict(self.recipe.context)
         return {
             "PROJECT_NAME": resolve_project_name(self.metadata),
             "PACKAGE_NAME": resolve_package_name(self.metadata),
+            "PYTHON_VERSION": resolve_python_version(self.metadata),
+            "CURRENT_YEAR": str(datetime.date.today().year),
+            "AUTHOR_NAME": self.metadata.get("author_name") or "your-name",
         }
 
     def to_dict(self) -> dict[str, Any]:

@@ -594,15 +594,16 @@ def test_a_file_owned_only_for_regions_is_left_to_the_region_step(
     assert reconciliation.candidate_state.files == (record,)
 
 
-def test_a_region_declared_in_a_generated_file_is_rendered_with_the_project_context(
+def test_a_region_declared_in_a_generated_file_is_written_as_declared(
     reconciliation, workspace
 ):
+    # Its producer rendered it while planning.
     reconciliation.manifest.metadata["project_name"] = "demo"
     region_of(reconciliation, "name: <% PROJECT_NAME %>\n")
 
     reconciliation._write_generated(NOTES, "generated\n")
 
-    assert "name: demo\n" in accepted(workspace, "notes.md")
+    assert "name: <% PROJECT_NAME %>\n" in accepted(workspace, "notes.md")
 
 
 def test_a_region_already_in_the_generated_text_is_replaced_by_the_declared_one(

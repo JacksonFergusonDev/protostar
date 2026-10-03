@@ -1,3 +1,4 @@
+import tomllib
 from dataclasses import replace
 from pathlib import Path
 
@@ -191,6 +192,40 @@ def test_plan_injects_pyproject_injections_from_blueprint(mocker, mock_config):
         "[tool.custom]" in c.content
         for c in manifest.filesystem.structured["pyproject.toml"]
     )
+
+
+def test_plan_renders_the_built_ins_a_template_left_by_where_they_sit(
+    tmp_path, monkeypatch, mock_config
+):
+    """A payload's placeholders sit inside TOML strings; a file's sit in free text."""
+    monkeypatch.chdir(tmp_path)
+    name = 'say "hi"'
+    blueprint = TemplateBlueprint(files={"README.md": "# <% PROJECT_NAME %>\n"})
+    blueprint.pyproject_injections = {
+        "named": PyprojectPayload('[tool.custom]\nname = "<% PROJECT_NAME %>"\n')
+    }
+    blueprint.appends = {
+        "NOTES.md": {"named": AppendContribution("named", "<% PROJECT_NAME %>\n")}
+    }
+    engine = Orchestrator(
+        [],
+        mock_config,
+        request=InitRequest(
+            template_blueprint=blueprint, metadata={"project_name": name}
+        ),
+    )
+
+    manifest = engine.plan()
+
+    assert manifest.filesystem.file_injections["README.md"] == f"# {name}\n"
+    [region] = manifest.filesystem.regions["NOTES.md"]
+    assert region.content == f"{name}\n"
+    [payload] = [
+        c
+        for c in manifest.filesystem.structured["pyproject.toml"]
+        if "tool.custom" in c.content
+    ]
+    assert tomllib.loads(payload.content)["tool"]["custom"]["name"] == name
 
 
 def _gated_payload_blueprint() -> TemplateBlueprint:

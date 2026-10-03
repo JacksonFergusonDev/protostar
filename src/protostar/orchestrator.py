@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, cast
 from . import git_hooks, system_deps
 from .documents import community
 from .errors import ExecutionInterruptedError, WorkspaceCollisionError
+from .interpolation import escaped, render_template
 from .manifest import EnvironmentManifest, MissingTool, ProjectMetadata
 from .merge import NO_RESOLUTIONS, Resolutions
 from .models import ExecutionResult, InitRequest
@@ -279,6 +280,9 @@ class Orchestrator:
             )
             producer = f"template:{template_id}"
             tool = None
+            # A template rendered without the built-in values keeps their
+            # placeholders; a payload's sit inside TOML strings.
+            built_ins = manifest.rendering_context()
             manifest.migrations = tuple(blueprint.migrations)
             logger.debug("Injecting blueprint structural fields into manifest.")
 
@@ -347,7 +351,7 @@ class Orchestrator:
                     tool = _bound_tool(payload.requires)
                     manifest.filesystem.add_structured(
                         "pyproject.toml",
-                        payload.content,
+                        render_template(payload.content, escaped(built_ins)),
                         producer=f"template:{template_id}:{identity}",
                     )
                 tool = None
@@ -360,7 +364,7 @@ class Orchestrator:
                             continue
                         manifest.filesystem.add_region(
                             filepath,
-                            record.content,
+                            render_template(record.content, built_ins),
                             identity=f"template:{template_id}:{identity}",
                         )
 
@@ -371,7 +375,9 @@ class Orchestrator:
                     # A file several blocks list ships while any of them holds.
                     if gates and not any(holds(gate.requires) for gate in gates):
                         continue
-                    manifest.filesystem.add_file_injection(filepath, content)
+                    manifest.filesystem.add_file_injection(
+                        filepath, render_template(content, built_ins)
+                    )
 
         if any(isinstance(mod, PythonCore) for mod in active_modules):
             producer = f"module:{PythonCore.__name__}"
