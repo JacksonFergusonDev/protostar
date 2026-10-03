@@ -23,6 +23,7 @@ from protostar.merge import (
 )
 
 from ..keys import MOVE
+from ..theme import TEXT_FAINT
 from .sides import OPEN, SAID, is_conflict, tag
 
 # Every status fits the column, so the locations after it line up.
@@ -57,11 +58,11 @@ def decision_label(conflict: MergeConflict, choice: ResolutionChoice | None) -> 
         where = f"{where} {named}"
     status = tag(conflict, choice)
     status.pad_right(_STATUS_WIDTH - status.cell_len)
-    return Text.assemble(status, where, "  ", (TAGS[conflict.reason], "dim"))
+    return Text.assemble(status, where, "  ", (TAGS[conflict.reason], TEXT_FAINT))
 
 
 def _file_label(path: str, decisions: int) -> Text:
-    return Text.assemble(path, (f"  {decisions}", "dim"))
+    return Text.assemble(path, (f"  {decisions}", TEXT_FAINT))
 
 
 def open_conflicts(
@@ -155,7 +156,9 @@ class DecisionList(Tree[Node]):
                 and path == next(p for p in by_file if p not in conflicted)
             ):
                 # What follows needs no choice: each row happens by default.
-                self.root.add_leaf(Text("Happens unless you choose otherwise", "dim"))
+                self.root.add_leaf(
+                    Text("Happens unless you choose otherwise", TEXT_FAINT)
+                )
             parent = self.root.add(
                 _file_label(path, len(conflicts)), Node(path), expand=True
             )

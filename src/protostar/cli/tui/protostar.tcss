@@ -1,4 +1,5 @@
-/* Tokens live in theme.py. Panels are $surface on the $background, raised
+/* Tokens live in theme.py, which also names the styles Python writes inline
+   after these variables. Panels are $surface on the $background, raised
    controls are $panel, and cyan ($accent) marks only focus, keys, and the
    primary action. */
 
@@ -6,6 +7,9 @@
     scrollbar-size-vertical: 1;
     scrollbar-size-horizontal: 1;
 }
+/* A disabled control says so in $text-disabled; Textual's fade on top of it
+   would land between the palette's colors. */
+*:disabled:can-focus { opacity: 1; }
 
 Screen { background: $background; }
 
@@ -15,7 +19,6 @@ Masthead { height: 1; padding: 0 2; background: $panel; }
 #headline { height: auto; margin: 1 0 0 0; padding: 0 2; }
 #title { width: auto; text-style: bold; color: $foreground; }
 #subtitle { width: 1fr; margin-left: 1; color: $text-muted; }
-#subtitle.-error { color: $error; }
 
 /* A panel is ruled above and below only. It stays transparent so the rules,
    drawn on the inner edge of their rows, sit flush on the filled contents. */
@@ -28,10 +31,13 @@ Panel {
 Panel:focus-within { border-top: wide $accent; border-bottom: wide $accent; }
 Panel > * { background: $surface; }
 Panel > .panel-title { height: 1; padding: 0 1; color: $text-faint; text-style: bold; }
+/* The shown tab takes the title's color, so it lights with focus too. */
+TabbedPanel > .panel-title { color: $foreground; }
 Panel:focus-within > .panel-title { color: $accent; }
 TabbedPanel > ContentSwitcher { height: 1fr; }
 /* The scrollbar meets the panel's edge. */
-#editor, PlanPreview, #changes, #decisions, #files, #setup, #diff-pane {
+#editor, PlanPreview, #changes, #decisions, #files, #setup, #diff-pane,
+#conflicts, .side, #result-pane {
     height: 1fr;
     padding: 0 0 0 1;
     background: $surface;
@@ -45,8 +51,8 @@ TabbedPanel > ContentSwitcher { height: 1fr; }
 /* The editor runs to the bottom; the buttons sit under the panel beside it. */
 /* Each column is at least as wide as its buttons, which never overhang it. */
 #aside { width: 2fr; min-width: 33; }
-#review { width: 2fr; }
-#diff-column { width: 3fr; min-width: 45; }
+#review, #conflicts-panel { width: 2fr; }
+#diff-column, #sides-column { width: 3fr; min-width: 45; }
 
 /* --- Layout -------------------------------------------------------------
    Spacing belongs to the layout, never to the blocks it holds (chrome.py):
@@ -75,8 +81,7 @@ Column > ActionBar { margin: 0 0 1 0; }
 VariableFields, MetadataFields, .field { height: auto; }
 
 #preview-summary, #changes-summary { color: $text-muted; }
-#changes-summary.-error { color: $error; }
-#preview-summary.-error { color: $error; }
+#subtitle.-error, #preview-summary.-error, #changes-summary.-error { color: $error; }
 #preview-network, #network-note { color: $warning; margin-bottom: 1; }
 #changes-diff { margin-top: 1; }
 #template-status { height: auto; color: $text-muted; }
@@ -90,11 +95,16 @@ Checkbox, RadioButton {
     padding: 0 1;
     background: transparent;
 }
-Checkbox > .toggle--button, RadioButton > .toggle--button {
+/* Lamps, unlit then lit: a checkbox's, a radio button's, and a list's. */
+Checkbox > .toggle--button, RadioButton > .toggle--button,
+SelectionList > .selection-list--button,
+SelectionList > .selection-list--button-highlighted {
     color: $strut;
     background: $panel;
 }
-Checkbox.-on > .toggle--button, RadioSet > RadioButton.-on > .toggle--button {
+Checkbox.-on > .toggle--button, RadioSet > RadioButton.-on > .toggle--button,
+SelectionList > .selection-list--button-selected,
+SelectionList > .selection-list--button-selected-highlighted {
     color: $accent;
     background: $panel;
 }
@@ -129,17 +139,7 @@ RadioSet:focus, SelectionList:focus {
     border: none;
     background-tint: $foreground 0%;
 }
-SelectionList > .selection-list--button,
-SelectionList > .selection-list--button-highlighted {
-    color: $strut;
-    background: $panel;
-}
 SelectionList:blur > .option-list--option-highlighted { background: transparent; }
-SelectionList > .selection-list--button-selected,
-SelectionList > .selection-list--button-selected-highlighted {
-    color: $accent;
-    background: $panel;
-}
 
 Select { width: 1fr; }
 Select > SelectCurrent {
@@ -155,7 +155,8 @@ Select:focus > SelectCurrent {
 }
 Select > SelectCurrent .arrow { color: $text-faint; }
 Select:focus > SelectCurrent .arrow { color: $accent; }
-Select > SelectOverlay {
+/* What floats over a screen: a menu, a dialog. */
+Select > SelectOverlay, #dialog {
     border: hkey $accent;
     background: $panel;
 }
@@ -192,12 +193,9 @@ Button:focus {
     background-tint: $foreground 0%;
 }
 Button.-primary { background: $accent; color: $background; }
-Button.-primary:hover, Button.-primary:focus {
-    background: $accent-lighten-2;
-    color: $background;
-}
 Button.-error { background: $error; color: $background; }
-Button.-error:hover, Button.-error:focus { background: $error-lighten-1; }
+Button.-primary:hover, Button.-primary:focus { background: $accent-lighten-2; }
+Button.-error:hover, Button.-error:focus { background: $error-lighten-2; }
 Button:disabled, Button.-primary:disabled {
     background: $panel;
     color: $text-disabled;
@@ -235,8 +233,6 @@ LeaveScreen, KeybindingsScreen, ToolInfoScreen, TierInfoScreen { align: center m
     max-width: 90;
     height: auto;
     padding: 1 2;
-    border: hkey $accent;
-    background: $panel;
 }
 .dialog-title {
     color: $accent;
@@ -245,12 +241,12 @@ LeaveScreen, KeybindingsScreen, ToolInfoScreen, TierInfoScreen { align: center m
 }
 #dialog .question { text-style: bold; }
 #dialog .note { margin-top: 1; }
-#dialog Button { background: $hairline; }
-#dialog Button.-error { background: $error; color: $background; }
+/* On the dialog's $panel, a plain button rises a step. */
+#dialog Button.-default { background: $hairline; }
 .dialog-actions { width: auto; height: auto; margin-top: 1; }
 .dialog-actions Button { margin-right: 2; }
 KeybindingsScreen #dialog, ToolInfoScreen #dialog { width: 72; max-width: 100%; }
-#dialog .info-heading { margin-top: 1; color: $text-faint; }
+#dialog .info-heading { margin-top: 1; color: $text-faint; text-style: bold; }
 TierInfoScreen #dialog { width: 90; max-width: 100%; }
 TierFields { height: auto; }
 .tier-turns-on { margin-top: 1; }
@@ -260,13 +256,6 @@ TierFields { height: auto; }
 
 /* --- Conflicts --------------------------------------------------------- */
 
-#conflicts-panel { width: 2fr; }
-#conflicts, .side, #result-pane {
-    height: 1fr;
-    padding: 0 0 0 1;
-    background: $surface;
-}
-#sides-column { width: 3fr; min-width: 45; }
 #sides { height: 1fr; }
 #sides > Panel { width: 1fr; }
 #meaning { height: auto; }

@@ -20,6 +20,7 @@ from protostar.cli.changes import count, indented_lines
 
 from .chrome import Column, Columns, Heading, Headline, Masthead, Panel, Section
 from .keys import ActionBar, KeyboardScreen, KeyRows, Toggle, key_label
+from .theme import TEXT_FAINT
 
 Commands = tuple[tuple[str, ...], ...]
 
@@ -41,7 +42,7 @@ def trust_text(commands: Commands, *, hint: str) -> RenderableType:
             "can make them run the template's code:"
         ),
         *indented_lines([shlex.join(command) for command in commands], "bold"),
-        Text(hint, style="dim"),
+        Text(hint, TEXT_FAINT),
     )
 
 

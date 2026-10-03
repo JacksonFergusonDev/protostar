@@ -1,16 +1,20 @@
 """Full-screen decision app; execution belongs to the CLI after exit."""
 
+from collections.abc import Sequence
 from typing import ClassVar
 
 from textual.app import App
 from textual.binding import Binding, BindingType
+from textual.filter import ANSIToTruecolor, LineFilter
 from textual.screen import Screen
 from textual.worker import WorkerFailed
 
 from protostar.cli.palette import ANSI
 from protostar.errors import ProtostarError
 
-from .theme import PROTOSTAR
+from .theme import PROTOSTAR, PaletteColors
+
+_PALETTE_COLORS = PaletteColors()
 
 
 class DecisionApp[ResultT](App[ResultT]):
@@ -66,6 +70,13 @@ class DecisionApp[ResultT](App[ResultT]):
         """
         self.failure = error
         self.exit(None)
+
+    def get_line_filters(self) -> Sequence[LineFilter]:
+        """Land ANSI names and ``dim`` on the palette, wherever Textual would."""
+        return [
+            _PALETTE_COLORS if isinstance(line_filter, ANSIToTruecolor) else line_filter
+            for line_filter in super().get_line_filters()
+        ]
 
     def _handle_exception(self, error: Exception) -> None:
         # Textual renders its own traceback with every frame's locals: for a

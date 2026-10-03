@@ -35,7 +35,15 @@ from protostar.errors import ConfigurationError
 from protostar.ide import IDEType
 from protostar.recipe import EXCLUSIVE_TOOL_PAIRS
 
-from ..chrome import Column, Columns, Heading, Headline, Masthead, Panel
+from ..chrome import (
+    Column,
+    Columns,
+    Heading,
+    Headline,
+    Masthead,
+    Panel,
+    error_text,
+)
 from ..code import CodeSource, DiffLabels, diff_text
 from ..keys import (
     ActionBar,
@@ -238,10 +246,7 @@ class ConfigScreen(KeyboardScreen[SaveConfig | OpenInEditor]):
             self.edit = edit_config(self.content, self.values(), source=str(self.path))
         except ConfigurationError as error:
             self.edit = None
-            message = Text(str(error))
-            if error.hint:
-                message.append(f"  {error.hint}", style="dim")
-            summary.update(message)
+            summary.update(error_text(error))
             summary.add_class("-error")
             diff.update("")
         else:

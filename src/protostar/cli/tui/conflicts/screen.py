@@ -16,7 +16,6 @@ from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import VerticalScroll
-from textual.content import Content
 from textual.widgets import Button, Footer, RadioButton, RadioSet, Static, Tree
 
 from protostar.cli.changes import count
@@ -33,6 +32,7 @@ from protostar.preparation import PreparedReview
 from ..chrome import Column, Columns, Heading, Headline, Masthead, Panel, Section
 from ..code import edit_text
 from ..keys import ActionBar, Choice, KeyboardScreen, KeyRows, key_label
+from ..theme import TEXT_FAINT
 from .decision_list import DecisionList, Node
 from .sides import (
     KEYS,
@@ -90,7 +90,7 @@ def _result(
     choices: Mapping[str, ResolutionChoice],
 ) -> RenderableType:
     if preview is None:
-        return Text("Preparing the result…", style="dim")
+        return Text("Preparing the result…", TEXT_FAINT)
     edit = next((edit for edit in preview.edits if edit.path == path), None)
     # Hunks still open because another hunk of the same text is.
     waiting = {
@@ -104,7 +104,7 @@ def _result(
     if edit is not None:
         parts.append(edit_text(edit))
     else:
-        parts.append(Text("The file stays as it is.", style="dim"))
+        parts.append(Text("The file stays as it is.", TEXT_FAINT))
     return Group(*parts)
 
 
@@ -243,16 +243,15 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
             self.query_one(f"#{side}", Static).update(
                 side_text(shown, side)
                 if shown is not None
-                else Text("Select a conflict to see both sides.", style="dim")
+                else Text("Select a conflict to see both sides.", TEXT_FAINT)
             )
-        title = Content("RESULT")
         if node is not None:
-            # A path is data: Content never reads it as markup.
-            title = Content.assemble(title, ("  ", ""), (node.path, "$foreground"))
             self.query_one("#result", Static).update(
                 _result(node.path, self.preview, self.choices)
             )
-        self.query_one("#result-panel", Panel).retitle(title)
+        self.query_one("#result-panel", Panel).name_subject(
+            node.path if node is not None else None
+        )
         self.query_one("#meaning", Static).update(
             describe_conflict(node.conflict)
             if node is not None and node.conflict is not None
@@ -260,7 +259,7 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
                 f"A choice here applies to every conflict in {node.path} that offers it."
                 if node is not None
                 else "",
-                style="dim",
+                TEXT_FAINT,
             )
         )
         self._show_choice(targets)
