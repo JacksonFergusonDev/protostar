@@ -1436,7 +1436,8 @@ class Reconciliation:
             )
         try:
             original = (
-                self.workspace.read_bytes(target).decode("utf-8")
+                # "UTF-8" names the same codec.
+                self.workspace.read_bytes(target).decode("utf-8")  # pragma: no mutate
                 if self.workspace.exists(target)
                 else ""
             )
@@ -1537,10 +1538,12 @@ class Reconciliation:
             for edge in accepted:
                 entries = owned_groups.setdefault(edge.group.value, [])
                 if not isinstance(entries, list):
+                    # Unreachable: the loop above raised for this group already,
+                    # so its message and hint cannot be observed.
                     raise ConfigurationError(
                         "Invalid owned dependency-group baseline.",
                         hint="Keep owned dependency groups as arrays of include records.",
-                    )
+                    )  # pragma: no mutate
                 member = {"include-group": edge.include.value}
                 if member not in entries:
                     entries.append(member)
