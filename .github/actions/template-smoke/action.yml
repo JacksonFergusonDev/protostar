@@ -1,0 +1,74 @@
+name: "Template hooks smoke"
+description: "Scaffolds each built-in template named and checks that its first commit passes the prek hooks Protostar installed"
+inputs:
+  templates:
+    description: Space-separated built-in templates to scaffold, one after another
+    required: true
+  python:
+    description: Python version each scaffold targets
+    required: true
+  retry:
+    description: Retry a failed template once, passing when the retry passes
+    required: false
+    default: "false"
+  wheel:
+    description: Install Protostar from dist/*.whl instead of the checkout
+    required: false
+    default: "false"
+runs:
+  using: "composite"
+  steps:
+    - name: Install Protostar
+      shell: bash
+      env:
+        WHEEL: ${{ inputs.wheel }}
+      run: |
+        if [ "$WHEEL" = true ]; then
+          uv tool install dist/*.whl
+        else
+          uv tool install --editable .
+        fi
+        uv tool install prek
+
+    - name: Configure Git identity
+      shell: bash
+      run: |
+        git config --global user.name "Protostar Bot"
+        git config --global user.email "bot@protostar.dev"
+        git config --global init.defaultBranch main
+        git config --global core.autocrlf false
+        git config --global credential.helper ""
+
+    - name: Verify each first commit triggers prek hooks
+      shell: bash
+      env:
+        GIT_TERMINAL_PROMPT: "0"
+        GCM_INTERACTIVE: "never"
+        PREK_COLOR: "never"
+        TEMPLATES: ${{ inputs.templates }}
+        PYTHON: ${{ inputs.python }}
+        RETRY: ${{ inputs.retry }}
+      run: |
+        # Every template runs even after one fails, so a run names all that broke.
+        failed=()
+        for template in $TEMPLATES; do
+          smoke=("$GITHUB_WORKSPACE/.github/scripts/template-hooks-smoke.sh" "$template" "$PYTHON")
+          echo "::group::$template"
+          if "${smoke[@]}"; then
+            echo "::endgroup::"
+            continue
+          fi
+          echo "::endgroup::"
+          if [ "$RETRY" = true ]; then
+            # Downloads from PyPI and GitHub fail now and then; a real break fails twice.
+            echo "::warning title=Smoke test retried::$template failed once and was retried; see the first attempt's output above"
+            if "${smoke[@]}"; then
+              continue
+            fi
+          fi
+          failed+=("$template")
+        done
+        if [ ${#failed[@]} -gt 0 ]; then
+          echo "::error title=Smoke test failed::${failed[*]} on Python $PYTHON"
+          exit 1
+        fi

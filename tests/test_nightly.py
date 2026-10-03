@@ -54,11 +54,14 @@ def expand(matrix: dict[str, Any]) -> list[Entry]:
     return combinations
 
 
-def job(workflow: str, name: str) -> dict[str, Any]:
-    jobs = YAML(typ="safe").load((WORKFLOWS / workflow).read_text(encoding="utf-8"))[
+def jobs(workflow: str) -> dict[str, Any]:
+    return YAML(typ="safe").load((WORKFLOWS / workflow).read_text(encoding="utf-8"))[
         "jobs"
     ]
-    return jobs[name]
+
+
+def job(workflow: str, name: str) -> dict[str, Any]:
+    return jobs(workflow)[name]
 
 
 def platforms(workflow: str, name: str = "platforms") -> dict[str, list[Entry]]:
@@ -72,7 +75,39 @@ def platforms(workflow: str, name: str = "platforms") -> dict[str, list[Entry]]:
 
 
 def platform(entry: Entry) -> tuple[tuple[str, Any], ...]:
-    return tuple(sorted((k, v) for k, v in entry.items() if k != "coverage"))
+    return tuple(sorted((k, v) for k, v in entry.items() if k in ("os", "python")))
+
+
+def smoke_runs(matrices: dict[str, list[Entry]]) -> list[tuple[str, str, str]]:
+    """Each template a run scaffolds, by OS and Python, in smoke and test jobs."""
+    return [
+        (entry["os"], entry["python"], template)
+        for entry in matrices["smoke"]
+        for template in entry["templates"]
+    ] + [
+        (entry["os"], entry["python"], template)
+        for entry in matrices["tests"]
+        for template in entry.get("smoke", [])
+    ]
+
+
+def job_count(workflow: str) -> int:
+    """How many jobs a run of the workflow starts at once."""
+    count = 0
+    for name, spec in jobs(workflow).items():
+        if spec.get("uses") == "./.github/workflows/platforms.yml":
+            count += sum(map(len, platforms(workflow, name).values()))
+        elif "strategy" in spec:
+            count += len(expand(spec["strategy"]["matrix"]))
+        else:
+            count += 1
+    return count
+
+
+def macos_jobs(matrices: dict[str, list[Entry]]) -> int:
+    return sum(
+        entry["os"] == "macos-latest" for kind in matrices.values() for entry in kind
+    )
 
 
 def supported_pythons() -> list[str]:
@@ -96,6 +131,11 @@ def built_in_templates() -> set[str]:
 PULL_REQUEST = platforms("ci.yml")
 NIGHTLY = platforms("nightly.yml")
 RELEASE = platforms("release.yml", "smoke")
+EVERY_PLATFORM = sorted(
+    platform({"os": os, "python": python})
+    for os in OPERATING_SYSTEMS
+    for python in supported_pythons()
+)
 
 
 def test_expand_follows_github_include_rules():
@@ -112,37 +152,36 @@ def test_expand_follows_github_include_rules():
     ]
 
 
-def test_nightly_tests_every_os_and_python():
-    assert sorted(map(platform, NIGHTLY["tests"])) == sorted(
-        platform({"os": os, "python": python})
-        for os in OPERATING_SYSTEMS
-        for python in supported_pythons()
-    )
+@pytest.mark.parametrize("matrices", [PULL_REQUEST, NIGHTLY], ids=["pr", "nightly"])
+def test_pull_requests_and_nightly_each_test_every_os_and_python(matrices):
+    assert sorted(map(platform, matrices["tests"])) == EVERY_PLATFORM
 
 
-def test_nightly_smoke_tests_every_template_on_every_os_and_python():
-    assert sorted(map(platform, NIGHTLY["smoke"])) == sorted(
-        platform({"os": os, "python": python, "template": template})
+def test_pull_requests_and_nightly_together_smoke_test_every_template_once():
+    assert sorted(smoke_runs(PULL_REQUEST) + smoke_runs(NIGHTLY)) == sorted(
+        (os, python, template)
         for os in OPERATING_SYSTEMS
         for python in supported_pythons()
         for template in built_in_templates()
     )
 
 
-def test_pull_requests_run_only_what_nightly_also_runs():
-    for kind in ("tests", "smoke"):
-        assert {platform(e) for e in PULL_REQUEST[kind]} <= {
-            platform(e) for e in NIGHTLY[kind]
-        }
+def test_pull_requests_smoke_test_every_template_on_every_os():
+    assert {(os, template) for os, _, template in smoke_runs(PULL_REQUEST)} == {
+        (os, template) for os in OPERATING_SYSTEMS for template in built_in_templates()
+    }
 
 
-def test_pull_requests_test_every_os_at_the_oldest_and_newest_python():
-    pythons = supported_pythons()
+def test_pull_requests_smoke_test_every_template_at_every_python_on_linux():
     assert {
-        platform({"os": os, "python": python})
-        for os in OPERATING_SYSTEMS
-        for python in (pythons[0], pythons[-1])
-    } <= {platform(e) for e in PULL_REQUEST["tests"]}
+        (python, template)
+        for os, python, template in smoke_runs(PULL_REQUEST)
+        if os == "ubuntu-latest"
+    } == {
+        (python, template)
+        for python in supported_pythons()
+        for template in built_in_templates()
+    }
 
 
 def test_one_pull_request_job_reports_coverage():
@@ -152,22 +191,15 @@ def test_one_pull_request_job_reports_coverage():
     assert not [t for t in NIGHTLY["tests"] if t.get("coverage")]
 
 
-def test_pull_requests_smoke_test_every_built_in_template_on_linux():
-    on_linux = {
-        s["template"] for s in PULL_REQUEST["smoke"] if s["os"] == "ubuntu-latest"
-    }
-    assert on_linux == built_in_templates()
+def test_a_pull_request_stays_within_the_accounts_runner_limits():
+    # The account runs 20 jobs at a time, five of them on macOS, across every
+    # open PR and push. Three leave room for a second run on macOS.
+    assert job_count("ci.yml") <= 20
+    assert macos_jobs(PULL_REQUEST) <= 3
 
 
-def test_pull_requests_stay_within_two_macos_jobs():
-    # The account runs five macOS jobs at a time across every open PR and push.
-    macos = [
-        e
-        for kind in ("tests", "smoke")
-        for e in PULL_REQUEST[kind]
-        if e["os"] == "macos-latest"
-    ]
-    assert len(macos) <= 2
+def test_nightly_stays_within_the_accounts_macos_limit():
+    assert macos_jobs(NIGHTLY) <= 3
 
 
 def test_a_release_smoke_tests_the_wheel_it_publishes_on_every_os():
@@ -178,12 +210,14 @@ def test_a_release_smoke_tests_the_wheel_it_publishes_on_every_os():
     assert RELEASE["tests"] == []
 
 
-def test_a_release_publishes_only_after_nightly_and_its_smoke_test_pass():
+def test_a_release_publishes_only_after_ci_nightly_and_its_smoke_test_pass():
     assert set(job("release.yml", "publish")["needs"]) == {
         "build",
-        "nightly-passed",
+        "checks-passed",
         "smoke",
     }
+    gate = job("release.yml", "checks-passed")["steps"][-1]["run"]
+    assert "for workflow in ci.yml nightly.yml" in gate
 
 
 class FakeGitHub:
