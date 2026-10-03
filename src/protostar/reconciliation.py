@@ -1682,9 +1682,7 @@ class Reconciliation:
         try:
             if self.workspace.exists(Path(vscode.SETTINGS_TARGET)):
                 parse_jsonc(
-                    self.workspace.read_bytes(Path(vscode.SETTINGS_TARGET)).decode(
-                        "utf-8"
-                    ),
+                    self.workspace.read_bytes(Path(vscode.SETTINGS_TARGET)).decode(),
                     allow_empty=True,
                 )
         except (OSError, UnicodeError) as error:
@@ -1702,11 +1700,11 @@ class Reconciliation:
             )
             return
         if located := self._locate(vscode.SETTINGS_TARGET, FilePolicy.JSONC):
+            # A cast only informs the type checker.
+            values = cast(dict[str, Value], dict(settings))  # pragma: no mutate
             self._reconcile_document(
                 located,
-                dumps_jsonc(
-                    cast(dict[str, Value], dict(settings)), vscode.SETTINGS_INDENT
-                ),
+                dumps_jsonc(values, vscode.SETTINGS_INDENT),
                 FilePolicy.JSONC,
                 indent=vscode.SETTINGS_INDENT,
             )
