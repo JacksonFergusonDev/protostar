@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790997635321,
+  "lastUpdate": 1791044569759,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21221,6 +21221,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 984.93,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9d7403dbd1ff3739e908b8d53cb87681412cda2c",
+          "message": "test(reconciliation): mutate reconciliation across six runners (#425)\n\n* test(mutation): cover reconciliation ownership and error contracts\n\n* test(reconciliation): verify configuration read failures\n\n* test(reconciliation): validate generated paths against workspace roots\n\n* chore(mutation): shard reconciliation across six runners\n\nThe unsharded reconciliation run passed four hours without finishing, and a job\ntimeout cancels the steps that upload results, so nothing would have survived.\nA module listed under [tool.mutmut-shards] now gets one runner per shard, and\ncombine adds the shards of a module back together.\n\n* test(mutation): ignore mutmut's generated functions in the shard coverage check\n\nmutmut runs the suite on a copy of the source that holds its own generated\nfunctions, so the check saw names the module does not define and failed stats\ncollection on every shard.\n\n* chore(mutation): run one shard of a sharded module on demand\n\nA survivor pass needs to re-check one shard after fixing its functions; running\nall six costs six runner-hours. A module:shard item in the modules input runs\njust that shard.\n\n* test(reconciliation): cover dependency-group include reconciliation\n\nKills the survivors in _apply_dependency_includes: the warnings it raises for\nunreadable, removed, and foreign edges, the ownership it records, its error\nmessages, and the root it checks the project file against. Two mutants cannot\nchange behavior (a codec alias and an unreachable error) and are marked.\n\n* test(reconciliation): cover retired seeds, undeclared generated files, and policy checks\n\nKills the survivors in _settle_retired, _release_undeclared_generated, and\n_file_record. The lossy decodes use the default codec instead of naming it, so\nno mutant can swap its spelling.\n\n* test(reconciliation): cover appended contributions, regions, and migrations\n\nKills the survivors in _append_files, _migrate, and _locate: the documents a\nheld or kept-out file must not stop, the ownership a deleted or proposed\ndocument keeps, the stale-resolver flag, retracted regions in a generated\nfile's text, and the roots paths are checked against. Defaults and casts that\ncould not change behavior are removed or marked.\n\n* test(reconciliation): cover dependency selection and the seed, justfile, and directory writers\n\nKills the survivors in _select_dependencies, _write_injected_files,\n_write_justfile, _create_directories, _follow, and _report. Defaults that a\ntype check made redundant are dropped so no mutant can swap them.\n\n* test(reconciliation): cover generated regions, node validation, and requirements\n\nKills the survivors in _write_generated, _validate_node, _materialize_dependencies,\nand _release_undeclared_dependencies. Defaults only read after an assignment,\na guard that serves the type checker, and a loop exit that equals a return are\nmarked or simplified.\n\n* test(reconciliation): cover retraction, single documents, and committed state\n\nKills the survivors in _release_undeclared_documents, _reconcile_document,\n_load_state, _write_ci_workflow, and _write_ignores. A cast and a guard that\nonly serve the type checker are marked.\n\n* test(reconciliation): cover target validation, container artifacts, and IDE settings\n\nKills the survivors in _validate_targets, _write_docker_artifacts,\n_write_ide_settings, _release_undeclared_seeds, and the initial state. Every\nkind of target, dependency declaration, and failure now has its own case.\n\n* test(reconciliation): check the project file's syntax for every dependency declaration\n\n* refactor(reconciliation): drop branches of _write_generated that cannot change its result\n\nThe merge returns the baseline it was given, so falling back to the record's\nbaseline when it is None changes nothing, and a record's text always has a\nbaseline to cut regions from. The remaining equivalents are marked with why.\n\n* refactor(reconciliation): cast the owned include group the loop above already checked\n\nThe post-loop check could never fail, so its message and hint were mutants no\ntest could see.\n\n* test(reconciliation): retract an edited seed, and drop reconciliation that cannot differ\n\nAn edited seed becomes a retraction conflict rather than a kept edit. The CI\nworkflow's default operating system and a retraction's proposals and preserved\nedits cannot change the result, so they are removed or marked.\n\n* test(reconciliation): retract under a document's own name spelling, and mark the last equivalents\n\n* docs(mutation): record reconciliation's score and runtime before and after its survivor pass\n\n* test(reconciliation): write fixtures without newline translation and keep test sources ASCII\n\nWindows text-mode writes turn each newline into CRLF, so the content the new\ntests read back differed from what they asserted. Fixtures now write bytes as\ngiven. One test file held a character cp1252 cannot decode, which the\ncross-platform boundary test reads with the platform codec.",
+          "timestamp": "2026-10-03T09:19:37-07:00",
+          "tree_id": "e7db201f6e7cf11efbbd45837397025ee250de25",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9d7403dbd1ff3739e908b8d53cb87681412cda2c"
+        },
+        "date": 1791044568679,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 179.32,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1277.58,
             "unit": "ms"
           }
         ]
