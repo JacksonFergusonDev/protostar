@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790997053393,
+  "lastUpdate": 1790997635321,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21187,6 +21187,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1220.38,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ebd081ccb57fd7e3805027930fb6f0ff1f2e4369",
+          "message": "docs(pages): serve the latest release at the bare URLs (#422)\n\nEvery page's canonical URL named its release, so each release handed\nsearch engines a new set of pages, and old releases competed with the\ncurrent one. The latest release is now served at the bare URLs that the\nCLI's hints, README, and PyPI already link; every versioned copy names\nthe bare URL as canonical, and pages the latest release dropped are\nmarked noindex. The sitemap and llms.txt list bare URLs.",
+          "timestamp": "2026-10-02T20:17:59-07:00",
+          "tree_id": "ea72cb18cc86904e5bd61e9468ee51d720ec1a62",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/ebd081ccb57fd7e3805027930fb6f0ff1f2e4369"
+        },
+        "date": 1790997634262,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 136.62,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 984.93,
             "unit": "ms"
           }
         ]
