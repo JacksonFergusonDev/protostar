@@ -26,6 +26,33 @@ HOUSE_DIR = _repo_root / "docs" / "house"
 HEADER_CSS = _repo_root / "docs" / "stylesheets" / "site-header.css"
 FOOTER_CSS = _repo_root / "docs" / "stylesheets" / "site-footer.css"
 FOOTER_HTML = _repo_root / "overrides" / "partials" / "site-footer.html"
+# jacksonferguson.me's policy: search and AI search agents read the docs,
+# AI training crawlers don't.
+ROBOTS = """\
+User-agent: *
+Allow: /
+
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: GPTBot
+User-agent: ClaudeBot
+User-agent: anthropic-ai
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: CCBot
+User-agent: meta-externalagent
+User-agent: Bytespider
+User-agent: cohere-training-data-crawler
+Disallow: /
+
+Sitemap: {sitemap}
+"""
 
 
 def render_benchmark_index() -> str:
@@ -205,6 +232,9 @@ def assemble_pages(source: Path, output: Path, config_path: Path) -> str:
         shutil.copyfile(favicon, output / "assets" / "favicon.png")
     _write_redirects(current, output, f"{site_url}{latest}/")
     (output / ".nojekyll").touch()
+    (output / "robots.txt").write_text(
+        ROBOTS.format(sitemap=f"{site_url}sitemap.xml"), encoding="utf-8"
+    )
     (output / "CNAME").write_text(f"{urlsplit(site_url).hostname}\n", encoding="utf-8")
     (output / "404.html").write_text(
         '<!DOCTYPE html><html lang="en"><meta charset="utf-8">'

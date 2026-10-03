@@ -2,6 +2,12 @@
     stylesheet, which no other page loads. -#}
 {% extends "main.html" %}
 
+{#- Its title says what Protostar is, instead of repeating the site name the
+    theme appends to every other page. -#}
+{% block htmltitle %}
+  <title>{{ config.site_name }} — {{ config.site_description | trim(".") }}</title>
+{% endblock %}
+
 {% block extrahead %}
   {{ super() }}
   <link rel="stylesheet" href="{{ 'house/css/components.css' | url }}">
@@ -10,6 +16,22 @@
   <link rel="stylesheet" href="{{ 'stylesheets/home.css' | url }}">
   <link rel="stylesheet" href="{{ 'stylesheets/site-header.css' | url }}">
   <link rel="stylesheet" href="{{ 'stylesheets/site-footer.css' | url }}">
+  {#- Search engines read what Protostar is, and where to get it, from here. -#}
+  {% set application = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": config.site_name,
+    "description": config.site_description,
+    "url": config.site_url,
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "macOS, Linux, Windows",
+    "license": config.repo_url ~ "/blob/main/LICENSE",
+    "downloadUrl": "https://pypi.org/project/protostar/",
+    "sameAs": [config.repo_url, "https://pypi.org/project/protostar/"],
+    "author": {"@type": "Person", "name": "Jackson Ferguson", "url": "https://jacksonferguson.me/"},
+    "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+  } %}
+  <script type="application/ld+json">{{ application | tojson }}</script>
 {% endblock %}
 
 {% block footer %}

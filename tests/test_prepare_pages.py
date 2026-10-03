@@ -128,6 +128,9 @@ def test_latest_content_redirects_and_benchmarks_share_one_clean_artifact(
     ).read_bytes()
     assert (output / "sitemap.xml").read_text() == "<sitemap>0.10.1</sitemap>"
     assert (output / "CNAME").read_text() == "docs.example\n"
+    robots = (output / "robots.txt").read_text()
+    assert robots.startswith("User-agent: *\nAllow: /\n")
+    assert robots.endswith("Sitemap: https://docs.example/sitemap.xml\n")
     assert (output / ".nojekyll").is_file()
     assert "https://docs.example/0.10.1/" in (output / "404.html").read_text()
     assert before == {
