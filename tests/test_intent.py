@@ -503,8 +503,11 @@ def test_generated_schema_example_parses_without_legacy_declarations():
 def test_generated_schema_example_declares_the_variables_it_uses():
     fixture = Path(__file__).parents[1] / "docs" / "generated" / "template_schema.toml"
     source = TemplateSource.load(str(fixture))
-    assert source.variables == frozenset({"REGION"})
-    assert source.descriptions == {"REGION": "Deployment region, e.g. eu-west-1"}
+    assert source.variables == frozenset({"REGION", "ORGANIZATION"})
+    assert source.descriptions == {
+        "REGION": "Deployment region, e.g. eu-west-1",
+        "ORGANIZATION": "The team that maintains the project",
+    }
 
 
 def test_late_bound_reserved_target_rejected_before_writes(
