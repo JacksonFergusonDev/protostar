@@ -912,13 +912,11 @@ class Reconciliation:
                 result.conflicts, result.resolved, result.proposals, result.preserved
             )
             if result.baseline is not MISSING:
+                # A cast only informs the type checker.
+                baseline = cast(dict[str, Value], result.baseline)  # pragma: no mutate
                 self._own(
                     located,
-                    FileState(
-                        target.as_posix(),
-                        policy,
-                        encode_baseline(cast(dict[str, Value], result.baseline)),
-                    ),
+                    FileState(target.as_posix(), policy, encode_baseline(baseline)),
                 )
             if result.content != original:
                 self.fs.write_text(target, result.content)
@@ -1833,7 +1831,11 @@ class Reconciliation:
                 check_template_identity(state, self.manifest.template_reference)
                 self._committed = state
                 reference = self.manifest.template_reference
-                if reference is not None and state.template is not None:
+                # The identity check makes both set or both None; the second test
+                # narrows the type.
+                if (
+                    reference is not None and state.template is not None
+                ):  # pragma: no mutate
                     reference = replace(reference, migrated=state.template.migrated)
                 self.candidate_state = replace(
                     state,
