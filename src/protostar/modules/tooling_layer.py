@@ -1,3 +1,9 @@
+"""The tool modules behind each tooling flag, from direnv to the agents guide.
+
+Each module carries its tool's casual-user baseline and its ``ToolInfo``;
+templates add only their delta on top (see ``docs/developer/built-in-templates.md``).
+"""
+
 from __future__ import annotations
 
 import logging

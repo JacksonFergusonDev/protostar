@@ -1,3 +1,11 @@
+"""The manifest: what a run declares it wants, before anything is reconciled.
+
+``EnvironmentManifest`` aggregates the dependency, filesystem, tooling, and
+task declarations modules and templates make during ``plan()``, and answers
+which files a run reads, writes, and leaves behind. Its ``to_dict`` is the
+dry-run's JSON and the digest a review is checked against.
+"""
+
 from __future__ import annotations
 
 import enum

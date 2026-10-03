@@ -1,3 +1,5 @@
+"""GitHub Actions modules: the CI workflow and the PyPI release workflow."""
+
 from __future__ import annotations
 
 import logging

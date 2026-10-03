@@ -1,4 +1,4 @@
-"""Filesystem helpers for safe disk mutation operations."""
+"""Atomic file writes, and the archive formats a template can arrive in."""
 
 import enum
 import os

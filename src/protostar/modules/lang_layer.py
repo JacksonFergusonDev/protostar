@@ -1,3 +1,5 @@
+"""The Python baseline every project gets: uv, ``pyproject.toml``, license, and readme."""
+
 from __future__ import annotations
 
 import importlib.resources

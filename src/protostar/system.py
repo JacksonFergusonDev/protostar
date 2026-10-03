@@ -1,4 +1,9 @@
-"""System-level subprocess execution utilities for Protostar."""
+"""Running subprocesses Protostar owns, and reading the host it runs on.
+
+``ProcessRunner`` starts each command in its own process group, with an
+environment free of the caller's virtualenv and git repository variables, so
+an interrupt can terminate and reap it before rollback.
+"""
 
 import logging
 import os

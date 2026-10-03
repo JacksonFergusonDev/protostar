@@ -1,3 +1,8 @@
+"""The argument parser for every subcommand, and dispatch to their handlers.
+
+Each tool's ``--flag`` and help come from its module's ``ToolInfo``.
+"""
+
 from __future__ import annotations
 
 import argparse

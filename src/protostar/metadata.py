@@ -1,4 +1,4 @@
-"""Project metadata definitions and resolution mechanisms for Protostar."""
+"""Project metadata (author, license, ports): its fields, validation, and defaults."""
 
 from __future__ import annotations
 

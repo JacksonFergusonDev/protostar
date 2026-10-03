@@ -1,4 +1,4 @@
-"""Security policies and enforcement boundaries."""
+"""The workspace path jail and the executables a run may start."""
 
 import enum
 import os

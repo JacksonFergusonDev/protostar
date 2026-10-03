@@ -1,4 +1,10 @@
-"""Configuration management and schema definitions for Protostar."""
+"""The user's configuration, and the templates it and the built-ins name.
+
+``UserConfig`` is the ``[env]`` defaults and ``[templates]`` aliases, read
+from the file ``active_config_source()`` selects. ``TemplateSource`` and
+``TemplateBlueprint`` load, validate, and render a template's
+``protostar.toml``.
+"""
 
 import enum
 import functools

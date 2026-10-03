@@ -1,3 +1,5 @@
+"""The community health files module: contributing guide, conduct, and issue forms."""
+
 from __future__ import annotations
 
 import logging

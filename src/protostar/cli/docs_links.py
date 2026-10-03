@@ -1,3 +1,5 @@
+"""Terminal links to documentation pages, for error hints and help text."""
+
 from rich.text import Text
 
 from protostar.cli import ui

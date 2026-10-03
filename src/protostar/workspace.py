@@ -1,4 +1,9 @@
-"""Workspace context and environment utilities for Protostar."""
+"""Project names and Python versions, and whether uv would resolve elsewhere.
+
+Names and versions resolve from metadata, ``pyproject.toml``, or the folder.
+``validate_resolver_workspace`` refuses a project an ancestor uv workspace
+owns, whose lock this run could not journal.
+"""
 
 import re
 import tomllib

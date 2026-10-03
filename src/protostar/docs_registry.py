@@ -1,3 +1,5 @@
+"""The documentation site's pages, so a hint links somewhere that exists."""
+
 import urllib.parse
 from enum import Enum
 

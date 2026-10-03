@@ -1,3 +1,12 @@
+"""``protostar``'s entry point, ``init``, and ``config``.
+
+``main()`` parses arguments, dispatches to a command's handler, and turns a
+``ProtostarError`` into its human or JSON report and exit code. ``init``
+gathers the draft from flags, configuration, and the TUI before the engine
+plans or runs anything; the other commands' handlers live in their own
+modules, such as ``reviews`` for ``sync``, ``status``, and ``diff``.
+"""
+
 from __future__ import annotations
 
 import argparse
