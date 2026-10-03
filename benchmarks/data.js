@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791048567526,
+  "lastUpdate": 1791048593688,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21323,6 +21323,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 864.65,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "808637fbcb4c30b85d7f581087b76868a4b6752c",
+          "message": "test(reconciliation): settle the last two survivors and finish Phase 2 (#428)\n\nRetracting a YAML document under its own spec matters: pre-commit's spec\nmatches repos by identity, so a reordered config is unedited and removed,\nwhere a generic spec would keep it with a retracted conflict. A new test\nkills the mutant that dropped the real spec. The fallback spec's name is\nread only for keyed sequences, which it has none of, so that mutant is\nmarked as equivalent.\n\nMark Phase 2 finished in the plan, keep its runtimes for Phase 3, and move\nthe survivor-pass guidance to Phase 6.",
+          "timestamp": "2026-10-03T10:24:54-07:00",
+          "tree_id": "8b56dc20f89b1f922e850234b009d60f334a43f2",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/808637fbcb4c30b85d7f581087b76868a4b6752c"
+        },
+        "date": 1791048592574,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 181.88,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1291.16,
             "unit": "ms"
           }
         ]
