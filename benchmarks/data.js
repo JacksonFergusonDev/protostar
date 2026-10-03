@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791048593688,
+  "lastUpdate": 1791048802296,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21357,6 +21357,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1291.16,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "14faae61da849a5fa0350e672503b351a4e48abe",
+          "message": "fix(config): render template strings after parsing, not before (#431)\n\nEscaping a value into the template's TOML source only works inside a basic\n\nstring: TOML never decodes escapes in a literal one, so a project name\nholding a quote showed \\\" in built-in templates' starter code. Templates now\nparse first and render each string's decoded text; only a [dev.pyproject]\npayload escapes, for the TOML it holds.",
+          "timestamp": "2026-10-03T10:25:34-07:00",
+          "tree_id": "1a683290c281e0e7bfebc452d9d422d29b8f19cb",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/14faae61da849a5fa0350e672503b351a4e48abe"
+        },
+        "date": 1791048800922,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 173.29,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1241.43,
             "unit": "ms"
           }
         ]
