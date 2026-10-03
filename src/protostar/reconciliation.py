@@ -1536,14 +1536,9 @@ class Reconciliation:
                 self.fs.write_text(target, updated)
                 self._resolution_dirty = True
             for edge in accepted:
-                entries = owned_groups.setdefault(edge.group.value, [])
-                if not isinstance(entries, list):
-                    # Unreachable: the loop above raised for this group already,
-                    # so its message and hint cannot be observed.
-                    raise ConfigurationError(
-                        "Invalid owned dependency-group baseline.",
-                        hint="Keep owned dependency groups as arrays of include records.",
-                    )  # pragma: no mutate
+                # The loop above raised for any group that is not an array.
+                owned = owned_groups.setdefault(edge.group.value, [])
+                entries = cast(list[Value], owned)  # pragma: no mutate
                 member = {"include-group": edge.include.value}
                 if member not in entries:
                     entries.append(member)
