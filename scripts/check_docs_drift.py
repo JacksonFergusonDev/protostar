@@ -40,6 +40,7 @@ from scripts._common import (
 from scripts.check_doc_links import docs_path_to_file, extract_anchors
 
 FIRST_PROJECT = DOCS_DIR / "first-project.md"
+CLI_REFERENCE = DOCS_DIR / "usage" / "cli-reference.md"
 ERROR_HANDLING = DOCS_DIR / "mechanics" / "error_handling.md"
 API_REFERENCE = DOCS_DIR / "developer" / "api-reference.md"
 EXIT_CODE_TABLE = DOCS_DIR / "generated" / "table_exit_codes.md"
@@ -531,6 +532,40 @@ def _documented_commands(text: str) -> Iterator[list[str]]:
                 yield args
 
 
+def check_cli_reference_sections() -> list[str]:
+    """cli-reference.md has one section per command, each showing its generated options."""
+    from protostar.cli.parser import build_parser
+    from scripts.generate_docs_assets.cli_tables import command_fixture, subcommands
+
+    text = CLI_REFERENCE.read_text(encoding="utf-8")
+    sections = re.findall(
+        r"^### ([^\n]*)\n(.*?)(?=^#{2,3} |\Z)", text, re.DOTALL | re.MULTILINE
+    )
+    commands = subcommands(build_parser())
+    problems: list[str] = []
+    found: dict[str, str] = {}
+    for heading, body in sections:
+        for command in re.findall(r"`protostar ([\w-]+)`", heading):
+            if command not in commands:
+                problems.append(f"{_rel(CLI_REFERENCE)}: '{heading}' names no command")
+            elif command in found:
+                problems.append(
+                    f"{_rel(CLI_REFERENCE)}: 'protostar {command}' has two sections"
+                )
+            found[command] = body
+    for command in commands:
+        if command not in found:
+            problems.append(
+                f"{_rel(CLI_REFERENCE)}: 'protostar {command}' has no section"
+            )
+        elif f'--8<-- "{command_fixture(command)}"' not in found[command]:
+            problems.append(
+                f"{_rel(CLI_REFERENCE)}: the 'protostar {command}' section doesn't"
+                f" include {command_fixture(command)}"
+            )
+    return problems
+
+
 def check_documented_commands() -> list[str]:
     """Every ``protostar`` command a page shows still parses."""
     from protostar.cli.parser import build_parser
@@ -733,6 +768,7 @@ CHECKS: tuple[Callable[[], list[str]], ...] = (
     check_page_front_matter,
     check_card_grids,
     check_site_links,
+    check_cli_reference_sections,
     check_documented_commands,
     check_walkthrough_output,
     check_generated_fixtures_are_used,
