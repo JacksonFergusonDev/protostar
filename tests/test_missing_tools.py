@@ -87,6 +87,8 @@ def test_missing_required_executable_fails_init_planning(
     assert caught.value.missing == (executable,)
 
 
+# The testing guide shows this test.
+# --8<-- [start:missing_tools]
 def test_execution_result_carries_missing_tools(workspace, missing_executables, mocker):
     missing_executables.add(GlobalExecutable.DIRENV)
     engine = Orchestrator([DirenvModule(), JustModule()], UserConfig(ide=None))
@@ -102,6 +104,9 @@ def test_execution_result_carries_missing_tools(workspace, missing_executables, 
         {"executable": "direnv", "tool": "direnv"}
     ]
     assert [note.message for note in result.diagnostics if "direnv" in note.message]
+
+
+# --8<-- [end:missing_tools]
 
 
 def test_missing_tools_serialize_sorted():

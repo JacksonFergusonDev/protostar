@@ -116,19 +116,14 @@ flowchart LR
 
 ## Modular & Decoupled
 
-**Each supported tool is an independent `BootstrapModule` subclass. Modules declare their requirements into the manifest and have no knowledge of each other.**
+**Each supported tool is an independent module. Modules declare what their tool needs into the manifest and know nothing about each other.**
 
-When you toggle `--no-direnv`, the `direnv` module simply isn't loaded. When you toggle `--docker`, the `Docker` module runs its `build()` method against the manifest and declares a `Dockerfile`, a `.dockerignore` update, and a set of ignore patterns. No other module changes. The engine never contains a conditional for Docker.
+When `--mypy` is on, the Mypy module declares its dependency, its commit hook, its CI step, its `just` recipe, and its settings. The hook configuration, the CI workflow, and the `justfile` are each assembled from what every enabled module declared, so no module needs to know which others are on, and the engine never contains a conditional for Mypy.
 
 === "Module Architecture"
 
     ```python
-    class DockerModule(BootstrapModule):
-        def build(self, manifest: EnvironmentManifest) -> None:
-            manifest.filesystem.add_file_injection(
-                Path("Dockerfile"), self._render_dockerfile()
-            )
-            manifest.filesystem.add_vcs_ignore("Dockerfile", context=".dockerignore")
+    --8<-- "src/protostar/modules/tooling_layer.py:mypy_module"
     ```
 
 === "What You'd Have Without It"
@@ -147,7 +142,7 @@ When you toggle `--no-direnv`, the `direnv` module simply isn't loaded. When you
         ...
     ```
 
-**Why this matters:** Decoupling prevents combinatorial explosion. With `n` tools, a monolithic conditional model can grow to `O(2^n)` interaction cases. A modular architecture keeps complexity linear — each module is an isolated unit, testable without any other module present. Adding a new tool to Protostar means writing one new class, not auditing every existing flag combination.
+**Why this matters:** Decoupling prevents combinatorial explosion. With `n` tools, a monolithic conditional model can grow to `O(2^n)` interaction cases. A modular architecture keeps complexity linear — each module is an isolated unit, testable without any other module present. Adding a new tool to Protostar means writing one new module and listing it in a few registries, not auditing every existing flag combination; see [Extending Protostar](./developer/extending-protostar.md).
 
 !!! note "Related: tri-state toggling"
     Because modules are independent, Protostar can offer `--<flag>` / `--no-<flag>` overrides for any module without the template author needing to write any conditional logic. See [Initialization](./usage/init.md) for the full flag matrix.
