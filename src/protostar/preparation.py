@@ -53,16 +53,26 @@ class ExecutionPolicy(StrEnum):
 
 
 class PreparationPhase(StrEnum):
-    """Initialization byte decisions separated by execution-only materialization."""
+    """Which batch of an initialization's decisions to prepare.
+
+    Initialization runs commands whose output later decisions read, so the
+    executor prepares its decisions in batches between them. A lifecycle run
+    (``sync``) runs no initializer and prepares ``COMPLETE`` at once.
+    """
 
     BEFORE_INITIALIZERS = "before-initializers"
+    """Migrations, releases, directories, and whole files no command creates."""
     BEFORE_RESOLVER = "before-resolver"
+    """Merged configuration, regions, and dependency selection."""
     BEFORE_COMMANDS = "before-commands"
     """Both batches before the resolver, for a change review, when no
     initializer creates a file the second one reads (see ``review_phase``)."""
     AFTER_RESOLVER = "after-resolver"
+    """Ignore rules, container files, and editor settings."""
     COMPLETE = "complete"
+    """Every batch at once, for a run with no initializer between them."""
     RECIPE = "recipe"
+    """The recipe in ``pyproject.toml``, written after everything it records."""
 
 
 @dataclass(frozen=True)
@@ -233,7 +243,45 @@ def conflict_record(conflict: MergeConflict) -> dict[str, Any]:
 
 @dataclass(frozen=True)
 class PreparedReview:
-    """Immutable accepted bytes, ownership decisions, and captured workspace inputs."""
+    """Immutable accepted bytes, ownership decisions, and captured workspace inputs.
+
+    A review is what the user approves and what execution applies: execution
+    refuses it if the manifest or any captured input changed since.
+
+    Attributes:
+        root: The project root the review was prepared in.
+        hook_revisions: The registry snapshot its hook pins come from, reused by
+            execution so it writes the pins the review showed.
+        manifest_digest: A fingerprint of the manifest the review reconciled.
+        selections: Each tool's enablement and the layer that decided it.
+        producers: Each declaration, attributed to the module or template that
+            made it, for the JSON review.
+        policy: Whether the review is for initialization or a lifecycle run.
+        one_shot: Whether the run leaves no recipe or ownership state behind.
+        inputs: Every workspace path the review read or may write, with the
+            state it had, which execution revalidates before applying.
+        edits: The accepted byte changes, file by file.
+        directories: The directories it creates.
+        conflicts: Open conflicts: the local side stays and the update waits.
+        resolved: Decisions a resolution settled in this review.
+        proposals: Changes into content Protostar never owned, applied unless
+            kept out.
+        preserved: Local edits kept under an unchanged update.
+        diagnostics: Non-fatal notes from reconciliation.
+        candidate_state: The ownership state applying the review records.
+        state_before: The ``protostar.lock`` bytes before the run, or None
+            when there is none.
+        resolver: The dependency resolution the review accepted.
+        initialization_only: Commands only ``init`` runs, such as ``git init``,
+            which a lifecycle run reports as skipped.
+        initialization_only_ide_probe: Whether ``init`` would also check the
+            editor for recommended extensions.
+        preserve_deleted_pyproject: Whether the user deleted a tracked
+            ``pyproject.toml``, so ``uv init`` must not recreate it.
+        migrations: The template migrations applied, in order.
+        missing_tools: Enabled tools' executables missing from ``PATH``.
+        hooks: What a lifecycle run does to the clone's installed git hooks.
+    """
 
     root: Path
     hook_revisions: tuple[ResolvedHookRevision, ...]

@@ -430,6 +430,8 @@ class Orchestrator:
         if manifest.collisions and manifest.collision_strategy is None:
             raise WorkspaceCollisionError(paths=manifest.collisions)
 
+        # Through the module, so the lazy __getattr__ imports SystemExecutor on
+        # first use and a test's patch of it is the one that runs.
         executor_cls: type[SystemExecutor] = sys.modules[__name__].SystemExecutor
         executor = executor_cls(
             manifest,

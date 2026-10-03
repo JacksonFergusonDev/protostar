@@ -258,6 +258,8 @@ def handle_init(args: argparse.Namespace) -> None:
 
         modules.append(CrashModule())
 
+    # Through the module, so the lazy __getattr__ imports Orchestrator on
+    # first use and a test's patch of it is the one that runs.
     orchestrator_cls: type[Orchestrator] = sys.modules[__name__].Orchestrator
     engine = orchestrator_cls(modules, user_config, request=request)
 

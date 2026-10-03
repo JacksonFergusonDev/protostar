@@ -618,6 +618,8 @@ def _read_archive(payload: bytes, fmt: ArchiveFormat, url: str) -> dict[str, byt
             with zipfile.ZipFile(io.BytesIO(payload)) as archive:
                 for member in archive.infolist():
                     name = validate(member.filename)
+                    # The high bits hold a Unix mode; archives made elsewhere
+                    # leave them 0. Anything else (a symlink) is refused.
                     mode = member.external_attr >> 16
                     if stat.S_IFMT(mode) not in (0, stat.S_IFREG, stat.S_IFDIR):
                         raise SecurityViolationError(
@@ -630,6 +632,8 @@ def _read_archive(payload: bytes, fmt: ArchiveFormat, url: str) -> dict[str, byt
             with tarfile.open(fileobj=io.BytesIO(payload), mode="r:*") as tar_archive:
                 for tar_member in tar_archive:
                     name = validate(tar_member.name)
+                    # A pax global header holds metadata, not a file: forge
+                    # tarballs carry one recording the commit.
                     if tar_member.isdir() or tar_member.type == tarfile.XGLTYPE:
                         continue
                     if not tar_member.isfile():

@@ -378,6 +378,12 @@ def validate_resolver_workspace(root: Path) -> None:
                 hint="Use arrays of relative glob strings for workspace members and exclude.",
             )
 
+        # uv expands members as path globs, where `*` stays within one path
+        # segment and `**` spans any number. fnmatch alone would let `*` cross
+        # `/`, so each segment is matched on its own. Brace alternatives are
+        # refused rather than guessed at: wrongly deciding this project is not
+        # a member would let uv rewrite the ancestor's lock outside this run's
+        # journal.
         def matches(relative: str, pattern: str) -> bool:
             if "{" in pattern or "}" in pattern:
                 raise ConfigurationError(

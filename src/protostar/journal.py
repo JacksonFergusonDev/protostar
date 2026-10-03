@@ -1,4 +1,23 @@
-"""Transaction journaling and rollback mechanisms."""
+"""The record of what a run changed, and how to put it back.
+
+Every path execution mutates is journaled before its first mutation, through
+``TransactionAwareFS`` or a task's declared outputs. Three rules make rollback
+restore the workspace exactly:
+
+- **First record wins.** A path is captured once, so later writes in the same
+  run never overwrite the state it had before the run.
+- **Rollback runs in reverse.** Missing parent directories are journaled
+  before the files inside them, so undoing in reverse removes children before
+  their parents.
+- **Only what the run created is deleted.** A directory the run created is
+  removed only if it is empty again. One that still holds files no journaled
+  path accounts for fails its restore instead, and the rollback reports it,
+  rather than deleting files Protostar cannot vouch for. A tree a command
+  declared it creates (``record_tree_creation``) is removed whole.
+
+Symbolic links and special nodes are refused before they are mutated, since
+their original state could not be restored byte for byte.
+"""
 
 import dataclasses
 import enum
@@ -99,7 +118,11 @@ def _remove_tree(path: Path) -> str | None:
 
 
 class MutationJournal:
-    """Tracks file mutations to enable rollback."""
+    """Captures each path's state before its first mutation, to roll a run back.
+
+    A journal is single-use: it is active until it commits, which discards the
+    captures, or rolls back, which restores them.
+    """
 
     def __init__(self, workspace_root: Path | None = None) -> None:
         self._workspace_root = (workspace_root or Path.cwd()).resolve()
@@ -176,7 +199,21 @@ class MutationJournal:
         self._touched_display_paths.add(self._format_display_path(path, is_dir=True))
 
     def record_mutation(self, path: Path) -> None:
-        """Records a path."""
+        """Captures a path's current state before its first mutation.
+
+        A path already journaled keeps its first capture. An absent path is
+        recorded as created; a file keeps its bytes and mode, a directory its
+        mode.
+
+        Args:
+            path: The path about to be mutated, inside the workspace.
+
+        Raises:
+            TransactionStateError: If the journal has committed or rolled back.
+            UnsupportedFilesystemNodeError: If the path is a symbolic link or a
+                special node.
+            FileSystemError: If the path cannot be inspected or read.
+        """
         if self._state is not TransactionState.ACTIVE:
             raise TransactionStateError("record a mutation in", self._state.value)
 
@@ -218,14 +255,28 @@ class MutationJournal:
         self._touched_display_paths.add(self._format_display_path(path, is_dir=is_dir))
 
     def commit(self) -> None:
-        """Commits the journal."""
+        """Accepts every mutation and discards the captures.
+
+        Raises:
+            TransactionStateError: If the journal is no longer active.
+        """
         if self._state is not TransactionState.ACTIVE:
             raise TransactionStateError("commit", self._state.value)
         self._state = TransactionState.COMMITTED
         self._journal.clear()
 
     def rollback(self) -> RollbackResult:
-        """Rolls back the journal."""
+        """Restores every journaled path, newest first.
+
+        Each path is attempted even when another fails, so one stuck path does
+        not leave the rest changed. Rolling back twice returns the first result.
+
+        Returns:
+            Whether every path was restored, and why any was not.
+
+        Raises:
+            TransactionStateError: If the journal has already committed.
+        """
         if self._state is TransactionState.COMMITTED:
             raise TransactionStateError("roll back", self._state.value)
         if self._rollback_result is not None:

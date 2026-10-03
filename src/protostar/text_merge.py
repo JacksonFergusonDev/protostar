@@ -193,8 +193,10 @@ def reconcile_text(
         What to write, what to own, and any refused or settled change.
     """
     target = desired.encode()
+    # Overwriting, or creating a file that was never there: write and own it.
     if overwrite or (baseline is None and local is None):
         return TextReconciliation(None if local == target else desired, desired)
+    # The update did not change: a local edit or deletion is only reported.
     if baseline is not None and desired == baseline:
         found = preserved_text(location, local, baseline)
         settled = found.settle(resolutions) if found is not None else None
@@ -206,11 +208,14 @@ def reconcile_text(
         return TextReconciliation(
             desired if restore else None, baseline, resolved=(settled,)
         )
+    # Bytes that are not UTF-8 can be neither merged nor shown.
     try:
         text = local.decode() if local is not None else None
     except UnicodeDecodeError:
         reason = ConflictReason.UNOWNED if baseline is None else ConflictReason.DIVERGED
         return TextReconciliation(None, baseline, (MergeConflict(location, reason),))
+    # Text never owned, or owned text the user deleted, has no ancestor to
+    # merge against, so the whole file is one decision.
     if baseline is None or text is None:
         if (baseline is None and local == target) or desired == baseline:
             return TextReconciliation(None, baseline)
@@ -248,6 +253,8 @@ def reconcile_text(
         settled = hunk(overlap).settle(resolutions)
         return settled.resolution if settled else None
 
+    # Both sides changed owned text: merge three ways. Any open hunk keeps the
+    # whole local text and the old baseline, so the update stays pending.
     merged = merge_text(baseline, text, desired, choose)
     if merged.content is None:
         return TextReconciliation(
