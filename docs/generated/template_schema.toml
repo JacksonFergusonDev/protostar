@@ -59,7 +59,7 @@ post_install_tasks = [
 
 # --- Tooling Opinions & Overrides ---
 # Boolean toggles configuring baseline tooling opinions.
-# Dynamic precedence: CLI Flags > Template Opinions > Global UserConfig
+# A project's own choices win over the tier, the tier over these, and these over the user's defaults.
 agents = false
 ci = false
 codecov = false

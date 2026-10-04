@@ -186,7 +186,7 @@ protostar init --template my-template --tier production
 protostar sync --tier workbench
 ```
 
-An explicit tool flag still wins over either tier, so `--tier production --no-ci` is production without CI. The project recipe records the tier as `tier` in `[tool.protostar]` only when it was passed with `--tier`, so a project that never chose follows the template's default. A recorded tier is dropped on `sync` once the template stops declaring tiers.
+An explicit tool flag still wins over either tier, so `--tier production --no-ci` is production without CI; see [which choice wins](project-recipes.md#which-choice-wins). The project recipe records the tier as `tier` in `[tool.protostar]` when it was passed with `--tier`, or chosen in the recipe editor away from the template's default, so a project that never chose follows the template's default. A recorded tier is dropped on `sync` once the template stops declaring tiers.
 
 ## Level 2: The Multi-File Repository
 
@@ -376,16 +376,14 @@ Renaming or removing a dependency, or a module-generated file, isn't a migration
 
 ### Security Considerations
 
-Protostar enforces an **Informed Consent Security Model**. When someone loads your template from a URL or an alias they haven't marked trusted, Protostar lists every command the run executes and asks them to confirm before anything runs: its own setup commands and dependency installs as well as your `system_tasks` and `post_install_tasks`, because your files decide what those commands do. Without an interactive terminal, the run aborts, so users who run your template in CI need to register it with `trusted = true`.
-
-Templates registered in your global `config.toml` aliases bypass this prompt. For a complete breakdown of how the runtime evaluates trust boundaries, see the [Remote Trust Model](templates.md#security-model-the-remote-trust-dialog).
+Your users confirm every command a run executes before it runs, unless they have trusted your template: Protostar's own setup commands and dependency installs as well as your `system_tasks` and `post_install_tasks`, because your files decide what those commands do. Without a terminal, an untrusted run stops instead, so users who run your template in CI give it an alias with `trusted = true`, or pass `--trust` for that run. See [Trusting a Template](templates.md#trusting-a-template).
 
 ## Best Practices
 
 When building templates for your team or the open-source community, keep the following guidelines in mind:
 
 - **State Only the Delta:** Each tool module already ships a sensible baseline configuration. Put only what is specific to your project in `[dev.pyproject]`, and prefer a tool's additive keys (for example Ruff's `extend-select`) over redefining a list. Lists merge atomically, so redefining `select` replaces the baseline instead of adding to it, and it will drift when the baseline changes. Protostar's own built-in templates follow this rule; see [Built-in Templates](../developer/built-in-templates.md#baseline-in-modules-delta-in-templates).
-- **Choose the Right Complexity:** Start with a single-file blueprint (`protostar.toml`) if you only need to enforce tooling configurations (like Ruff or Pyright rules). Graduate to a multi-file repository only when you need to scaffold physical code, directories, or CI/CD pipelines.
+- **Choose the Right Complexity:** A single TOML file covers tools, dependencies, directories, configuration, and small starter files in `[files]`. Move to a directory with a `template/` folder when your starter files are big enough that writing them inside TOML strings gets in the way. CI, hooks, and tool configuration never need one: the tool flags bring them.
 - **Descriptive Variable Names:** Use clear, self-explanatory names for custom placeholders (e.g., `<% AWS_REGION %>` instead of `<% REG %>`). Since Protostar automatically generates interactive terminal prompts for unresolved variables, descriptive names provide a better user experience.
 - **Minimize Shell Scripts:** Be cautious with `system_tasks` and `post_install_tasks`. Heavy reliance on shell commands can compromise cross-platform compatibility (e.g., failing on Windows), and each one is another command users must confirm before an untrusted run.
 - **Check, Then Test Locally:** Run `protostar check-template --strict` on every change, and try the template against an empty target directory (`protostar init --from ./path/to/template`) before publishing it to a remote version control platform.

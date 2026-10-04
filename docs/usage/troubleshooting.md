@@ -12,7 +12,7 @@ Protostar needs `uv` and `git` for every project, and checks for them before wri
 
 ### `uv` is not installed or not in `$PATH`
 
-Protostar strongly recommends [uv](https://docs.astral.sh/uv/) for high-velocity package resolution and environment management.
+Protostar runs [uv](https://docs.astral.sh/uv/) to create every project and install its packages, so it can't run without it.
 
 === "macOS & Linux"
     ```bash
@@ -103,24 +103,18 @@ protostar init --template cli --force-replace
 
 ## Remote Template Security Alerts
 
-When you load a template you haven't marked trusted (`--from`, or an alias without `trusted = true`), Protostar lists every command the run executes under **Untrusted template** in the change review: setup commands such as `git init`, each dependency install, and the template's own tasks. They run in the files the template wrote, which can make them run its code, for example through a build hook `uv add` triggers. **Apply** stays disabled until you tick the checkbox confirming those commands, and only the commands you confirmed run. Without an interactive terminal, the run aborts with exit code `77`; pass `--trust` to run the listed commands for that run only. `protostar sync` asks the same way when a template update needs `uv add`, `uv lock`, or a hook install.
+A template you haven't trusted (a `--from` path or URL, or an alias without `trusted = true`) runs no command until you confirm it. In a terminal, the change review lists the commands under **Untrusted template**, and **Apply** stays off until you tick the box. Without a terminal, the run stops with `SecurityViolationError` (exit code `77`) before writing anything.
 
-### Bypassing Prompts for Trusted Templates
+- **For one run,** pass `--trust`. It still lists the commands.
+- **Every time,** give the template an alias with `trusted = true` in your configuration (`protostar config --edit`):
 
-To permanently trust a remote or team template and bypass security prompts:
+    ```toml
+    [templates.team-backend]
+    source = "https://github.com/YourOrg/standards"
+    trusted = true
+    ```
 
-1. Run `protostar config --edit` to open your global settings in `$EDITOR`.
-1. Register the template under the `[templates.<alias>]` table with `trusted = true`:
-
-```toml
-[templates.team-backend]
-source = "https://raw.githubusercontent.com/YourOrg/standards/main/backend.toml"
-name = "Team Backend"
-description = "Internal FastAPI microservice template"
-trusted = true
-```
-
-1. Invoke it via shorthand: `protostar init --template team-backend`. External templates configured with `trusted = true` bypass interactive confirmation dialogs and execute cleanly in non-interactive CI/CD pipelines.
+See [Trusting a Template](templates.md#trusting-a-template) for exactly which templates count as trusted, and what `sync` asks.
 
 ## Template Variables That Look Like Credentials
 
