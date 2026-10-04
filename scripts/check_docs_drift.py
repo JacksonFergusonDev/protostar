@@ -533,6 +533,19 @@ def _documented_commands(text: str) -> Iterator[list[str]]:
                 yield args
 
 
+def check_execution_order() -> list[str]:
+    """The execution-order page names every preparation phase."""
+    from protostar.preparation import PreparationPhase
+
+    page = DOCS_DIR / "developer" / "reconciliation" / "execution.md"
+    section = _section(page.read_text(encoding="utf-8"), "Execution Order")
+    return [
+        f"{_rel(page)}: Execution Order doesn't name `{phase.name}`"
+        for phase in PreparationPhase
+        if f"`{phase.name}`" not in section
+    ]
+
+
 def check_cli_reference_sections() -> list[str]:
     """cli-reference.md has one section per command, each showing its generated options."""
     from protostar.cli.parser import build_parser
@@ -893,6 +906,7 @@ CHECKS: tuple[Callable[[], list[str]], ...] = (
     check_card_grids,
     check_site_links,
     check_cli_reference_sections,
+    check_execution_order,
     check_documented_commands,
     check_inline_commands,
     check_tui_keys,
