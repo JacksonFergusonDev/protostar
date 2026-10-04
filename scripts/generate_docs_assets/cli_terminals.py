@@ -6,9 +6,10 @@ import argparse
 import importlib.resources
 import io
 import os
+import sys
 import tempfile
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
 from typing import Any
 from unittest import mock
@@ -19,6 +20,7 @@ from rich.text import Text
 
 import protostar.cli
 from protostar.cli.changes import hook_snapshot, prepare_draft, print_dry_run
+from protostar.cli.main import main as run_cli
 from protostar.cli.reviews import handle_review
 from protostar.config import TemplateSource, UserConfig
 from protostar.manifest import DiagnosticEvent, DiagnosticPhase, Severity
@@ -195,6 +197,42 @@ def generate_cli_missing_tools_svg() -> None:
             title="zsh",
             filename="cli_missing_tools.svg",
             unique_id="cli_missing_tools",
+        )
+    finally:
+        protostar.cli.ui.console = original_global_console
+
+
+def _stub_which_without_uv(name: str) -> str | None:
+    """Reports every binary present except uv and the IDE CLIs."""
+    return None if name == "uv" else _stub_which(name)
+
+
+def generate_cli_missing_dependency_svg() -> None:
+    """Captures an init on a machine without uv, which stops before writing anything.
+
+    Homebrew is stubbed present, so the install command is the same on every host.
+    """
+    original_global_console = protostar.cli.ui.console
+    record_console = _recording_console(terminal=False)
+    _print_prompt(record_console, "init --template cli")
+
+    try:
+        protostar.cli.ui.console = record_console
+        with (
+            _demo_project(),
+            mock.patch("shutil.which", _stub_which_without_uv),
+            mock.patch.object(
+                sys, "argv", ["protostar", "init", "--template", "cli", "--no-config"]
+            ),
+            suppress(SystemExit),
+        ):
+            run_cli()
+
+        _render_and_write_svg(
+            record_console,
+            title="zsh",
+            filename="cli_missing_dependency.svg",
+            unique_id="cli_missing_dependency",
         )
     finally:
         protostar.cli.ui.console = original_global_console
