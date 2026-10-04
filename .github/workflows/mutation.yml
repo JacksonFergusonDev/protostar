@@ -272,3 +272,28 @@ jobs:
       pages: write
       id-token: write
     uses: ./.github/workflows/pages.yml
+
+  # jacksonferguson.me shows the latest score and fetches it only when it builds.
+  # Wait for the deploy, not the gh-pages push, so the build reads the new file.
+  refresh-site:
+    name: Refresh jacksonferguson.me
+    needs: publish-pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+    - name: Ask the site to rebuild
+      env:
+        # A fine-grained token that can only send this dispatch to the site's repository.
+        GH_TOKEN: ${{ secrets.PORTFOLIO_DISPATCH_TOKEN }}
+        REF: ${{ github.ref }}
+      run: |
+        if [[ -z "$GH_TOKEN" ]]; then
+          echo '::error::Add the PORTFOLIO_DISPATCH_TOKEN secret: a fine-grained token with Contents read and write on JacksonFergusonDev/JacksonFergusonDev.github.io only.'
+          exit 1
+        fi
+        gh api repos/JacksonFergusonDev/JacksonFergusonDev.github.io/dispatches \
+          --method POST \
+          --field event_type=remote-assets-updated \
+          --field "client_payload[asset_source]=$GITHUB_REPOSITORY" \
+          --field "client_payload[ref]=$REF"

@@ -193,7 +193,9 @@ Local runs write each surviving edit as a diff to `mutants/survivors.md`. Each C
 
 Only a successful complete run on `main` publishes. Failed or cancelled jobs and manual subset runs cannot update the public score. Publication checks every expected artifact and the configured module set, then appends the commit, UTC date, and raw per-module counts to `benchmarks/mutation-history.json` on `gh-pages`. `benchmarks/mutation-latest.json` is a Shields endpoint with the aggregate score and an explicit engine label. Retrying a recorded commit does not add another history point. Counts are retained so the dashboard can later show changes in the module set without averaging percentages.
 
-Publication rebases and retries if the benchmark or release workflow updates `gh-pages` concurrently; a conflicting history update is regenerated against the new branch contents. The shared Pages workflow deploys both mutation JSON files alongside the performance history. The graph and README badge are a separate follow-up.
+Publication rebases and retries if the benchmark or release workflow updates `gh-pages` concurrently; a conflicting history update is regenerated against the new branch contents. The shared Pages workflow deploys both mutation JSON files alongside the performance history. The benchmark dashboard graphs the history, and the README badge reads the latest score.
+
+jacksonferguson.me shows the latest score on Protostar's project card, and fetches it only when it builds. Once the Pages deploy finishes, the workflow sends the site's repository a `remote-assets-updated` dispatch, so the site rebuilds from the file just deployed. The dispatch uses `PORTFOLIO_DISPATCH_TOKEN`, a fine-grained token limited to that repository with Contents read and write; the job fails with a pointer to it when the secret is missing.
 
 GitHub disables scheduled workflows in public repositories after 60 days without repository activity. Re-enable this workflow with:
 
