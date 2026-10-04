@@ -242,6 +242,7 @@ jobs:
         git -C pages-data config user.name 'github-actions[bot]'
         git -C pages-data config user.email '41898282+github-actions[bot]@users.noreply.github.com'
         for attempt in 1 2 3 4 5; do
+          echo "Publishing mutation results (attempt $attempt/5)."
           python3 scripts/mutation_report.py record \
             --results results --matrix "$MATRIX" --commit "$COMMIT" --date "$recorded_at" \
             --history pages-data/benchmarks/mutation-history.json \
