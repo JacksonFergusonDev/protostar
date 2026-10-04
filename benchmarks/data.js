@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791048802296,
+  "lastUpdate": 1791143614727,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21391,6 +21391,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1241.43,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "df17ccda33cbe8462a9f67c3390e697e6a9458cf",
+          "message": "docs(troubleshooting): cover the errors people hit (#439)\n\nTroubleshooting covered installation, collisions, and trust, but not\nthe errors a tracked project meets: a teammate's newer Protostar\n(OutdatedProtostarError), a file changed between review and apply\n(StaleReviewError), a stale --resolve id (UnmatchedResolutionError),\nand passing a different template.\n\nEach now has a section with the message, why it happens, and the fix.\nThe stale-review and template-switch errors link to their sections,\nand their hints say what to do in plain words instead of \"prepare a\nnew review against the current workspace\". A new drift check fails\nwhen a page names an error that doesn't exist; it caught CONTRIBUTING\nlisting an AggregatedDependencyError removed long ago.",
+          "timestamp": "2026-10-04T12:50:08-07:00",
+          "tree_id": "64636fd8a79973221362c21a985f09e73800417f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/df17ccda33cbe8462a9f67c3390e697e6a9458cf"
+        },
+        "date": 1791143613576,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 177.23,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1269.09,
             "unit": "ms"
           }
         ]
