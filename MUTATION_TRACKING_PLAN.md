@@ -10,8 +10,8 @@ Widen mutation testing to the rest of the engine, then run it on a schedule, rec
 |---|---|---|
 | 1 | One module list for mutation testing | Finished (#413) |
 | 2 | Expand coverage to the target set | Finished (#415, #417, #418, #425, #428) |
-| 3 | Record scores on `gh-pages` on a schedule | Implemented; awaiting merge |
-| 4 | Dashboard graph and README badge | Planned |
+| 3 | Record scores on `gh-pages` on a schedule | Finished (#441) |
+| 4 | Dashboard graph and README badge | Implemented; awaiting merge |
 | 5 | Score on jacksonferguson.me | Planned |
 | 6 | Further coverage (ongoing) | Planned |
 
@@ -27,16 +27,9 @@ Widen mutation testing to the rest of the engine, then run it on a schedule, rec
 - **The website reads the score when it builds.** jacksonferguson.me (Astro, `~/Developer/JacksonFergusonDev.github.io`) already fetches remote files at build time through `config/remote-assets.json`, and its `deploy.yml` already rebuilds on `repository_dispatch` of type `remote-assets-updated`, plus weekly. Protostar sends that dispatch after the Pages deploy finishes, not just after the `gh-pages` push, so the site never fetches a stale file.
 - **Say what the score covers.** It covers the mutated modules, not the whole codebase. The dashboard says which modules, and the badge label doesn't imply full coverage.
 
-## Phase 3: Record scores on `gh-pages` on a schedule
-
-Implemented in the current PR: nightly at 02:23 UTC, gated by changed inputs; complete main-branch runs publish raw per-module history and the latest-score endpoint, and Pages carries both files. After merge, mark this phase Finished and move it to the summary below.
-
-- **Report:** give `scripts/mutation_report.py` JSON output for one history entry and for the shields endpoint file.
-- **Workflow:** add a schedule to `mutation.yml` with the change check above. Choose how often it runs from Phase 2's runtimes after each survivor pass: nightly if a full run is short enough, less often if not. Add a publish job that runs only when every module succeeded. It appends to the history and writes the latest-score file on `gh-pages`, rebases and retries its push (the benchmark workflow pushes to the same branch), then calls `pages.yml` as `benchmark.yml` does.
-- **Pages:** `scripts/prepare_pages.py` copies only `benchmarks/data.js` from `gh-pages` today; teach it to carry the mutation files too.
-- **Docs:** document mutation testing and its schedule in `docs/developer/testing.md`, including that GitHub disables scheduled workflows in a public repo after 60 days without commits, and that `gh workflow enable mutation.yml` turns it back on.
-
 ## Phase 4: Dashboard graph and README badge
+
+The dashboard consumes `benchmarks/mutation-history.json`: an array of entries `{ "commit": "<40-character SHA>", "date": "<ISO 8601 timestamp>", "modules": [...] }`. Each module uses `mutation_report.py`'s `ModuleResult` shape (`module`, `killed`, `timeout`, `survived`, `suspicious`, `no_tests`), with integer counts and one row per module after combining shards. The score is `(killed + timeout) / (killed + timeout + survived + suspicious)`; zero decided mutants display as N/A. A scope change compares module names with the preceding entry. Phase 3 publishes this history and `benchmarks/mutation-latest.json` (the shields.io endpoint file the README reads), and carries both into Pages. Until the first complete run is published, the panel shows that no complete runs are published. Preview the graph by serving these files beside the dashboard assets; the existing preview command currently fetches only performance data.
 
 - Add a mutation panel to the benchmarks dashboard (`benchmarks/`), sharing its styles and house-style: the overall score over time, a line per module, and a marker where the module set changed.
 - Add a shields.io endpoint badge to the README beside the others, in the same colors (`22d3ee` on `0A0A0A`), reading the latest-score file and linking to the dashboard.
@@ -75,3 +68,5 @@ Candidates include `executor.py`, `workspace.py`, `migrations.py`, `options.py`,
   | `documents/pyproject_layout` | 37m | 28m |
   | `manifest` | 3h38m | 11m |
   | `reconciliation` (6 shards) | 2h30m wall, 8h40m runner | 36m wall, 1h55m runner |
+
+- Phase 3 (#441): Complete main-branch runs publish raw per-module history and the latest-score endpoint nightly at 02:23 UTC, gated by changed inputs. Pages carries both JSON files.

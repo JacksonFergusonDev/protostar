@@ -21,7 +21,15 @@ sys.path.insert(0, str(_repo_root / "src"))
 from protostar.errors import ConfigurationError
 
 BENCHMARK_DIR = _repo_root / "benchmarks"
-BENCHMARK_ASSETS = ("index.html", "style.css", "dashboard.js", "metrics.mjs")
+BENCHMARK_ASSETS = (
+    "index.html",
+    "style.css",
+    "dashboard.js",
+    "metrics.mjs",
+    "charts.mjs",
+    "mutations.mjs",
+    "mutation-dashboard.js",
+)
 HOUSE_DIR = _repo_root / "docs" / "house"
 HEADER_CSS = _repo_root / "docs" / "stylesheets" / "site-header.css"
 FOOTER_CSS = _repo_root / "docs" / "stylesheets" / "site-footer.css"
