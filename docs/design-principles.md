@@ -323,16 +323,7 @@ POSIX defines a set of exit code semantics beyond the binary success/fail conven
 The same structured information is available programmatically via `--json`, where every error envelope includes the exception class name and a `docs_url` pointing to the relevant remediation guide.
 
 ```json
-{
-  "api_version": 0,
-  "status": "error",
-  "error": {
-    "type": "MissingDependencyError",
-    "message": "Protostar needs uv, which is not installed.",
-    "hint": "Install it with:\n    brew install uv",
-    "docs_url": "https://protostar.jacksonferguson.me/usage/troubleshooting/"
-  }
-}
+--8<-- "agent_payload_error.json"
 ```
 
 !!! tip "For CI pipelines and AI agents"

@@ -158,6 +158,7 @@ Export it again after upgrading Protostar, so the schema matches the template fo
 #:schema ./protostar-template.schema.json
 
 name = "my-custom-template"
+description = "FastAPI service with Ruff"
 dependencies = ["fastapi", "uvicorn"]
 ruff = true
 ```

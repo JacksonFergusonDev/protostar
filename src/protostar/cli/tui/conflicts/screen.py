@@ -130,6 +130,22 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
     LEAVE = "Leave without syncing?"
     ROOMY = (100, 30)
 
+    KEYS: ClassVar[KeyRows] = (
+        ("↑ ↓", "Move between conflicts"),
+        ("pgup pgdn", "Scroll both sides"),
+        ("space", "Fold or unfold a file"),
+        ("k", "Keep mine"),
+        ("u", "Take the update"),
+        ("b", "Keep both, for overlapping lines"),
+        ("x", "Leave open"),
+        ("n", "Next open conflict"),
+        ("tab", "Next control"),
+        ("shift+tab", "Previous control"),
+        ("a", "Apply the sync"),
+        ("esc", "Cancel, after asking"),
+        ("^c", "Quit immediately"),
+    )
+
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("k", "choose('local')", "Keep mine", show=False),
         Binding("u", "choose('desired')", "Take update", show=False),
@@ -330,24 +346,6 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
         """Settle the highlighted conflict, or its file's, with the pressed choice."""
         value = str(event.pressed.id).removeprefix("choice-")
         self._choose(None if value == OPEN else ResolutionChoice(value))
-
-    def key_rows(self) -> KeyRows:
-        """The conflict screen's keys."""
-        return (
-            ("↑ ↓", "Move between conflicts"),
-            ("pgup pgdn", "Scroll both sides"),
-            ("space", "Fold or unfold a file"),
-            ("k", "Keep mine"),
-            ("u", "Take the update"),
-            ("b", "Keep both, for overlapping lines"),
-            ("x", "Leave open"),
-            ("n", "Next open conflict"),
-            ("tab", "Next control"),
-            ("shift+tab", "Previous control"),
-            ("a", "Apply the sync"),
-            ("esc", "Cancel, after asking"),
-            ("^c", "Quit immediately"),
-        )
 
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
         """Disable a choice no highlighted conflict offers."""

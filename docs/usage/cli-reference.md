@@ -28,7 +28,7 @@ Set up a project in the current directory: in an empty folder, or in a project y
 
 #### Tool Flags
 
-Each tool has a flag that turns it on and a `--no-` flag that turns it off, whatever the template chose. See the [Tooling & Flags Matrix](tooling-matrix.md) for what each one adds.
+Each tool has a flag that turns it on and a `--no-<tool>` flag that turns it off, whatever the template chose. See the [Tooling & Flags Matrix](tooling-matrix.md) for what each one adds.
 
 --8<-- "cli_init_tools.md"
 

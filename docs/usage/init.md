@@ -113,7 +113,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
     - __PEP 561 Typing:__ Injects `py.typed` to signal inline type annotations to downstream type checkers like Mypy and Pyright.
     - __Package Packaging:__ Configures the `hatchling` build backend with a standard `src/` layout for wheel and sdist builds.
     - __Public API Architecture:__ Scaffolds `__init__.py` with explicit `__all__` re-exports and dynamic `__version__` lookup via `importlib.metadata`.
-    - __Strict Typing & Quality:__ Enables strict Mypy checking, docstring linting (`D`), and `TC` (flake8-type-checking) to keep type-only imports from becoming runtime transitive dependencies.
+    - __Strict Typing & Quality:__ Enables strict Mypy checking, docstring linting (Ruff's `D` rules), and `TC` (flake8-type-checking) to keep type-only imports from becoming runtime transitive dependencies.
 
 === "The Astrophysics Pipeline (Data Focus)"
     __Command:__ `protostar init --template astro`
@@ -226,19 +226,11 @@ When running `protostar init` without a `--template` flag in a terminal, Protost
 
 The editor is built for the keyboard; the mouse works too. Moving never changes a value; only `Space` and `Enter` do. The footer shows the keys for whatever has focus, each button shows its own key, and `?` lists them all.
 
-| Key | Action |
-| --- | --- |
-| `↑` `↓` | Move between rows. Lists move within, then continue to the next row. |
-| `Space` | Toggle a checkbox, choose an option, or open a menu. |
-| `Enter` | Same as `Space`; in a text field, accept it and move on. |
-| `Tab` / `Shift+Tab` | Next or previous control; the tool checkboxes count as one stop. |
-| `i` | On a tool, what it does to the project; on the tier, what each tier turns on. |
-| `Ctrl+S` | Continue to the change review. |
-| `Esc` | Cancel, after asking. |
-| `Ctrl+C` | Quit immediately. |
-| `?` | Show all keybindings. |
+--8<-- "keys_recipe_editor.md"
 
-__Continue__ opens the change review. Its left panel has three tabs. __Decisions__ (`D`) appears when something needs you: every conflict and change to a file you already have, each row led by what happens to it, with the count still open beside the tab. __Files__ (`F`) lists every planned path as new, modified, conflict, existing, or after setup, and __Setup__ (`S`) lists the commands and packages that follow. The diff beside them shows the highlighted decision or file. Settling a conflict moves on to the next open one, and `N` jumps there from any tab. Nothing runs until you choose __Apply__ (`A`). `↑` `↓` move through the list, `PgUp` `PgDn` scroll the diff, and `Esc` goes back to the editor.
+__Continue__ opens the change review. Its left panel has three tabs. __Decisions__ appears when something needs you: every conflict and change to a file you already have, each row led by what happens to it, with the count still open beside the tab. __Files__ lists every planned path as new, modified, conflict, existing, or after setup, and __Setup__ lists the commands and packages that follow. The diff beside them shows the highlighted decision or file. Settling a conflict moves on to the next open one. Nothing runs until you choose __Apply__.
+
+--8<-- "keys_change_review.md"
 
 ![Protostar change review](../assets/terminals/tui_change_review.svg)
 
@@ -271,8 +263,8 @@ The change review that follows lists every change Protostar would make to a file
 
 When Protostar detects existing configuration files (like `pyproject.toml`), the recipe editor asks how to handle them in its __Existing files__ panel, under the recipe, and the change review lists each decision that leaves:
 
-- __Merge__ (`M`) safely injects missing configs and preserves existing user data.
-- __Overwrite__ (`O`) forces injection and updates existing keys to match Protostar.
+- __Merge__ keeps your values and adds what's missing.
+- __Overwrite__ replaces them with Protostar's version.
 
 Choosing either re-prepares the review with its diffs. Press __Cancel__ to exit without modifying the environment.
 
