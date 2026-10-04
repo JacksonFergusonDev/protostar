@@ -4,9 +4,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Protostar · Performance history</title>
+  <title>Protostar · Performance and mutation history</title>
   <meta name="description"
-    content="Track help-command startup and recipe-editor first-frame measurements on GitHub Actions runners.">
+    content="Track startup performance and mutation scores for selected engine modules.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="alternate icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="house/css/fonts.css">
@@ -25,7 +25,7 @@
     <div class="ps-bar__inner">
       <a class="ps-bar__mark" href="https://protostar.jacksonferguson.me/" aria-label="Protostar documentation"><img
           src="favicon.svg" alt="" width="30" height="30">Protostar</a>
-      <span class="ps-bar__context ps-wide">Performance history</span>
+      <span class="ps-bar__context ps-wide">Performance and mutation history</span>
       <nav class="ps-bar__end" aria-label="Related resources">
         <a class="ps-bar__link ps-bar__link--accent" href="https://protostar.jacksonferguson.me/"><span class="hs-icon hs-icon-arrow-left"
             aria-hidden="true"></span>Documentation</a>
@@ -40,7 +40,7 @@
   <main id="content">
     <div class="page-width">
       <section class="intro" aria-labelledby="page-title">
-        <h1 id="page-title">Performance history.</h1>
+        <h1 id="page-title">Performance and mutation history.</h1>
         <aside class="ci-notice" aria-label="CI timings are not local performance estimates">
           <p class="ci-notice-title">These timings are likely much slower than local runs.</p>
           <p>Protostar is measured on shared GitHub Actions runners. The numbers below track changes in CI, not the
@@ -129,9 +129,55 @@
       </div>
     </section>
 
+    <section class="history-section" id="mutations" aria-labelledby="mutations-title">
+      <div class="page-width">
+        <div class="hs-section-marker"><span>03 / MUTATION TESTING</span></div>
+        <h2 id="mutations-title">Can the tests catch a bug?</h2>
+        <p class="section-note">Mutation testing introduces small deliberate bugs into selected engine modules.
+          The score is the share caught by a failing test or timeout, out of caught, surviving, and suspicious
+          mutants. Mutants no test reaches are excluded. This measures the modules listed below, not the whole codebase.</p>
+        <p class="section-note">The overall line combines raw counts, so larger modules carry more weight.
+          Dashed vertical markers show a change in the module set; compare across them with care.
+          Toggle module lines in the legend to inspect their trends.</p>
+        <p id="mutation-status" class="status" role="status">Loading mutation history…</p>
+        <div id="mutation-results" hidden>
+          <p id="mutation-latest" class="metric-measurement"></p>
+          <div class="chart-panel">
+            <div class="chart-header">
+              <span class="chart-caption">Caught mutants / %</span>
+            </div>
+            <div id="chart-mutations" class="chart-canvas" role="img"
+              aria-label="Overall and per-module mutation score history. Exact values and changes of scope are in the tables below."></div>
+          </div>
+          <details class="measurements" open>
+            <summary>Latest module scores</summary>
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Latest mutation scores">
+              <table>
+                <caption>Only these engine modules contribute to the latest overall score.</caption>
+                <thead><tr><th scope="col">Module</th><th scope="col">Score</th><th scope="col">Caught / decided</th><th scope="col">Not reached</th></tr></thead>
+                <tbody id="mutation-modules"></tbody>
+              </table>
+            </div>
+          </details>
+          <details class="measurements">
+            <summary>Recent scores and changes of scope<span class="table-range">Last 30 runs</span></summary>
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Recent mutation measurements">
+              <table>
+                <caption>Dates are shown in your local timezone. Use the JSON history for every run.</caption>
+                <thead><tr><th scope="col">Measured</th><th scope="col">Overall</th><th scope="col">Commit</th><th scope="col">Module set</th></tr></thead>
+                <tbody id="mutation-runs"></tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+        <a class="text-link guide-link" href="mutation-history.json">Download mutation history<span class="hs-icon hs-icon-arrow-down" aria-hidden="true"></span></a>
+        <noscript><p class="status">JavaScript is required to display mutation scores. Download the history to read the raw counts.</p></noscript>
+      </div>
+    </section>
+
     <section class="history-section methodology" id="methodology" aria-labelledby="methodology-title">
       <div class="page-width">
-        <div class="hs-section-marker"><span>03 / METHODOLOGY</span></div>
+        <div class="hs-section-marker"><span>04 / METHODOLOGY</span></div>
         <h2 id="methodology-title">Read the trend, with context.</h2>
         <div class="methodology-grid">
           <div>
@@ -178,6 +224,7 @@
   <!-- site-footer -->
   <script src="data.js" defer></script>
   <script type="module" src="dashboard.js"></script>
+  <script type="module" src="mutation-dashboard.js"></script>
 </body>
 
 </html>
