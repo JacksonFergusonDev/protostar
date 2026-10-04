@@ -61,20 +61,10 @@ The binaries the module's tool runs, such as `direnv`. Before any module builds,
 
 The aggregation phase. Modules receive the mutable manifest object and register dependencies, directory structures, ignored files, and AST payloads.
 
-```python
-# Example: A simplified tool implementation
-class MyPyModule(BootstrapModule):
-    def build(self, manifest: EnvironmentManifest) -> None:
-        # Register the dependency
-        manifest.dependencies.add_dev("mypy")
+The Mypy module, as Protostar ships it:
 
-        # Inject the AST payload for pyproject.toml. Keep it a casual baseline;
-        # templates that want strict mode add it themselves.
-        manifest.filesystem.add_structured("pyproject.toml", """
-[tool.mypy]
-check_untyped_defs = true
-warn_return_any = true
-        """, producer="module:MyPyModule")
+```python
+--8<-- "src/protostar/modules/tooling_layer.py:mypy_module"
 ```
 
 ## API Reference

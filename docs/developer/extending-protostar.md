@@ -1,77 +1,67 @@
 ---
-description: "Learn how to extend Protostar's architecture by adding new modules, tools, or domain workflows without altering core execution."
+description: "How to add a tool to Protostar: the module that declares what it needs, where it is registered, and the rules its commands follow."
 ---
 
 # Extending Protostar
 
-Protostar's architecture strictly isolates state definition from execution. This guarantees that you can add entirely new languages, tools, or domain workflows without altering the core orchestrator or the system executor.
+Every tool Protostar sets up is a `ToolModule`: a class whose `build()` method declares what the tool needs into the `EnvironmentManifest`. Planning collects every module's declarations, and execution applies them in one transaction. A module never writes a file or runs a command itself, so adding a tool never touches the orchestrator or the executor.
 
-## Building a Custom Bootstrap Module
+## A Tool Module
 
-Bootstrap modules define the structural environment footprint. To create a new module, subclass `BootstrapModule` from `protostar.modules.base`.
+This is the Mypy module, exactly as Protostar ships it:
 
-You must define its CLI flags, a human-readable name, its `info`, and the `build` method. Declare the binaries your tool runs in `executables`.
+```python
+--8<-- "src/protostar/modules/tooling_layer.py:mypy_module"
+```
 
-`info` is a `ToolInfo` written for someone who has never heard of the tool. Its `summary` is the flag's `--help` line and the recipe editor's tooltip. `adds` and `workflow` fill the editor's tool-information popup (`i`), and `docs_url` is checked by `scripts/check_doc_links.py`. A contract test fails for a tooling module without one.
+- **`cli_flags`** names the flag. The parser adds `--mypy` and `--no-mypy` from it.
+- **`info`** is a `ToolInfo`, the one description of the tool. Its `summary` is the flag's `--help` line and the recipe editor's tooltip, and `adds` and `workflow` fill the editor's `i` popup. Write it for someone who has never heard of the tool, and say what changes in their project rather than what category the tool is in. `ToolModule.info` is abstract, so mypy rejects a module without one, and `scripts/check_doc_links.py` checks every `docs_url`.
+- **`config_key`** is the tool's name in templates, recipes, and the global configuration.
+- **`signals`** say what shows that a project Protostar has never touched already uses the tool; see [Signals](#signals-recognizing-an-existing-project).
+- **`build()`** declares everything the tool brings: its development dependency, its cache directory, its editor extension, its commit hook, its CI step, its `just` recipe, and its `pyproject.toml` settings. Each declaration is retracted again when the tool is turned off.
 
-!!! tip "Dynamic CLI Registration"
-    The CLI parser dynamically reads the `cli_flags` and `info.summary` attributes at runtime. Once you append your module to the `TOOLING_MODULES` tuple in `protostar/modules/__init__.py`, it will automatically appear in the `protostar init --help` output.
+The `pyproject.toml` settings are a baseline for a casual project. Stricter settings belong in the templates whose shape wants them; see [Built-in Templates](built-in-templates.md#baseline-in-modules-delta-in-templates).
 
-Here is a complete example of a module that scaffolds a `justfile` (a modern `Makefile` alternative):
+## Registering a Tool
 
-=== "Example Implementation"
-    ```python
-    from protostar.modules import BootstrapModule, PathSignal, ToolInfo
-    from protostar.manifest import EnvironmentManifest
-    from protostar.system_deps import GlobalExecutable
+A tool is listed in a few places, so that every part of Protostar knows it. Tests fail, naming what's missing, until each is in place:
 
-    class JustModule(BootstrapModule):
-        """Configures a justfile for project task execution."""
+1. A `Tool` member in `src/protostar/recipe.py`, whose value is the module's `config_key`.
+1. A `bool` field of the same name on `UserConfig` in `src/protostar/config.py`, `False` unless most new projects want the tool.
+1. The module, appended to `TOOLING_MODULES` in `src/protostar/modules/__init__.py`. The flag, its help, the template schema, the configuration form, and the recipe editor all read this tuple.
+1. Its place in a group of the recipe editor, in `TOOL_GROUPS` in `src/protostar/cli/tui/tool_info.py`.
+1. A `ToolSection` in `src/protostar/documents/pyproject_layout.py`, when the tool writes a `[tool.<name>]` table; see [The pyproject.toml Layout](pyproject-layout.md).
 
-        cli_flags = ("--just",)
-        info = ToolInfo(
-            summary="Give the project's common commands short names, like `just test`",
-            adds="A justfile with commands for testing and checking.",
-            workflow="`just --list` shows every command, and `just <name>` runs one.",
-            docs_url="https://just.systems/man/en/",
-        )
-        config_key = "just"
-        # What shows an existing project already uses this tool.
-        signals = (PathSignal("justfile"), PathSignal("Justfile"))
-        # Binaries the tool runs; planning reports each missing one.
-        executables = (GlobalExecutable.JUST,)
+Then run `just check-snapshots` and review what changed. `tests/test_tool_definitions.py`, `tests/test_tool_info.py`, and `tests/test_pyproject_layout.py` check that the lists agree.
 
-        @property
-        def name(self) -> str:
-            return "Just"
+A tool with a configuration file of its own, such as a YAML or JSONC file, also declares that file as a document under `src/protostar/documents/`, which says where it lives and how it merges. The format engines never name a file; see [Managed Documents](reconciliation/documents.md).
 
-        def build(self, manifest: EnvironmentManifest) -> None:
-            content = r"""default:
-    \t@just --list
+## Programs a Tool Runs
 
-    lint:
-    \tuv run ruff check .
-    \tuv run ruff format --check .
+Only `uv` and `git` can stop a run. A program that only one tool runs, such as `direnv`, is declared in the module's `executables`. Planning records each one missing from `PATH` in `manifest.missing_tools`, and the module still writes the tool's files but skips the step that runs the program, with a diagnostic saying so:
 
-    test:
-    \tuv run pytest
-    """
-            manifest.filesystem.add_file_injection("justfile", content)
-    ```
+```python
+--8<-- "src/protostar/modules/tooling_layer.py:missing_executable"
+```
 
-=== "Base API"
-    !!! abstract "Core Interface: `BootstrapModule`"
-        ::: protostar.modules.base.BootstrapModule
-            options:
-                show_source: true
-                show_bases: true
-                show_root_heading: true
-                show_root_toc_entry: true
-                separate_signature: true
+The run then ends with the command that installs everything missing. A new program needs a `GlobalExecutable` member in `src/protostar/system_deps.py`, with its package name for each package manager. Look a program up only through `system_deps.find_executable`, never `shutil.which`: on Windows a bare lookup searches the working directory first, where a template's `git.bat` would win.
 
-??? abstract "Deep Dive: Executables vs Build"
-    - **`executables`**: Never blocks a run. Before any module builds, planning records each one missing from `$PATH` in `manifest.missing_tools`, so `build()` can skip a step that runs it (`manifest.is_missing(...)`) and record why in `manifest.diagnostics`. Only the binaries Protostar itself runs (`system_deps.REQUIRED`: `uv` and `git`) fail planning.
-    - **`build()`**: Only queues state changes. Notice how we use `manifest.filesystem.add_file_injection()` instead of `Path("justfile").write_text()`.
+## Commands and the Files They Create
+
+A module queues commands rather than running them:
+
+- `manifest.tasks.add_system_task()` runs once the project's files are written, before its dependencies are installed, like `git init` and `uv init`.
+- `manifest.tasks.add_post_install_task()` runs after the dependencies are installed, like a hook install.
+
+Each command's program must be in the safelist in `src/protostar/security.py`, and a template's commands must be confirmed by the user unless the template is trusted.
+
+A command's output is invisible to Protostar unless the module declares it. List every file a command creates in `owned_files`, and every directory tree in `owned_trees`:
+
+```python
+--8<-- "src/protostar/modules/lang_layer.py:owned_files"
+```
+
+Declared files appear in every preview of the run, and rollback restores them if it fails. `just check-snapshots` fails when a scaffold leaves a file its dry run didn't list, so a missing declaration is caught.
 
 ## Signals: Recognizing an Existing Project
 
@@ -86,30 +76,25 @@ A module that manages a document builds its path signals from that document's lo
 
 ## The Manifest API
 
-!!! danger "No Direct Disk I/O"
-    Never call `subprocess.run` or write to disk inside a module's `build()` method. Modules must strictly communicate via the `EnvironmentManifest` to ensure the Orchestrator maintains atomicity.
+!!! danger "Declare, never act"
+    `build()` may check what the workspace holds, as the `uv init` example does, but it never writes a file or runs a process. Everything it wants done goes into the manifest, so `--dry-run` and the change review show it before it happens.
 
-!!! tip "Automated Collision Detection"
-    Modules do not need to register collision markers manually. Any files queued via `manifest.filesystem.add_file_injection()`, `manifest.filesystem.add_structured()`, `manifest.filesystem.add_region()`, or manifest tooling flags are automatically derived by `EnvironmentManifest.target_files()` for workspace collision detection.
-
-The manifest exposes the following methods across its domain slices to queue state changes:
-
-| Method Signature | Execution Behavior |
+| Method | What it declares |
 | --- | --- |
-| `manifest.dependencies.add(package: str)` | Queues a standard package for resolution. |
-| `manifest.dependencies.add_dev(package: str)` | Queues a development or tooling package. |
-| `manifest.dependencies.add_docs(package: str)` | Queues a documentation dependency for installation. |
-| `manifest.filesystem.add_directory(path: str)` | Queues a relative directory path to be scaffolded. |
-| `manifest.filesystem.add_file_injection(path: str, content: str)` | Queues a complete file write. Fails if the file exists unless explicitly marked for overwrite. |
-| `manifest.filesystem.add_structured(path: str, content: str, *, producer: str)` | Queues typed TOML contributions, separating personal metadata seeds from managed configuration. |
-| `manifest.filesystem.add_region(path: str, content: str, *, identity: str)` | Queues one uniquely named non-TOML text region. Use a stable module namespace. |
-| `manifest.dependencies.add_include(group: DependencyGroup, include: DependencyGroup)` | Declares an include edge between dev/docs groups and its resolver footprint. |
-| `manifest.filesystem.add_vcs_ignore(path: str)` | Appends a tracking exclusion entry to the version control ignore manifest (e.g., `.gitignore`). |
-| `manifest.tasks.add_system_task(command: list[str], timeout: int | None = 30, description: str | None = None)` | Queues a subprocess command to execute *after* the disk scaffolding phase is complete. Allows an optional execution timeout and UI description. |
-| `manifest.tasks.add_post_install_task(command: list[str], timeout: int | None = 30, description: str | None = None)` | Queues a subprocess command to execute *after* all dependencies have been installed. Allows an optional execution timeout and UI description. |
+| `manifest.dependencies.add(package)` | A runtime dependency, added with `uv add`. |
+| `manifest.dependencies.add_dev(package)` | A development dependency, in the `dev` group. |
+| `manifest.dependencies.add_docs(package)` | A documentation dependency, in the `docs` group. |
+| `manifest.dependencies.add_include(group, include)` | One dependency group including another (`dev` including `docs`). |
+| `manifest.filesystem.add_directory(path)` | A directory to create. |
+| `manifest.filesystem.add_file_injection(path, content)` | A file written once, when the project doesn't have it. After that it belongs to the project. |
+| `manifest.filesystem.add_structured(path, content, producer=...)` | TOML (or a supported YAML file) merged key by key and kept up to date. A `ToolModule` uses `add_pyproject_config()` for `pyproject.toml`. |
+| `manifest.filesystem.add_region(path, content, identity=...)` | A named block of text inside a file, kept up to date between its markers. |
+| `manifest.filesystem.add_vcs_ignore(path)` | A pattern added to `.gitignore`. |
+| `manifest.tasks.add_system_task(command, timeout=30, description=None, owned_files=None, owned_trees=None)` | A command run before dependencies are installed, with the files and trees it creates. |
+| `manifest.tasks.add_post_install_task(command, timeout=30, description=None, owned_files=None, owned_trees=None)` | A command run after dependencies are installed, with the files and trees it creates. |
 
 ## Next Steps
 
-- **[Testing Architecture & Philosophy](./testing.md):** Best practices for writing isolated unit tests and mocking subprocesses.
-- **[The Module Architecture](../mechanics/modules.md):** Deep dive into the layering model and module resolution sequence.
+- **[The Module Architecture](../mechanics/modules.md):** The module families and the contract every module follows.
+- **[Testing Architecture & Philosophy](./testing.md):** How to test a module without touching the machine.
 - **[API Reference](./api-reference.md):** Complete class documentation for `BootstrapModule` and `EnvironmentManifest`.
