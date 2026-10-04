@@ -6,7 +6,7 @@ description: "Learn how to use protostar init to safely construct and manage you
 
 `protostar init` sets up a project in the current directory: an empty folder, or a project you already have. In a terminal with no template given, it opens the recipe editor; with `--template` or `--from`, it runs headlessly. Either way, nothing is written until you have seen the plan, in the change review or with `--dry-run`, and if anything fails part-way, every change is [rolled back](rollback.md).
 
-Afterwards the project is tracked: its recipe in `pyproject.toml` records what it asked for (see [Project Recipes](project-recipes.md)), `protostar.lock` records what was applied, and `status`, `diff`, and `sync` keep it current (see [Project Lifecycle](lifecycle.md)).
+Afterwards the project is tracked ([How Protostar Tracks Your Files](tracking.md) explains what that means): its recipe in `pyproject.toml` records what it asked for (see [Project Recipes](project-recipes.md)), `protostar.lock` records what was applied, and `status`, `diff`, and `sync` keep it current (see [Project Lifecycle](lifecycle.md)).
 
 Running `init --force-merge` again in a tracked project reapplies the same template. Content Protostar wrote and you haven't touched takes the template's current version, your edits and deletions stay, and content Protostar no longer produces is removed. It skips the change review, so each conflict keeps your version; `init` ends by counting them, and `protostar sync` lets you settle them. It can't switch the project to another template. To update a tracked project, use `sync`.
 
