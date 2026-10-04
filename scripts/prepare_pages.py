@@ -253,11 +253,16 @@ def assemble_pages(source: Path, output: Path, config_path: Path) -> str:
         target = site_url if version.name == latest else f"{site_url}{version.name}/"
         for alias in version.aliases:
             _write_redirects(tree, output / alias, target)
-    benchmark_data = source / "benchmarks" / "data.js"
-    if benchmark_data.is_file():
+    benchmark_files = [
+        source / "benchmarks" / filename
+        for filename in ("data.js", "mutation-history.json", "mutation-latest.json")
+        if (source / "benchmarks" / filename).is_file()
+    ]
+    if benchmark_files:
         benchmark_output = output / "benchmarks"
         benchmark_output.mkdir()
-        shutil.copyfile(benchmark_data, benchmark_output / "data.js")
+        for data in benchmark_files:
+            shutil.copyfile(data, benchmark_output / data.name)
         for filename in BENCHMARK_ASSETS:
             shutil.copyfile(BENCHMARK_DIR / filename, benchmark_output / filename)
         (benchmark_output / "index.html").write_text(

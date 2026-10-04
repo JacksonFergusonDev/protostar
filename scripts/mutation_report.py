@@ -17,11 +17,15 @@ import argparse
 import importlib
 import json
 import re
+import subprocess
 import sys
+import tomllib
 from collections import Counter
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
+from typing import TypedDict
 
 # Runs without the project installed (the workflow's combine job), so it
 # depends on the standard library alone.
@@ -106,7 +110,12 @@ def load_module_results(
             meta.read_text(encoding="utf-8")
         )["exit_code_by_key"]
         counts: Counter[Status] = Counter()
-        module = meta.name.removesuffix(".py.meta")
+        module = ".".join(
+            meta.relative_to(mutants_dir / "src" / "protostar")
+            .as_posix()
+            .removesuffix(".py.meta")
+            .split("/")
+        )
         for name, code in sorted(exit_codes.items()):
             status = _STATUS_BY_EXIT_CODE.get(code, Status.SUSPICIOUS)
             counts[status] += 1
@@ -320,6 +329,119 @@ def _combine(args: argparse.Namespace) -> None:
     sys.stdout.write(render_markdown(combine_results(args.results)))
 
 
+class HistoryEntry(TypedDict):
+    """One full run, retaining counts so future scope changes remain visible."""
+
+    commit: str
+    date: str
+    modules: list[dict[str, object]]
+
+
+def read_history(path: Path) -> list[HistoryEntry]:
+    """Read recorded runs, treating a missing history as the first run."""
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+
+
+def changed_since_last_run(history: Path, config: Path) -> bool:
+    """Check score inputs against the last published commit; unknown bases run."""
+    entries = read_history(history)
+    if not entries:
+        return True
+    commit = entries[-1]["commit"]
+    if not re.fullmatch(r"[0-9a-f]{40}", commit):
+        raise SystemExit("History contains an invalid commit.")
+    known = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", commit, "HEAD"], check=False
+    )
+    if known.returncode:
+        return True
+    with config.open("rb") as stream:
+        sources = tomllib.load(stream)["tool"]["mutmut"]["source_paths"]
+    diff = subprocess.run(
+        [
+            "git",
+            "diff",
+            "--quiet",
+            commit,
+            "HEAD",
+            "--",
+            *sources,
+            "tests/",
+            "pyproject.toml",
+            "uv.lock",
+            "scripts/mutation_report.py",
+            ".github/workflows/mutation.yml",
+        ],
+        check=False,
+    )
+    if diff.returncode not in (0, 1):
+        raise SystemExit("Could not compare mutation inputs with the recorded commit.")
+    return diff.returncode == 1
+
+
+def _check_changes(args: argparse.Namespace) -> None:
+    print("true" if changed_since_last_run(args.history, args.config) else "false")
+
+
+def record_run(args: argparse.Namespace) -> None:
+    """Validate every planned artifact and append a complete run and badge."""
+    matrix = json.loads(args.matrix)["include"]
+    expected = {entry["artifact"] for entry in matrix}
+    actual = {path.name for path in args.results.iterdir() if path.is_dir()}
+    if not expected or actual != expected:
+        raise SystemExit(
+            f"Expected artifacts {sorted(expected)}, got {sorted(actual)}."
+        )
+    paths = [args.results / name / "summary.json" for name in sorted(expected)]
+    for path in paths:
+        if not path.is_file() or not json.loads(path.read_text(encoding="utf-8")):
+            raise SystemExit(f"Missing or empty mutation summary: {path}.")
+    results = combine_results(paths)
+    with args.config.open("rb") as stream:
+        sources = tomllib.load(stream)["tool"]["mutmut"]["source_paths"]
+    modules = {
+        ".".join(Path(source).relative_to("src/protostar").with_suffix("").parts)
+        for source in sources
+    }
+    if {row.module for row in results} != modules:
+        raise SystemExit("Mutation results do not cover the configured module set.")
+    for row in results:
+        if any(value < 0 for key, value in asdict(row).items() if key != "module"):
+            raise SystemExit("Mutation counts cannot be negative.")
+    if not re.fullmatch(r"[0-9a-f]{40}", args.commit):
+        raise SystemExit("--commit must be a full Git commit hash.")
+    entries = read_history(args.history)
+    entry: HistoryEntry = {
+        "commit": args.commit,
+        "date": args.date,
+        "modules": [asdict(row) for row in results],
+    }
+    # A workflow retry must not append the same commit twice or replace a newer run.
+    if any(item["commit"] == args.commit for item in entries):
+        return
+    date = datetime.fromisoformat(args.date)
+    offset = date.utcoffset()
+    if offset is None or offset.total_seconds() != 0:
+        raise SystemExit("--date must be a UTC timestamp.")
+    if entries and datetime.fromisoformat(entries[-1]["date"]) > date:
+        raise SystemExit(
+            "Refusing to publish a run older than the latest recorded run."
+        )
+    entries.append(entry)
+    caught = sum(row.caught for row in results)
+    decided = sum(row.decided for row in results)
+    badge = {
+        "schemaVersion": 1,
+        "label": "engine mutation score",
+        "message": f"{caught / decided:.1%}" if decided else "n/a",
+        "color": "22d3ee",
+        "labelColor": "0A0A0A",
+    }
+    for path, payload in ((args.history, entries), (args.latest, badge)):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
 def parse_args() -> argparse.Namespace:
     """Parses command-line arguments.
 
@@ -347,6 +469,24 @@ def parse_args() -> argparse.Namespace:
     combine = commands.add_parser("combine", help="Merge several --json results.")
     combine.add_argument("results", type=Path, nargs="+")
     combine.set_defaults(func=_combine)
+    changes = commands.add_parser(
+        "changed", help="Check inputs since the last recorded run."
+    )
+    changes.add_argument("--history", type=Path, required=True)
+    changes.add_argument("--config", type=Path, default=REPO_ROOT / "pyproject.toml")
+    changes.set_defaults(func=_check_changes)
+
+    record = commands.add_parser(
+        "record", help="Append a complete run and write its badge."
+    )
+    record.add_argument("--results", type=Path, required=True)
+    record.add_argument("--matrix", required=True)
+    record.add_argument("--config", type=Path, default=REPO_ROOT / "pyproject.toml")
+    record.add_argument("--history", type=Path, required=True)
+    record.add_argument("--latest", type=Path, required=True)
+    record.add_argument("--commit", required=True)
+    record.add_argument("--date", default=datetime.now(UTC).isoformat())
+    record.set_defaults(func=record_run)
     return parser.parse_args()
 
 

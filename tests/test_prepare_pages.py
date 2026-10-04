@@ -259,3 +259,21 @@ def test_benchmarks_are_not_published_without_recorded_data(
     assemble_pages(source, output, config)
 
     assert not (output / "benchmarks").exists()
+
+
+@pytest.mark.parametrize("performance", [False, True])
+def test_mutation_files_survive_pages_assembly_without_obsolete_assets(
+    published_docs, performance
+):
+    source, output, config = published_docs
+    if not performance:
+        (source / "benchmarks/data.js").unlink()
+    for filename in ("mutation-history.json", "mutation-latest.json"):
+        _write(source / "benchmarks" / filename, '{"kept": true}\n')
+    assemble_pages(source, output, config)
+    for filename in ("mutation-history.json", "mutation-latest.json"):
+        assert (output / "benchmarks" / filename).read_bytes() == (
+            source / "benchmarks" / filename
+        ).read_bytes()
+    assert (output / "benchmarks/index.html").exists()
+    assert not (output / "benchmarks/retired.js").exists()
