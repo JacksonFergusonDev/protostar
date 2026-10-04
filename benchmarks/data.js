@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791153427634,
+  "lastUpdate": 1791156254809,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21493,6 +21493,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1254.95,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f9b271bc78c9fea170008579c73a881cbf5109b9",
+          "message": "ci(mutation): ask jacksonferguson.me to rebuild after a new score (#443)\n\njacksonferguson.me shows the latest engine mutation score and fetches it only\nwhen it builds. Once a published run's Pages deploy finishes, send the site's\nrepository a remote-assets-updated dispatch through PORTFOLIO_DISPATCH_TOKEN.",
+          "timestamp": "2026-10-04T16:20:52-07:00",
+          "tree_id": "51cc68eb90ca2c0f18f4ded844e1797718630d6e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f9b271bc78c9fea170008579c73a881cbf5109b9"
+        },
+        "date": 1791156253743,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 184.1,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1376.93,
             "unit": "ms"
           }
         ]
