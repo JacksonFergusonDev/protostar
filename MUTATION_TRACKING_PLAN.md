@@ -11,8 +11,8 @@ Widen mutation testing to the rest of the engine, then run it on a schedule, rec
 | 1 | One module list for mutation testing | Finished (#413) |
 | 2 | Expand coverage to the target set | Finished (#415, #417, #418, #425, #428) |
 | 3 | Record scores on `gh-pages` on a schedule | Finished (#441) |
-| 4 | Dashboard graph and README badge | Implemented; awaiting merge |
-| 5 | Score on jacksonferguson.me | Planned |
+| 4 | Dashboard graph and README badge | Finished (#442) |
+| 5 | Score on jacksonferguson.me | Implemented; awaiting merge |
 | 6 | Further coverage (ongoing) | Planned |
 
 ## Settled Decisions
@@ -26,13 +26,6 @@ Widen mutation testing to the rest of the engine, then run it on a schedule, rec
 - **Our own JSON, not github-action-benchmark.** That action writes a JS file built for speed regressions. Mutation results go in their own files under `benchmarks/` on `gh-pages`: a history file for the graph and a small latest-score file in shields.io's endpoint format, which the badge and the website both read.
 - **The website reads the score when it builds.** jacksonferguson.me (Astro, `~/Developer/JacksonFergusonDev.github.io`) already fetches remote files at build time through `config/remote-assets.json`, and its `deploy.yml` already rebuilds on `repository_dispatch` of type `remote-assets-updated`, plus weekly. Protostar sends that dispatch after the Pages deploy finishes, not just after the `gh-pages` push, so the site never fetches a stale file.
 - **Say what the score covers.** It covers the mutated modules, not the whole codebase. The dashboard says which modules, and the badge label doesn't imply full coverage.
-
-## Phase 4: Dashboard graph and README badge
-
-The dashboard consumes `benchmarks/mutation-history.json`: an array of entries `{ "commit": "<40-character SHA>", "date": "<ISO 8601 timestamp>", "modules": [...] }`. Each module uses `mutation_report.py`'s `ModuleResult` shape (`module`, `killed`, `timeout`, `survived`, `suspicious`, `no_tests`), with integer counts and one row per module after combining shards. The score is `(killed + timeout) / (killed + timeout + survived + suspicious)`; zero decided mutants display as N/A. A scope change compares module names with the preceding entry. Phase 3 publishes this history and `benchmarks/mutation-latest.json` (the shields.io endpoint file the README reads), and carries both into Pages. Until the first complete run is published, the panel shows that no complete runs are published. Preview the graph by serving these files beside the dashboard assets; the existing preview command currently fetches only performance data.
-
-- Add a mutation panel to the benchmarks dashboard (`benchmarks/`), sharing its styles and house-style: the overall score over time, a line per module, and a marker where the module set changed.
-- Add a shields.io endpoint badge to the README beside the others, in the same colors (`22d3ee` on `0A0A0A`), reading the latest-score file and linking to the dashboard.
 
 ## Phase 5: Score on jacksonferguson.me
 
@@ -70,3 +63,4 @@ Candidates include `executor.py`, `workspace.py`, `migrations.py`, `options.py`,
   | `reconciliation` (6 shards) | 2h30m wall, 8h40m runner | 36m wall, 1h55m runner |
 
 - Phase 3 (#441): Complete main-branch runs publish raw per-module history and the latest-score endpoint nightly at 02:23 UTC, gated by changed inputs. Pages carries both JSON files.
+- Phase 4 (#442): The benchmarks dashboard graphs the overall score and each module from `mutation-history.json`, marking where the module set changed, and the README carries a shields.io endpoint badge reading `mutation-latest.json`.
