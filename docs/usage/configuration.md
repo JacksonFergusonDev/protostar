@@ -12,7 +12,9 @@ protostar config
 
 The form covers your identity (name, email, and GitHub username), your editor, the default Python version, and which tools a new project starts with. Name and email start from your Git configuration when the file leaves them unset; Protostar reads Git's configuration but never writes it. Press `i` on a tool to see what it does, as in the recipe editor. A template's own tool choices still win over these defaults.
 
-Beside the form, the **Changes** panel shows exactly what saving will change in the file. `Ctrl+S` saves; only the settings whose values changed are written, and comments, other keys, and your `[templates]` stay as they are. `Esc` leaves without saving, asking first if you changed anything.
+Beside the form, the **Changes** panel shows exactly what saving will change in the file. Saving writes only the settings whose values changed; comments, other keys, and your `[templates]` stay as they are.
+
+--8<-- "keys_config.md"
 
 The file stays the source of truth and is always yours to edit by hand. For everything the form doesn't cover, such as `[templates]` aliases, `license`, and `supported_os`, open it in your system's default `$EDITOR`, either with `e` in the form or directly:
 
@@ -111,16 +113,16 @@ trusted = true
 
 When declaring a template using the `[templates.<alias>]` table format:
 
-- **`source`** *(required)*: The local filesystem path or remote URL to the template.
+- **`source`** *(required)*: A local path (`~` is expanded) or an HTTPS URL, in any form [`--from`](templates.md#repository-urls) accepts.
 - **`name`** *(optional)*: Display name shown in listings and the template picker.
 - **`description`** *(optional)*: Short summary displayed in `protostar init --list-templates`, shell autocompletion, and the template picker.
-- **`trusted`** *(optional, default: `false`)*: Set to `true` to explicitly trust this template and bypass the interactive remote execution warning prompt.
+- **`trusted`** *(optional, default: `false`)*: Set to `true` to let this template run its commands without asking; see [Trusting a Template](templates.md#trusting-a-template).
 
-Pin `source` to a tag or commit when new projects from this alias must be reproducible, and leave it on a branch when you want `protostar sync` to deliver template updates. See [Pinning a Template Revision](./templates.md) for the URL forms each host accepts and what ends up in `protostar.lock`.
+A repository URL that names no ref starts each new project on the template's newest release; one that names a tag or branch starts it there. Either way, each project then stays on the commit it applied until you move it with `protostar sync --to <ref>`, so an alias never changes an existing project. See [Template Versions](templates.md#template-versions).
 
 Alias names are case-insensitive and must be unique: an alias may not reuse a built-in template name (`api`, `astro`, `cli`, `lib`, `ml`), and two aliases may not differ only by letter case. Protostar rejects either collision when it loads your configuration, because the alias would otherwise resolve to a different template depending on how it was looked up.
 
-Templates declared here can be invoked directly with `protostar init --template <alias>`, appear automatically in the interactive template picker, and are dynamically surfaced in shell completions.
+Use an alias with `protostar init --template <alias>`. It also appears in the recipe editor's template picker and in shell completion.
 
 ## Next Steps
 

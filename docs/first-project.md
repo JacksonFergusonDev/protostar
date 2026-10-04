@@ -49,11 +49,11 @@ Press `Ctrl+S` to continue.
 
 ## 4. Review and Apply
 
-The change review lists every file Protostar will create, with its contents; press `S` for the commands and packages that follow. Use `↑` and `↓` to look through the files. Nothing has happened yet.
+The change review lists every file Protostar will create, with its contents; press `s` for the commands and packages that follow. Use `↑` and `↓` to look through the files. Nothing has happened yet.
 
 ![The change review](assets/terminals/tui_change_review.svg)
 
-Press `A` to apply. Protostar writes the files and runs each step in turn:
+Press `a` to apply. Protostar writes the files and runs each step in turn:
 
 ```text
   ✔ Writing project files
@@ -159,6 +159,6 @@ Many problems Ruff finds, including this one, `just format` fixes for you: it re
 ## Where to Go Next
 
 - **More tooling when you need it.** When the project turns into something other people will install, switch it to the production tier: `protostar sync --tier production`. It adds tests, type checking, CI, and a **pre-commit hook**: a check git runs each time you commit, which stops the commit if a check fails, so a mistake never enters the project's history. `sync` installs the hook for you. See [Templates](usage/templates.md#choosing-a-tier) and the [Tooling & Flags Matrix](usage/tooling-matrix.md).
-- **Keep the project current.** `protostar sync` brings in updates to the template and tools without overwriting your edits. See [Project Lifecycle](usage/lifecycle.md).
+- **Keep the project current.** `protostar sync` brings in updates to the template and tools without overwriting your edits. [How Protostar Tracks Your Files](usage/tracking.md) explains how it tells your edits from its own content, and [Project Lifecycle](usage/lifecycle.md) shows the commands.
 - **Set your defaults once.** `protostar config` opens a form for your name, email, editor, Python version, and the tools new projects start with. See [Global Configuration](usage/configuration.md).
 - **Everything `init` can do.** See [Environment Initialization](usage/init.md).

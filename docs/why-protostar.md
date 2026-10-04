@@ -217,7 +217,7 @@ A template update meets a team's own edits: keep both versions of the overlappin
 
 Most templates assume an empty directory. Run `protostar init` in an existing repository, and it first reads what's there: the Python version from `requires-python`, the author and license from `[project]`, and the tools you already use, which the recipe editor starts switched on. Reading changes nothing and runs nothing.
 
-Every change it would then make to a file you wrote is a proposal you can keep out. **Keep all mine** adopts the project exactly as it is. `protostar status` then lists each change you kept out, with the command that takes it, so the project can adopt its template's standards one at a time. With Copier, the documented route is to overwrite the project and restore your changes by hand; a first-class adopt command is an [open request](https://github.com/copier-org/copier/issues/2486).
+Every change it would then make to a file you wrote is a proposal you can keep out. **Keep all mine** keeps the project exactly as it is. `protostar status` then lists each change you kept out, with the command that takes it, so the project can adopt its template's standards one at a time. With Copier, the documented route is to overwrite the project and restore your changes by hand; a first-class adopt command is an [open request](https://github.com/copier-org/copier/issues/2486).
 
 ### Template Releases You Control
 

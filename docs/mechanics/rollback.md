@@ -34,6 +34,8 @@ flowchart TD
 
 ## Transactional Execution Flow
 
+The batches themselves are listed in [Execution Order](../developer/reconciliation/execution.md#execution-order). Whatever the batch, every write and every command follows the same rule: record first, then act.
+
 ```mermaid
 flowchart TD
     classDef phase fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
@@ -44,18 +46,15 @@ flowchart TD
 
     Start([Execute manifest]) --> Steps
 
-    subgraph Steps ["Execution Phases (sequential)"]
+    subgraph Steps ["Execution, in batches"]
         direction TB
-        S1["1 · Pre-flight TOML validation"]:::phase
-        S2["2 · Directory scaffolding & file writes\n(via TransactionAwareFS → MutationJournal)"]:::phase
-        S3["3 · System tasks via ProcessRunner\n(git init, etc.)"]:::phase
-        S4["4 · Dependency installation\n(pyproject.toml & uv.lock pre-journaled)"]:::phase
-        S5["5 · Config appends, ignores, IDE settings"]:::phase
-        S6["6 · Post-install tasks & journal commit"]:::phase
-        S1 --> S2 --> S3 --> S4 --> S5 --> S6
+        S1["Each write: TransactionAwareFS records,<br/>then writes"]:::phase
+        S2["Each command: declared outputs recorded,<br/>then ProcessRunner runs it"]:::phase
+        S3["protostar.lock written, then journal commit"]:::phase
+        S1 --> S2 --> S3
     end
 
-    S6 --> Done([ExecutionResult returned]):::success
+    S3 --> Done([ExecutionResult returned]):::success
 
     Steps -. "BaseException\nor KeyboardInterrupt" .-> RB
 

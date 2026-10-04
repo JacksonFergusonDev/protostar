@@ -12,7 +12,7 @@ Protostar needs `uv` and `git` for every project, and checks for them before wri
 
 ### `uv` is not installed or not in `$PATH`
 
-Protostar strongly recommends [uv](https://docs.astral.sh/uv/) for high-velocity package resolution and environment management.
+Protostar runs [uv](https://docs.astral.sh/uv/) to create every project and install its packages, so it can't run without it.
 
 === "macOS & Linux"
     ```bash
@@ -103,24 +103,18 @@ protostar init --template cli --force-replace
 
 ## Remote Template Security Alerts
 
-When you load a template you haven't marked trusted (`--from`, or an alias without `trusted = true`), Protostar lists every command the run executes under **Untrusted template** in the change review: setup commands such as `git init`, each dependency install, and the template's own tasks. They run in the files the template wrote, which can make them run its code, for example through a build hook `uv add` triggers. **Apply** stays disabled until you tick the checkbox confirming those commands, and only the commands you confirmed run. Without an interactive terminal, the run aborts with exit code `77`; pass `--trust` to run the listed commands for that run only. `protostar sync` asks the same way when a template update needs `uv add`, `uv lock`, or a hook install.
+A template you haven't trusted (a `--from` path or URL, or an alias without `trusted = true`) runs no command until you confirm it. In a terminal, the change review lists the commands under **Untrusted template**, and **Apply** stays off until you tick the box. Without a terminal, the run stops with `SecurityViolationError` (exit code `77`) before writing anything.
 
-### Bypassing Prompts for Trusted Templates
+- **For one run,** pass `--trust`. It still lists the commands.
+- **Every time,** give the template an alias with `trusted = true` in your configuration (`protostar config --edit`):
 
-To permanently trust a remote or team template and bypass security prompts:
+    ```toml
+    [templates.team-backend]
+    source = "https://github.com/YourOrg/standards"
+    trusted = true
+    ```
 
-1. Run `protostar config --edit` to open your global settings in `$EDITOR`.
-1. Register the template under the `[templates.<alias>]` table with `trusted = true`:
-
-```toml
-[templates.team-backend]
-source = "https://raw.githubusercontent.com/YourOrg/standards/main/backend.toml"
-name = "Team Backend"
-description = "Internal FastAPI microservice template"
-trusted = true
-```
-
-1. Invoke it via shorthand: `protostar init --template team-backend`. External templates configured with `trusted = true` bypass interactive confirmation dialogs and execute cleanly in non-interactive CI/CD pipelines.
+See [Trusting a Template](templates.md#trusting-a-template) for exactly which templates count as trusted, and what `sync` asks.
 
 ## Template Variables That Look Like Credentials
 
@@ -158,6 +152,7 @@ Export it again after upgrading Protostar, so the schema matches the template fo
 #:schema ./protostar-template.schema.json
 
 name = "my-custom-template"
+description = "FastAPI service with Ruff"
 dependencies = ["fastapi", "uvicorn"]
 ruff = true
 ```
@@ -168,6 +163,42 @@ ruff = true
 1. Add a new mapping named `Protostar Template`.
 1. Set the schema file to the exported `protostar-template.schema.json`.
 1. Add the file pattern `*protostar*.toml`.
+
+## Errors from Status and Sync
+
+### Protostar Is Older Than the Project
+
+```text
+protostar.lock was written by Protostar 0.12.0, but Protostar 0.11.2 is installed.
+```
+
+`OutdatedProtostarError`: someone synced the project with a newer Protostar than yours. Built-in templates come from the installed release, so an older one would plan older files and offer them as an update, quietly undoing the newer work. `init`, `status`, `diff`, and `sync` refuse instead. Upgrade, with `brew upgrade protostar` or `uv tool upgrade protostar`, and run the command again. To keep a team and CI on one release, see [Keep Protostar Versions in Step](automating-updates.md#keep-protostar-versions-in-step).
+
+### The Review Is Out of Date
+
+```text
+Review input changed: pyproject.toml.
+```
+
+`StaleReviewError`: a file changed between the review Protostar showed you and the moment it would apply it, for example because an editor saved it, or a formatter rewrote it. Protostar never applies changes you didn't see, so it stops before writing anything. Run the command again to review the project as it is now.
+
+### No Conflict Matches
+
+```text
+No conflict matches: 3f2a9c1b7d4e.
+```
+
+`UnmatchedResolutionError`: a `--resolve` names a decision the current review doesn't have. A decision's `id` covers both sides, so it stops matching as soon as either side changes: you edited the file, or the template moved. Run `protostar status` again and use the `id`s it prints now. Nothing was written. See [Resolve Conflicts](lifecycle.md#resolve-conflicts).
+
+### A Project Can't Switch Templates
+
+```text
+This project follows a different template.
+```
+
+The template you passed isn't the one the project records. A project follows one template for life: switching would turn every file the old template wrote into a conflict with no sensible owner. Pass the template the project records; `protostar status` names it, and the recipe editor preselects it. To move a repository template to a new release, use `protostar sync --to <ref>`, which is the same template at another version.
+
+To start over with a different template, `protostar eject` the project first; the files stay, and the next `init` treats them as yours.
 
 ## Execution Interruptions & Rollback
 

@@ -400,7 +400,7 @@ def test_workspace_identity_rejects_only_a_recorded_other_template(tmp_path):
     check_workspace_identity(tmp_path, replace(REF, locator="cli"))
     (tmp_path / "protostar.lock").write_text(serialize_state(sample_state()))
     check_workspace_identity(tmp_path, replace(REF, digest="b" * 64))
-    with pytest.raises(ConfigurationError, match="differs") as caught:
+    with pytest.raises(ConfigurationError, match="different template") as caught:
         check_workspace_identity(tmp_path, replace(REF, locator="cli"))
     assert caught.value.hint
 
@@ -951,13 +951,10 @@ def test_a_template_switch_is_refused_in_plain_words():
     with pytest.raises(ConfigurationError) as caught:
         check_template_identity(sample_state(), None)
 
-    assert (
-        str(caught.value)
-        == "Selected template differs from the tracked project identity."
-    )
+    assert str(caught.value) == "This project follows a different template."
     assert caught.value.hint == (
-        "Select the same template source explicitly; "
-        "template switching and adoption are unsupported."
+        "Use the template the project records; `protostar status` names it. "
+        "A project can't switch to another template."
     )
 
 

@@ -13,7 +13,27 @@ Reconciliation is pure, but it runs inside the [executor's](../../mechanics/exec
 - Missing state must never adopt existing content.
 - Pass only applied owned contributions to the snapshot encoder.
 
-### Write order
+## Execution Order
+
+This is the one description of the order execution runs in; the mechanics pages link here. `SystemExecutor.execute()` runs everything inside one transaction, and prepares its decisions in batches named by `PreparationPhase`. Each batch is prepared only once the files it reads exist, so a batch that merges into `pyproject.toml` runs after `uv init` creates it.
+
+### `init`
+
+1. **`BEFORE_INITIALIZERS`**: migrations, released content, directories, and whole files no command creates. The CLI shows this as "Writing project files".
+1. **System tasks**: the initializers `git init` and `uv init` when the project lacks them, then the template's `system_tasks`.
+1. **`BEFORE_RESOLVER`**: merged configuration, append regions, and dependency selection, then the resolver: one `uv add` per dependency group, or a single `uv lock` when only metadata or include edges changed. By this point every choice the change review made must have matched a decision, or execution raises `StaleReviewError`.
+1. **`AFTER_RESOLVER`**: ignore rules, container files, and editor settings, which depend on the resolved project.
+1. **Post-install tasks**, such as a hook install, then the editor extension probe.
+1. **`RECIPE`**: the recipe in `pyproject.toml`, written after everything it records. A one-shot run skips it.
+1. **State**: `protostar.lock` is written last, then the journal commits.
+
+The change review shows what can be known before any command runs: `review_phase()` returns `BEFORE_COMMANDS`, both batches before the resolver, when no initializer creates a file the second batch reads (as in a project that already has its `pyproject.toml`), and `BEFORE_INITIALIZERS` otherwise. Files later batches create are listed as "after setup".
+
+### `sync`
+
+A lifecycle run has no initializer between batches, so `prepare_review()` prepares `COMPLETE`, every batch at once, before anything runs. Execution applies that review's edits, runs only its accepted resolver requests, converges git hooks, and writes `protostar.lock`, then commits. It runs no system task, post-install task, or editor probe.
+
+### Write rules
 
 1. Apply accepted changes through format ASTs and `TransactionAwareFS`.
 1. Stage composite baselines in a candidate.
@@ -21,9 +41,11 @@ Reconciliation is pure, but it runs inside the [executor's](../../mechanics/exec
 1. Skip writes when the resulting bytes already match.
 1. Commit state before the journal commit, so a failure restores exact original file and state bytes and modes.
 
-Expected merge conflicts preserve the affected values and become structured warnings, while malformed state stays fatal. The executor aggregates module contributions in declared sequence order, then applies template opinions once. Unclassified conflicting producers fail before any mutation.
+Any exception terminates managed processes and rolls the journal back; see [Rollback Internals](../../mechanics/rollback.md).
 
-### Conflict diagnostics
+## Conflict diagnostics
+
+Expected merge conflicts preserve the affected values and become structured warnings, while malformed state stays fatal. The executor aggregates module contributions in declared sequence order, then applies template opinions once. Unclassified conflicting producers fail before any mutation.
 
 Conflict diagnostics carry the file, key path, optional identity, and an enum reason in `ExecutionResult.to_dict()`. Safe siblings can apply despite other conflicts, and existing equal values remain unowned.
 
@@ -98,7 +120,7 @@ Immediately before applying a batch, execution checks the desired manifest and a
 
 `init --force-merge` is safe reinitialization, not an update product. It requires the same selected template identity for a tracked project and reconciles only recorded contributions. It does not:
 
-- Adopt pre-existing files.
+- Adopt pre-existing files on its own. Only a `local` resolution of an `unowned` conflict adopts one.
 - Restore user-deleted content.
 - Switch templates.
 - Reconstruct or rerun a request from the lock state.

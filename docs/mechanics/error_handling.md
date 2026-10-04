@@ -30,7 +30,7 @@ During standard CLI usage, operational errors are caught at the top level of the
 
 ## How Errors Propagate
 
-The flow below illustrates how errors propagate from deep pipeline operations (pre-flight checks, AST validation, transactional side-effects) up to the top-level CLI boundary in `cli.py`:
+The flow below illustrates how errors propagate from deep pipeline operations (pre-flight checks, AST validation, transactional side-effects) up to the top-level handler in `protostar.cli.main`:
 
 ```mermaid
 flowchart TD
@@ -155,7 +155,7 @@ Raised when a template is rendered without a value for one of its custom variabl
 
 ### `WorkspaceCollisionError`
 
-Raised during the engine's `plan()` phase when existing workspace files collide with planned manifest targets (derived via `manifest.target_files()`) and no explicit `--force-merge` or `--force-replace` flag is active. Exposes structured collision data via its `paths: frozenset[Path]` attribute.
+Raised by `execute()`, before anything is written, when files the plan would write already exist and no collision strategy was chosen: neither `--force-merge` nor `--force-replace`, nor a choice in the recipe editor. `plan()` only records them in `manifest.collisions`, so the CLI can ask first. Exposes the paths as `paths: frozenset[Path]`.
 
 ### `MissingDependencyError`
 

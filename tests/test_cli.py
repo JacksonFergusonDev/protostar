@@ -1382,57 +1382,36 @@ def test_help_invalid_subcommand_json_mode(capsys, monkeypatch):
 
 
 def test_cli_reference_fixture_tables():
-    """Verify that all generated CLI fixture tables exist and contain required headers and flags."""
+    """Every option the CLI shows in help is in its command's generated table."""
+    import argparse
     from pathlib import Path
 
-    from protostar.modules import TOOLING_MODULES
+    from protostar.cli.parser import build_parser
 
     fixtures_dir = Path("docs/generated")
-    assert fixtures_dir.exists()
+    parser = build_parser()
+    global_content = (fixtures_dir / "cli_global.md").read_text()
+    for flag in ("--json", "--verbose", "--config", "--no-config", "--version"):
+        assert f"{flag}" in global_content
 
-    # Verify Global Options fixture
-    global_file = fixtures_dir / "table_cli_global.md"
-    assert global_file.exists()
-    global_content = global_file.read_text()
-    assert "| Flag | Shorthand | Description |" in global_content
-    assert "`--json`" in global_content
-    assert "`--dry-run`" in global_content
-    assert "`--verbose`" in global_content
-
-    # Verify Init Core Options fixture
-    init_core_file = fixtures_dir / "table_cli_init_core.md"
-    assert init_core_file.exists()
-    init_core_content = init_core_file.read_text()
-    assert "| Option | Shorthand | Description |" in init_core_content
-    assert "`--template <NAME>`" in init_core_content
-    assert "`--force-merge`" in init_core_content
-
-    # Verify Tooling Flags fixture contains all TOOLING_MODULES
-    tooling_flags_file = fixtures_dir / "table_cli_tooling_flags.md"
-    assert tooling_flags_file.exists()
-    tooling_flags_content = tooling_flags_file.read_text()
-    assert "| Enable Flag | Disable Flag | Description |" in tooling_flags_content
-    for mod in TOOLING_MODULES:
-        if mod.cli_flags:
-            assert f"`{mod.cli_flags[0]}`" in tooling_flags_content
-
-    # Verify Config Options fixture
-    config_file = fixtures_dir / "table_cli_config.md"
-    assert config_file.exists()
-    config_content = config_file.read_text()
-    assert "`--reset`" in config_content
-
-    # Verify Export Schema Options fixture
-    export_file = fixtures_dir / "table_cli_export_schema.md"
-    assert export_file.exists()
-    export_content = export_file.read_text()
-    assert "`--json`" in export_content
-
-    # Verify Completion Options fixture
-    completion_file = fixtures_dir / "table_cli_completion.md"
-    assert completion_file.exists()
-    completion_content = completion_file.read_text()
-    assert "`<shell>`" in completion_content
+    subparsers = next(
+        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
+    )
+    for command, subparser in subparsers.choices.items():
+        name = command.replace("-", "_")
+        content = (fixtures_dir / f"cli_{name}.md").read_text()
+        if command == "init":
+            content += (fixtures_dir / "cli_init_tools.md").read_text()
+        for action in subparser._actions:
+            if (
+                action.help == argparse.SUPPRESS
+                or not action.option_strings
+                or isinstance(action, argparse._HelpAction)
+            ):
+                continue
+            if any(flag in global_content for flag in action.option_strings):
+                continue
+            assert action.option_strings[-1] in content, (command, action.dest)
 
     # Verify Exit Codes fixture
     exit_codes_file = fixtures_dir / "table_exit_codes.md"
@@ -1651,7 +1630,7 @@ def test_template_switch_fails_before_any_screen(mocker, tmp_path, monkeypatch):
     ]
     run = mocker.patch("protostar.cli.ui._run_engine")
 
-    with pytest.raises(ConfigurationError, match="differs"):
+    with pytest.raises(ConfigurationError, match="different template"):
         handle_init(argparse.Namespace(from_path=str(blueprint)))
     for screen in screens:
         screen.assert_not_called()

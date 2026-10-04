@@ -656,6 +656,8 @@ def test_system_workspace_skips_git_init_if_already_repo(tmp_path, monkeypatch):
     assert ".DS_Store" in manifest.filesystem.workspace_hides
 
 
+# The testing guide shows this test.
+# --8<-- [start:git_init]
 def test_system_workspace_queues_git_init_in_clean_dir(tmp_path, monkeypatch):
     """Verify that git init is queued when .git is absent."""
     monkeypatch.chdir(tmp_path)
@@ -669,3 +671,6 @@ def test_system_workspace_queues_git_init_in_clean_dir(tmp_path, monkeypatch):
     assert ["git", "init"] in queued_commands
     assert ".idea/" in manifest.filesystem.vcs_ignores
     assert ".idea/" in manifest.filesystem.workspace_hides
+
+
+# --8<-- [end:git_init]

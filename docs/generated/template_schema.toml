@@ -47,19 +47,19 @@ vcs_ignores = [
 ]
 
 # --- Subprocess Tasks ---
-# Commands executed before dependency installation.
+# Commands run once the project's files are written, before its dependencies are installed.
 system_tasks = [
-    ["git", "init"],
+    ["git", "lfs", "install", "--local"],
 ]
 
-# Commands executed after dependencies are installed.
+# Commands run after the project's dependencies are installed.
 post_install_tasks = [
     ["uv", "run", "nbdime", "config-git", "--enable"],
 ]
 
 # --- Tooling Opinions & Overrides ---
 # Boolean toggles configuring baseline tooling opinions.
-# Dynamic precedence: CLI Flags > Template Opinions > Global UserConfig
+# A project's own choices win over the tier, the tier over these, and these over the user's defaults.
 agents = false
 ci = false
 codecov = false
@@ -96,6 +96,9 @@ Auto-scaffolded using custom template.
 """<% PROJECT_NAME %> package."""
 __version__ = "0.1.0"
 '''
+"src/<% PACKAGE_NAME %>/config.py" = '''
+"""Settings for <% PROJECT_NAME %>, maintained by <% ORGANIZATION %>."""
+'''
 "compose.yaml" = '''
 services: {}
 '''
@@ -103,15 +106,13 @@ services: {}
 # --- Development Environment ([dev]) ---
 
 [dev]
-# Development packages not shipped to production.
+# Development packages installed whichever tools are on. A tool's own packages go in an [[optional]] block that requires it.
 dev_dependencies = [
-    "pytest",
-    "mypy",
-    "ruff",
+    "ipython",
 ]
 
 # --- pyproject.toml AST Injections ---
-# Managed TOML configuration; personal metadata is seed-only; dependency tables and tool.protostar are forbidden. A payload is a TOML string, or a table with `content` and an optional `requires` condition that injects it only while the condition holds.
+# Named pyproject.toml payloads. A payload is a TOML string, or a table with `content` and an optional `requires` condition that injects it only while the condition holds. Project fields such as description and authors are written once and then belong to the project; dependency tables and tool.protostar can't be set here.
 
 [dev.pyproject]
 build_backend = '''
@@ -184,3 +185,6 @@ pytest = true
 
 [variables.REGION]
 description = "Deployment region, e.g. eu-west-1"
+
+[variables.ORGANIZATION]
+description = "The team that maintains the project"

@@ -1,59 +1,74 @@
 ---
-description: "Review and apply recipe-driven project updates while preserving local intent."
+description: "Review and apply updates to a project Protostar tracks: status, diff, sync, conflicts, and the edits of yours that stay."
 ---
 
-# Review and synchronize a project
+# Project Lifecycle
 
-After a tracked `init`, commit `pyproject.toml` and `protostar.lock`. The [project recipe](project-recipes.md) records desired selection; the lock records accepted ownership. Run lifecycle commands from that project's root. Protostar uses the current directory and never searches ancestors for a project.
+Once `init` has set up a project, `status`, `diff`, and `sync` keep it current as its template, its tools, and Protostar itself change. This page shows how. [How Protostar Tracks Your Files](tracking.md) explains the ideas behind it: what counts as yours, and how a conflict arises.
 
-To stop tracking the project, run `protostar eject`. It shows the pending removal of `protostar.lock` and `[tool.protostar]` and asks for confirmation. Preview the `pyproject.toml` diff with `protostar eject --dry-run`, or pass `--yes` when no interactive terminal is available. Other files, including `uv.lock`, remain. After ejection, the lifecycle commands on this page no longer apply.
+Commit `pyproject.toml` and `protostar.lock` after `init`, and run these commands from the project's root folder. Protostar works on the current directory, and never looks in parent folders for a project.
 
-To keep projects current without running these commands by hand, with a scheduled update pull request, a check in CI, and template releases, see [Automating Updates](automating-updates.md).
+To keep projects current without running anything by hand, with a scheduled update pull request and a check in CI, see [Automating Updates](automating-updates.md).
 
-## Review, apply, repeat
+## Review, Apply, Repeat
 
 ```bash
-protostar init --template cli
 protostar status
 protostar diff
-protostar sync --dry-run
 protostar sync
 protostar sync --check
 ```
 
-`status` shows the files with pending work as the same labelled tree `init` previews: each is `new`, `modified`, `removed`, or `conflict`, and a file marks what was resolved, the proposals kept out, and your kept edits. Files the update leaves alone are not listed. Below the tree, each conflict, proposal, and kept edit says in a sentence what happened, what Protostar does unless you choose, and the `sync --resolve` command for each choice, ready to copy. A conflicted file can still have independent accepted edits. `diff` and `sync --dry-run` add each accepted byte change as a unified diff. `status` also lists the packages uv will add. What uv then changes in `pyproject.toml` and `uv.lock` is unknown until it runs, so previews do not invent a resulting lockfile diff.
+`status` shows what an update would do, without doing it. It draws each file with pending changes as the same labelled tree `init` previews: `new`, `modified`, `removed`, or `conflict`. Below the tree, each conflict, proposed change, and kept edit says in a sentence what happened and what Protostar does unless you choose, followed by the `sync --resolve` command for each choice, ready to copy. It also lists the packages uv will add.
 
 ![Protostar status after a recipe edit](../assets/terminals/cli_status.svg)
 
-Here the recipe turns Docker on and `just` off. Docker's files are new, and `CONTRIBUTING.md` changes to match the new tools. The justfile was edited by hand, so removing it is a conflict: it stays until you choose to keep it or remove it. The hand-edited Ruff line length is kept, and one command takes Protostar's value instead.
+Here the recipe turns Docker on and `just` off. Docker's files are new, and `CONTRIBUTING.md` changes to match the new tools. The `justfile` was edited by hand, so removing it is a conflict: it stays until you choose. The hand-edited Ruff line length is a kept edit, with one command that takes Protostar's value instead.
 
-`sync` applies safe edits and composite ownership state transactionally. It never reruns project initialization, Git initialization, arbitrary template tasks, or IDE extension probes. It is not an environment reinstall or a package upgrade command. An unchanged repeat writes nothing and runs no subprocess.
+`diff` adds each file's changes as a unified diff, and `sync --dry-run` shows the same. What uv changes in `pyproject.toml` and `uv.lock` isn't known until it runs, so no preview shows a lockfile diff.
 
-`sync` does keep this clone's git hooks in line with the recipe, since they live in `.git/hooks`, outside the project's files. When the recipe wants a hook manager and one of its hooks is missing, as after switching to the production tier or in a fresh clone, `sync` runs its install. It removes the hooks a manager generated that can now only fail: those of a manager the recipe switched away from, and all of them once no hook manager is selected and no hook configuration is left. A hook you wrote yourself is never removed. A failed install is a warning, not a rollback. Hooks never count as pending work, so `sync --check` passes in a checkout without them, as in CI. Each resolver subprocess it does run (`uv add` per dependency group, or `uv lock`) leaves a `✔` line on screen as it finishes.
+`sync` applies the update. `sync --check` changes nothing and exits `1` while the project is behind its recipe or has an open conflict, which makes it a CI gate; kept edits don't fail it.
 
-Built-in templates come from the installed Protostar version. Local templates use the recorded locator. A repository template uses the commit `protostar.lock` records until you move it with `sync --to <ref>`; see [template versions](templates.md#template-versions). A revision at the same identity can update the project. Changing template identity, switching to tooling-only mode, or retargeting an alias is not a supported lifecycle update. Missing sources fail visibly rather than falling back to cached content.
+## What Sync Does
 
-## Preserve local intent and handle partial updates
+`sync` applies the safe changes and keeps your version of every conflict, in one transaction: if it fails part-way, every file goes back ([Automatic Rollback](rollback.md)). With conflicts left open, it still applies the safe changes, and exits `1` rather than `0`.
 
-Suppose a template changes two settings and you independently edited one of them. Inspection reports the divergent setting as a conflict and the other as accepted. `sync` commits the safe setting while retaining your conflicting content and its previous applied baseline. It returns exit `1` with a partial result; this is a committed update, not a failed transaction.
+It runs a command only when the update needs one: `uv add` or `uv lock` when dependencies change, and a git hook install when a hook is missing. It never reruns `init`'s setup, such as `git init`, a template's own tasks, or a reinstall of the environment. A repeat with nothing new writes nothing and runs nothing.
+
+Git hooks live in `.git/hooks`, outside the project's files, so each clone has its own. `sync` keeps this clone's in line with the recipe: it installs a hook manager's hooks when one is missing, as after switching to the production tier or in a fresh clone, and removes hooks a hook manager generated that can now only fail, after you switch manager or turn hooks off. A hook you wrote yourself is never removed. A failed hook install is a warning, not a reason to roll back, and hooks never count as pending, so `sync --check` passes in a checkout without them, as in CI.
+
+Which template revision an update comes from depends on the template:
+
+- **Built-in templates** come from the installed Protostar, so upgrading Protostar brings their updates.
+- **Local templates** come from their files as they are now.
+- **Repository templates** stay on the commit `protostar.lock` records until you move them with `sync --to`; see [template versions](templates.md#template-versions).
+
+A project can't switch to a different template, and a template that can't be found fails rather than falling back to a cached copy.
+
+## When You and the Update Both Changed Something
+
+Suppose a template changes two settings, and you had edited one of them. `status` shows the one you edited as a conflict and the other as a safe change. `sync` applies the safe change, keeps your version of the conflict, and exits `1`:
 
 ```bash
 protostar sync --json > sync-result.json
-# Exit 1 with status "partial": inspect review.conflicts in sync-result.json.
-protostar diff
+# Exit 1 with status "partial": the open conflicts are under review.conflicts.
 ```
 
-Settle the conflict with a [resolution](#resolve-conflicts), or edit your project or same-source template and review again. If local content already equals new desired content, Protostar can advance its baseline without rewriting that content. This still counts as pending work until `sync` records the advancement.
+Settle the conflict with one of [the choices below](#resolve-conflicts), or change your file to what you want and choose yours.
 
-Generated files without a structured format, such as the `justfile` and `Dockerfile`, merge line by line against the text Protostar last wrote. Your edits and Protostar's changes combine when they touch different lines. When both change the same or adjacent lines, the whole file is kept exactly as you left it rather than half updated, and each overlap is reported as a `diverged` conflict with its `lines` (a one-based `start` and a `count`, numbered like a unified diff hunk header). The update stays pending until those lines match what you want. A checkout that only converts line endings, such as Git's `core.autocrlf`, is not an edit, and a merged file keeps your line endings.
+Files with no structure of their own, such as the `justfile` and `Dockerfile`, merge line by line against the text Protostar last wrote. Your edits and the update combine when they touch different lines. When both change the same or neighbouring lines, the whole file stays exactly as you left it, rather than half updated, and each overlap is a conflict with its line range. A checkout that only converts line endings, such as Git's `core.autocrlf`, isn't an edit, and a merged file keeps your line endings.
 
-Local edits or deletions with unchanged desired intent are preserved and do not make checks fail. Deleted managed files stay deleted. Each preserved edit has an `id`, and you can [take its update later](#take-a-kept-change-later). Equal foreign content remains unowned.
+## When Protostar Takes Something Back
 
-Content Protostar stops producing is retracted: a tool you turn off, a [template option](authoring-templates.md#template-options) you change, or a file, dependency, or payload a new template version drops. An unedited copy is removed and an edited copy is kept with a `retracted` conflict, whose `local` choice keeps it as yours and `desired` removes it. This covers seeded files, owned dependencies (after which the lock is refreshed), each `[tool.*]` table in `pyproject.toml`, append regions, each step or key of a GitHub Actions workflow (for example the Codecov upload steps after you turn Codecov off), and each hook and hook repository in the hook configuration (for example mypy's hook after you turn mypy off, so no commit runs a tool that is no longer installed). A whole configuration file whose tool you turn off, such as `zensical.toml`, `.github/codecov.yml`, `.readthedocs.yaml`, a workflow, the hook configuration, Renovate's, or the VS Code settings, is retracted key by key the same way. When nothing of Protostar's is left, the file is deleted if it holds nothing else and kept with only your own keys if it does. A generated `justfile` or `Dockerfile` whose tool you turn off is deleted when unedited; an edited one is kept with a `retracted` conflict for the whole file. Seeded project metadata such as `[project].name` and dependency-group includes are never retracted. Workflow files are merged by job and by step name, so your own jobs, steps, triggers, and inputs stay. An action version you or Renovate changed (including a SHA pin) is yours: a newer Protostar version of the same action does not conflict and `sync --check` passes.
+Content Protostar no longer produces is taken back: what a tool added when you turn it off, what a [template option](authoring-templates.md#template-options) brought when you change it, and what a new template release drops. Each piece is removed if you never edited it, and kept as a conflict if you did, where keeping yours makes it yours and taking the update removes it.
 
-## Resolve conflicts
+This works at the same grain as everything else: each `[tool.*]` table in `pyproject.toml`, each workflow step, each hook, each dependency, each managed block. Turning Codecov off removes its upload steps from the CI workflow and leaves your own steps alone; turning Mypy off removes its hook, so no commit runs a tool that's no longer installed. A whole file, such as `zensical.toml` or the Renovate settings, is taken back key by key, and deleted only if nothing of yours is left in it. Project fields such as `[project].name` are never taken back.
 
-A conflict stays open, and `sync --check` keeps failing, until you settle it. In an interactive terminal, `protostar sync` opens a screen that shows both sides of each conflict and what the file will look like, before anything is written:
+Workflows merge by job and by step name, so your own jobs, steps, triggers, and inputs stay. An action version you or Renovate changed, including a pin to a commit, is yours: a newer version of the same action from Protostar doesn't conflict, and `sync --check` passes.
+
+## Resolve Conflicts
+
+A conflict stays open, and `sync --check` keeps failing, until you settle it. In a terminal, `protostar sync` opens a screen showing both sides of each conflict and what the file will look like, before anything is written:
 
 <div class="hs-terminal">
   <div class="hs-terminal-bar">
@@ -71,63 +86,67 @@ A conflict stays open, and `sync --check` keeps failing, until you settle it. In
   </div>
 </div>
 
-Every resolution makes the update Protostar's new baseline there; your choice decides only which content stays in the file:
+The screen opens whenever there is a conflict you can settle or a proposed change, and lists them by file with your kept edits. A choice on a file's row applies to every conflict and proposed change in that file, but never to a kept edit. Applying keeps your version of any conflict left open. It never opens for `--dry-run`, `--check`, `--json`, `--resolve`, or without a terminal.
 
-| Choice | Meaning | Afterwards |
-| --- | --- | --- |
-| `local` | Keep mine | Your content reads as a local edit of the update and is preserved until the update changes there again. |
-| `desired` | Take the update | The update is written. |
-| `both` | Keep both | Your lines, then the update's. Only for overlapping lines of a text file. |
-
-Choosing `local` is also how you finish a hand edit: change the file however you like, then keep it. The same choices settle every kind of conflict Protostar can show both sides of:
-
-- A `diverged` or `type-mismatch` value or line range takes the side you choose.
-- An `unowned` file, value, or workflow job kept with `local` is adopted: it stays as it is and merges three ways from then on (a job's steps by name). With `desired` it is replaced.
-- A dependency whose requirement differs from the request (`unowned`, `diverged`, or `deleted-ancestor`) kept with `local` stands for the request from then on, so `ruff>=0.5` satisfies a request for `ruff`; with `desired` the resolver adds the request.
-- A `deleted-ancestor` file or table kept with `local` stays deleted; `desired` recreates it.
-- A `retracted` value kept with `local` stays and is no longer Protostar's; `desired` removes it.
-
-Conflicts caused by document policy (`duplicate-identity`, `shared-structure`, `unsafe-pin`), a table outside the file's root, and a dependency listed more than once offer no choices. Fix those by hand.
-
-In an interactive terminal, `sync` opens its review screen before it applies anything whenever a conflict can be settled or it proposes a change to a file you already have. It lists them by file, with your preserved edits, showing your side, the update's side, and a preview of the file each choice produces. Press `k` to keep yours, `u` to take the update, `b` to keep both, `x` to leave a conflict open, and `n` for the next open one; on a file's row, a choice applies to every conflict and proposal in that file, but never to a preserved edit. `a` applies the sync with those choices, and open conflicts keep your content as before. `esc` asks before leaving without applying anything. The screen never opens for `--dry-run`, `--check`, `--json`, `--resolve`, or a non-interactive terminal, and never for preserved edits alone.
+--8<-- "keys_sync_conflicts.md"
 
 ![Protostar sync conflict screen](../assets/terminals/tui_sync_conflicts.svg)
 
-Each conflict has an `id` covering its location and content. `status` prints the `sync --resolve` command for each choice it offers, and JSON reviews list both with every side under `review.conflicts`. Pass `--resolve SELECTOR=CHOICE` to `sync`, where the selector is an `id` or a file path that selects every conflict and proposal in that file:
+Whichever side you choose, the update becomes Protostar's record for that content, so the same conflict never returns for the same update:
+
+| Choice | `--resolve` | What stays in the file |
+| --- | --- | --- |
+| Keep mine | `local` | Your version. It counts as your edit of the update, and stays until a later update changes that content again. |
+| Take update | `desired` | The update's version. |
+| Keep both | `both` | Your lines, then the update's. Only for overlapping lines in a text file. |
+
+Keeping yours is also how you finish a hand edit: change the file however you like, then keep it. What each choice means depends on the conflict:
+
+- **You and the update both changed it:** the side you choose stays.
+- **It was yours before Protostar managed it,** such as a `justfile` you already had: keeping yours adopts it, so it stays as it is and later updates merge into it. Taking the update replaces it.
+- **A dependency you declared differently,** such as `ruff>=0.5` where the update asks for `ruff`: keeping yours lets your requirement stand for the update's from then on. Taking the update asks uv for it.
+- **You deleted it, and the update changed it:** keeping yours leaves it deleted; taking the update brings it back.
+- **The update no longer includes something you edited:** keeping yours makes it yours; taking the update removes it.
+
+A few conflicts have no sides to choose between, such as a key defined twice so Protostar can't tell which copy to update. `status` says so; fix those by hand.
+
+### Settling Conflicts from the Command Line
+
+Each conflict has an `id`. `status` prints the `sync --resolve` command for each of its choices. Pass one `--resolve` per decision, naming an `id`, or a file path for every conflict and proposed change in that file:
 
 ```bash
 protostar sync --dry-run --resolve 3f2a9c1b7d4e=local
 protostar sync --resolve justfile=both --resolve 8b0e5d2c61fa=desired
 ```
 
-Later selectors override earlier ones, so an `id` can refine a file-wide choice. Settled conflicts move from `review.conflicts` to `review.resolved`. A selector that matches nothing fails before anything is written. An `id` stops matching as soon as either side of its conflict changes, so a choice is never applied to content you did not review. The overlapping line ranges of one text file are applied together: resolve every one, or the file stays as it is.
+Later selectors override earlier ones, so an `id` can refine a choice made for its whole file. A selector that matches nothing fails before anything is written. An `id` covers both sides of its conflict and stops matching as soon as either changes, so a choice never applies to content you didn't review. The overlapping line ranges of one text file apply together: settle every one, or the file stays as it is.
 
-## Changes to files you already have
+## Changes to Files You Already Have
 
-A change Protostar would make inside a file it has never owned is a proposal: `init` in an existing project, or a tool you enable whose configuration file you already wrote. That covers a new key or table, members added to a list such as Ruff's `select`, and a new dependency in a project whose requirements it never managed. A proposal applies unless you keep it out. Keeping it out records Protostar's version as the baseline without writing it, exactly like keeping your side of a conflict, so it reads as your deletion from then on: it is preserved, `sync --check` passes, and you can take it later.
+A change Protostar would make inside a file it has never written to is a proposed change: in a project you run `init` in, or when you turn on a tool whose configuration file you already wrote. That covers a new key or table, members added to a list such as Ruff's `select`, and a new dependency in a project whose requirements Protostar never managed. A proposed change applies unless you keep it out. Keeping it out records Protostar's version without writing it, so it reads as your deletion from then on: it stays out, `sync --check` passes, and you can take it later.
 
-The `init` change review opens on its **Decisions** tab: every conflict and proposal by file, the conflicts first, each row led by what happens to it. Press `k` or `u` on a row to keep yours or take the update for that change, or on a file's row for all of its changes; settling a conflict moves on to the next open one, and `n` jumps there from anywhere. `K` keeps yours for every conflict and change in the review, which adopts the project exactly as it is. When no setup command creates them, as in a project that already has a `pyproject.toml`, the review shows the configuration merges and dependency choices too, so every change to an existing file is decided before anything runs. `status` and JSON reviews list proposals under `review.proposals`; a proposal without a `resolution` applies. `--force-merge` without a review applies every proposal, as before. To choose without the review, `init` takes the same `--resolve` as `sync`, with the ids `init --dry-run` prints:
+The `init` change review opens on its **Decisions** tab, listing every conflict and proposed change by file, conflicts first. **Keep all mine** keeps your side of every one at once, which leaves the project exactly as it is. When no setup command creates them, as in a project that already has a `pyproject.toml`, the review shows the configuration merges and dependency choices too, so every change to an existing file is decided before anything runs. Headless, `init --force-merge` applies every proposed change unless you keep it out with `--resolve`, using the ids `init --dry-run` prints:
 
 ```bash
 protostar init --force-merge --resolve pyproject.toml=local
 ```
 
-`.gitignore` additions stay automatic: they only add missing lines.
+Lines Protostar adds to `.gitignore` are never a decision: it only adds patterns that are missing.
 
-## Take a kept change later
+## Take a Kept Change Later
 
-Every preserved edit or deletion is a decision you can revisit. `status` prints the command that takes the update for each, and JSON reviews list them under `review.preserved` with their sides. Taking the update writes Protostar's version there, through the resolver for a dependency:
+Every kept edit and kept-out change can be revisited. `status` prints the command that takes the update for each:
 
 ```bash
 protostar status
 protostar sync --resolve 53c675afdfb0=desired
 ```
 
-A file path never selects preserved edits, since each is deliberate: name them by `id`. The sync review screen lists them too, where `u` on a preserved edit's own row takes its update. This is how a project adopted as it was takes up Protostar's standards one at a time.
+A file path never selects a kept edit, since each one was deliberate: name it by its `id`. On the sync screen, choosing **Take update** on a kept edit's own row does the same. This is how a project kept exactly as it was takes up its template's standards, one at a time.
 
-## Edit the recipe deliberately
+## Change the Recipe
 
-Edit entries in `[tool.protostar]` using the [recipe rules](project-recipes.md). For example:
+To turn a tool on or off, add it to `[tool.protostar.tools]` and run `sync`:
 
 ```toml
 [tool.protostar.tools]
@@ -135,28 +154,28 @@ renovate = false
 mypy = true
 ```
 
-The `tools` table is left out of `pyproject.toml` until it has an entry, so add it when you need it.
+A tool you leave out follows the template; [which choice wins](project-recipes.md#which-choice-wins) has the full order. Turning a tool off takes back what it added, and turning it on again adds it back. Deleting a tool's files by hand never turns the tool off: the next `status` shows them as your deletions. To change a template option or tier, use `sync --option NAME=VALUE` or `sync --tier`; [Project Recipes](project-recipes.md) covers everything else the recipe holds.
 
-An omitted tool follows current template opinion, then the fallback captured on initialization. Current global defaults cannot change project selection. An opt-out suppresses only that tool's contributions and warnings, retaining its previous files, dependencies, and ownership. Other producers sharing a target still apply. Re-enabling a tool resumes reconciliation against retained baselines; it does not restore deleted files or adopt foreign content. Filesystem edits never implicitly write a recipe opt-out. Captured metadata and year keep rendering repeatable.
+## When the Recipe Is Missing
 
-## Enroll an existing project
+A project that has never been tracked starts with `protostar init`, which reads it first; see [existing projects](init.md#existing-projects).
 
-A project Protostar has never touched starts with `protostar init`, which reads the project first and fills the recipe from it; see [existing projects](init.md#existing-projects).
-
-A Stage 1 project needs an explicit recipe. Rerun its original selection:
+A project with a `protostar.lock` but no recipe, because `[tool.protostar]` was deleted, can't be synced: `status` and `sync` stop and say so. Rerun the original `init` command with `--force-merge`, with the same template and the tool flags you chose then:
 
 ```bash
 protostar init --template cli --force-merge
 ```
 
-Include the original tooling choices and source as appropriate. Protostar does not reconstruct a request from the ownership lock. Enrollment preserves existing ownership and does not adopt equal foreign content. Template variable values come from the recipe; see [template variables](project-recipes.md#template-variables). Missing recipes, malformed state, and missing variable values fail before mutation.
+This writes a new recipe and keeps what the lock records; Protostar never guesses the original command from the lock.
 
-## Security and rollback boundaries
+## Stop Tracking a Project
 
-Inspection does not write workspace files, populate source caches, run subprocesses, or prompt. Remote acquisition can access the network outside pure planning and holds source data in memory. Each invocation captures one source revision and hook registry snapshot; apply uses those captured decisions without a second fetch. Trust is not inherited from the recipe or lock: when an update from a template you haven't trusted needs `uv add`, `uv lock`, or a hook install, `sync` asks you to confirm those commands first, or takes `--trust` (see [the trust model](templates.md#security-model-the-remote-trust-dialog)). Initialization-only tasks remain excluded even for trusted external templates.
+`protostar eject` removes `protostar.lock` and `[tool.protostar]`, and keeps every other file, including `uv.lock`. It shows the change and asks first; `--dry-run` previews the `pyproject.toml` diff, and `--yes` confirms without a terminal. Afterwards, `status`, `diff`, and `sync` no longer work in the project.
 
-Template variable values are recorded in the recipe after passing the secret guard when they were entered; sync does not check them again. Generated files and review diffs contain project content, so diffs are not a secret-redaction system. Keep credentials out of rendered configuration.
+## What Protects Your Project
 
-Before mutation, sync checks captured bytes, existence, and modes. Changed inputs abort as a stale review before the first write. This protects the review/apply interval, not arbitrary concurrent writes during execution. Symlinks and special filesystem nodes are rejected for transaction-managed targets.
-
-Fatal resolver failures, timeouts, interrupts, and late state-write failures trigger [automatic rollback](rollback.md). Managed processes are terminated and reaped before journaled files are restored to exact original bytes and POSIX modes. Direct edits, ownership state, and declared resolver `pyproject.toml`/`uv.lock` paths are covered. `.venv` and global caches remain outside that guarantee.
+- **Previews change nothing.** `status`, `diff`, `sync --dry-run`, and `sync --check` write no file, run no command, and never prompt.
+- **What you reviewed is what applies.** `sync` checks, just before writing, that every file it read is unchanged since the review it showed you, and stops before writing anything if one changed. Run it again to review the new state.
+- **Commands need trust.** For a template you haven't trusted, `sync` lists the commands an update needs and asks first, or takes `--trust`; see [Trusting a Template](templates.md#trusting-a-template).
+- **Failures roll back.** See [Automatic Rollback](rollback.md).
+- **Diffs aren't redacted.** Reviews and diffs show your files' content, so keep secrets out of files a template renders. Template variables are checked for secrets only when you enter them.

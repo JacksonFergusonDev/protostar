@@ -1,5 +1,5 @@
 ---
-description: "Install Protostar and scaffold your first Python project in seconds."
+description: "A quick tour for people who know Python tooling: the recipe editor, a headless init, and what a new project contains."
 icon: material/rocket
 ---
 
@@ -14,11 +14,11 @@ uv tool install protostar                       # Linux and Windows
 
 Protostar needs `uv` and `git`. [Installation](installation.md) covers both on each platform, for a machine with no Python setup. New to Python tooling? [Your First Project](first-project.md) walks through a project from start to finish.
 
-`protostar init` is designed to be executed immediately after you `mkdir` a new project directory. It offers two distinct operational modes: an **interactive TUI** for discovery, and a **headless CLI** for speed.
+`protostar init` sets up a project in the current directory, either in a terminal screen where you choose everything, or headlessly from flags.
 
-## Interactive Setup
+## The Recipe Editor
 
-If you run `protostar init` without any arguments, it will launch an interactive Terminal User Interface (TUI). The recipe editor lets you visually map out your languages, tools, and built-in templates using the spacebar—no CLI flag memorization required.
+Run `protostar init` with no arguments in an empty folder, or in a project you already have, and it opens the recipe editor: the template, its tier and options, every tool as a switch, and the project's details, with a live preview of the files it will write. `Ctrl+S` continues to the change review, which shows every file and command before anything runs. The keyboard does everything, and `?` lists the keys.
 
 ```bash
 mkdir orbital-mechanics-sim
@@ -42,9 +42,9 @@ protostar init
   </div>
 </div>
 
-## Headless Scaffolding
+## Headless Setup
 
-For fast, repeatable initialization, you can bypass the TUI entirely and pass your options as CLI flags. Protostar automatically configures common ignore files (`.gitignore`, `.envrc`) and adds your preferred IDE settings.
+Pass a template, and any tool flags, to skip the screens:
 
 ```bash
 mkdir hyperdrive-cli
@@ -52,14 +52,7 @@ cd hyperdrive-cli
 protostar init --template cli
 ```
 
-**What just happened?** In a fraction of a second, Protostar:
-
-- **Scaffolded Application & Test Suites**: Created a modular package architecture with an executable Typer and Rich CLI application (`src/hyperdrive_cli/cli.py`, `__init__.py`) alongside a unit test suite (`tests/test_cli.py`).
-- **Resolved Dependencies & Registered Entrypoints**: Injected runtime dependencies (`rich`, `typer`), wired the console script entrypoint in `pyproject.toml` (`[project.scripts]`), and populated development dependency groups.
-- **Configured Static Analysis & Testing ASTs**: Generated strictly typed `[tool.mypy]` rules, configured `[tool.ruff]` and `[tool.rumdl]` linting and formatting opinions, and wired coverage-backed `[tool.pytest.ini_options]`.
-- **Wired Automation & Pre-Commit Git Hooks**: Initialized `.pre-commit-config.yaml` with local toolchain hooks, configured Commitizen conventional commit checks (`CHANGELOG.md`), and scaffolded task automation in `justfile`.
-- **Provisioned CI/CD & Documentation**: Scaffolded GitHub Actions workflows (`.github/workflows/ci.yml`, `release.yml`, `codecov.yml`, `renovate.json`) alongside a ready-to-publish Zensical documentation site (`zensical.toml`, `docs/index.md`, `.readthedocs.yaml`).
-- **Applied Universal Workspace Hygiene**: Evaluated the virtual environment via `.envrc` (direnv), locked dependencies with `uv.lock`, and safely deduplicated `.gitignore` without overwriting existing entries.
+It writes the files, runs `git init` and `uv init`, and installs the dependencies with uv, which takes as long as the downloads do. Add `--dry-run` first to see the plan without writing anything, and `--no-<tool>` to leave a tool out.
 
 <div class="hs-terminal">
   <div class="hs-terminal-bar">
@@ -77,19 +70,32 @@ protostar init --template cli
   </div>
 </div>
 
-## Exploration & Help
+### What the Project Contains
 
-Protostar is self-documenting. You can view the full capabilities matrix and subcommand details directly from your terminal at any time.
+The `cli` template starts in the production tier, so the project has the full quality gate:
+
+- **A Typer and Rich command-line package** in `src/`, installable with Hatchling, with its console script in `[project.scripts]` and a test in `tests/`.
+- **Tool settings in `pyproject.toml`:** Ruff, strict Mypy, pytest with coverage, and rumdl for Markdown.
+- **Commit hooks** in `.pre-commit-config.yaml`, run by prek, with Commitizen checking each commit message and keeping `CHANGELOG.md`.
+- **CI and releases:** GitHub Actions workflows that run the checks and publish to PyPI on a version tag, Renovate settings, and Codecov.
+- **Documentation:** a Zensical site in `docs/`, ready for Read the Docs.
+- **The files GitHub shows contributors:** `CONTRIBUTING.md`, a code of conduct, a security policy, and issue and pull request templates.
+- **A `justfile`** with `just lint`, `just test`, and `just ci`, and an `.envrc` that activates the virtual environment through direnv.
+
+??? abstract "Every file `protostar init --template cli` writes"
+    ```text
+    --8<-- "tree_cli.txt"
+    ```
+
+Two of those files make this a Protostar project rather than a copy of a template. `[tool.protostar]` in `pyproject.toml` is the **recipe**: what you asked for. `protostar.lock` records what Protostar wrote. Commit both, and when the template or Protostar improves, `protostar status` shows the update and `protostar sync` applies it without overwriting your edits. [How Protostar Tracks Your Files](usage/tracking.md) explains how.
+
+## Getting Help
+
+`protostar help` lists every command, and `protostar help <command>` shows one command's options. The [CLI Reference](usage/cli-reference.md) has the same, generated from the same source.
 
 ![Protostar Help](./assets/terminals/cli_help.svg)
 
-!!! tip "Command-Specific Help"
-    You can also get localized help for specific subcommands by running:
-    ```bash
-    protostar help init
-    ```
-
-## Shell Autocomplete & Aliasing
+## Shell Completion and an Alias
 
 To speed up your workflow, you can enable CLI autocompletion and set up a shorter alias.
 
@@ -160,10 +166,8 @@ alias proto="protostar"
 
 ## Next Steps
 
-Now that your environment is ready, explore the rest of Protostar's features:
-
-- **[Configuration](./usage/configuration.md):** Learn how to set up global defaults (like your preferred Python version, dev dependencies, or custom ruff configuration) so you don't have to specify them every time.
-- **[Tooling & Flags Matrix](./usage/tooling-matrix.md):** Explore the full list of supported languages, tools, and built-in templates.
+- **[Configuration](./usage/configuration.md):** Set your name, editor, Python version, and the tools new projects start with, once.
+- **[Tooling & Flags Matrix](./usage/tooling-matrix.md):** Every tool, its flag, and the built-in templates.
 - **[CLI Reference](./usage/cli-reference.md):** Comprehensive reference for all subcommands, global options, and POSIX exit codes.
 - **[Troubleshooting & FAQ](./usage/troubleshooting.md):** Solutions for missing dependencies, workspace collisions, and IDE schema integration.
-- **[Architecture](./mechanics/orchestrator.md):** Read how the Orchestrator guarantees idempotent disk operations without corrupting your existing files.
+- **[Project Lifecycle](./usage/lifecycle.md):** Keep the project current with `status`, `diff`, and `sync`.

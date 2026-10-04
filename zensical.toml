@@ -15,6 +15,7 @@ nav = [
     { "Design Principles" = "design-principles.md" },
     { "User Guide" = [
         { "Initialization" = "usage/init.md" },
+        { "How Protostar Tracks Files" = "usage/tracking.md" },
         { "Project Lifecycle" = "usage/lifecycle.md" },
         { "Automating Updates" = "usage/automating-updates.md" },
         { "Templates" = "usage/templates.md" },
@@ -142,7 +143,7 @@ md_in_html = {}
 toc = { permalink = true }
 "pymdownx.details" = {}
 "pymdownx.highlight" = { anchor_linenums = true, line_spans = "__span", pygments_lang_class = true }
-"pymdownx.snippets" = { base_path = ["tests/snapshots", "docs/generated", "."], check_paths = true }
+"pymdownx.snippets" = { base_path = ["tests/snapshots", "docs/generated", "."], check_paths = true, dedent_subsections = true }
 "pymdownx.tabbed" = { alternate_style = true, combine_header_slug = true }
 
 [project.markdown_extensions."pymdownx.emoji"]
