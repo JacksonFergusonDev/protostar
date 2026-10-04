@@ -10,7 +10,7 @@ Widen mutation testing to the rest of the engine, then run it on a schedule, rec
 |---|---|---|
 | 1 | One module list for mutation testing | Finished (#413) |
 | 2 | Expand coverage to the target set | Finished (#415, #417, #418, #425, #428) |
-| 3 | Record scores on `gh-pages` on a schedule | Planned |
+| 3 | Record scores on `gh-pages` on a schedule | Implemented; awaiting merge |
 | 4 | Dashboard graph and README badge | Planned |
 | 5 | Score on jacksonferguson.me | Planned |
 | 6 | Further coverage (ongoing) | Planned |
@@ -28,6 +28,8 @@ Widen mutation testing to the rest of the engine, then run it on a schedule, rec
 - **Say what the score covers.** It covers the mutated modules, not the whole codebase. The dashboard says which modules, and the badge label doesn't imply full coverage.
 
 ## Phase 3: Record scores on `gh-pages` on a schedule
+
+Implemented in the current PR: nightly at 02:23 UTC, gated by changed inputs; complete main-branch runs publish raw per-module history and the latest-score endpoint, and Pages carries both files. After merge, mark this phase Finished and move it to the summary below.
 
 - **Report:** give `scripts/mutation_report.py` JSON output for one history entry and for the shields endpoint file.
 - **Workflow:** add a schedule to `mutation.yml` with the change check above. Choose how often it runs from Phase 2's runtimes after each survivor pass: nightly if a full run is short enough, less often if not. Add a publish job that runs only when every module succeeded. It appends to the history and writes the latest-score file on `gh-pages`, rebases and retries its push (the benchmark workflow pushes to the same branch), then calls `pages.yml` as `benchmark.yml` does.

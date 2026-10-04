@@ -1,9 +1,11 @@
 name: Mutation Testing
 
-# Manual only: a full run mutates thousands of lines and takes hours, so it never
-# runs on a commit. Each module gets its own runner, in parallel; a module listed
+# Nightly runs skip unchanged inputs; manual runs remain available for development.
+# Each module gets its own runner, in parallel; a module listed
 # under [tool.mutmut-shards] in pyproject.toml gets one runner per shard.
 on:
+  schedule:
+    - cron: "23 2 * * *"
   workflow_dispatch:
     inputs:
       modules:
@@ -15,6 +17,11 @@ on:
 permissions:
   contents: read
 
+# Keep full runs in order without cancelling the work already in progress.
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   plan:
     name: Plan
@@ -22,14 +29,36 @@ jobs:
     timeout-minutes: 2
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
+      run: ${{ steps.changed.outputs.run }}
+      publish: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || inputs.modules == 'all') }}
 
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      with:
+        fetch-depth: 0
+
+    - name: Check changed mutation inputs
+      id: changed
+      env:
+        EVENT: ${{ github.event_name }}
+      run: |
+        if [[ "$EVENT" == "schedule" ]]; then
+          git fetch origin gh-pages
+          if git cat-file -e origin/gh-pages:benchmarks/mutation-history.json; then
+            git show origin/gh-pages:benchmarks/mutation-history.json > mutation-history.json
+          fi
+          changed="$(python3 scripts/mutation_report.py changed --history mutation-history.json)"
+        else
+          changed=true
+        fi
+        echo "run=$changed" >> "$GITHUB_OUTPUT"
+
     - name: Select modules
       id: matrix
+      if: steps.changed.outputs.run == 'true'
       env:
-        REQUESTED: ${{ inputs.modules }}
+        REQUESTED: ${{ github.event_name == 'schedule' && 'all' || inputs.modules }}
       run: |
         python3 - <<'EOF'
         import json, os, sys, tomllib
@@ -90,6 +119,7 @@ jobs:
   mutate:
     name: Mutate ${{ matrix.name }}
     needs: plan
+    if: needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
@@ -153,7 +183,7 @@ jobs:
   summary:
     name: Combine results
     needs: mutate
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && needs.mutate.result != 'skipped' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -174,3 +204,71 @@ jobs:
           echo
           python3 scripts/mutation_report.py combine "${summaries[@]}"
         } >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    name: Record complete mutation run
+    needs: [plan, mutate, summary]
+    if: needs.plan.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Download every mutation result
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        pattern: mutation-*
+        path: results
+
+    - name: Read the published data branch
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        ref: gh-pages
+        path: pages-data
+        fetch-depth: 0
+
+    - name: Append history and latest score
+      env:
+        MATRIX: ${{ needs.plan.outputs.matrix }}
+        COMMIT: ${{ github.sha }}
+      run: |
+        # Artifact directories have a prefix; the planner's stable names do not.
+        for path in results/mutation-*; do
+          mv "$path" "results/${path##*/mutation-}"
+        done
+        recorded_at="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
+        git -C pages-data config user.name 'github-actions[bot]'
+        git -C pages-data config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+        for attempt in 1 2 3 4 5; do
+          echo "Publishing mutation results (attempt $attempt/5)."
+          python3 scripts/mutation_report.py record \
+            --results results --matrix "$MATRIX" --commit "$COMMIT" --date "$recorded_at" \
+            --history pages-data/benchmarks/mutation-history.json \
+            --latest pages-data/benchmarks/mutation-latest.json
+          git -C pages-data add benchmarks/mutation-history.json benchmarks/mutation-latest.json
+          if ! git -C pages-data diff --cached --quiet; then
+            git -C pages-data commit -m "Record engine mutation score for ${COMMIT:0:7}"
+          fi
+          if git -C pages-data push origin HEAD:gh-pages; then
+            exit 0
+          fi
+          # Benchmarks and releases also write here. Rebase non-conflicting edits;
+          # if history itself changed, regenerate against its current contents.
+          if ! git -C pages-data pull --rebase origin gh-pages; then
+            git -C pages-data rebase --abort
+            git -C pages-data reset --hard origin/gh-pages
+          fi
+        done
+        echo 'Could not publish mutation results after five attempts.' >&2
+        exit 1
+
+  publish-pages:
+    name: Publish updated mutation scores
+    needs: publish
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml

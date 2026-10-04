@@ -176,11 +176,30 @@ The TOML merge tests start from this deliberately messy `pyproject.toml`, `tests
 
 Mutation testing checks that the tests would notice a bug: [mutmut](https://github.com/boxed/mutmut) changes the code one small edit at a time, such as `<` to `<=`, and reports each edit the suite still passes. `[tool.mutmut]` in `pyproject.toml` lists the modules it covers.
 
+The set comes from `[tool.mutmut].source_paths` in `pyproject.toml`; it excludes the CLI, generated code, and modules reached mainly through mocked boundaries. The score describes that selected engine set, not the whole codebase.
+
+The **Mutation Testing** workflow runs nightly at 02:23 UTC. After the survivor fixes, the slowest measured module, reconciliation, took about 36 minutes across six parallel shards; nightly runs leave room for that work without running it on every commit. A scheduled run skips mutation testing unless its inputs changed since the last published commit: the selected source modules, `tests/`, `pyproject.toml`, `uv.lock`, or the reporting script and mutation workflow. A missing history or a recorded commit no longer in the current branch's ancestry starts a full run.
+
+Run a module locally, or select modules and individual shards through the workflow's manual trigger:
+
 ```bash
 just mutate journal
+gh workflow run mutation.yml --ref main -f modules=journal
+gh workflow run mutation.yml --ref main -f modules=reconciliation:append-files
+gh workflow run mutation.yml --ref main -f modules=all
 ```
 
-This runs one module (here `protostar.journal`) and writes what to fix to `mutants/survivors.md`: each surviving edit, as a diff. A full run takes hours, so it never runs on a commit; the manual **Mutation Testing** workflow (`mutation.yml`) runs chosen modules, or all of them, in parallel on CI.
+Local runs write each surviving edit as a diff to `mutants/survivors.md`. Each CI runner uploads raw counts, survivor names, and survivor diffs. The combined job adds shard counts into one result per module. The mutation score is `(killed + timeout) / (killed + timeout + survived + suspicious)`; mutants no test reaches are reported separately. Surviving mutants reduce the score but do not make the workflow fail: inspect their diffs and strengthen tests where a meaningful behavior change went unnoticed.
+
+Only a successful complete run on `main` publishes. Failed or cancelled jobs and manual subset runs cannot update the public score. Publication checks every expected artifact and the configured module set, then appends the commit, UTC date, and raw per-module counts to `benchmarks/mutation-history.json` on `gh-pages`. `benchmarks/mutation-latest.json` is a Shields endpoint with the aggregate score and an explicit engine label. Retrying a recorded commit does not add another history point. Counts are retained so the dashboard can later show changes in the module set without averaging percentages.
+
+Publication rebases and retries if the benchmark or release workflow updates `gh-pages` concurrently; a conflicting history update is regenerated against the new branch contents. The shared Pages workflow deploys both mutation JSON files alongside the performance history. The graph and README badge are a separate follow-up.
+
+GitHub disables scheduled workflows in public repositories after 60 days without repository activity. Re-enable this workflow with:
+
+```bash
+gh workflow enable mutation.yml
+```
 
 ## Performance & Latency Testing
 
