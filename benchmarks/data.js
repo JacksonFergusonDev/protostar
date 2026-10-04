@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791144890349,
+  "lastUpdate": 1791153427634,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21459,6 +21459,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1253.23,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "da9b75768f5e036411deda3e7ac04603c7e96738",
+          "message": "feat(benchmarks): graph engine mutation scores and add README badge (#442)",
+          "timestamp": "2026-10-04T15:33:57-07:00",
+          "tree_id": "f68158c70c512c8b0e24782346167fe66bce177f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/da9b75768f5e036411deda3e7ac04603c7e96738"
+        },
+        "date": 1791153426501,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 173.28,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1254.95,
             "unit": "ms"
           }
         ]
