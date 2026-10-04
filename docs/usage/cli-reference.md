@@ -1,174 +1,107 @@
 ---
-description: "Comprehensive command-line interface reference for the Protostar CLI, including flags and options."
+description: "Every Protostar command and option, with what each one does and the exit codes it returns."
 ---
 
-# Command Line Interface (CLI) Reference
+# CLI Reference
 
-Protostar provides a composable, deterministic command-line interface. Commands can be run interactively through the terminal interface (TUI) or headlessly via flags.
+Every command runs in the current directory. Global options go before or after the command:
 
-```bash
-protostar [GLOBAL_OPTIONS] <COMMAND> [COMMAND_OPTIONS]
+```text
+protostar [global options] <command> [options]
 ```
+
+The usage line and option table under each command are generated from Protostar's own argument parser, so they always match `protostar help <command>`.
 
 ## Global Options
 
-Global options can be passed to any command or evaluated independently:
+--8<-- "cli_global.md"
 
---8<-- "table_cli_global.md"
+`--json` can appear anywhere on the command line. See the [machine interface](agent-interface.md) for its payloads.
 
 ## Commands
 
 ### `protostar init`
 
-The primary command to scaffold and configure a Python repository.
+Set up a project in the current directory: in an empty folder, or in a project you already have. In a terminal with no template given, it opens the recipe editor and then the change review; with `--template` or `--from`, it runs headlessly. See [Initialization](init.md).
 
-```bash
-protostar init [OPTIONS] [DYNAMIC_VARS...]
-```
+--8<-- "cli_init.md"
 
-#### Core Options
+#### Tool Flags
 
---8<-- "table_cli_init_core.md"
+Each tool has a flag that turns it on and a `--no-` flag that turns it off, whatever the template chose. See the [Tooling & Flags Matrix](tooling-matrix.md) for what each one adds.
 
-`--one-shot` scaffolds without writing `[tool.protostar]` or `protostar.lock`. It still generates `uv.lock` when dependencies are resolved. It requires a project that is not already tracked by Protostar. See [one time scaffolding](init.md#one-time-scaffolding).
+--8<-- "cli_init_tools.md"
 
-#### Tooling Tri-State Flags
-
-Every tooling module can be explicitly enabled (`--<flag>`) or disabled (`--no-<flag>`), overriding template defaults:
-
---8<-- "table_cli_tooling_flags.md"
-
-#### Template Variables
-
-A template containing custom placeholders (e.g., `<% REGION %>`) receives their values through `--var`, repeated once per variable. Values are saved in the project recipe, so never pass secrets:
-
-```bash
-protostar init --from ./api.toml --var REGION=eu-west-1 --var SERVICE_NAME=billing
-```
-
-A value that looks like a credential stops init. If it isn't a secret, keep it with `--allow-secret NAME`, repeated once per variable.
-
-In a terminal, Protostar prompts for any variable left out. Elsewhere, including under `--json`, a missing value fails with `MissingTemplateVariablesError`.
-
-#### Template Options
-
-A template that declares [options](authoring-templates.md#template-options) takes a choice for each through `--option`, repeated once per option: `true` or `false` for a bool option, or one of a choice option's values. An option left out takes the template's default:
-
-```bash
-protostar init --from ./api.toml --option database=postgres --option compose=true
-```
-
-An unknown option or a value the option doesn't offer stops init with the values it does offer.
-
-### `protostar guide`
-
-Show how to work on the project in the current directory: the command that runs it, the file its code starts in, and its tests, checks, and docs, each with a short explanation:
-
-```bash
-protostar guide
-protostar guide --json
-```
-
-![Guide command help](../assets/terminals/cli_guide_help.svg)
-
-The commands come from the same tooling state that renders the project's `AGENTS.md` and `CONTRIBUTING.md`, so the three always agree. An action appears only when the project has it: the run command comes from `[project.scripts]`, and the justfile's recipes appear only while `just` is enabled. If a tool's binary is missing, such as `just`, the guide shows the commands its recipes run instead and ends with the command that installs it. The guide reads the recipe and `pyproject.toml`; it never runs a project command or writes a file. Without a recipe, it says what it cannot know and points to `protostar init`.
-
-![Guide for a CLI project](../assets/terminals/cli_guide_cli.svg)
+A value that looks like a credential stops `init`. If it isn't a secret, keep it with `--allow-secret NAME`. In a terminal, Protostar asks for any template variable you leave out; elsewhere, including under `--json`, a missing value fails with `MissingTemplateVariablesError`. An unknown option, or a value the option doesn't offer, stops `init` with the values it does offer.
 
 ### `protostar status` and `protostar diff`
 
-Inspect the current directory using its recorded project recipe and ownership ledger:
+Show what `sync` would do, without doing it. `status` lists each file with pending changes as a labelled tree, then explains each conflict, change to a file you wrote, and edit of yours that stays, with the `sync --resolve` command for each choice. It also lists the packages uv will add and any git hook changes. `diff` adds each file's changes as a unified diff.
 
-```bash
-protostar status
-protostar diff
-protostar diff --json
-```
+--8<-- "cli_status.md"
 
-![Status command help](../assets/terminals/cli_status_help.svg)
+--8<-- "cli_diff.md"
 
-![Diff command help](../assets/terminals/cli_diff_help.svg)
-
-`status` shows the files with pending work as a tree labelled like `init`'s preview. Below it, each conflict, proposal, and kept edit says what happened and gives the `sync --resolve` command for each choice, followed by the packages uv will add and any git hook changes. `diff` also displays unified diffs of accepted direct edits after the tree. Conflicting content is preserved; conflict details give the file, semantic keys or region identity, and reason. Resolver output is unknown until application; no predicted dependency or lockfile diff is shown.
-
-Both commands support `--json`, `--verbose`, and help. They never prompt, execute subprocesses, write workspace files, or populate disk caches. Remote template acquisition may use the network and reads archive data entirely in memory. They say when setup that only `init` does, like `git init`, is skipped. For a repository template, the first line names the applied ref and commit, and any newer release or moved ref the repository offers; see [template versions](templates.md#template-versions).
-
-The explicit current directory must contain `[tool.protostar]` in `pyproject.toml` and `protostar.lock`. For a Stage 1 project, rerun the original explicit selection with `init --force-merge` to enroll it. Edit the recipe deliberately to change tool selections; global defaults are never consulted during review. Template variable values come from `[tool.protostar.variables]`; these commands never prompt. Recorded template identity changes are rejected.
-
-Valid reviews exit `0`, even with conflicts or pending work. Fatal errors use the existing domain-specific exit codes. These commands only inspect; `init --dry-run` continues to show the creation manifest rather than accepted lifecycle changes.
+Both read the project's recipe in `pyproject.toml` and `protostar.lock`, so they fail in a project without them. They never prompt, run a command, or write a file, and they exit `0` whenever the review succeeds, even with conflicts. For a repository template, the first line names the release and commit the project applied, and any newer release; see [template versions](templates.md#template-versions). See [Project Lifecycle](lifecycle.md).
 
 ### `protostar sync`
 
-Apply the accepted decisions from the same recipe-driven review:
+Apply the update `status` shows. Safe changes apply, and each conflict keeps your version until you choose. In a terminal, conflicts you can settle open a review screen before anything is applied. Turning off a tool, or choosing a template option that drops content, removes what it added: unedited content goes, and edited content stays as a conflict for you to settle.
 
-```bash
-protostar sync --dry-run
-protostar sync --check --json
-protostar sync --json
-```
+--8<-- "cli_sync.md"
 
-![Sync command help](../assets/terminals/cli_sync_help.svg)
+`sync` exits `0` when everything applied, and `1` when it applied the safe changes and left conflicts open. It never reruns `init`'s setup commands. It runs `uv add` or `uv lock` only when dependencies change, and installs a git hook only when one is missing. For a template you haven't trusted, those commands need your confirmation first: a screen in a terminal, or `--trust` for one run; otherwise `sync` stops with exit code `77` before writing anything.
 
-`sync` applies safe updates and advances ownership state in one transaction. Conflicting local content and its applied baselines are retained while safe sibling updates commit. Deleted tracked files stay deleted. Removing a tool, or choosing a template option that drops content, retracts what it added: unedited files, dependencies, configuration tables, and regions are removed, and edited ones are kept as `retracted` conflicts. Initialization tasks, arbitrary template tasks, and IDE probes never run. Only accepted dependency requests and required metadata lock refreshes invoke the resolver, and a missing git hook is installed; unchanged repeats write nothing and run no subprocesses. For a template you haven't trusted, those commands need your confirmation first: a screen in an interactive terminal, or `--trust` for one run; otherwise `sync` stops with exit code `77` before writing anything.
+Without `--to`, `sync` applies the commit `protostar.lock` records, however the template's branch or tag has moved since. If a run fails or you press `Ctrl+C`, every file it wrote is restored; see [Automatic Rollback](rollback.md). See [Project Lifecycle](lifecycle.md) and [Automating Updates](automating-updates.md).
 
-`--to REF` moves a repository template to a tag, branch, full commit SHA, or `latest` (the newest release), records the ref in the recipe, and reviews the new revision like any other update; it combines with `--dry-run`, `--check`, and `--resolve`. `--var NAME=VALUE` supplies a variable the new revision adds, `--allow-secret NAME` keeps a value the secret guard flags, and `--option NAME=VALUE` chooses a [template option](authoring-templates.md#template-options). Without `--to`, `sync` applies the commit `protostar.lock` records, however the ref has moved since.
+### `protostar guide`
 
-`--dry-run` presents the same accepted diffs as `diff`. `--check` is read-only and exits `1` for accepted work, baseline advancement, or conflicts; preserved local edits and deletions alone pass. The two modes are mutually exclusive.
+Show how to work on the project in the current directory: the command that runs it, the file its code starts in, and its tests, checks, and docs, each with a short explanation.
 
-Application exits `0` on success and `1` after committing safe changes with retained conflicts. JSON application envelopes have `status: "success"` or `"partial"`, the captured `review`, and an actual `result` with sorted created, mutated, and touched paths. Inspection uses `status: "reviewed"`; check adds `check_passed`. Schema discovery publishes both review and application schemas.
+--8<-- "cli_guide.md"
 
-One source revision and hook registry snapshot are captured per invocation. Inputs are revalidated before mutation; stale inputs abort. Resolver failures, timeouts, interrupts, and late state-write failures roll back journaled bytes and POSIX modes. Fatal JSON errors report rollback context when available. Resolver `pyproject.toml` and `uv.lock` writes are journaled; `.venv` and global caches remain outside the rollback boundary. Review output contains project content, including any secrets rendered into files.
+The commands come from the same place as the project's `AGENTS.md` and `CONTRIBUTING.md`, so the three always agree. An action appears only when the project has it: the run command comes from `[project.scripts]`, and the justfile's recipes appear only while `just` is enabled. If a tool's program is missing, such as `just`, the guide shows the commands its recipes run instead, and ends with the command that installs it. Without a recipe, it says what it can't know and points to `protostar init`.
+
+![Guide for a CLI project](../assets/terminals/cli_guide_cli.svg)
+
+### `protostar eject`
+
+Stop Protostar managing the project. `eject` removes `protostar.lock` and the recipe from `pyproject.toml`, and keeps every other file, including `uv.lock`. In a terminal it shows the change and asks first; elsewhere it needs `--yes`. Afterwards, `status`, `diff`, and `sync` no longer work in the project. See [Project Recipes](project-recipes.md#one-shot-and-eject).
+
+--8<-- "cli_eject.md"
 
 ### `protostar config`
 
-Edits your default preferences stored in `~/.config/protostar/config.toml`, as a form or in `$EDITOR`.
+Edit your global configuration, stored in `~/.config/protostar/config.toml`, as a form or in `$EDITOR`. The form needs a terminal. See [Global Configuration](configuration.md).
 
-```bash
-protostar config [OPTIONS]
-```
-
---8<-- "table_cli_config.md"
+--8<-- "cli_config.md"
 
 ### `protostar export-schema`
 
-Exports the official JSON Schema for Protostar TOML templates.
+Print the JSON Schema for template files, for your editor or a validator. See [Editor Schema Setup](troubleshooting.md#editor-schema-setup-for-custom-templates).
 
-```bash
-protostar export-schema [OPTIONS]
-```
-
---8<-- "table_cli_export_schema.md"
+--8<-- "cli_export_schema.md"
 
 ### `protostar check-template`
 
-Checks a template before you publish it: that `protostar init` would accept it, and that it follows the practices built-in templates follow. It writes nothing and runs no commands. See [Checking a Template](authoring-templates.md#checking-a-template).
+Check a template before you publish it: that `protostar init` would accept it, and that it follows the practices built-in templates follow. It writes nothing and runs no commands. With `--json`, it returns the findings as a payload. See [Checking a Template](authoring-templates.md#checking-a-template).
 
-```bash
-protostar check-template [SOURCE] [OPTIONS]
-```
-
---8<-- "table_cli_check_template.md"
+--8<-- "cli_check_template.md"
 
 ### `protostar completion`
 
-Generates dynamic autocompletion scripts for supported shells (Bash, Zsh, Fish, PowerShell).
+Print the tab-completion script for your shell. See [Shell Completion](../getting-started.md#shell-completion-and-an-alias) for where to save it.
 
-```bash
-protostar completion [SHELL]
-```
-
---8<-- "table_cli_completion.md"
+--8<-- "cli_completion.md"
 
 ### `protostar help`
 
-Displays comprehensive help panels and usage instructions.
+Show every command, or one command's options. `protostar help <command>` is the same as `protostar <command> --help`.
 
-```bash
-protostar help [COMMAND]
-```
+--8<-- "cli_help.md"
 
 ## POSIX Exit Codes
 
-Protostar maps runtime outcomes and operational exceptions to standard POSIX status codes:
+Each kind of failure has its own exit code, so a script can tell a network failure from a broken template:
 
 --8<-- "table_exit_codes.md"

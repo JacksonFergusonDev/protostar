@@ -87,13 +87,6 @@ def generate_cli_help_svgs() -> None:
         if subparsers and "config" in subparsers.choices:
             config_parser = subparsers.choices["config"]
             _render_svg(config_parser, "help config", "cli_config_help.svg")
-        if subparsers:
-            for command in ("status", "diff", "sync", "guide"):
-                _render_svg(
-                    subparsers.choices[command],
-                    f"help {command}",
-                    f"cli_{command}_help.svg",
-                )
     finally:
         protostar.cli.ui.console = original_global_console
 
