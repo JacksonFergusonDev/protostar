@@ -12,8 +12,8 @@ Widen mutation testing to the rest of the engine, then run it on a schedule, rec
 | 2 | Expand coverage to the target set | Finished (#415, #417, #418, #425, #428) |
 | 3 | Record scores on `gh-pages` on a schedule | Finished (#441) |
 | 4 | Dashboard graph and README badge | Finished (#442) |
-| 5 | Score on jacksonferguson.me | Implemented; awaiting merge |
-| 6 | Further coverage (ongoing) | Planned |
+| 5 | Score on jacksonferguson.me | Protostar half finished (#443); site PR open (JacksonFergusonDev.github.io#7) |
+| 6 | Further coverage (ongoing) | In progress |
 
 ## Settled Decisions
 
@@ -45,7 +45,13 @@ Before the survivor pass, check for two things that hide mutants:
 
 A module too large for one runner is split by function through `[tool.mutmut-shards]` in `pyproject.toml`, as `reconciliation` is.
 
-Candidates include `executor.py`, `workspace.py`, `migrations.py`, `options.py`, `secret_guard.py`, and `recipe.py`. The graph marks each change of scope.
+Candidates include `executor.py`, `workspace.py`, `migrations.py`, `secret_guard.py`, and `recipe.py`.
+
+Added so far:
+
+| Module | PR | First run | Finished tests |
+|---|---|---|---|
+| `options` | #444 | 46m, 71.4% (65 survivors) | 11m, 100% |
 
 ## Finished
 
