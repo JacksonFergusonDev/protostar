@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791173253554,
+  "lastUpdate": 1791240541247,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21629,6 +21629,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 822.14,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dcabd359b7f9816d45c95df82aacb777422ec622",
+          "message": "test(rollback): fail init at every write and command site (#445)\n\n* fix(executor): report a failed directory creation as a FileSystemError\n\nApplying a prepared batch wrapped an OSError from each file edit, but not\nfrom the directories it creates first, so a directory that could not be\ncreated crashed as an internal error with a crash report instead of a\nrolled-back FileSystemError.\n\n* test(rollback): fail init at every write and command site\n\nWrap the four mutation seams (TransactionAwareFS writes, directories and\nremovals, and ProcessRunner.run), name each call a site, and fail a real\ninit before, mid-way through, and after each one with an error and an\ninterrupt. Every case requires the project and home directory to come\nback byte for byte, and no unjournaled file to be rewritten.",
+          "timestamp": "2026-10-05T15:45:47-07:00",
+          "tree_id": "51fb346c903ffabf97bb5e2fec519ed17bfb15ff",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/dcabd359b7f9816d45c95df82aacb777422ec622"
+        },
+        "date": 1791240540017,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 183.65,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1265.62,
             "unit": "ms"
           }
         ]
