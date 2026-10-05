@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791156254809,
+  "lastUpdate": 1791161383105,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21527,6 +21527,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1376.93,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c86f5cd268ce43e917902cef22109ec2130641d4",
+          "message": "test(mutation): mutate options and kill every survivor (#444)\n\n* test(mutation): mutate options\n\n* test(options): pin every error's wording and kill the survivors\n\n* docs(mutation): record options in the plan\n\n* docs(mutation): record Phase 5 as finished",
+          "timestamp": "2026-10-04T17:46:26-07:00",
+          "tree_id": "ae529c8a44280b1f965fadde27ff1c66c9fa5d62",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/c86f5cd268ce43e917902cef22109ec2130641d4"
+        },
+        "date": 1791161381227,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 175.42,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1273.54,
             "unit": "ms"
           }
         ]
