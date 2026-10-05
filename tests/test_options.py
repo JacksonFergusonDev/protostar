@@ -16,6 +16,7 @@ from protostar.options import (
     OptionValue,
     TemplateOption,
     Term,
+    format_value,
     parse_condition,
     parse_options,
     resolve_options,
@@ -38,6 +39,28 @@ class TestCondition:
     def test_a_malformed_requires_is_rejected(self, raw: object) -> None:
         with pytest.raises(ConfigurationError, match="Invalid requires"):
             parse_condition(raw, "x", "t")
+
+    @pytest.mark.parametrize(
+        ("raw", "message"),
+        [
+            ([], "Invalid requires in configuration source 't' for 'x'."),
+            ([5], "Invalid requires in configuration source 't' for 'x'."),
+            (
+                ["ruff", "a b"],
+                "Invalid requires term 'a b' in configuration source 't' for 'x'.",
+            ),
+        ],
+    )
+    def test_a_malformed_requires_says_what_to_write(
+        self, raw: object, message: str
+    ) -> None:
+        with pytest.raises(ConfigurationError) as caught:
+            parse_condition(raw, "x", "t")
+        assert str(caught.value) == message
+        assert caught.value.hint == (
+            'Use requires = "tool", "option", or "option=value", or an array of '
+            "them that must all hold."
+        )
 
     def test_every_term_must_hold(self) -> None:
         condition = parse_condition(
@@ -90,6 +113,65 @@ class TestOptions:
         with pytest.raises(ConfigurationError):
             parse_options(raw, "t")
 
+    @pytest.mark.parametrize(
+        ("raw", "message"),
+        [
+            ([], "The [options] table in configuration source 't' is malformed."),
+            (
+                {"bad-name": {"default": False}},
+                "Option 'bad-name' in configuration source 't' needs a name made "
+                "of letters, digits, and underscores.",
+            ),
+            (
+                {"compose": False},
+                "Option 'compose' in configuration source 't' is malformed.",
+            ),
+            (
+                {"compose": {"default": "yes"}},
+                "Option 'compose' in configuration source 't' needs a bool default, "
+                "or a list of choices.",
+            ),
+            (
+                {"database": {"choices": ["only"], "default": "only"}},
+                "Option 'database' in configuration source 't' needs at least two "
+                "distinct choices made of letters, digits, dots, dashes, and "
+                "underscores.",
+            ),
+            (
+                {"database": {"choices": ["a", "b"], "default": "c"}},
+                "Option 'database' in configuration source 't' needs a default "
+                "among its choices.",
+            ),
+        ],
+    )
+    def test_a_malformed_option_says_how_to_declare_one(
+        self, raw: object, message: str
+    ) -> None:
+        with pytest.raises(ConfigurationError) as caught:
+            parse_options(raw, "t")
+        assert str(caught.value) == message
+        assert caught.value.hint == (
+            "Declare [options.NAME] with default = true or false, or with "
+            'choices = ["a", "b"] and default = "a"; description is optional.'
+        )
+
+    def test_descriptions_are_kept_and_default_to_empty(self) -> None:
+        options = parse_options(
+            {
+                "compose": {"default": False},
+                "database": {
+                    "choices": ["none", "sqlite"],
+                    "default": "none",
+                    "description": "Pick a database.",
+                },
+                "plain": {"choices": ["a", "b"], "default": "a"},
+            },
+            "t",
+        )
+        assert options["compose"].description == ""
+        assert options["database"].description == "Pick a database."
+        assert options["plain"].description == ""
+
     def test_command_line_values_parse_to_the_option_type(self) -> None:
         assert COMPOSE.parse("true") is True
         assert COMPOSE.parse("False") is False
@@ -97,6 +179,7 @@ class TestOptions:
         with pytest.raises(InvalidOptionValueError) as bool_error:
             COMPOSE.parse("yes")
         assert bool_error.value.values == ("true", "false")
+        assert str(bool_error.value) == "Option 'compose' has no value 'yes'."
         with pytest.raises(InvalidOptionValueError) as choice_error:
             DATABASE.parse("mysql")
         assert choice_error.value.details() == {
@@ -107,8 +190,20 @@ class TestOptions:
     def test_a_recorded_value_of_the_wrong_type_is_rejected(self) -> None:
         with pytest.raises(InvalidOptionValueError):
             COMPOSE.check("true")
-        with pytest.raises(InvalidOptionValueError):
+        with pytest.raises(InvalidOptionValueError) as as_bool:
             DATABASE.check(True)
+        assert str(as_bool.value) == "Option 'database' has no value 'true'."
+        with pytest.raises(InvalidOptionValueError) as as_number:
+            DATABASE.check(5)
+        assert str(as_number.value) == "Option 'database' has no value '5'."
+        with pytest.raises(InvalidOptionValueError) as as_list:
+            COMPOSE.check([])
+        assert as_list.value.values == ("false", "true")
+
+    def test_values_are_spelled_as_the_command_line_takes_them(self) -> None:
+        assert format_value(True) == "true"
+        assert format_value(False) == "false"
+        assert format_value("postgres") == "postgres"
 
     def test_unchosen_options_take_their_defaults(self) -> None:
         options = {"compose": COMPOSE, "database": DATABASE}
@@ -121,6 +216,15 @@ class TestOptions:
     def test_a_value_for_an_option_the_template_lacks_is_rejected(self) -> None:
         with pytest.raises(ConfigurationError, match="no option named cache"):
             resolve_options({"compose": COMPOSE}, {"cache": True})
+
+    def test_every_unknown_option_is_named_with_a_hint(self) -> None:
+        with pytest.raises(ConfigurationError) as caught:
+            resolve_options({"compose": COMPOSE}, {"port": True, "cache": True})
+        assert str(caught.value) == "The template offers no option named cache, port."
+        assert caught.value.hint == (
+            "Choose among the template's [options], or remove the value "
+            "from [tool.protostar.options]."
+        )
 
 
 OPTIONS = """
