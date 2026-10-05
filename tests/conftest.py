@@ -19,6 +19,18 @@ from protostar.manifest import EnvironmentManifest
 from protostar.system_deps import GlobalExecutable
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--rollback-scope",
+        choices=("pr", "full"),
+        default="pr",
+        help=(
+            "Fault-injection rollback cases to run: a representative scenario "
+            "(pr) or every template and seed (full, run nightly)."
+        ),
+    )
+
+
 @pytest.fixture
 def settled_pilot(monkeypatch):
     """Drain cascading UI messages and rendering instead of guessing CPU idleness.

@@ -1,0 +1,31 @@
+mkdir:.github/workflows#1
+mkdir:tests#1
+write:.envrc#1
+write:.github/ISSUE_TEMPLATE/bug_report.yml#1
+write:.github/ISSUE_TEMPLATE/feature_request.yml#1
+write:.github/pull_request_template.md#1
+write:.github/renovate.json#1
+write:.github/workflows/ci.yml#1
+write:.github/workflows/release.yml#1
+write:.pre-commit-config.yaml#1
+write:CHANGELOG.md#1
+write:CODE_OF_CONDUCT.md#1
+write:SECURITY.md#1
+write:docs/index.md#1
+write:justfile#1
+write:src/demo/cli.py#1
+write:tests/test_cli.py#1
+command:git init#1
+write:.github/codecov.yml#1
+write:.readthedocs.yaml#1
+write:CONTRIBUTING.md#1
+write:pyproject.toml#1
+write:zensical.toml#1
+command:uv add#1
+command:uv add --dev#1
+command:uv add --group#1
+write:.gitignore#1
+command:direnv allow#1
+command:uv run prek install#1
+write:pyproject.toml#2
+write:protostar.lock#1

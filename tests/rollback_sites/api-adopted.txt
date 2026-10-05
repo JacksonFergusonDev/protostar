@@ -1,0 +1,29 @@
+mkdir:.github/workflows#1
+mkdir:src/demo/api/routers#1
+mkdir:src/demo/core#1
+mkdir:src/demo/models#1
+mkdir:src/demo/schemas#1
+mkdir:src/demo/services#1
+mkdir:tests#1
+mkdir:tests/api#1
+write:.env.example#1
+write:.envrc#1
+write:.github/renovate.json#1
+write:.github/workflows/ci.yml#1
+write:.pre-commit-config.yaml#1
+write:CHANGELOG.md#1
+write:justfile#1
+write:src/demo/core/config.py#1
+write:src/demo/main.py#1
+write:tests/test_health.py#1
+command:git init#1
+write:pyproject.toml#1
+command:uv add#1
+command:uv add --dev#1
+write:.dockerignore#1
+write:.gitignore#1
+write:Dockerfile#1
+command:direnv allow#1
+command:uv run prek install#1
+write:pyproject.toml#2
+write:protostar.lock#1

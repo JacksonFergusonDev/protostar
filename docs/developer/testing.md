@@ -57,6 +57,7 @@ Some tests exist to keep a rule from AGENTS.md true:
 - **`tests/test_cli_startup.py`** checks in fresh interpreters that `--help` and `--version` import no project analysis, execution, or format engine.
 - **`tests/test_legacy_encoding.py`** renders output to a strict cp1252 stream, as Windows does for redirected output. Test new output there; macOS and Linux never hit it.
 - **`tests/test_tui_theme.py`** fails when TUI code names a color outside the theme.
+- **`tests/test_rollback.py`** fails `init` at every write, directory, and command, and fails when a run changes a file it never journaled (see [Rollback Fault Injection](#rollback-fault-injection)).
 - **TUI snapshots** compare each screen's rendering, and `check_layout` measures its spacing against the layout rule, so every new screen needs a snapshot. Drive TUI tests with `pilot.press`, and use `pilot.click` only in tests about the mouse.
 
 ## Test Categories
@@ -66,6 +67,26 @@ Some tests exist to keep a rule from AGENTS.md true:
 The suite runs in parallel with `just test` (`pytest -n auto --dist worksteal`). It covers the format engines, the reconciliation kernel, planning, the CLI and TUI, and transactional execution in `tmp_path` sandboxes.
 
 Repeatability and reconciliation acceptance live in `tests/test_template_repeatability.py` and the focused reconciliation suites (see the [acceptance suite](reconciliation/execution.md#acceptance-suite)): a tracked project is run again with the same template, never a different one, since switching templates is rejected.
+
+### Rollback Fault Injection
+
+Execution is one transaction: a failure anywhere must leave the project and the home directory exactly as they were. `tests/test_rollback.py` checks that at every point a real `init` can fail. Every disk mutation goes through three `TransactionAwareFS` operations and every command through `ProcessRunner.run`, so the harness (`tests/rollback_harness.py`) wraps those four seams and names each call a site: `write:pyproject.toml#2` is the second write of `pyproject.toml`. Each case seeds a project, fails the run at one site, and compares the trees afterwards:
+
+- **Where:** before the operation, mid-way (a write's final rename fails after its temporary file exists; a command does half its work), or after it.
+- **How:** an error (`OSError`, or a failed command) or an interrupt (`KeyboardInterrupt`).
+- **Seeds:** an empty folder, an existing project Protostar merges into (comments, kept file modes, binary and CRLF files, an unrelated tree), and the same project already a git repository.
+
+A case passes when the run exits with a domain error (or 130 for an interrupt), every path is restored byte for byte with its mode, nothing is left behind, and no file the run never journaled was rewritten. Only what the rollback boundary disclaims goes uncompared: uv's `.venv/` and tool caches in the home directory, listed with their reasons in the harness.
+
+Commands run through a fake that writes exactly what the executor journaled for them, so the cases stay fast and offline. A clean run must journal every path it changes, which catches a write made around the seams. Integration tests run the real commands for one scenario: they pass the same sites as the fake, and an error after each command, or an interrupt after the last, rolls back what it really did.
+
+The sites each scenario passes are committed in `tests/rollback_sites/`, and the cases are generated from them. A change that adds, removes, or reorders a site fails until the lists are regenerated:
+
+```bash
+uv run pytest tests/test_rollback.py -k sites_match --snapshot-update
+```
+
+Pull requests run one representative scenario, `cli` merged into an existing project. Every template and seed runs with `--rollback-scope full`, or locally with `just test-rollback`.
 
 ### Template Hooks Smoke Matrix (CI)
 

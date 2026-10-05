@@ -41,7 +41,7 @@ jobs:
     name: Test on ${{ matrix.os }} / Python ${{ matrix.python }}${{ matrix.smoke && format(' + smoke ({0})', join(matrix.smoke, ', ')) || '' }}
     if: inputs.tests != ''
     runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ matrix.smoke && (inputs.retry && 20 || 10) || (inputs.retry && 10 || 6) }}
+    timeout-minutes: ${{ matrix.smoke && (inputs.retry && 20 || 10) || (inputs.retry && 10 || 8) }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(inputs.tests) }}
