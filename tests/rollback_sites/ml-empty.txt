@@ -1,0 +1,22 @@
+mkdir:data/01_raw#1
+mkdir:data/02_processed#1
+mkdir:data/03_features#1
+mkdir:models/weights#1
+mkdir:notebooks/exploratory#1
+mkdir:src/project/data#1
+mkdir:src/project/models#1
+mkdir:src/project/training#1
+write:.envrc#1
+write:.gitattributes#1
+write:README.md#1
+write:justfile#1
+command:git init#1
+command:uv init --no-workspace --bare --pin-python --python#1
+write:pyproject.toml#1
+command:uv add#1
+command:uv add --dev#1
+write:.gitignore#1
+command:direnv allow#1
+command:uv run nbdime config-git --enable#1
+write:pyproject.toml#2
+write:protostar.lock#1
