@@ -12,31 +12,24 @@ Widen mutation testing to the rest of the engine, then run it on a schedule, rec
 | 2 | Expand coverage to the target set | Finished (#415, #417, #418, #425, #428) |
 | 3 | Record scores on `gh-pages` on a schedule | Finished (#441) |
 | 4 | Dashboard graph and README badge | Finished (#442) |
-| 5 | Score on jacksonferguson.me | Implemented; awaiting merge |
-| 6 | Further coverage (ongoing) | Planned |
+| 5 | Score on jacksonferguson.me | Finished (#443, JacksonFergusonDev.github.io#7) |
+| 6 | Further coverage (ongoing) | In progress (#444) |
 
 ## Settled Decisions
 
 - **Expand coverage before tracking starts.** The public score (badge and website) begins with the expanded set, so it opens near its long-run value instead of dropping each time a module joins. The expanded set's cost also decides the schedule and how runners are split, so Phase 3 is designed after Phase 2 is measured.
 - **The target set is fixed.** Phase 2 ended when its seven modules (listed under "Finished") were mutated and had a survivor pass. Anything else is Phase 6 and does not hold up tracking.
 - **Engine logic only, never the whole codebase.** Leave out `cli/` and `cli/tui/` (their mutants mostly change labels, styles, and layout, and snapshot tests catch them slowly or not at all), `_secret_rules.py` (generated), `errors.py` (mostly message text), and modules whose behavior the suite reaches only through mocked boundaries, such as `system.py` and `network.py` (their mutants survive whatever the tests do).
-- **Scheduled, gated by change.** No run on every commit. A scheduled run first checks whether the mutated modules, `tests/`, or `pyproject.toml` changed since the last recorded commit, and stops if not. Quiet periods cost nothing, and a busy period gets one point per scheduled run. The manual trigger stays for development.
+- **Scheduled, gated by change.** No run on every commit. A scheduled run first checks whether the mutated modules, `tests/`, `pyproject.toml`, `uv.lock`, `scripts/mutation_report.py`, or the mutation workflow changed since the last recorded commit, and stops if not. Quiet periods cost nothing, and a busy period gets one point per scheduled run. The manual trigger stays for development.
 - **Only complete runs publish.** A run publishes a score only if every module in the set succeeded. Manual runs on a subset never publish.
 - **Store raw counts per module.** Each history entry records the commit, the date, and each module's counts (killed, timeout, survived, and the rest `mutation_report.py` tracks), not just percentages. The overall score is computed from them, so it stays correct when the set grows, and the graph can mark when the scope changed.
 - **Our own JSON, not github-action-benchmark.** That action writes a JS file built for speed regressions. Mutation results go in their own files under `benchmarks/` on `gh-pages`: a history file for the graph and a small latest-score file in shields.io's endpoint format, which the badge and the website both read.
 - **The website reads the score when it builds.** jacksonferguson.me (Astro, `~/Developer/JacksonFergusonDev.github.io`) already fetches remote files at build time through `config/remote-assets.json`, and its `deploy.yml` already rebuilds on `repository_dispatch` of type `remote-assets-updated`, plus weekly. Protostar sends that dispatch after the Pages deploy finishes, not just after the `gh-pages` push, so the site never fetches a stale file.
 - **Say what the score covers.** It covers the mutated modules, not the whole codebase. The dashboard says which modules, and the badge label doesn't imply full coverage.
 
-## Phase 5: Score on jacksonferguson.me
-
-The first PR is in the site's repo; the second is in Protostar.
-
-1. **Site:** add a `json` type to `scripts/fetch-remote-assets.mjs` that checks the file's shape, add a manifest entry for the published latest-score file, and show the score on the Protostar project card, linked to the dashboard.
-1. **Protostar:** after the Pages deploy, send `remote-assets-updated` to the site repo. This needs a fine-grained token limited to that repo, stored as its own secret (not `TAP_GITHUB_TOKEN`). The maintainer creates the token; an agent only wires up the workflow.
-
 ## Phase 6: Further coverage (ongoing)
 
-After tracking starts, add more engine modules the same way as Phase 2, one or a few at a time: add the module to `source_paths`, run it through the manual workflow, kill the survivors worth killing (strengthen tests, and mark only mutants that cannot change behavior with `# pragma: no mutate` and a reason on the line above), and run it again on the finished tests.
+Tracking has started, so add more engine modules the same way as Phase 2, one or a few at a time: add the module to `source_paths`, run it through the manual workflow, kill the survivors worth killing (strengthen tests, and mark only mutants that cannot change behavior with `# pragma: no mutate` and a reason on the line above), and run it again on the finished tests.
 
 Before the survivor pass, check for two things that hide mutants:
 
@@ -45,7 +38,13 @@ Before the survivor pass, check for two things that hide mutants:
 
 A module too large for one runner is split by function through `[tool.mutmut-shards]` in `pyproject.toml`, as `reconciliation` is.
 
-Candidates include `executor.py`, `workspace.py`, `migrations.py`, `options.py`, `secret_guard.py`, and `recipe.py`. The graph marks each change of scope.
+Candidates include `executor.py`, `workspace.py`, `migrations.py`, `secret_guard.py`, and `recipe.py`.
+
+Added so far:
+
+| Module | PR | First run | Finished tests |
+|---|---|---|---|
+| `options` | #444 | 46m, 71.4% (65 survivors) | 11m, 100% |
 
 ## Finished
 
@@ -64,3 +63,4 @@ Candidates include `executor.py`, `workspace.py`, `migrations.py`, `options.py`,
 
 - Phase 3 (#441): Complete main-branch runs publish raw per-module history and the latest-score endpoint nightly at 02:23 UTC, gated by changed inputs. Pages carries both JSON files.
 - Phase 4 (#442): The benchmarks dashboard graphs the overall score and each module from `mutation-history.json`, marking where the module set changed, and the README carries a shields.io endpoint badge reading `mutation-latest.json`.
+- Phase 5 (#443, JacksonFergusonDev.github.io#7): jacksonferguson.me fetches `mutation-latest.json` at build time through a `json` remote asset type that checks the file's shape, and shows the score on the Protostar card, linked to the dashboard. After a published run's Pages deploy, the mutation workflow's `refresh-site` job sends the site a `remote-assets-updated` dispatch using `PORTFOLIO_DISPATCH_TOKEN`, a fine-grained token limited to the site's repository. The first complete run, started by hand, recorded 99.9% across 14 modules at `da9b757` on 2026-10-04.

@@ -190,6 +190,7 @@ source_paths = [
     "src/protostar/jsonc_ast.py",
     "src/protostar/manifest.py",
     "src/protostar/merge.py",
+    "src/protostar/options.py",
     "src/protostar/reconciliation.py",
     "src/protostar/sync_state.py",
     "src/protostar/text_merge.py",
