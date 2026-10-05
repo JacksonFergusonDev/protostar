@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791161953352,
+  "lastUpdate": 1791173253554,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21595,6 +21595,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1016.85,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "fc7af4f4231183bfd356f89497628c7a0ca5eff4",
+          "message": "docs(agents): record the CI runner budget\n\nPull request and push workflows stay within 20 runners and 5 macOS so\nevery job starts at once; scheduled workflows have no limit.",
+          "timestamp": "2026-10-04T21:05:14-07:00",
+          "tree_id": "f6623da4b11f9d6e6abd554a5060a2b7177707b4",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/fc7af4f4231183bfd356f89497628c7a0ca5eff4"
+        },
+        "date": 1791173252038,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 121.46,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 822.14,
             "unit": "ms"
           }
         ]
