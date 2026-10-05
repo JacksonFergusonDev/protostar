@@ -354,7 +354,10 @@ class SystemExecutor(Reconciliation):
         self._preserve_deleted_pyproject = review.preserve_deleted_pyproject
         self.diagnostics.extend(review.diagnostics)
         for path in review.directories:
-            self.fs.ensure_directory(Path(path))
+            try:
+                self.fs.ensure_directory(Path(path))
+            except OSError as error:
+                raise FileSystemError("create directory", path, error) from error
         for edit in review.edits:
             try:
                 if edit.after is None:
