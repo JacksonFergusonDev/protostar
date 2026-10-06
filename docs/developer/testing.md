@@ -86,7 +86,7 @@ The sites each scenario passes are committed in `tests/rollback_sites/`, and the
 uv run pytest tests/test_rollback.py -k sites_match --snapshot-update
 ```
 
-Pull requests run one representative scenario, `cli` merged into an existing project. Every template and seed runs with `--rollback-scope full`, or locally with `just test-rollback`.
+Pull requests keep to what guards coverage, so their test jobs stay within a few minutes on every platform: every scenario's clean run and site list, an error after each site of one representative scenario (`cli` merged into an existing project), and that scenario's real commands once, except on Windows, where a real init takes a minute. Every position and fault in every template and seed, and faults around real commands, run with `--rollback-scope full`, or locally with `just test-rollback`. The harness skips `fsync`: rollback restores what is on disk, and durability through a power cut isn't under test.
 
 ### Template Hooks Smoke Matrix (CI)
 

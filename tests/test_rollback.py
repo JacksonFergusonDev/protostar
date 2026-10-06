@@ -10,8 +10,11 @@ and the cases are generated from them. A change that adds, removes, or
 reorders a site fails ``test_the_sites_match_the_recorded_list`` until the
 list is regenerated with ``--snapshot-update``, so new sites show in review.
 
-Pull requests run one representative scenario (``--rollback-scope pr``, the
-default); the nightly run covers every template and seed (``full``).
+Pull requests (``--rollback-scope pr``, the default) check every scenario's
+site list, raise an error after each site of one representative scenario, and
+run its real commands once, off Windows, so their test jobs stay within a few
+minutes. The full scope raises every fault in every scenario, and faults
+around real commands, nightly.
 """
 
 from __future__ import annotations
@@ -46,10 +49,25 @@ from tests.rollback_harness import (
 REPRESENTATIVE = Scenario("cli", "adopted")
 
 
+def _full(config: pytest.Config) -> bool:
+    return config.getoption("--rollback-scope") == "full"
+
+
 def _scenarios(config: pytest.Config) -> tuple[Scenario, ...]:
-    if config.getoption("--rollback-scope") == "full":
-        return SCENARIOS
-    return (REPRESENTATIVE,)
+    return SCENARIOS if _full(config) else (REPRESENTATIVE,)
+
+
+def _one_per_site(scenario: Scenario) -> list[Case]:
+    """The pull-request faults: an error after each write, directory, and command.
+
+    That is the fault that proves a path was journaled before it changed. The
+    other positions and the interrupt run nightly, so a pull request's test
+    jobs stay within a few minutes on every platform.
+    """
+    return [
+        Case(scenario, site, Position.AFTER, Fault.ERROR)
+        for site in scenario.recorded_sites()
+    ]
 
 
 def _real_cases(scenario: Scenario) -> list[Case]:
@@ -74,10 +92,13 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if "scenario" in metafunc.fixturenames:
         metafunc.parametrize("scenario", SCENARIOS, ids=lambda s: s.name)
     if "case" in metafunc.fixturenames:
-        selected = [case for scenario in scenarios for case in cases(scenario)]
+        select = cases if _full(metafunc.config) else _one_per_site
+        selected = [case for scenario in scenarios for case in select(scenario)]
         metafunc.parametrize("case", selected, ids=lambda c: c.id)
     if "real_case" in metafunc.fixturenames:
-        selected = _real_cases(REPRESENTATIVE)
+        # A real command takes a minute on Windows, so faults around real
+        # commands run nightly only.
+        selected = _real_cases(REPRESENTATIVE) if _full(metafunc.config) else []
         metafunc.parametrize("real_case", selected, ids=lambda c: c.id)
 
 
@@ -133,30 +154,23 @@ def _assert_clean_run(
 # ------------------------------------------------------------ site lists -- #
 
 
-def test_the_sites_match_the_recorded_list(
+def test_a_clean_run_passes_the_recorded_sites_and_journals_every_change(
     scenario: Scenario, tmp_path, monkeypatch, capsys, request
 ):
-    workspace = Workspace.seed(tmp_path, scenario)
-    outcome = init(workspace, scenario, Runner.FAKE, monkeypatch, capsys)
-    assert outcome.code == 0, outcome.payload
-    if request.config.getoption("--snapshot-update"):
-        SITES_DIR.mkdir(exist_ok=True)
-        scenario.sites_file.write_text("\n".join(outcome.sites) + "\n", "utf-8")
-    assert outcome.sites == scenario.recorded_sites()
+    """The fault cases cover every site, and every change goes through one.
 
-
-def test_a_clean_run_journals_every_path_it_changes(
-    scenario: Scenario, tmp_path, monkeypatch, capsys
-):
-    """Every write goes through the seams the fault cases cover.
-
-    A file written around ``TransactionAwareFS`` would survive a rollback;
-    this fails first, naming it.
+    A new site fails here until the list is regenerated, so it gets its
+    cases; a file written around ``TransactionAwareFS`` would survive a
+    rollback, so it fails here too, named.
     """
     workspace = Workspace.seed(tmp_path, scenario)
     before = workspace.capture()
     outcome = init(workspace, scenario, Runner.FAKE, monkeypatch, capsys)
     _assert_clean_run(outcome, workspace, before)
+    if request.config.getoption("--snapshot-update"):
+        SITES_DIR.mkdir(exist_ok=True)
+        scenario.sites_file.write_text("\n".join(outcome.sites) + "\n", "utf-8")
+    assert outcome.sites == scenario.recorded_sites()
 
 
 # ----------------------------------------------------------------- faults -- #
@@ -200,8 +214,10 @@ def real_commands(
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("real_commands")
-def test_real_commands_pass_the_recorded_sites(tmp_path, monkeypatch, capsys):
+def test_real_commands_pass_the_recorded_sites(tmp_path, monkeypatch, capsys, request):
     """The fake runner stands in faithfully: real commands pass the same sites."""
+    if sys.platform == "win32" and not _full(request.config):
+        pytest.skip("A real init takes a minute on Windows; nightly runs it there.")
     scenario = REPRESENTATIVE
     workspace = Workspace.seed(tmp_path, scenario)
     before = workspace.capture()
