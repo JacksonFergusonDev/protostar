@@ -32,11 +32,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
     group.addoption(
         "--rollback-real",
-        choices=("subset", "all"),
-        default="subset",
+        choices=("once", "all"),
+        default="once",
         help=(
-            "Faults to raise around real commands in each scenario: an error "
-            "after each command (subset), or at every site (all, run nightly)."
+            "Real commands: one clean run of the representative scenario, off "
+            "Windows (once), or a clean run of every scenario in scope and "
+            "every fault around real commands (all, run nightly)."
         ),
     )
     group.addoption(

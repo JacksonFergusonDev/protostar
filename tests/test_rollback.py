@@ -10,11 +10,12 @@ and the cases are generated from them. A change that adds, removes, or
 reorders a site fails ``test_the_sites_match_the_recorded_list`` until the
 list is regenerated with ``--snapshot-update``, so new sites show in review.
 
-Pull requests run one representative scenario (``--rollback-scope pr``, the
-default), with real commands only around an error after each one. Nightly runs
-every template and seed (``--rollback-scope full``) and raises every fault
-around real commands too (``--rollback-real all``), one template per job
-(``--rollback-templates``).
+Pull requests (``--rollback-scope pr``, the default) check every scenario's
+site list, raise an error after each site of one representative scenario, and
+run its real commands once (``--rollback-real once``), off Windows, so their
+test jobs stay within a few minutes. The full scope raises every fault in
+every scenario; nightly also raises each around real commands
+(``--rollback-real all``), one template per job (``--rollback-templates``).
 """
 
 from __future__ import annotations
@@ -52,8 +53,12 @@ from tests.rollback_harness import (
 REPRESENTATIVE = Scenario("cli", "adopted")
 
 
+def _full(config: pytest.Config) -> bool:
+    return config.getoption("--rollback-scope") == "full"
+
+
 def _scenarios(config: pytest.Config) -> tuple[Scenario, ...]:
-    if config.getoption("--rollback-scope") == "pr":
+    if not _full(config):
         return (REPRESENTATIVE,)
     templates = {t for t in config.getoption("--rollback-templates").split(",") if t}
     unknown = templates - {scenario.template for scenario in SCENARIOS}
@@ -62,33 +67,37 @@ def _scenarios(config: pytest.Config) -> tuple[Scenario, ...]:
     return tuple(s for s in SCENARIOS if not templates or s.template in templates)
 
 
-def _real_cases(scenario: Scenario, every: bool) -> list[Case]:
-    """The faults raised around real commands in one scenario.
+def _every_real(config: pytest.Config) -> bool:
+    return config.getoption("--rollback-real") == "all"
 
-    Every case but a command stopped mid-way, which only the fake can do at a
-    known point; or, by default, an error after each command and an
-    interrupt after the last. Those are where real commands differ from the
-    fake: what a real `git init`, `uv add`, or hook install leaves on disk
+
+def _one_per_site(scenario: Scenario) -> list[Case]:
+    """The pull-request faults: an error after each write, directory, and command.
+
+    That is the fault that proves a path was journaled before it changed. The
+    other positions and the interrupt run in the full scope, so a pull
+    request's test jobs stay within a few minutes on every platform.
+    """
+    return [
+        Case(scenario, site, Position.AFTER, Fault.ERROR)
+        for site in scenario.recorded_sites()
+    ]
+
+
+def _real_cases(scenario: Scenario) -> list[Case]:
+    """Every fault around real commands in one scenario.
+
+    All but a command stopped mid-way, which only the fake can do at a known
+    point. What a real `git init`, `uv add`, or hook install leaves on disk
     must roll back too.
     """
-    if every:
-        return [
-            case
-            for case in cases(scenario)
-            if not (
-                site_kind(case.site) is SiteKind.COMMAND
-                and case.position is Position.MID
-            )
-        ]
-    commands = [
-        site
-        for site in scenario.recorded_sites()
-        if site_kind(site) is SiteKind.COMMAND
+    return [
+        case
+        for case in cases(scenario)
+        if not (
+            site_kind(case.site) is SiteKind.COMMAND and case.position is Position.MID
+        )
     ]
-    selected = [Case(scenario, site, Position.AFTER, Fault.ERROR) for site in commands]
-    if commands:
-        selected.append(Case(scenario, commands[-1], Position.AFTER, Fault.INTERRUPT))
-    return selected
 
 
 def _last_write(scenario: Scenario) -> Case:
@@ -136,15 +145,20 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         ]
         metafunc.parametrize("retried_case", selected, ids=lambda c: c.id)
     if "case" in metafunc.fixturenames:
-        selected = [case for scenario in scenarios for case in cases(scenario)]
+        select = cases if _full(metafunc.config) else _one_per_site
+        selected = [case for scenario in scenarios for case in select(scenario)]
         metafunc.parametrize("case", selected, ids=lambda c: c.id)
     if "real_scenario" in metafunc.fixturenames:
-        metafunc.parametrize("real_scenario", scenarios, ids=lambda s: s.name)
+        real = scenarios if _every_real(metafunc.config) else (REPRESENTATIVE,)
+        metafunc.parametrize("real_scenario", real, ids=lambda s: s.name)
     if "real_case" in metafunc.fixturenames:
-        every = metafunc.config.getoption("--rollback-real") == "all"
-        selected = [
-            case for scenario in scenarios for case in _real_cases(scenario, every)
-        ]
+        # A real command takes a minute on Windows, so faults around real
+        # commands run nightly only.
+        selected = (
+            [case for scenario in scenarios for case in _real_cases(scenario)]
+            if _every_real(metafunc.config)
+            else []
+        )
         metafunc.parametrize("real_case", selected, ids=lambda c: c.id)
 
 
@@ -224,30 +238,23 @@ def _assert_clean_run(
 # ------------------------------------------------------------ site lists -- #
 
 
-def test_the_sites_match_the_recorded_list(
+def test_a_clean_run_passes_the_recorded_sites_and_journals_every_change(
     scenario: Scenario, tmp_path, monkeypatch, capsys, request
 ):
-    workspace = Workspace.seed(tmp_path, scenario)
-    outcome = init(workspace, scenario, Runner.FAKE, monkeypatch, capsys)
-    assert outcome.code == 0, outcome.payload
-    if request.config.getoption("--snapshot-update"):
-        SITES_DIR.mkdir(exist_ok=True)
-        scenario.sites_file.write_text("\n".join(outcome.sites) + "\n", "utf-8")
-    assert outcome.sites == scenario.recorded_sites()
+    """The fault cases cover every site, and every change goes through one.
 
-
-def test_a_clean_run_journals_every_path_it_changes(
-    scenario: Scenario, tmp_path, monkeypatch, capsys
-):
-    """Every write goes through the seams the fault cases cover.
-
-    A file written around ``TransactionAwareFS`` would survive a rollback;
-    this fails first, naming it.
+    A new site fails here until the list is regenerated, so it gets its
+    cases; a file written around ``TransactionAwareFS`` would survive a
+    rollback, so it fails here too, named.
     """
     workspace = Workspace.seed(tmp_path, scenario)
     before = workspace.capture()
     outcome = init(workspace, scenario, Runner.FAKE, monkeypatch, capsys)
     _assert_clean_run(outcome, workspace, before)
+    if request.config.getoption("--snapshot-update"):
+        SITES_DIR.mkdir(exist_ok=True)
+        scenario.sites_file.write_text("\n".join(outcome.sites) + "\n", "utf-8")
+    assert outcome.sites == scenario.recorded_sites()
 
 
 # ----------------------------------------------------------------- faults -- #
@@ -375,9 +382,11 @@ def real_commands(
 @pytest.mark.integration
 @pytest.mark.usefixtures("real_commands")
 def test_real_commands_pass_the_recorded_sites(
-    real_scenario: Scenario, tmp_path, monkeypatch, capsys
+    real_scenario: Scenario, tmp_path, monkeypatch, capsys, request
 ):
     """The fake runner stands in faithfully: real commands pass the same sites."""
+    if sys.platform == "win32" and not _every_real(request.config):
+        pytest.skip("A real init takes a minute on Windows; nightly runs it there.")
     scenario = real_scenario
     workspace = Workspace.seed(tmp_path, scenario)
     before = workspace.capture()
