@@ -92,7 +92,7 @@ The sites each scenario passes are committed in `tests/rollback_sites/`, and the
 uv run pytest tests/test_rollback.py -k sites_match --snapshot-update
 ```
 
-Pull requests keep to what guards coverage, so their test jobs stay within a few minutes on every platform: every scenario's clean run and site list, an error after each site of two representative scenarios (`cli` merged into an existing project, and a `sync` of `cli`), and the first one's real commands once, except on Windows, where a real init takes a minute. One Linux pull-request job raises every position and fault in every template and seed (`--rollback-scope full`), which faked commands make cheap there. Nightly does the same with every fault raised around real commands too (`--rollback-real all`), in one job per template and operating system:
+Pull requests keep to what guards coverage, so their test jobs stay within a few minutes on every platform: every scenario's clean run and site list, an error after each site of two representative scenarios (`cli` merged into an existing project, and a `sync` of `cli`), and the first one's real commands once, except on Windows, where a real init takes a minute. The three Linux pull-request jobs raise every position and fault in every template and seed (`--rollback-scope full`) between them, a third each (`--rollback-shard 1/3` and so on, a stable split by test id), which faked commands make cheap there. Nightly does the same with every fault raised around real commands too (`--rollback-real all`), in one job per template and operating system, and six slices per template on Windows, where each run is slowest:
 
 ```bash
 uv run pytest tests/test_rollback.py --rollback-scope full --rollback-real all --rollback-templates ml

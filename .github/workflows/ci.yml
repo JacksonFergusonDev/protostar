@@ -97,8 +97,9 @@ jobs:
 
   # Every OS and Python runs the suite; macOS smoke-tests templates after it,
   # so it takes no runner of its own. Linux smoke-tests every template at every
-  # Python, and Windows every template at the oldest and newest. One Linux job
-  # raises every rollback fault, with commands faked. Nightly runs the rest.
+  # Python, and Windows every template at the oldest and newest. The Linux jobs
+  # split every rollback fault between them, with commands faked. Nightly runs
+  # the rest.
   platforms:
     name: Platforms
     uses: ./.github/workflows/platforms.yml
@@ -110,8 +111,9 @@ jobs:
           "os": ["ubuntu-latest", "macos-latest", "windows-latest"],
           "python": ["3.12", "3.13", "3.14"],
           "include": [
-            {"os": "ubuntu-latest", "python": "3.14", "coverage": true},
-            {"os": "ubuntu-latest", "python": "3.13", "rollback": "full"},
+            {"os": "ubuntu-latest", "python": "3.12", "rollback": "1/3"},
+            {"os": "ubuntu-latest", "python": "3.13", "rollback": "2/3"},
+            {"os": "ubuntu-latest", "python": "3.14", "coverage": true, "rollback": "3/3"},
             {"os": "macos-latest", "python": "3.12", "smoke": ["ml"]},
             {"os": "macos-latest", "python": "3.13", "smoke": ["api", "astro"]},
             {"os": "macos-latest", "python": "3.14", "smoke": ["cli", "lib"]}

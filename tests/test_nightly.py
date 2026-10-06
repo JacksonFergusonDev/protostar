@@ -185,17 +185,52 @@ def test_pull_requests_smoke_test_every_template_at_every_python_on_linux():
 
 
 def test_one_pull_request_job_reports_coverage():
-    assert [t for t in PULL_REQUEST["tests"] if t.get("coverage")] == [
-        {"os": "ubuntu-latest", "python": "3.14", "coverage": True}
-    ]
+    assert [
+        (t["os"], t["python"]) for t in PULL_REQUEST["tests"] if t.get("coverage")
+    ] == [("ubuntu-latest", "3.14")]
     assert not [t for t in NIGHTLY["tests"] if t.get("coverage")]
 
 
-def test_one_pull_request_job_raises_every_rollback_fault():
+def test_the_linux_pull_request_jobs_split_every_rollback_fault():
     # Cheap with commands faked on Linux; everywhere else runs the PR scope.
-    full = [entry for entry in PULL_REQUEST["tests"] if entry.get("rollback")]
-    assert [(e["os"], e["rollback"]) for e in full] == [("ubuntu-latest", "full")]
-    assert not full[0].get("coverage")
+    shards = sorted(
+        (entry["os"], entry["rollback"])
+        for entry in PULL_REQUEST["tests"]
+        if entry.get("rollback")
+    )
+    assert shards == [("ubuntu-latest", f"{i}/3") for i in (1, 2, 3)]
+
+
+def test_rollback_slices_cover_every_test_exactly_once():
+    import subprocess
+    import sys
+
+    def collect(*options: str) -> list[str]:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "tests/test_rollback.py",
+                "--co",
+                "-q",
+                "-p",
+                "no:randomly",
+                "--rollback-scope",
+                "full",
+                *options,
+            ],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            check=True,
+        )
+        return [line for line in result.stdout.splitlines() if "::" in line]
+
+    whole = collect()
+    slices = [collect("--rollback-shard", f"{i}/3") for i in (1, 2, 3)]
+    assert sorted(test for part in slices for test in part) == sorted(whole)
+    assert all(len(part) > len(whole) / 4 for part in slices)
 
 
 def test_a_pull_request_stays_within_the_accounts_runner_limits():
@@ -206,14 +241,22 @@ def test_a_pull_request_stays_within_the_accounts_runner_limits():
 
 
 def test_nightly_fails_every_template_at_every_site_on_every_os():
-    """Scheduled runs have no runner limit, so each template gets its own job."""
+    """Scheduled runs have no runner limit: a job per template, six on Windows."""
     rollback = job("nightly.yml", "rollback")
+    matrix = rollback["strategy"]["matrix"]
     runs = {
-        (entry["os"], entry["template"])
-        for entry in expand(rollback["strategy"]["matrix"])
+        (entry["os"], entry["template"], entry["slice"])
+        for entry in expand({k: v for k, v in matrix.items() if k != "exclude"})
+        if not any(
+            all(entry[key] == value for key, value in excluded.items())
+            for excluded in matrix["exclude"]
+        )
     }
     assert runs == {
-        (os, template) for os in OPERATING_SYSTEMS for template in built_in_templates()
+        (os, template, part)
+        for os in OPERATING_SYSTEMS
+        for template in built_in_templates()
+        for part in (range(1, 7) if os == "windows-latest" else [1])
     }
     (step,) = [
         s for s in rollback["steps"] if s.get("uses") == "./.github/actions/pytest"

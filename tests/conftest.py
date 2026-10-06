@@ -45,6 +45,43 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default="",
         help="Comma-separated templates to limit the full scope to (a nightly shard).",
     )
+    group.addoption(
+        "--rollback-shard",
+        default="1/1",
+        metavar="I/N",
+        help=(
+            "Run the I-th of N stable slices of the rollback tests, so CI can "
+            "split them across jobs."
+        ),
+    )
+
+
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
+    """Keeps one slice of the rollback tests, chosen by a hash of each id."""
+    import zlib
+
+    shard = config.getoption("--rollback-shard")
+    try:
+        index, count = (int(part) for part in shard.split("/"))
+    except ValueError:
+        raise pytest.UsageError(
+            f"--rollback-shard: expected I/N, got {shard!r}"
+        ) from None
+    if not 1 <= index <= count:
+        raise pytest.UsageError(f"--rollback-shard: {shard!r} is out of range")
+    if count == 1:
+        return
+    kept: list[pytest.Item] = []
+    dropped: list[pytest.Item] = []
+    for item in items:
+        in_slice = zlib.crc32(item.nodeid.encode()) % count == index - 1
+        rollback = item.path.name == "test_rollback.py"
+        (kept if in_slice or not rollback else dropped).append(item)
+    if dropped:
+        config.hook.pytest_deselected(items=dropped)
+        items[:] = kept
 
 
 @pytest.fixture
