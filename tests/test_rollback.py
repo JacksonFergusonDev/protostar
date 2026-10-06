@@ -29,6 +29,7 @@ from pathlib import Path
 import pytest
 
 from tests.rollback_harness import (
+    POSITIONS,
     SCENARIOS,
     SITES_DIR,
     Case,
@@ -75,13 +76,20 @@ def _one_per_site(scenario: Scenario) -> list[Case]:
     """The pull-request faults: an error after each write, directory, and command.
 
     That is the fault that proves a path was journaled before it changed. The
-    other positions and the interrupt run in the full scope, so a pull
-    request's test jobs stay within a few minutes on every platform.
+    commit takes an interrupt on either side, where the run either rolls back
+    or stands. The other positions and faults run in the full scope, so a
+    pull request's test jobs stay within a few minutes on every platform.
     """
-    return [
-        Case(scenario, site, Position.AFTER, Fault.ERROR)
-        for site in scenario.recorded_sites()
-    ]
+    selected = []
+    for site in scenario.recorded_sites():
+        if site_kind(site) is SiteKind.COMMIT:
+            selected += [
+                Case(scenario, site, position, Fault.INTERRUPT)
+                for position in POSITIONS[SiteKind.COMMIT]
+            ]
+        else:
+            selected.append(Case(scenario, site, Position.AFTER, Fault.ERROR))
+    return selected
 
 
 def _real_cases(scenario: Scenario) -> list[Case]:
@@ -127,14 +135,20 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         metafunc.parametrize("scenario", SCENARIOS, ids=lambda s: s.name)
     if "scoped_scenario" in metafunc.fixturenames:
         metafunc.parametrize("scoped_scenario", scenarios, ids=lambda s: s.name)
+    full = _full(metafunc.config)
     if "failed_restore" in metafunc.fixturenames:
+        # A pull request fails one restore per scenario; the full scope, each.
         restores = [
-            pair for scenario in scenarios for pair in _failed_restores(scenario)
+            pair
+            for scenario in scenarios
+            for pair in _failed_restores(scenario)[: None if full else 1]
         ]
         metafunc.parametrize(
             "failed_restore", restores, ids=lambda p: f"{p[0].scenario.name}:{p[1]}"
         )
     if "retried_case" in metafunc.fixturenames:
+        # A pull request retries after an interrupt at the last write, when
+        # the most is rolled back; the full scope, after one at each site.
         selected = [
             case
             for scenario in scenarios
@@ -142,10 +156,11 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             if case.position is Position.AFTER
             and case.fault is Fault.INTERRUPT
             and not _commits(case)
+            and (full or case.site == _last_write(scenario).site)
         ]
         metafunc.parametrize("retried_case", selected, ids=lambda c: c.id)
     if "case" in metafunc.fixturenames:
-        select = cases if _full(metafunc.config) else _one_per_site
+        select = cases if full else _one_per_site
         selected = [case for scenario in scenarios for case in select(scenario)]
         metafunc.parametrize("case", selected, ids=lambda c: c.id)
     if "real_scenario" in metafunc.fixturenames:
