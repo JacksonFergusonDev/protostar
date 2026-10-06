@@ -221,7 +221,7 @@ def _assert_survived(outcome: Outcome, workspace: Workspace, clean: Workspace) -
 
     Only the hooks the failed install would have written may differ.
     """
-    assert outcome.fired, "the run never reached the hook install"
+    assert outcome.fired, _unreached("the hook install", outcome)
     assert outcome.code == 0, outcome.payload
     assert "Could not install git hooks" in json.dumps(outcome.payload)
     expected, project = clean.capture()[0], workspace.capture()[0]
@@ -235,7 +235,7 @@ def _assert_committed(
     outcome: Outcome, workspace: Workspace, before: tuple[Tree, Tree]
 ) -> None:
     """Checks an interrupt after the commit kept every change and claimed no rollback."""
-    assert outcome.fired, "the run never committed"
+    assert outcome.fired, _unreached("the commit", outcome)
     assert outcome.code == 130
     # A plain interrupt: no payload says the run was rolled back.
     assert outcome.payload == {}
@@ -249,7 +249,7 @@ def _assert_rolled_back(
     case: Case, outcome: Outcome, workspace: Workspace, before: tuple[Tree, Tree]
 ) -> None:
     """Checks a failed run left nothing behind and touched nothing it didn't journal."""
-    assert outcome.fired, f"the run never reached {case.site}"
+    assert outcome.fired, _unreached(case.site, outcome)
     if case.fault is Fault.INTERRUPT:
         assert outcome.code == 130, outcome.payload
     else:
@@ -275,6 +275,12 @@ def _assert_rolled_back(
         if path not in journaled and project.identities.get(path) != identity
     )
     assert not rewritten, "rewritten outside the journal:\n" + "\n".join(rewritten)
+
+
+def _unreached(site: str, outcome: Outcome) -> str:
+    """Says the fault never fired, listing every site the run did pass."""
+    passed = "\n".join(outcome.sites) or "(none)"
+    return f"the run never reached {site}; it passed:\n{passed}"
 
 
 def _assert_unchanged(name: str, before: Tree, after: Tree) -> None:
