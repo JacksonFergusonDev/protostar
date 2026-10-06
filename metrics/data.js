@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791310172276,
+  "lastUpdate": 1791310697562,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21901,6 +21901,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1234.83,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "57cb0fcb4f083cedf9df878e30fed2aa82b9979d",
+          "message": "ci(metrics): let a full manual Nightly record the rollback count (#459)\n\nA manual run that covers the whole matrix is as complete as a scheduled one, so\nit publishes. One narrowed to an OS or template is incomplete and now ends\nquietly instead of failing; a scheduled run still fails loudly.",
+          "timestamp": "2026-10-06T11:14:42-07:00",
+          "tree_id": "6e5572d8909395959c0ab02936aaa3d5a23ea085",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/57cb0fcb4f083cedf9df878e30fed2aa82b9979d"
+        },
+        "date": 1791310694969,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 193.44,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1397.46,
             "unit": "ms"
           }
         ]
