@@ -57,7 +57,7 @@ Some tests exist to keep a rule from AGENTS.md true:
 - **`tests/test_cli_startup.py`** checks in fresh interpreters that `--help` and `--version` import no project analysis, execution, or format engine.
 - **`tests/test_legacy_encoding.py`** renders output to a strict cp1252 stream, as Windows does for redirected output. Test new output there; macOS and Linux never hit it.
 - **`tests/test_tui_theme.py`** fails when TUI code names a color outside the theme.
-- **`tests/test_rollback.py`** fails `init` at every write, directory, and command, and fails when a run changes a file it never journaled (see [Rollback Fault Injection](#rollback-fault-injection)).
+- **`tests/test_rollback.py`** fails `init` and `sync` at every write, directory, removal, and command, and fails when a run changes a file it never journaled (see [Rollback Fault Injection](#rollback-fault-injection)).
 - **TUI snapshots** compare each screen's rendering, and `check_layout` measures its spacing against the layout rule, so every new screen needs a snapshot. Drive TUI tests with `pilot.press`, and use `pilot.click` only in tests about the mouse.
 
 ## Test Categories
@@ -70,21 +70,21 @@ Repeatability and reconciliation acceptance live in `tests/test_template_repeata
 
 ### Rollback Fault Injection
 
-Execution is one transaction: a failure anywhere must leave the project and the home directory exactly as they were. `tests/test_rollback.py` checks that at every point a real `init` can fail. Every disk mutation goes through three `TransactionAwareFS` operations and every command through `ProcessRunner.run`, so the harness (`tests/rollback_harness.py`) wraps those four seams and names each call a site: `write:pyproject.toml#2` is the second write of `pyproject.toml`. Each case seeds a project, fails the run at one site, and compares the trees afterwards:
+Execution is one transaction: a failure anywhere must leave the project and the home directory exactly as they were. `tests/test_rollback.py` checks that at every point a real `init` or `sync` can fail. Every disk mutation goes through three `TransactionAwareFS` operations and every command through `ProcessRunner.run`, so the harness (`tests/rollback_harness.py`) wraps those four seams and names each call a site: `write:pyproject.toml#2` is the second write of `pyproject.toml`. Each case seeds a project, fails the run at one site, and compares the trees afterwards:
 
 - **Where:** before the operation, mid-way (a write's final rename fails after its temporary file exists; a command does half its work), or after it.
 - **How:** an error (`OSError`, or a failed command) or an interrupt (`KeyboardInterrupt`).
-- **Seeds:** an empty folder, an existing project Protostar merges into (comments, kept file modes, binary and CRLF files, an unrelated tree), and the same project already a git repository.
+- **Seeds:** for `init`, an empty folder, an existing project Protostar merges into (comments, kept file modes, binary and CRLF files, an unrelated tree), and the same project already a git repository. For `sync`, a project `init` just created whose recipe then turns tools off and on and loses an installed hook, so the run removes files, adds one, resolves dependencies, and installs hooks again.
 
-A case passes when the run exits with a domain error (or 130 for an interrupt), every path is restored byte for byte with its mode, nothing is left behind, and no file the run never journaled was rewritten. Only what the rollback boundary disclaims goes uncompared: uv's `.venv/` and tool caches in the home directory, listed with their reasons in the harness.
+A case passes when the run exits with a domain error (or 130 for an interrupt), every path is restored byte for byte with its mode, nothing is left behind, and no file the run never journaled was rewritten. The one exception is an error in the hook install on `sync`, which only warns: that run must finish, say so, and leave what a clean run leaves apart from the hooks. Only what the rollback boundary disclaims goes uncompared: uv's `.venv/` and tool caches in the home directory, listed with their reasons in the harness.
 
 The commit is a site too. An interrupt just before it rolls everything back; one just after it must keep the finished run whole and report a plain interrupt, never a rollback. Three more checks cover rollback itself:
 
 - **A restore that fails:** each path the run writes fails its restore in turn. Rollback must name that path (and any directory it created above it) in `RollbackFailedError`, and restore everything else.
 - **A second `Ctrl+C`:** a real `SIGINT` arrives as rollback starts, and every path must still come back. POSIX only.
-- **Running again:** after an interrupt at the last write, which rolls back the most, a second `init` must leave exactly the project a clean run does. Once per scenario is enough: every fault case already proves a rolled-back project matches the seed byte for byte, so this catches only state a run keeps outside the files.
+- **Running again:** after an interrupt at the last write, which rolls back the most, running the command again must leave exactly the project a clean run does. Once per scenario is enough: every fault case already proves a rolled-back project matches the seed byte for byte, so this catches only state a run keeps outside the files.
 
-Commands run through a fake that writes exactly what the executor journaled for them, so the cases stay fast and offline. A clean run must journal every path it changes, which catches a write made around the seams. Integration tests run the real commands for one scenario: they pass the same sites as the fake, and an error after each command, or an interrupt after the last, rolls back what it really did.
+Commands run through a fake that writes exactly what the executor journaled for them (and, for `uv add` and `uv lock`, what uv writes), so the cases stay fast and offline. A clean run must journal every path it changes, which catches a write made around the seams. Integration tests run the real commands for one scenario: they pass the same sites as the fake, and an error after each command, or an interrupt after the last, rolls back what it really did.
 
 The sites each scenario passes are committed in `tests/rollback_sites/`, and the cases are generated from them. A change that adds, removes, or reorders a site fails until the lists are regenerated:
 
@@ -92,7 +92,7 @@ The sites each scenario passes are committed in `tests/rollback_sites/`, and the
 uv run pytest tests/test_rollback.py -k sites_match --snapshot-update
 ```
 
-Pull requests keep to what guards coverage, so their test jobs stay within a few minutes on every platform: every scenario's clean run and site list, an error after each site of one representative scenario (`cli` merged into an existing project), and that scenario's real commands once, except on Windows, where a real init takes a minute. One Linux pull-request job raises every position and fault in every template and seed (`--rollback-scope full`), which faked commands make cheap there. Nightly does the same with every fault raised around real commands too (`--rollback-real all`), in one job per template and operating system:
+Pull requests keep to what guards coverage, so their test jobs stay within a few minutes on every platform: every scenario's clean run and site list, an error after each site of two representative scenarios (`cli` merged into an existing project, and a `sync` of `cli`), and the first one's real commands once, except on Windows, where a real init takes a minute. One Linux pull-request job raises every position and fault in every template and seed (`--rollback-scope full`), which faked commands make cheap there. Nightly does the same with every fault raised around real commands too (`--rollback-real all`), in one job per template and operating system:
 
 ```bash
 uv run pytest tests/test_rollback.py --rollback-scope full --rollback-real all --rollback-templates ml

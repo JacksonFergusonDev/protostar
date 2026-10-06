@@ -136,6 +136,9 @@ class PreparedProject:
         try:
             executor.execute()
         except (KeyboardInterrupt, ProtostarError) as error:
+            if executor.journal.state is TransactionState.COMMITTED:
+                # Interrupted after the commit: nothing was rolled back.
+                raise
             context = RollbackContext(
                 touched_paths=frozenset(executor.journal.touched_paths),
                 completed_tasks=tuple(executor.completed_tasks),
