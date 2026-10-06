@@ -146,6 +146,13 @@ The docs site (`docs/`, built by Zensical) shares its look and its rules with ja
 - **Script-added files go in `<body>`.** Instant navigation drops any `<head>` element the next page doesn't declare, so a stylesheet or script added at runtime to `<head>` vanishes on the next page. This once broke every recording.
 - **The landing page's first screen is text.** No image, recording, or player loads before the reader scrolls toward it. The hero's Dadras attractor (`docs/javascripts/field.js`, three.js from jsDelivr) loads only after the page has. It follows house-style's motion rules: faint, paused off screen, still for reduced motion, and with a pause control.
 
+## Flaky-Test Issues & Verification
+
+- **A fix awaits verification; it does not close the issue.** After a flaky-test fix lands on `main`, agents must add the `awaiting-verification` label to the test's GitHub issue and leave it open. Link the fix commit or PR and identify the exact test ids and affected platforms so later nightly runs can verify the right behavior. Local passes and a merged PR alone do not establish that the flakiness is resolved.
+- **Track verification per test.** Use the reporter-created issue for each flaky test. The nightly reporter splits existing aggregate issues into individual issues, links the replacements, and retains the aggregate as closed history. Follow those links to mark the fixed tests; do not mark an aggregate as awaiting verification while some tests still need fixes, or create duplicate issues without a managed tracking block.
+- **Require three consecutive clean nightly runs after the fix.** Count a run only when the fixed test actually ran and passed on every affected platform without a retry. Skipped tests, narrowed runs that omit an affected platform, and missing results provide no verification. Keep the issue open with `awaiting-verification` until all three qualifying runs pass; retain the issue and comments as history when it closes.
+- **A recurrence needs attention.** If the test fails or flakes during verification, reset its clean-run count, remove `awaiting-verification`, and return it to work needing a fix. If it recurs after closure, reopen its issue. The nightly reporter handles verification counts, closure, and reopening from explicit per-test results. Agents must mark the issue after the fix lands, link the fix, and leave the managed tracking block intact; never assume that an absent flaky-test report means the test ran cleanly.
+
 ## Pre-Commit & Pre-Push Hooks (Avoid Redundant Checks)
 
 The repository uses **`prek`** hooks (`.pre-commit-config.yaml`) for automated gating:

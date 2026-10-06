@@ -2,11 +2,11 @@
 
 A failed run opens one tracking issue, or comments on the open one, naming the
 failing jobs and the commits since the last passing run. A passing run closes
-it. Tests that passed only when retried go to a separate issue that stays open
-until someone closes it, since a flaky test needs a fix, not another pass.
+it. Each flaky test gets its own issue. Once its fix is marked awaiting
+verification, three clean nightly runs close it; a recurrence reopens it.
 
 Run (from the Nightly Report workflow, with GH_TOKEN set):
-    python3 scripts/nightly_report.py --repo OWNER/NAME --run-id ID --sha SHA
+    python3 -m scripts.nightly_report --repo OWNER/NAME --run-id ID --sha SHA
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ import tempfile
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 # Runs on a bare runner before anything is installed, so it depends on the
 # standard library alone.
@@ -44,12 +44,6 @@ FAILING = Tracker(
     title="Nightly checks are failing on main",
     color="d73a4a",
     description="The scheduled Nightly run failed",
-)
-FLAKY = Tracker(
-    label="flaky-test",
-    title="Flaky tests in the nightly run",
-    color="fbca04",
-    description="Tests that passed only when retried",
 )
 
 
@@ -89,6 +83,7 @@ class GitHub(Protocol):
 
     def jobs(self, run: Run) -> list[Job]: ...
     def flaky_lists(self, run: Run) -> dict[str, str]: ...
+    def track_tests(self, run: Run) -> None: ...
     def last_passing_sha(self, run: Run) -> str | None: ...
     def open_issue(self, tracker: Tracker) -> int | None: ...
     def has_report(self, number: int, body: str) -> bool: ...
@@ -151,28 +146,6 @@ def failure_body(run: Run, outcome: Outcome, last_passing: str | None) -> str:
     return "\n".join(lines) + "\n"
 
 
-def flaky_body(run: Run, outcome: Outcome) -> str:
-    """Lists the tests that failed and then passed when retried.
-
-    Args:
-        run: The run they flaked in.
-        outcome: What it found.
-
-    Returns:
-        Markdown for the issue body or comment.
-    """
-    lines = [
-        f"These tests failed and then passed when retried at `{run.sha[:7]}`"
-        f" ([run]({run.url})). Each one needs a fix:",
-        "",
-    ]
-    lines += [
-        f"- `{test}` ({', '.join(platforms)})"
-        for test, platforms in outcome.flaky.items()
-    ]
-    return "\n".join(lines) + "\n"
-
-
 def report(github: GitHub, run: Run) -> Outcome:
     """Files a finished run as issues.
 
@@ -197,13 +170,7 @@ def report(github: GitHub, run: Run) -> Outcome:
     elif failing is not None:
         github.close(failing, f"Nightly passed at `{run.sha[:7]}` ([run]({run.url})).")
 
-    if outcome.flaky:
-        body = flaky_body(run, outcome)
-        flaky = github.open_issue(FLAKY)
-        if flaky is None:
-            github.create_issue(FLAKY, body)
-        elif not github.has_report(flaky, body):
-            github.comment(flaky, body)
+    github.track_tests(run)
     return outcome
 
 
@@ -235,35 +202,89 @@ class GhCli:
 
     def flaky_lists(self, run: Run) -> dict[str, str]:
         """Each flaky-test artifact the run uploaded, by name."""
-        data = json.loads(
-            self._gh(
-                "api",
-                f"repos/{self.repo}/actions/runs/{run.run_id}/artifacts?per_page=100",
-            )
-        )
         names = [
             artifact["name"]
-            for artifact in data["artifacts"]
+            for artifact in self.artifacts(run)
             if artifact["name"].startswith(FLAKY_ARTIFACT_PREFIX)
         ]
         if not names:
             return {}
         with tempfile.TemporaryDirectory() as directory:
-            self._gh(
-                "run",
-                "download",
-                run.run_id,
-                "--repo",
-                self.repo,
-                "--pattern",
-                f"{FLAKY_ARTIFACT_PREFIX}*",
-                "--dir",
-                directory,
-            )
+            for name in names:
+                self._gh(
+                    "run",
+                    "download",
+                    run.run_id,
+                    "--repo",
+                    self.repo,
+                    "--name",
+                    name,
+                    "--dir",
+                    str(Path(directory) / name),
+                )
             return {
                 name: (Path(directory) / name / FLAKY_LIST).read_text(encoding="utf-8")
                 for name in names
             }
+
+    def artifacts(self, run: Run) -> list[dict[str, Any]]:
+        """Read all artifact pages, since sliced runs can upload more than 100."""
+        pages = json.loads(
+            self._gh(
+                "api",
+                f"repos/{self.repo}/actions/runs/{run.run_id}/artifacts?per_page=100",
+                "--paginate",
+                "--slurp",
+            )
+        )
+        return [artifact for page in pages for artifact in page["artifacts"]]
+
+    def track_tests(self, run: Run) -> None:
+        """Verify fixes using only this attempt's explicit test results."""
+        from scripts.flaky_tracking import IssueStore, Nightly, evidence_from, track
+
+        details = json.loads(
+            self._gh("api", f"repos/{self.repo}/actions/runs/{run.run_id}")
+        )
+        names = [
+            a["name"]
+            for a in self.artifacts(run)
+            if a["name"].startswith("test-results-")
+            and not a["expired"]
+            and a["created_at"] >= details["run_started_at"]
+        ]
+        artifacts: dict[str, dict[str, str]] = {}
+        if names:
+            with tempfile.TemporaryDirectory() as directory:
+                # gh extracts a single named artifact directly into --dir;
+                # multiple named artifacts get their own subdirectories.
+                destination = (
+                    Path(directory) / names[0] if len(names) == 1 else Path(directory)
+                )
+                self._gh(
+                    "run",
+                    "download",
+                    run.run_id,
+                    "--repo",
+                    self.repo,
+                    "--dir",
+                    str(destination),
+                    *(arg for name in names for arg in ("--name", name)),
+                )
+                artifacts = {
+                    name: {
+                        path.name: path.read_text(encoding="utf-8")
+                        for path in (Path(directory) / name).glob("*.json")
+                    }
+                    for name in names
+                }
+        store = IssueStore(self.repo, self._gh)
+        store.ensure_labels()
+        track(
+            store,
+            Nightly(int(run.run_id), run.sha, details["created_at"], run.url),
+            evidence_from(artifacts),
+        )
 
     def last_passing_sha(self, run: Run) -> str | None:
         """The commit of the latest passing Nightly run on main before this one."""

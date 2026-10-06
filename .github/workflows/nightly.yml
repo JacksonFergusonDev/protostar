@@ -41,6 +41,7 @@ jobs:
     timeout-minutes: 2
     permissions:
       actions: read
+      issues: read
     outputs:
       changed: ${{ steps.compare.outputs.changed }}
 
@@ -52,7 +53,9 @@ jobs:
         REPO: ${{ github.repository }}
       run: |
         last=$(gh run list --repo "$REPO" --workflow nightly.yml --branch main --status success --limit 1 --json headSha --jq '.[0].headSha // ""')
-        if [ "$last" = "$GITHUB_SHA" ]; then
+        pending=$(gh issue list --repo "$REPO" --label awaiting-verification --state open --limit 1 --json number --jq length)
+        # Three runs must verify a fix even when no further commits land.
+        if [ "$last" = "$GITHUB_SHA" ] && [ "$pending" = 0 ]; then
           echo "main is still at ${GITHUB_SHA::7}, which already passed."
           echo "changed=false" >> "$GITHUB_OUTPUT"
         else
