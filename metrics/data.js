@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791308732093,
+  "lastUpdate": 1791310172276,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21867,6 +21867,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1247.12,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "737f52ef027cd365a9cca2c959aeae28b84807c0",
+          "message": "feat(metrics): track rollback faults restored on the dashboard and a badge (#458)\n\nNightly's rollback jobs now count the faults they inject, and a new Rollback\nMetrics workflow records the total on gh-pages beside the mutation score, for a\ndashboard section, a README badge, and jacksonferguson.me.",
+          "timestamp": "2026-10-06T11:06:17-07:00",
+          "tree_id": "cc62cf3a0547d40c1991ba0dfae0df752a43ed9d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/737f52ef027cd365a9cca2c959aeae28b84807c0"
+        },
+        "date": 1791310169883,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 179.73,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1234.83,
             "unit": "ms"
           }
         ]
