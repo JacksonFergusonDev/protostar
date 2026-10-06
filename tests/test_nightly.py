@@ -191,6 +191,13 @@ def test_one_pull_request_job_reports_coverage():
     assert not [t for t in NIGHTLY["tests"] if t.get("coverage")]
 
 
+def test_one_pull_request_job_raises_every_rollback_fault():
+    # Cheap with commands faked on Linux; everywhere else runs the PR scope.
+    full = [entry for entry in PULL_REQUEST["tests"] if entry.get("rollback")]
+    assert [(e["os"], e["rollback"]) for e in full] == [("ubuntu-latest", "full")]
+    assert not full[0].get("coverage")
+
+
 def test_a_pull_request_stays_within_the_accounts_runner_limits():
     # The account runs 20 jobs at a time, five of them on macOS, across every
     # open PR and push. Three leave room for a second run on macOS.
