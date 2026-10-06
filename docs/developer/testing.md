@@ -186,9 +186,9 @@ Pass Protostar arguments to run one command without entering a shell, such as `j
     ```
 
 === "Benchmark Preview"
-    Opens the benchmark dashboard at `http://127.0.0.1:8765/benchmarks/`, independently of the documentation server on port 8000. It fetches the published measurements once; refresh the page to see source edits. Stop it with `Ctrl+C`, or choose another port with `just serve-benchmarks 8766`.
+    Opens the metrics dashboard at `http://127.0.0.1:8765/metrics/`, independently of the documentation server on port 8000. It fetches the published measurements once; refresh the page to see source edits. Stop it with `Ctrl+C`, or choose another port with `just serve-metrics 8766`.
     ```bash
-    just serve-benchmarks
+    just serve-metrics
     ```
 
 !!! tip "Manual Execution"
@@ -224,7 +224,7 @@ gh workflow run mutation.yml --ref main -f modules=all
 
 Local runs write each surviving edit as a diff to `mutants/survivors.md`. Each CI runner uploads raw counts, survivor names, and survivor diffs. The combined job adds shard counts into one result per module. The mutation score is `(killed + timeout) / (killed + timeout + survived + suspicious)`; mutants no test reaches are reported separately. Surviving mutants reduce the score but do not make the workflow fail: inspect their diffs and strengthen tests where a meaningful behavior change went unnoticed.
 
-Only a successful complete run on `main` publishes. Failed or cancelled jobs and manual subset runs cannot update the public score. Publication checks every expected artifact and the configured module set, then appends the commit, UTC date, and raw per-module counts to `benchmarks/mutation-history.json` on `gh-pages`. `benchmarks/mutation-latest.json` is a Shields endpoint with the aggregate score and an explicit engine label. Retrying a recorded commit does not add another history point. Counts are retained so the dashboard can later show changes in the module set without averaging percentages.
+Only a successful complete run on `main` publishes. Failed or cancelled jobs and manual subset runs cannot update the public score. Publication checks every expected artifact and the configured module set, then appends the commit, UTC date, and raw per-module counts to `metrics/mutation-history.json` on `gh-pages`. `metrics/mutation-latest.json` is a Shields endpoint with the aggregate score and an explicit engine label. Retrying a recorded commit does not add another history point. Counts are retained so the dashboard can later show changes in the module set without averaging percentages.
 
 Publication rebases and retries if the benchmark or release workflow updates `gh-pages` concurrently; a conflicting history update is regenerated against the new branch contents. The shared Pages workflow deploys both mutation JSON files alongside the performance history. The benchmark dashboard graphs the history, and the README badge reads the latest score.
 
@@ -242,7 +242,7 @@ CI tracks help-command startup (`protostar help init`) and the recipe editor's f
 
 The recipe editor benchmark sets a hidden environment variable, `PROTOSTAR_BENCHMARK_RECIPE_EDITOR=1`. It treats the session as interactive and makes `protostar init` exit as soon as the recipe editor draws its first frame, without waiting on input. Hyperfine measures the whole process, including Python startup and shutdown, in the checked-out repository.
 
-The [CI performance history](https://protostar.jacksonferguson.me/benchmarks/) records main-branch measurements on GitHub Actions Ubuntu runners with Python 3.14. Each recorded point is the mean of 90 executions after 30 warmups. These timings describe the CI environment, not local workstation latency; runner variability and changes to the runner image or project checkout also limit comparisons between commits. Look for sustained trends rather than treating a single increase as a confirmed regression. Older wizard measurements remain in the downloadable history but are excluded from the recipe-editor chart.
+The [metrics dashboard](https://protostar.jacksonferguson.me/metrics/) records main-branch measurements on GitHub Actions Ubuntu runners with Python 3.14. Each recorded point is the mean of 90 executions after 30 warmups. These timings describe the CI environment, not local workstation latency; runner variability and changes to the runner image or project checkout also limit comparisons between commits. Look for sustained trends rather than treating a single increase as a confirmed regression. Older wizard measurements remain in the downloadable history but are excluded from the recipe-editor chart.
 
 The CI regression check uses 30 executions after 5 warmups and fails when a measurement exceeds 250% of the preceding recorded result for the same benchmark. Historical tracking alerts above 200% without failing the run. These are relative checks for large regressions, not an absolute latency budget. The dashboard's comparison with up to 100 preceding benchmark runs is a separate descriptive summary, not the baseline used by either check.
 
@@ -250,10 +250,10 @@ The `justfile` includes predefined recipes using [Hyperfine](https://github.com/
 
 Help and version requests load argument definitions and tool descriptions, but do not load project analysis, reviews, execution, or format engines. Command implementations load only after dispatch. A tool reads its document-backed signals when analysis asks for them, and loads its document generators when planning calls `build()`. `tests/test_cli_startup.py` checks this boundary in fresh interpreters, including JSON help; this catches unnecessary imports without a machine-dependent timing threshold.
 
-The dashboard source lives in `benchmarks/` on `main`. Pages publishing combines that source with the recorded `benchmarks/data.js` from `gh-pages`; it never publishes dashboard code from the data branch. To test its data handling locally, use Node.js 18 or newer:
+The dashboard source lives in `metrics/` on `main`. Pages publishing combines that source with the recorded `metrics/data.js` from `gh-pages`; it never publishes dashboard code from the data branch. To test its data handling locally, use Node.js 18 or newer:
 
 ```bash
-node --test tests/benchmark_metrics.test.mjs
+node --test tests/metrics_dashboard.test.mjs
 ```
 
 === "Quick Benchmark"

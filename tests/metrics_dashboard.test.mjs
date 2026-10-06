@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
-import { escapeHtml, metricHistory, precedingAverage } from '../benchmarks/metrics.mjs';
+import { escapeHtml, metricHistory, precedingAverage } from '../metrics/metrics.mjs';
 
 const editor = 'Protostar Recipe Editor First Frame Latency';
 const wizard = 'Protostar TUI Wizard Latency';
@@ -68,7 +68,7 @@ test('dashboard wiring displays the current editor result, preceding count, and 
     });
     return elements.get(id);
   };
-  const source = await readFile(new URL('../benchmarks/dashboard.js', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../metrics/dashboard.js', import.meta.url), 'utf8');
   const complete = runInNewContext(source.replace(/^import[^\n]*\n/gm, ''), {
     metricHistory, precedingAverage, escapeHtml, loadCharts: async () => {},
     window: { BENCHMARK_DATA: { entries: { 'Protostar Initialization Latency': [
@@ -108,7 +108,7 @@ test('dashboard wiring displays the current editor result, preceding count, and 
 });
 
 // Mutation history is a separate raw-count dataset, independent of latency runs.
-const { mutationScore, mutationHistory, mutationSeries } = await import('../benchmarks/mutations.mjs');
+const { mutationScore, mutationHistory, mutationSeries } = await import('../metrics/mutations.mjs');
 const moduleResult = (module, killed, survived = 0, extra = {}) =>
   ({ module, killed, timeout: 0, survived, suspicious: 0, no_tests: 0, ...extra });
 const mutationRun = (date, modules) => ({ commit: 'b'.repeat(40), date, modules });
@@ -176,7 +176,7 @@ async function renderMutations(response, chartFailure = false) {
     });
     return elements.get(id);
   };
-  const source = await readFile(new URL('../benchmarks/mutation-dashboard.js', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../metrics/mutation-dashboard.js', import.meta.url), 'utf8');
   await runInNewContext(source.replace(/^import[^\n]*\n/gm, ''), {
     mutationHistory, mutationScore, mutationSeries, escapeHtml,
     fetch: async () => response,

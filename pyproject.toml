@@ -210,7 +210,6 @@ pytest_add_cli_args_test_selection = ["tests/"]
 do_not_mutate_patterns = ["# pragma: no mutate"]
 also_copy = [
     ".github/",
-    "benchmarks/",
     "AGENTS.md",
     "CHANGELOG.md",
     "CODE_OF_CONDUCT.md",
@@ -218,9 +217,9 @@ also_copy = [
     "LICENSE",
     "README.md",
     "SECURITY.md",
-    "benchmarks/",
     "docs/",
     "justfile",
+    "metrics/",
     "overrides/",
     "scripts/",
     "src/",

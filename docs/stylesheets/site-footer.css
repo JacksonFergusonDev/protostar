@@ -1,4 +1,4 @@
-/* One footer for the documentation landing page and benchmark dashboard. */
+/* One footer for the documentation landing page and metrics dashboard. */
 .ps-footer { background: var(--bg); color: var(--muted); font-family: var(--sans); font-size: var(--fs-ui); line-height: 1.6; }
 .ps-footer__inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; width: min(1160px, calc(100% - 64px)); margin-inline: auto; padding-block: 20px; }
 .ps-footer p { margin: 0; }

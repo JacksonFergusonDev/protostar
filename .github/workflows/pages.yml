@@ -28,7 +28,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Read current published versions and benchmarks
+      - name: Read current published versions and metrics
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: gh-pages
@@ -44,15 +44,15 @@ jobs:
       - name: Install documentation dependencies
         run: uv sync --only-group docs --locked
 
-      - name: Assemble documentation, redirects, and benchmarks
+      - name: Assemble documentation, redirects, and metrics
         run: |
           latest_version="$(uv run --only-group docs python scripts/prepare_pages.py pages-source --print-latest)"
           git show "refs/tags/v${latest_version}:zensical.toml" > latest-zensical.toml
           uv run --only-group docs python scripts/prepare_pages.py pages-source \
             --output published --config latest-zensical.toml
 
-      - name: Test benchmark dashboard data handling
-        run: node --test tests/benchmark_metrics.test.mjs
+      - name: Test metrics dashboard data handling
+        run: node --test tests/metrics_dashboard.test.mjs
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

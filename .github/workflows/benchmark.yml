@@ -52,7 +52,7 @@ jobs:
         tool: 'customSmallerIsBetter'
         output-file-path: benchmark-gh.json
         gh-pages-branch: 'gh-pages'
-        benchmark-data-dir-path: 'benchmarks'
+        benchmark-data-dir-path: 'metrics'
         github-token: ${{ secrets.GITHUB_TOKEN }}
         fail-on-alert: false
         alert-threshold: '200%'
@@ -60,7 +60,7 @@ jobs:
         auto-push: ${{ github.event_name == 'push' }}
 
   publish-pages:
-    name: Publish updated benchmarks
+    name: Publish updated metrics
     needs: benchmark
     if: github.event_name == 'push'
     permissions:

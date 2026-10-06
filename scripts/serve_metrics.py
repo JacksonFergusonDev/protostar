@@ -1,4 +1,4 @@
-"""Preview benchmark history on localhost without publishing or copying source assets."""
+"""Preview the metrics dashboard on localhost without publishing or copying source assets."""
 
 from __future__ import annotations
 
@@ -18,16 +18,16 @@ if str(_repo_root) not in sys.path:
 
 from scripts._common import DOCS_DIR, OutputStyle, fetch_bytes, report
 from scripts.prepare_pages import (
-    BENCHMARK_ASSETS,
-    BENCHMARK_DIR,
     FOOTER_CSS,
     HEADER_CSS,
     HOUSE_DIR,
-    render_benchmark_index,
+    METRICS_ASSETS,
+    METRICS_DIR,
+    render_metrics_index,
 )
 
 DEFAULT_PORT = 8765
-DATA_URL = "https://protostar.jacksonferguson.me/benchmarks/data.js"
+DATA_URL = "https://protostar.jacksonferguson.me/metrics/data.js"
 
 
 class PreviewHandler(SimpleHTTPRequestHandler):
@@ -37,17 +37,17 @@ class PreviewHandler(SimpleHTTPRequestHandler):
         """Map sanitized preview routes to their repository source files."""
         translated = super().translate_path(path)
         relative = Path(translated).relative_to(self.directory)
-        if relative == Path("benchmarks"):
-            return str(BENCHMARK_DIR)
-        if relative.parts[:2] == ("benchmarks", "house"):
+        if relative == Path("metrics"):
+            return str(METRICS_DIR)
+        if relative.parts[:2] == ("metrics", "house"):
             return str(HOUSE_DIR.joinpath(*relative.parts[2:]))
-        if relative.parent == Path("benchmarks"):
+        if relative.parent == Path("metrics"):
             if relative.name == "site-header.css":
                 return str(HEADER_CSS)
             if relative.name == "site-footer.css":
                 return str(FOOTER_CSS)
-            if relative.name in BENCHMARK_ASSETS:
-                return str(BENCHMARK_DIR / relative.name)
+            if relative.name in METRICS_ASSETS:
+                return str(METRICS_DIR / relative.name)
             if relative.name in ("favicon.svg", "favicon.png"):
                 return str(DOCS_DIR / "assets" / relative.name)
         return translated
@@ -55,8 +55,8 @@ class PreviewHandler(SimpleHTTPRequestHandler):
     def send_head(self) -> BinaryIO | None:
         """Render the live dashboard with the same footer the docs include."""
         path = Path(self.translate_path(self.path))
-        if path in (BENCHMARK_DIR, BENCHMARK_DIR / "index.html"):
-            content = render_benchmark_index().encode("utf-8")
+        if path in (METRICS_DIR, METRICS_DIR / "index.html"):
+            content = render_metrics_index().encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(content)))
@@ -77,27 +77,27 @@ def main() -> None:
     parser.add_argument("--no-open", action="store_true", help="Do not open a browser.")
     args = parser.parse_args()
     data = fetch_bytes(DATA_URL)
-    with tempfile.TemporaryDirectory(prefix="protostar-benchmarks-") as directory:
+    with tempfile.TemporaryDirectory(prefix="protostar-metrics-") as directory:
         root = Path(directory)
-        (root / "benchmarks").mkdir()
-        (root / "benchmarks" / "data.js").write_bytes(data)
+        (root / "metrics").mkdir()
+        (root / "metrics" / "data.js").write_bytes(data)
         (root / "index.html").write_text(
-            '<meta http-equiv="refresh" content="0; url=/benchmarks/">',
+            '<meta http-equiv="refresh" content="0; url=/metrics/">',
             encoding="utf-8",
         )
         handler = partial(PreviewHandler, directory=directory)
         try:
             server = ThreadingHTTPServer(("127.0.0.1", args.port), handler)
         except OSError as error:
-            report(f"Cannot start the benchmark preview: {error}", stderr=True)
+            report(f"Cannot start the metrics preview: {error}", stderr=True)
             report(
-                "Stop the other preview, or choose a port with `just serve-benchmarks 8766`.",
+                "Stop the other preview, or choose a port with `just serve-metrics 8766`.",
                 stderr=True,
             )
             sys.exit(1)
         with server:
-            url = f"http://127.0.0.1:{server.server_port}/benchmarks/"
-            report(f"Benchmark preview: {url}", style=OutputStyle.COMMAND)
+            url = f"http://127.0.0.1:{server.server_port}/metrics/"
+            report(f"Metrics preview: {url}", style=OutputStyle.COMMAND)
             report("Refresh to see source edits. Ctrl+C stops the server.")
             if not args.no_open:
                 webbrowser.open(url)

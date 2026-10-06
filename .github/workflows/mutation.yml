@@ -46,8 +46,8 @@ jobs:
       run: |
         if [[ "$EVENT" == "schedule" ]]; then
           git fetch origin gh-pages
-          if git cat-file -e origin/gh-pages:benchmarks/mutation-history.json; then
-            git show origin/gh-pages:benchmarks/mutation-history.json > mutation-history.json
+          if git cat-file -e origin/gh-pages:metrics/mutation-history.json; then
+            git show origin/gh-pages:metrics/mutation-history.json > mutation-history.json
           fi
           changed="$(python3 scripts/mutation_report.py changed --history mutation-history.json)"
         else
@@ -246,9 +246,9 @@ jobs:
           echo "Publishing mutation results (attempt $attempt/5)."
           python3 scripts/mutation_report.py record \
             --results results --matrix "$MATRIX" --commit "$COMMIT" --date "$recorded_at" \
-            --history pages-data/benchmarks/mutation-history.json \
-            --latest pages-data/benchmarks/mutation-latest.json
-          git -C pages-data add benchmarks/mutation-history.json benchmarks/mutation-latest.json
+            --history pages-data/metrics/mutation-history.json \
+            --latest pages-data/metrics/mutation-latest.json
+          git -C pages-data add metrics/mutation-history.json metrics/mutation-latest.json
           if ! git -C pages-data diff --cached --quiet; then
             git -C pages-data commit -m "Record engine mutation score for ${COMMIT:0:7}"
           fi

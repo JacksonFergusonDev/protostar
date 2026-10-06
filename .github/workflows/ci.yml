@@ -149,7 +149,7 @@ jobs:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
     - name: Test benchmark dashboard data handling
-      run: node --test tests/benchmark_metrics.test.mjs
+      run: node --test tests/metrics_dashboard.test.mjs
 
     - name: Install uv
       uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
@@ -180,7 +180,7 @@ jobs:
         tool: 'customSmallerIsBetter'
         output-file-path: benchmark-gh.json
         gh-pages-branch: 'gh-pages'
-        benchmark-data-dir-path: 'benchmarks'
+        benchmark-data-dir-path: 'metrics'
         github-token: ${{ secrets.GITHUB_TOKEN }}
         fail-on-alert: true
         alert-threshold: '250%'
