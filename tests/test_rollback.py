@@ -12,16 +12,18 @@ list is regenerated with ``--snapshot-update``, so new sites show in review.
 
 Pull requests (``--rollback-scope pr``, the default) check every scenario's
 site list, raise an error after each site of one representative scenario, and
-run its real commands once, off Windows, so their test jobs stay within a few
-minutes. The full scope raises every fault in every scenario, and faults
-around real commands, nightly.
+run its real commands once (``--rollback-real once``), off Windows, so their
+test jobs stay within a few minutes. The full scope raises every fault in
+every scenario; nightly also raises each around real commands
+(``--rollback-real all``), one template per job (``--rollback-templates``).
 """
 
 from __future__ import annotations
 
 import os
+import shutil
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
@@ -54,15 +56,25 @@ def _full(config: pytest.Config) -> bool:
 
 
 def _scenarios(config: pytest.Config) -> tuple[Scenario, ...]:
-    return SCENARIOS if _full(config) else (REPRESENTATIVE,)
+    if not _full(config):
+        return (REPRESENTATIVE,)
+    templates = {t for t in config.getoption("--rollback-templates").split(",") if t}
+    unknown = templates - {scenario.template for scenario in SCENARIOS}
+    if unknown:
+        raise pytest.UsageError(f"--rollback-templates: unknown {sorted(unknown)}")
+    return tuple(s for s in SCENARIOS if not templates or s.template in templates)
+
+
+def _every_real(config: pytest.Config) -> bool:
+    return config.getoption("--rollback-real") == "all"
 
 
 def _one_per_site(scenario: Scenario) -> list[Case]:
     """The pull-request faults: an error after each write, directory, and command.
 
     That is the fault that proves a path was journaled before it changed. The
-    other positions and the interrupt run nightly, so a pull request's test
-    jobs stay within a few minutes on every platform.
+    other positions and the interrupt run in the full scope, so a pull
+    request's test jobs stay within a few minutes on every platform.
     """
     return [
         Case(scenario, site, Position.AFTER, Fault.ERROR)
@@ -71,20 +83,19 @@ def _one_per_site(scenario: Scenario) -> list[Case]:
 
 
 def _real_cases(scenario: Scenario) -> list[Case]:
-    """An error after each command, and an interrupt after the last.
+    """Every fault around real commands in one scenario.
 
-    These are where real commands differ from the fake: what a real `git
-    init`, `uv add`, or hook install leaves on disk must roll back too.
+    All but a command stopped mid-way, which only the fake can do at a known
+    point. What a real `git init`, `uv add`, or hook install leaves on disk
+    must roll back too.
     """
-    commands = [
-        site
-        for site in scenario.recorded_sites()
-        if site_kind(site) is SiteKind.COMMAND
+    return [
+        case
+        for case in cases(scenario)
+        if not (
+            site_kind(case.site) is SiteKind.COMMAND and case.position is Position.MID
+        )
     ]
-    selected = [Case(scenario, site, Position.AFTER, Fault.ERROR) for site in commands]
-    if commands:
-        selected.append(Case(scenario, commands[-1], Position.AFTER, Fault.INTERRUPT))
-    return selected
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
@@ -95,10 +106,17 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         select = cases if _full(metafunc.config) else _one_per_site
         selected = [case for scenario in scenarios for case in select(scenario)]
         metafunc.parametrize("case", selected, ids=lambda c: c.id)
+    if "real_scenario" in metafunc.fixturenames:
+        real = scenarios if _every_real(metafunc.config) else (REPRESENTATIVE,)
+        metafunc.parametrize("real_scenario", real, ids=lambda s: s.name)
     if "real_case" in metafunc.fixturenames:
         # A real command takes a minute on Windows, so faults around real
         # commands run nightly only.
-        selected = _real_cases(REPRESENTATIVE) if _full(metafunc.config) else []
+        selected = (
+            [case for scenario in scenarios for case in _real_cases(scenario)]
+            if _every_real(metafunc.config)
+            else []
+        )
         metafunc.parametrize("real_case", selected, ids=lambda c: c.id)
 
 
@@ -186,6 +204,19 @@ def test_rollback_restores_the_seed(case: Case, tmp_path, monkeypatch, capsys):
 # ---------------------------------------------------------- real commands -- #
 
 
+@pytest.fixture(autouse=True)
+def _drop_environments(tmp_path: Path) -> Iterator[None]:
+    """Removes each run's uv environment once its test is done.
+
+    pytest keeps every test's directory until the session ends. Where uv
+    can't link packages from its cache (Windows), it copies them, and a few
+    hundred kept environments fill the runner's disk.
+    """
+    yield
+    for environment in tmp_path.rglob(".venv"):
+        shutil.rmtree(environment, ignore_errors=True)
+
+
 @pytest.fixture
 def real_commands(
     tmp_path: Path,
@@ -214,11 +245,13 @@ def real_commands(
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("real_commands")
-def test_real_commands_pass_the_recorded_sites(tmp_path, monkeypatch, capsys, request):
+def test_real_commands_pass_the_recorded_sites(
+    real_scenario: Scenario, tmp_path, monkeypatch, capsys, request
+):
     """The fake runner stands in faithfully: real commands pass the same sites."""
-    if sys.platform == "win32" and not _full(request.config):
+    if sys.platform == "win32" and not _every_real(request.config):
         pytest.skip("A real init takes a minute on Windows; nightly runs it there.")
-    scenario = REPRESENTATIVE
+    scenario = real_scenario
     workspace = Workspace.seed(tmp_path, scenario)
     before = workspace.capture()
     outcome = init(workspace, scenario, Runner.REAL, monkeypatch, capsys)

@@ -73,42 +73,11 @@ jobs:
 
     - name: Run tests # (without coverage to avoid overhead on non-Codecov runs)
       if: ${{ !matrix.coverage }}
-      shell: bash
-      env:
-        RETRY: ${{ inputs.retry }}
-        FLAKY_LIST: flaky-tests.txt
-        ROLLBACK_SCOPE: ${{ matrix.rollback || 'pr' }}
-      run: |
-        pytest=(uv run pytest -n auto --dist worksteal --durations=25 -o faulthandler_timeout=90 --rollback-scope "$ROLLBACK_SCOPE")
-        if "${pytest[@]}"; then
-          exit 0
-        fi
-        if [ "$RETRY" != true ]; then
-          exit 1
-        fi
-
-        # A test that fails and then passes alone is flaky, not broken: record
-        # it for the nightly report instead of failing the run.
-        uv run --no-sync python -c 'import json; print("\n".join(sorted(json.load(open(".pytest_cache/v/cache/lastfailed")))))' > "$FLAKY_LIST"
-        echo "Retrying $(wc -l < "$FLAKY_LIST") failed test(s) once"
-        "${pytest[@]}" --last-failed --last-failed-no-failures none
-        {
-          echo "### Flaky tests"
-          echo
-          echo "These failed, then passed when retried:"
-          echo
-          # shellcheck disable=SC2016 # the backticks are Markdown
-          sed 's/^/- `/; s/$/`/' "$FLAKY_LIST"
-        } >> "$GITHUB_STEP_SUMMARY"
-        echo "::warning title=Flaky tests::$(wc -l < "$FLAKY_LIST") test(s) passed only when retried; see the job summary"
-
-    - name: Upload flaky tests
-      if: ${{ hashFiles('flaky-tests.txt') != '' }}
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: ./.github/actions/pytest
       with:
-        name: flaky-tests-${{ matrix.os }}-py${{ matrix.python }}
-        path: flaky-tests.txt
-        retention-days: 30
+        args: -o faulthandler_timeout=90 --rollback-scope ${{ matrix.rollback || 'pr' }}
+        retry: ${{ inputs.retry }}
+        flaky-artifact: flaky-tests-${{ matrix.os }}-py${{ matrix.python }}
 
     - name: Upload coverage to Codecov
       if: matrix.coverage

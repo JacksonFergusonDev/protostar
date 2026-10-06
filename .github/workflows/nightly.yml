@@ -2,10 +2,11 @@ name: Nightly
 
 # Once a day on main: the smoke tests pull requests leave out, so the two
 # together scaffold every built-in template on every OS and Python, and the
-# suite again with retries, which is how a flaky test is found. A release
-# requires CI and Nightly to have passed on the commit it bumps. Nightly Report
-# files the outcome as an issue. After its gate, the run starts 11 jobs, three
-# of them on macOS.
+# suite again with retries, which is how a flaky test is found. It also fails
+# init at every write and command of every template, with real commands, on
+# every OS. A release requires CI and Nightly to have passed on the commit it
+# bumps. Nightly Report files the outcome as an issue. After its gate, the run
+# starts 26 jobs, eight of them on macOS: a scheduled run has no runner limit.
 on:
   schedule:
     - cron: "17 9 * * *"
@@ -65,3 +66,43 @@ jobs:
           "python": ["3.13"],
           "templates": [["cli", "astro", "ml"], ["api", "lib"]]
         }
+
+  # Every fault at every site of a real init (tests/test_rollback.py), one
+  # template per job. Pull requests run one scenario of it in the suite.
+  rollback:
+    name: Rollback (${{ matrix.os }} / ${{ matrix.template }})
+    needs: gate
+    if: ${{ !cancelled() && needs.gate.outputs.changed != 'false' }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        template: [api, astro, cli, lib, ml]
+
+    env:
+      PYTHONIOENCODING: "utf-8"
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+      with:
+        enable-cache: true
+        python-version: "3.14"
+
+    - name: Install dependencies
+      run: |
+        uv sync --only-group ci --locked
+        uv pip install pytest-github-actions-annotate-failures
+
+    - name: Fail init at every site
+      uses: ./.github/actions/pytest
+      with:
+        args: >-
+          tests/test_rollback.py --rollback-scope full --rollback-real all
+          --rollback-templates ${{ matrix.template }} -o faulthandler_timeout=300
+        retry: "true"
+        flaky-artifact: flaky-tests-rollback-${{ matrix.os }}-${{ matrix.template }}
