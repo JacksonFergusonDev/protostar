@@ -17,7 +17,7 @@ import types
 import typing
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .errors import (
@@ -714,6 +714,75 @@ TEMPLATE_STRUCTURAL_KEYS: frozenset[str] = frozenset(
 )
 
 
+@dataclass(frozen=True)
+class TemplateTask:
+    """A command a template runs, and the files it declares it writes.
+
+    Attributes:
+        command: The command and its arguments.
+        owned_files: Project-relative POSIX paths the command creates or
+            changes. Each is recorded before the command runs, so a failed
+            run restores it.
+    """
+
+    command: tuple[str, ...]
+    owned_files: tuple[str, ...] = ()
+
+
+def _parse_task(value: object, field_name: str, source: str) -> TemplateTask:
+    """Parses one task: an argument array, or a table naming its outputs.
+
+    Args:
+        value: The raw TOML value.
+        field_name: ``system_tasks`` or ``post_install_tasks``.
+        source: The template being read, for error messages.
+
+    Raises:
+        ConfigurationError: If the task is malformed or names a path outside
+            the project.
+    """
+    example = (
+        f'{field_name} = [["command", "arg"]] or '
+        f'{field_name} = [{{ command = ["command", "arg"], owned_files = ["path"] }}]'
+    )
+    if isinstance(value, dict):
+        unknown = sorted(set(value) - {"command", "owned_files"})
+        if unknown or "command" not in value:
+            raise ConfigurationError(
+                f"Invalid task in configuration source '{source}' for '{field_name}'.\n"
+                + (
+                    f"Unknown keys: {', '.join(unknown)}."
+                    if unknown
+                    else "A task table needs a command."
+                ),
+                hint=f"Define each task as {example}.",
+            )
+        command, owned = value["command"], value.get("owned_files", [])
+    else:
+        command, owned = value, []
+    for part_name, parts in (("command", command), ("owned_files", owned)):
+        if not isinstance(parts, list) or not all(isinstance(p, str) for p in parts):
+            raise ConfigurationError(
+                f"Type mismatch in configuration source '{source}' for '{field_name}' "
+                f"{part_name}.\nExpected array of strings.",
+                hint=f"Define each task as {example}.",
+            )
+    if not command:
+        raise ConfigurationError(
+            f"Empty command in configuration source '{source}' for '{field_name}'.",
+            hint=f"Define each task as {example}.",
+        )
+    for path in owned:
+        posix = PurePosixPath(path)
+        if not path or posix.is_absolute() or ".." in posix.parts or ":" in path:
+            raise ConfigurationError(
+                f"Task output '{path}' in configuration source '{source}' is outside the project.",
+                hint="Name each file in owned_files by its path from the project root, "
+                'such as ".git/config".',
+            )
+    return TemplateTask(tuple(command), tuple(owned))
+
+
 @dataclass
 class TemplateBlueprint:
     """Represents the parsed template state for target environments."""
@@ -780,18 +849,28 @@ class TemplateBlueprint:
             "example": ["*.log", ".env", "local_data/"],
         },
     )
-    system_tasks: list[list[str]] = field(
+    system_tasks: list[TemplateTask] = field(
         default_factory=list,
         metadata={
-            "description": "Commands run once the project's files are written, before its dependencies are installed.",
-            "example": [["git", "lfs", "install", "--local"]],
+            "description": "Commands run once the project's files are written, before its dependencies are installed. A task is an argument array, or a table that also lists the files the command writes (owned_files), so a failed run restores them.",
+            "example": [
+                {
+                    "command": ["git", "lfs", "install", "--local"],
+                    "owned_files": [".git/config"],
+                }
+            ],
         },
     )
-    post_install_tasks: list[list[str]] = field(
+    post_install_tasks: list[TemplateTask] = field(
         default_factory=list,
         metadata={
-            "description": "Commands run after the project's dependencies are installed.",
-            "example": [["uv", "run", "nbdime", "config-git", "--enable"]],
+            "description": "Commands run after the project's dependencies are installed, in the same form as system_tasks.",
+            "example": [
+                {
+                    "command": ["uv", "run", "nbdime", "config-git", "--enable"],
+                    "owned_files": [".git/config"],
+                }
+            ],
         },
     )
     files: dict[str, str] = field(
@@ -969,32 +1048,20 @@ class TemplateBlueprint:
                         )
                 setattr(instance, field_name, val)
 
-        # Validate task list fields (list of lists of strings)
-        task_fields = ["system_tasks", "post_install_tasks"]
-        for field_name in task_fields:
+        for field_name in ("system_tasks", "post_install_tasks"):
             if field_name in data:
                 val = data[field_name]
                 if not isinstance(val, list):
                     raise ConfigurationError(
                         f"Type mismatch in configuration source '{source}' for '{field_name}'.\n"
-                        f"Expected array of commands, but got {type(val).__name__}.",
-                        hint=f'Define {field_name} as an array of command arrays: {field_name} = [["command", "arg"]]',
+                        f"Expected array of tasks, but got {type(val).__name__}.",
+                        hint=f'Define {field_name} as an array of tasks: {field_name} = [["command", "arg"]]',
                     )
-                for task in val:
-                    if not isinstance(task, list):
-                        raise ConfigurationError(
-                            f"Type mismatch in configuration source '{source}' for '{field_name}' command elements.\n"
-                            f"Expected array of strings, but got {type(task).__name__}.",
-                            hint=f'Define each command in \'{field_name}\' as an array of strings: {field_name} = [["command", "arg"]]',
-                        )
-                    for part in task:
-                        if not isinstance(part, str):
-                            raise ConfigurationError(
-                                f"Type mismatch in configuration source '{source}' for '{field_name}' command arguments.\n"
-                                f"Expected string, but got {type(part).__name__}.",
-                                hint=f"Ensure all command arguments in '{field_name}' are strings.",
-                            )
-                setattr(instance, field_name, val)
+                setattr(
+                    instance,
+                    field_name,
+                    [_parse_task(task, field_name, source) for task in val],
+                )
 
         # Extract environment fields
         if "dev" in data:

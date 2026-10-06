@@ -28,7 +28,7 @@ Protostar records each path's original state before it first changes it, and res
 - **Files it created** are removed.
 - **Directories it created** are removed when they are empty again.
 - **`pyproject.toml` and `uv.lock`** are recorded before `uv add` or `uv lock` runs, so a failed install leaves both as they were.
-- **What its own commands create** is removed: the `.git/` directory `git init` makes, and the `pyproject.toml` and `.python-version` from `uv init`. Each command declares these in advance.
+- **What its commands create** is removed: the `.git/` directory `git init` makes, and the `pyproject.toml` and `.python-version` from `uv init`. Each command declares these in advance, and a template's commands can declare theirs too.
 - **`protostar.lock` and the recipe** go back with everything else, so the record never claims a change that was undone.
 
 ## What Might Remain
@@ -36,7 +36,7 @@ Protostar records each path's original state before it first changes it, and res
 Protostar only restores what it recorded, and never guesses what else a command wrote:
 
 - **The virtual environment and caches.** `.venv`, uv's package cache, and other tools' caches can keep what was installed before the failure. They are rebuilt on the next run, and nothing in the project depends on them.
-- **What a template's own commands write.** A template's `system_tasks` and `post_install_tasks` can't declare their outputs, so a file one of them created outside the paths above stays behind.
+- **What a template's commands write without declaring it.** A template's `system_tasks` and `post_install_tasks` restore only the files they list in `owned_files` (see [Commands](authoring-templates.md#commands-system_tasks-and-post_install_tasks)). Anything else one of them writes stays behind.
 
 ## When a Restore Fails (`RollbackFailedError`)
 

@@ -29,7 +29,10 @@ vcs_ignores = [
 ]
 
 # --- Post-Install Subprocesses ---
-post_install_tasks = [["uv", "run", "nbdime", "config-git", "--enable"]]
+# nbdime writes its diff and merge drivers into the repository's .git/config.
+post_install_tasks = [
+  { command = ["uv", "run", "nbdime", "config-git", "--enable"], owned_files = [".git/config"] },
+]
 
 # --- Tooling Opinions ---
 # Wanted in any project of this shape, whichever tier it follows.

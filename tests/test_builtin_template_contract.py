@@ -14,7 +14,7 @@ from typing import Any
 
 import pytest
 
-from protostar.config import UserConfig
+from protostar.config import TemplateBlueprint, UserConfig
 from protostar.intent import TemplateOrigin
 from protostar.template_check import check_template
 from protostar.templates import discover_templates
@@ -39,7 +39,11 @@ DEFAULT_TIERS = {
 }
 
 # Built-ins are trusted implicitly, so what they may execute is deliberately tiny.
-ALLOWED_POST_INSTALL_TASKS = {("uv", "run", "nbdime", "config-git", "--enable")}
+# Each allowed command, and the files it must declare it writes: the rollback
+# suite fails when a command writes a file it didn't declare.
+ALLOWED_POST_INSTALL_TASKS: dict[tuple[str, ...], tuple[str, ...]] = {
+    ("uv", "run", "nbdime", "config-git", "--enable"): (".git/config",),
+}
 
 
 def _path(alias: str) -> str:
@@ -144,13 +148,15 @@ def test_tasks_stay_within_the_trusted_allowlist(alias: str) -> None:
     assert not data.get("system_tasks"), (
         f"{alias}.toml declares system_tasks; built-ins are trusted implicitly."
     )
+    blueprint = TemplateBlueprint._from_data(data, alias)
     unlisted = [
         task
-        for task in data.get("post_install_tasks", [])
-        if tuple(task) not in ALLOWED_POST_INSTALL_TASKS
+        for task in blueprint.post_install_tasks
+        if ALLOWED_POST_INSTALL_TASKS.get(task.command) != task.owned_files
     ]
     assert not unlisted, (
-        f"{alias}.toml runs post-install tasks outside the allowlist: {unlisted}"
+        f"{alias}.toml runs post-install tasks outside the allowlist, or declares "
+        f"other outputs: {unlisted}"
     )
 
 

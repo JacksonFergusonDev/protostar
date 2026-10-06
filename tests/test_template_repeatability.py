@@ -127,6 +127,7 @@ def _mock_process_runner(cmd: list[str], *args: Any, **kwargs: Any) -> None:
         Path("uv.lock").write_text("resolved-lock\n", encoding="utf-8")
     elif len(cmd) >= 2 and cmd[0] == "git" and cmd[1] == "init":
         Path(".git").mkdir(exist_ok=True)
+        Path(".git/config").write_text("[core]\n\tbare = false\n", encoding="utf-8")
     elif "install" in cmd and any(tool in cmd for tool in ("pre-commit", "prek")):
         # Like the real runners, install one script per declared hook type.
         runner = "prek" if "prek" in cmd else "pre-commit"
@@ -245,8 +246,10 @@ def test_template_initial_and_repeat_merge_convergence(
     assert len(results) == 2
     phase2_result = results[1]
     assert phase2_result.created_paths == frozenset()
-    # Any touched path on repeat must be restricted to external subprocess hook registration
+    # Any touched path on repeat must be restricted to what commands declare they
+    # rewrite in the clone: hook scripts, and nbdime's drivers in .git/config.
     assert phase2_result.touched_paths <= {
+        ".git/config",
         ".git/hooks/pre-commit",
         ".git/hooks/commit-msg",
         ".git/hooks/pre-push",

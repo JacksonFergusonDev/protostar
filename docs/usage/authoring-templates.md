@@ -103,10 +103,14 @@ dependency_includes = [{ group = "dev", include = "docs" }]
 
 ```toml
 system_tasks = [["git", "lfs", "install", "--local"]]
-post_install_tasks = [["uv", "run", "nbdime", "config-git", "--enable"]]
+post_install_tasks = [
+  { command = ["uv", "run", "nbdime", "config-git", "--enable"], owned_files = [".git/config"] },
+]
 ```
 
 Each command is a list of arguments, never a shell string. `system_tasks` run once the project's files are written, after Protostar's own `git init` and `uv init`, and before dependencies are installed. `post_install_tasks` run after dependencies are installed, so they can use the project's packages through `uv run`.
+
+When a command creates or changes files in the project, write it as a table and list them in `owned_files`, by their path from the project root. Protostar records each one before the command runs, so if the run fails later, it puts them back exactly as they were, or removes them if the command created them. The files also appear in the change review and `--dry-run`, except those inside `.git/`. A command written as a plain list declares nothing, and whatever it writes stays behind after a failed run.
 
 - Commands run only during `init`. `sync` never runs them.
 - Each command's program must be one of `uv`, `git`, `npm`, `yarn`, `pnpm`, `pre-commit`, `prek`, `direnv`, or `just`.

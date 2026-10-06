@@ -9,6 +9,7 @@ from protostar.config import (
     TemplateAliasConfig,
     TemplateBlueprint,
     TemplateSource,
+    TemplateTask,
     UserConfig,
     active_config_source,
     clear_user_config_cache,
@@ -647,12 +648,27 @@ def test_user_config_caching_and_cache_clear(mocker) -> None:
         ('docs_dependencies = "zensical"', "for 'docs_dependencies'"),
         ("docs_dependencies = [3.14]", "for 'docs_dependencies' elements"),
         ('system_tasks = "git init"', "for 'system_tasks'"),
-        ('system_tasks = ["git", "init"]', "for 'system_tasks' command elements"),
-        ('system_tasks = [["git", 123]]', "for 'system_tasks' command arguments"),
+        ('system_tasks = ["git", "init"]', "for 'system_tasks' command"),
+        ('system_tasks = [["git", 123]]', "for 'system_tasks' command"),
+        ("system_tasks = [[]]", "Empty command"),
         ("post_install_tasks = true", "for 'post_install_tasks'"),
+        ('post_install_tasks = ["uv", "sync"]', "for 'post_install_tasks' command"),
+        ("post_install_tasks = [{ owned_files = [] }]", "needs a command"),
         (
-            'post_install_tasks = ["uv", "sync"]',
-            "for 'post_install_tasks' command elements",
+            'post_install_tasks = [{ command = ["uv"], run = true }]',
+            "Unknown keys: run",
+        ),
+        (
+            'post_install_tasks = [{ command = ["uv"], owned_files = ".git" }]',
+            "for 'post_install_tasks' owned_files",
+        ),
+        (
+            'post_install_tasks = [{ command = ["uv"], owned_files = ["../x"] }]',
+            "outside the project",
+        ),
+        (
+            'post_install_tasks = [{ command = ["uv"], owned_files = ["/etc/x"] }]',
+            "outside the project",
         ),
         ('dev = "invalid"', "for '[dev]'"),
         ('dev = { dev_dependencies = "pytest" }', "for '[dev].dev_dependencies'"),
@@ -677,6 +693,27 @@ def test_template_blueprint_parse_rejects_wrong_field_types(
 
     assert expected_err_snippet in str(exc_info.value)
     assert exc_info.value.hint is not None
+
+
+def test_template_tasks_take_an_argument_array_or_a_table_of_outputs():
+    blueprint = TemplateBlueprint._parse(
+        """
+system_tasks = [["git", "lfs", "install", "--local"]]
+post_install_tasks = [
+  { command = ["uv", "run", "nbdime", "config-git", "--enable"], owned_files = [".git/config"] },
+]
+""",
+        source="test.toml",
+    )
+
+    assert blueprint.system_tasks == [
+        TemplateTask(("git", "lfs", "install", "--local"))
+    ]
+    assert blueprint.post_install_tasks == [
+        TemplateTask(
+            ("uv", "run", "nbdime", "config-git", "--enable"), (".git/config",)
+        )
+    ]
 
 
 def test_template_blueprint_parses_optional_content():
