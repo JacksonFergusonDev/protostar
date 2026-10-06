@@ -1,5 +1,6 @@
 """The metrics preview reads live source without sharing the docs server's port."""
 
+from functools import partial
 from pathlib import Path
 
 import pytest
@@ -59,3 +60,39 @@ def test_source_edits_are_visible_without_restarting(
 def test_the_default_port_is_separate_from_zensical() -> None:
     assert serve_metrics.DEFAULT_PORT == 8765
     assert serve_metrics.DEFAULT_PORT != 8000
+
+
+def test_preview_fetches_every_dashboard_dataset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fetched: list[str] = []
+
+    def fetch(url: str) -> bytes:
+        fetched.append(url)
+        return url.encode()
+
+    def server(
+        address: tuple[str, int], handler: partial[serve_metrics.PreviewHandler]
+    ) -> None:
+        directory = Path(handler.keywords["directory"])
+        expected = {
+            "data.js",
+            "mutation-history.json",
+            "rollback-history.json",
+            "rollback-latest.json",
+        }
+        assert {path.name for path in (directory / "metrics").iterdir()} == expected
+        for filename in expected:
+            assert (directory / "metrics" / filename).read_bytes() == (
+                serve_metrics.DATA_URL + filename
+            ).encode()
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(serve_metrics, "fetch_bytes", fetch)
+    monkeypatch.setattr(serve_metrics, "ThreadingHTTPServer", server)
+    monkeypatch.setattr("sys.argv", ["serve_metrics.py", "--no-open"])
+    with pytest.raises(KeyboardInterrupt):
+        serve_metrics.main()
+    assert set(fetched) == {
+        serve_metrics.DATA_URL + filename for filename in serve_metrics.DATA_FILES
+    }

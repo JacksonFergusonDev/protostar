@@ -27,7 +27,13 @@ from scripts.prepare_pages import (
 )
 
 DEFAULT_PORT = 8765
-DATA_URL = "https://protostar.jacksonferguson.me/metrics/data.js"
+DATA_URL = "https://protostar.jacksonferguson.me/metrics/"
+DATA_FILES = (
+    "data.js",
+    "mutation-history.json",
+    "rollback-history.json",
+    "rollback-latest.json",
+)
 
 
 class PreviewHandler(SimpleHTTPRequestHandler):
@@ -76,11 +82,11 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--no-open", action="store_true", help="Do not open a browser.")
     args = parser.parse_args()
-    data = fetch_bytes(DATA_URL)
     with tempfile.TemporaryDirectory(prefix="protostar-metrics-") as directory:
         root = Path(directory)
         (root / "metrics").mkdir()
-        (root / "metrics" / "data.js").write_bytes(data)
+        for filename in DATA_FILES:
+            (root / "metrics" / filename).write_bytes(fetch_bytes(DATA_URL + filename))
         (root / "index.html").write_text(
             '<meta http-equiv="refresh" content="0; url=/metrics/">',
             encoding="utf-8",
