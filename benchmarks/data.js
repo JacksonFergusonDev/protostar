@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791255936952,
+  "lastUpdate": 1791256715588,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21697,6 +21697,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1262.16,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bfcbe38babc9b239cd728a28db5d0f40806037a4",
+          "message": "test(rollback): fail sync at every site, including removals (#449)\n\nSync scenarios start from a project init created, retooled in its recipe so\nthe run removes files, adds one, locks, and reinstalls hooks. A failed hook\ninstall on sync only warns, so its cases require a finished run that matches\na clean one apart from the hooks. An interrupt after sync commits now keeps\nthe run, as it does for init. The fake runner records uv add's requirements\nand writes uv.lock, so a later sync takes the path it does with real uv.",
+          "timestamp": "2026-10-05T20:15:19-07:00",
+          "tree_id": "20656807e3e44f0aab48dc32268e173620f1b36b",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/bfcbe38babc9b239cd728a28db5d0f40806037a4"
+        },
+        "date": 1791256714408,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 171.93,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1275.12,
             "unit": "ms"
           }
         ]
