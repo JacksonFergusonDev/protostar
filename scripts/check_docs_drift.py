@@ -277,14 +277,14 @@ def check_quality_flags() -> list[str]:
 
 
 def check_python_version() -> list[str]:
-    """The README badge and CONTRIBUTING name the minimum Python in pyproject.toml."""
+    """The README and CONTRIBUTING name the minimum Python in pyproject.toml."""
     pyproject = tomllib.loads(
         (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
     )
     minimum = re.sub(r"[^\d.]", "", pyproject["project"]["requires-python"])
     problems: list[str] = []
     claims = (
-        (README, r"badge/python-([\d.]+)\+"),
+        (README, r"Python ([\d.]+)\+"),
         (CONTRIBUTING, r"\*\*Python ([\d.]+)\+\*\*"),
     )
     for page, pattern in claims:

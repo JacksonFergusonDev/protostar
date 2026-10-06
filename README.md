@@ -12,13 +12,9 @@
 
 [![PyPI Version](https://img.shields.io/pypi/v/protostar?color=22d3ee&labelColor=0A0A0A&logo=pypi&logoColor=white)](https://pypi.org/project/protostar/)
 [![CI](https://img.shields.io/github/actions/workflow/status/jacksonfergusondev/protostar/ci.yml?color=22d3ee&labelColor=0A0A0A&label=CI)](https://github.com/jacksonfergusondev/protostar/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/actions/workflow/status/jacksonfergusondev/protostar/release.yml?color=22d3ee&labelColor=0A0A0A&label=release)](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml)
 [![Codecov](https://img.shields.io/codecov/c/github/JacksonFergusonDev/protostar?color=22d3ee&labelColor=0A0A0A&logo=codecov&logoColor=white)](https://codecov.io/gh/JacksonFergusonDev/protostar)
 [![Engine mutation score](https://img.shields.io/endpoint?url=https%3A%2F%2Fprotostar.jacksonferguson.me%2Fmetrics%2Fmutation-latest.json&label=engine%20mutation%20score&color=22d3ee&labelColor=0A0A0A)](https://protostar.jacksonferguson.me/metrics/#mutations)
 [![Rollback faults restored](https://img.shields.io/endpoint?url=https%3A%2F%2Fprotostar.jacksonferguson.me%2Fmetrics%2Frollback-latest.json&label=rollback%20faults%20restored&color=22d3ee&labelColor=0A0A0A)](https://protostar.jacksonferguson.me/metrics/#rollback)
-[![Python](https://img.shields.io/badge/python-3.12+-22d3ee?labelColor=0A0A0A&logo=python&logoColor=white)](https://www.python.org/downloads/)
-[![Documentation](https://img.shields.io/badge/docs-gh--pages-22d3ee?labelColor=0A0A0A&logo=github&logoColor=white)](https://protostar.jacksonferguson.me/)
-[![License](https://img.shields.io/badge/license-MIT-22d3ee?labelColor=0A0A0A)](LICENSE)
 
 ---
 
@@ -91,7 +87,7 @@ Or with Homebrew on macOS:
 brew install jacksonfergusondev/tap/protostar
 ```
 
-Protostar needs uv and git. Homebrew installs both for you, and the [installation guide](https://protostar.jacksonferguson.me/installation/) covers every platform.
+Protostar needs Python 3.12+, uv, and git. Homebrew installs both for you, and the [installation guide](https://protostar.jacksonferguson.me/installation/) covers every platform.
 
 Then make a folder for your project and run `protostar init` inside it:
 
