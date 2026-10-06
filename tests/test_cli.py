@@ -1115,6 +1115,34 @@ def test_export_schema_json_mode(capsys, monkeypatch):
     assert "properties" in payload
 
 
+@pytest.mark.parametrize(
+    ("task", "valid"),
+    [
+        (["git", "lfs", "install"], True),
+        ({"command": ["uv", "run", "x"], "owned_files": [".git/config"]}, True),
+        ({"command": ["uv"], "owned_files": ["../outside"]}, False),
+        ({"command": ["uv"], "owned_files": ["/etc/hosts"]}, False),
+        ({"owned_files": ["x"]}, False),
+        ({"command": ["uv"], "run": True}, False),
+        ([], False),
+    ],
+)
+def test_export_schema_accepts_both_task_forms(capsys, monkeypatch, task, valid):
+    import jsonschema  # type: ignore[import-untyped]
+
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
+    monkeypatch.setattr("sys.argv", ["protostar", "export-schema", "--json"])
+    with pytest.raises(SystemExit):
+        main()
+    schema = json.loads(capsys.readouterr().out)
+    errors = list(
+        jsonschema.Draft202012Validator(schema).iter_errors(
+            {"post_install_tasks": [task]}
+        )
+    )
+    assert (not errors) is valid, errors
+
+
 def test_list_templates_json_mode(capsys, monkeypatch):
     monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
     monkeypatch.setattr("sys.argv", ["protostar", "init", "--list-templates", "--json"])
