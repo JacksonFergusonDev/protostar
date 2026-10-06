@@ -54,10 +54,12 @@ def expand(matrix: dict[str, Any]) -> list[Entry]:
     return combinations
 
 
+def yaml_workflow(workflow: str) -> dict[str, Any]:
+    return YAML(typ="safe").load((WORKFLOWS / workflow).read_text(encoding="utf-8"))
+
+
 def jobs(workflow: str) -> dict[str, Any]:
-    return YAML(typ="safe").load((WORKFLOWS / workflow).read_text(encoding="utf-8"))[
-        "jobs"
-    ]
+    return yaml_workflow(workflow)["jobs"]
 
 
 def job(workflow: str, name: str) -> dict[str, Any]:
@@ -273,6 +275,39 @@ def test_a_manual_nightly_can_narrow_the_rollback_jobs():
     assert "tests/test_rollback.py" in args
     assert args[args.index("--rollback-scope") + 1] == "full"
     assert args[args.index("--rollback-real") + 1] == "all"
+
+
+def test_every_rollback_job_uploads_its_fault_report_even_when_it_fails():
+    rollback = job("nightly.yml", "rollback")
+    (run,) = [
+        s for s in rollback["steps"] if s.get("uses") == "./.github/actions/pytest"
+    ]
+    args = run["with"]["args"].split()
+    assert args[args.index("--rollback-report") + 1] == "rollback-report/report.json"
+    (upload,) = [s for s in rollback["steps"] if "upload-artifact" in s.get("uses", "")]
+    assert upload["name"] == "Upload the fault report"
+    assert upload["with"]["name"] == "${{ matrix.artifact }}"
+    assert upload["with"]["path"] == "rollback-report/report.json"
+    assert upload["if"] == "${{ !cancelled() }}"
+
+
+def test_rollback_metrics_are_recorded_apart_from_nightly_and_only_for_scheduled_runs():
+    """A publishing failure must not fail the run a release requires."""
+    workflow = yaml_workflow("rollback-metrics.yml")
+    trigger = workflow["on"]["workflow_run"]
+    assert trigger["workflows"] == ["Nightly"]
+    assert "rollback-metrics.yml" not in (WORKFLOWS / "nightly.yml").read_text()
+    record = workflow["jobs"]["record"]
+    assert "workflow_run.event == 'schedule'" in record["if"]
+    assert "head_branch == 'main'" in record["if"]
+    assert record["permissions"]["contents"] == "write"
+    (download,) = [
+        s for s in record["steps"] if "download-artifact" in s.get("uses", "")
+    ]
+    assert download["with"]["pattern"] == "rollback-*"
+    assert download["with"]["run-id"] == "${{ github.event.workflow_run.id }}"
+    assert workflow["jobs"]["publish-pages"]["uses"] == "./.github/workflows/pages.yml"
+    assert workflow["jobs"]["refresh-site"]["needs"] == "publish-pages"
 
 
 def test_a_release_smoke_tests_the_wheel_it_publishes_on_every_os():

@@ -169,7 +169,10 @@ addopts = "--strict-markers"
 testpaths = ["tests"]
 norecursedirs = ["snapshots", ".*", "build", "dist", "venv"]
 pythonpath = ["."]
-markers = ["integration: runs real subprocesses in an isolated workspace"]
+markers = [
+    "integration: runs real subprocesses in an isolated workspace",
+    "rollback_fault: injects one fault into a run and requires rollback to restore the project",
+]
 
 [tool.coverage.run]
 source = ["src/protostar"]

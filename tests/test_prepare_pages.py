@@ -274,17 +274,25 @@ def test_the_old_dashboard_address_redirects_to_the_metrics_page(
     assert {path.name for path in (output / "benchmarks").iterdir()} == {"index.html"}
 
 
+RECORDED_JSON = (
+    "mutation-history.json",
+    "mutation-latest.json",
+    "rollback-history.json",
+    "rollback-latest.json",
+)
+
+
 @pytest.mark.parametrize("performance", [False, True])
-def test_mutation_files_survive_pages_assembly_without_obsolete_assets(
+def test_recorded_json_survives_pages_assembly_without_obsolete_assets(
     published_docs, performance
 ):
     source, output, config = published_docs
     if not performance:
         (source / "metrics/data.js").unlink()
-    for filename in ("mutation-history.json", "mutation-latest.json"):
+    for filename in RECORDED_JSON:
         _write(source / "metrics" / filename, '{"kept": true}\n')
     assemble_pages(source, output, config)
-    for filename in ("mutation-history.json", "mutation-latest.json"):
+    for filename in RECORDED_JSON:
         assert (output / "metrics" / filename).read_bytes() == (
             source / "metrics" / filename
         ).read_bytes()

@@ -140,5 +140,17 @@ jobs:
           tests/test_rollback.py --rollback-scope full --rollback-real all
           --rollback-templates ${{ matrix.template }} -o faulthandler_timeout=300
           --rollback-shard ${{ matrix.slice }}
+          --rollback-report rollback-report/report.json
         retry: "true"
         flaky-artifact: flaky-tests-rollback-${{ matrix.os }}-${{ matrix.template }}-${{ strategy.job-index }}
+
+    # Rollback Metrics adds the reports up. A failing job reports too, so the
+    # badge can say how many faults failed.
+    - name: Upload the fault report
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ matrix.artifact }}
+        path: rollback-report/report.json
+        if-no-files-found: ignore
+        retention-days: 7

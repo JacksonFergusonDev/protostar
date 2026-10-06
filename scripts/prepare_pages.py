@@ -29,6 +29,8 @@ METRICS_ASSETS = (
     "charts.mjs",
     "mutations.mjs",
     "mutation-dashboard.js",
+    "rollbacks.mjs",
+    "rollback-dashboard.js",
 )
 HOUSE_DIR = _repo_root / "docs" / "house"
 HEADER_CSS = _repo_root / "docs" / "stylesheets" / "site-header.css"
@@ -264,7 +266,13 @@ def assemble_pages(source: Path, output: Path, config_path: Path) -> str:
             _write_redirects(tree, output / alias, target)
     metrics_files = [
         source / "metrics" / filename
-        for filename in ("data.js", "mutation-history.json", "mutation-latest.json")
+        for filename in (
+            "data.js",
+            "mutation-history.json",
+            "mutation-latest.json",
+            "rollback-history.json",
+            "rollback-latest.json",
+        )
         if (source / "metrics" / filename).is_file()
     ]
     if metrics_files:

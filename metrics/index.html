@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Protostar · Metrics</title>
   <meta name="description"
-    content="Startup performance and mutation scores for Protostar, recorded from CI.">
+    content="Startup performance, mutation scores, and rollback fault counts for Protostar, recorded from CI.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="alternate icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="house/css/fonts.css">
@@ -175,9 +175,57 @@
       </div>
     </section>
 
+    <section class="history-section" id="rollback" aria-labelledby="rollback-title">
+      <div class="page-width">
+        <div class="hs-section-marker"><span>04 / ROLLBACK</span></div>
+        <h2 id="rollback-title">Does a failed run leave nothing behind?</h2>
+        <p class="section-note">Every night, Protostar fails a real <code>init</code> or <code>sync</code> at each
+          write, directory, removal, and command of every built-in template, with an error and with an interrupt,
+          before, during, and after the step. A fault counts as restored when the project and home directory come back
+          byte for byte. The count covers every operating system the nightly run uses.</p>
+        <p class="section-note">The overall line adds every job&rsquo;s count, so it rises when a template, a step,
+          or a platform is added. Dashed vertical markers show a change in the set of jobs. Toggle operating
+          systems and templates in the legend to inspect them.</p>
+        <p id="rollback-status" class="status" role="status">Loading rollback history…</p>
+        <p id="rollback-failing" class="status" role="status"></p>
+        <div id="rollback-results" hidden>
+          <p id="rollback-latest" class="metric-measurement"></p>
+          <div class="chart-panel">
+            <div class="chart-header">
+              <span class="chart-caption">Faults restored / count</span>
+            </div>
+            <div id="chart-rollback" class="chart-canvas" role="img"
+              aria-label="Faults restored per nightly run, overall and by operating system and template. Exact values and changes of scope are in the tables below."></div>
+          </div>
+          <details class="measurements" open>
+            <summary>Latest faults by template</summary>
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Latest rollback faults by template and operating system">
+              <table>
+                <caption>Faults restored in the latest complete run.</caption>
+                <thead><tr id="rollback-os"><th scope="col">Template</th></tr></thead>
+                <tbody id="rollback-cells"></tbody>
+              </table>
+            </div>
+          </details>
+          <details class="measurements">
+            <summary>Recent runs and changes of scope<span class="table-range">Last 30 runs</span></summary>
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Recent rollback runs">
+              <table>
+                <caption>Dates are shown in your local timezone. Use the JSON history for every run.</caption>
+                <thead><tr><th scope="col">Recorded</th><th scope="col">Faults restored</th><th scope="col">Commit</th><th scope="col">Jobs</th></tr></thead>
+                <tbody id="rollback-runs"></tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+        <a class="text-link guide-link" href="rollback-history.json">Download rollback history<span class="hs-icon hs-icon-arrow-down" aria-hidden="true"></span></a>
+        <noscript><p class="status">JavaScript is required to display rollback counts. Download the history to read the raw counts.</p></noscript>
+      </div>
+    </section>
+
     <section class="history-section methodology" id="methodology" aria-labelledby="methodology-title">
       <div class="page-width">
-        <div class="hs-section-marker"><span>04 / METHODOLOGY</span></div>
+        <div class="hs-section-marker"><span>05 / METHODOLOGY</span></div>
         <h2 id="methodology-title">Read the trend, with context.</h2>
         <div class="methodology-grid">
           <div>
@@ -225,6 +273,7 @@
   <script src="data.js" defer></script>
   <script type="module" src="dashboard.js"></script>
   <script type="module" src="mutation-dashboard.js"></script>
+  <script type="module" src="rollback-dashboard.js"></script>
 </body>
 
 </html>
