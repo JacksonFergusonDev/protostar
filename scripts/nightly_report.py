@@ -91,6 +91,7 @@ class GitHub(Protocol):
     def flaky_lists(self, run: Run) -> dict[str, str]: ...
     def last_passing_sha(self, run: Run) -> str | None: ...
     def open_issue(self, tracker: Tracker) -> int | None: ...
+    def has_report(self, number: int, body: str) -> bool: ...
     def create_issue(self, tracker: Tracker, body: str) -> None: ...
     def comment(self, number: int, body: str) -> None: ...
     def close(self, number: int, body: str) -> None: ...
@@ -162,7 +163,7 @@ def flaky_body(run: Run, outcome: Outcome) -> str:
     """
     lines = [
         f"These tests failed and then passed when retried at `{run.sha[:7]}`"
-        f" ([run]({run.url})). The run passed, but each one needs a fix:",
+        f" ([run]({run.url})). Each one needs a fix:",
         "",
     ]
     lines += [
@@ -191,7 +192,7 @@ def report(github: GitHub, run: Run) -> Outcome:
         body = failure_body(run, outcome, github.last_passing_sha(run))
         if failing is None:
             github.create_issue(FAILING, body)
-        else:
+        elif not github.has_report(failing, body):
             github.comment(failing, body)
     elif failing is not None:
         github.close(failing, f"Nightly passed at `{run.sha[:7]}` ([run]({run.url})).")
@@ -201,7 +202,7 @@ def report(github: GitHub, run: Run) -> Outcome:
         flaky = github.open_issue(FLAKY)
         if flaky is None:
             github.create_issue(FLAKY, body)
-        else:
+        elif not github.has_report(flaky, body):
             github.comment(flaky, body)
     return outcome
 
@@ -334,6 +335,22 @@ class GhCli:
             "--body",
             body,
         )
+
+    def has_report(self, number: int, body: str) -> bool:
+        """Whether this exact report is already in the issue or its comments.
+
+        Re-running Nightly Report must not repeat a report. Distinct Nightly
+        runs have different URLs, and still record each recurrence.
+        """
+        endpoint = f"repos/{self.repo}/issues/{number}"
+        issue = json.loads(self._gh("api", endpoint))
+        pages = json.loads(
+            self._gh(
+                "api", f"{endpoint}/comments?per_page=100", "--paginate", "--slurp"
+            )
+        )
+        bodies = [issue["body"] or "", *(c["body"] for page in pages for c in page)]
+        return any(previous.strip() == body.strip() for previous in bodies)
 
     def comment(self, number: int, body: str) -> None:
         """Comments on an issue."""

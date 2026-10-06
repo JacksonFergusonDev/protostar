@@ -14,6 +14,7 @@ from scripts.nightly_report import (
     FAILING,
     FLAKY,
     GATE_JOB,
+    GhCli,
     Job,
     Run,
     Tracker,
@@ -277,6 +278,25 @@ def test_a_manual_nightly_can_narrow_the_rollback_jobs():
     assert args[args.index("--rollback-real") + 1] == "all"
 
 
+def test_windows_rollback_jobs_run_one_environment_at_a_time():
+    step = next(
+        s
+        for s in job("nightly.yml", "rollback")["steps"]
+        if s.get("uses") == "./.github/actions/pytest"
+    )
+    assert (
+        step["with"]["workers"]
+        == "${{ matrix.os == 'windows-latest' && '1' || 'auto' }}"
+    )
+    action = YAML(typ="safe").load(
+        (REPO_ROOT / ".github/actions/pytest/action.yml").read_text()
+    )
+    assert action["inputs"]["workers"]["default"] == "auto"
+    run = action["runs"]["steps"][0]
+    assert run["env"]["WORKERS"] == "${{ inputs.workers }}"
+    assert '-n "$WORKERS"' in run["run"]
+
+
 def test_every_rollback_job_uploads_its_fault_report_even_when_it_fails():
     rollback = job("nightly.yml", "rollback")
     (run,) = [
@@ -338,6 +358,7 @@ class FakeGitHub:
         self._open = dict(open_issues or {})
         self._last_passing = last_passing
         self.calls: list[tuple[str, object, str]] = []
+        self.bodies: dict[int, list[str]] = {}
 
     def jobs(self, run):
         return self._jobs
@@ -353,9 +374,16 @@ class FakeGitHub:
 
     def create_issue(self, tracker, body):
         self.calls.append(("create", tracker.label, body))
+        number = len(self._open) + 100
+        self._open[tracker.label] = number
+        self.bodies[number] = [body]
+
+    def has_report(self, number, body):
+        return body in self.bodies.get(number, [])
 
     def comment(self, number, body):
         self.calls.append(("comment", number, body))
+        self.bodies.setdefault(number, []).append(body)
 
     def close(self, number, body):
         self.calls.append(("close", number, body))
@@ -450,3 +478,52 @@ def test_flaky_tests_comment_on_the_open_flaky_issue():
 def test_summarize_ignores_blank_lines_in_flaky_lists():
     outcome = summarize(PASSED, {"flaky-tests-ubuntu-latest-py3.12": "\n t::a \n\n"})
     assert outcome.flaky == {"t::a": ("ubuntu-latest-py3.12",)}
+
+
+@pytest.mark.parametrize("jobs", [PASSED, FAILED], ids=["flaky", "failed-and-flaky"])
+@pytest.mark.parametrize("existing", [False, True], ids=["new-issue", "open-issue"])
+def test_reporting_the_same_run_twice_does_not_repeat_its_report(jobs, existing):
+    github = FakeGitHub(
+        jobs,
+        flaky={"flaky-tests-windows": "tests/test_x.py::test_y\n"},
+        open_issues={FAILING.label: 7, FLAKY.label: 9} if existing else {},
+    )
+    # A passing run closes a failure issue only once in real GitHub.
+    if jobs == PASSED:
+        github._open.pop(FAILING.label, None)
+    report(github, RUN)
+    first = list(github.calls)
+    report(github, RUN)
+    assert github.calls == first
+    report(github, Run(repo=RUN.repo, run_id="43", sha=RUN.sha))
+    assert len(github.calls) == len(first) * 2
+
+
+@pytest.mark.parametrize("location", ["body", "first-page", "second-page", "absent"])
+def test_report_lookup_reads_the_issue_body_and_every_comment_page(
+    monkeypatch, location
+):
+    github = GhCli("owner/name")
+    responses = iter(
+        [
+            {"body": "report\n" if location == "body" else "other run"},
+            [
+                [{"body": "report" if location == "first-page" else "other run"}],
+                [{"body": "report" if location == "second-page" else "other run"}],
+            ],
+        ]
+    )
+    calls = []
+
+    def gh(*args):
+        calls.append(args)
+        return json.dumps(next(responses))
+
+    monkeypatch.setattr(github, "_gh", gh)
+    assert github.has_report(9, "report\n") == (location != "absent")
+    assert calls[-1] == (
+        "api",
+        "repos/owner/name/issues/9/comments?per_page=100",
+        "--paginate",
+        "--slurp",
+    )
