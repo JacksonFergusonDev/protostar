@@ -107,7 +107,7 @@ def test_the_install_names_its_runner():
     task = install_task(tooling(HookRunner.PRE_COMMIT, "pre-push"))
     assert task.command == ["uv", "run", "pre-commit", "install"]
     assert task.description == "Installing pre-commit git hooks"
-    assert task.timeout == 30
+    assert task.timeout == 600
 
 
 def executor(tmp_path, monkeypatch, mocker):
@@ -125,7 +125,7 @@ def test_applying_removes_hooks_and_runs_the_install(
     task = install_task(tooling(HookRunner.PREK))
     engine._apply_hooks(HookAction(task, (".git/hooks/pre-push",)))
     assert not (hooks / "pre-push").exists()
-    run.assert_called_once_with(["uv", "run", "prek", "install"], timeout=30)
+    run.assert_called_once_with(["uv", "run", "prek", "install"], timeout=600)
     assert engine.completed_tasks == [task]
     engine.journal.rollback()
     assert (hooks / "pre-push").read_text() == PRE_COMMIT_HOOK

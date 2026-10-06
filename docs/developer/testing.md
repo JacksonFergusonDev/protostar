@@ -118,7 +118,7 @@ The account runs 20 jobs at a time, five of them on macOS, so a pull request sta
 
 Nightly retries a failed test or smoke run once. A test that then passes doesn't fail the run; it is filed as flaky instead. Nightly Report (`nightly-report.yml`) opens a `nightly-failure` issue when the run fails, naming the failing jobs and the commits since the last pass, and closes it when a later run passes. Flaky tests go to a separate `flaky-test` issue that stays open until they are fixed.
 
-To run Nightly before merging a risky change, or before a release when it hasn't run on the commit yet, start it from the Actions tab or with `gh workflow run nightly.yml --ref <branch or tag>`.
+To run Nightly before merging a risky change, or before a release when it hasn't run on the commit yet, start it from the Actions tab or with `gh workflow run nightly.yml --ref <branch or tag>`. To reproduce one rollback failure without starting every job, narrow it: `gh workflow run nightly.yml --ref <branch> -f rollback-only=true -f os=windows-latest -f template=cli` runs only that template's rollback jobs on that operating system.
 
 ### Crash Reporter Testing (`--crash-test`)
 
@@ -211,7 +211,7 @@ Mutation testing checks that the tests would notice a bug: [mutmut](https://gith
 
 The set comes from `[tool.mutmut].source_paths` in `pyproject.toml`; it excludes the CLI, generated code, and modules reached mainly through mocked boundaries. The score describes that selected engine set, not the whole codebase.
 
-The **Mutation Testing** workflow runs nightly at 02:23 UTC. After the survivor fixes, the slowest measured module, reconciliation, took about 36 minutes across six parallel shards; nightly runs leave room for that work without running it on every commit. A scheduled run skips mutation testing unless its inputs changed since the last published commit: the selected source modules, `tests/`, `pyproject.toml`, `uv.lock`, or the reporting script and mutation workflow. A missing history or a recorded commit no longer in the current branch's ancestry starts a full run.
+The **Mutation Testing** workflow runs nightly at 05:30 UTC (10:30pm Pacific daylight time), with Nightly. GitHub can start a scheduled run late. After the survivor fixes, the slowest measured module, reconciliation, took about 36 minutes across six parallel shards; nightly runs leave room for that work without running it on every commit. A scheduled run skips mutation testing unless its inputs changed since the last published commit: the selected source modules, `tests/`, `pyproject.toml`, `uv.lock`, or the reporting script and mutation workflow. A missing history or a recorded commit no longer in the current branch's ancestry starts a full run.
 
 Run a module locally, or select modules and individual shards through the workflow's manual trigger:
 

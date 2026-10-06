@@ -242,22 +242,30 @@ def test_a_pull_request_stays_within_the_accounts_runner_limits():
 
 def test_nightly_fails_every_template_at_every_site_on_every_os():
     """Scheduled runs have no runner limit: a job per template, six on Windows."""
+    from scripts.nightly_matrix import rollback_matrix
+
     rollback = job("nightly.yml", "rollback")
-    matrix = rollback["strategy"]["matrix"]
+    assert "needs.select.outputs.rollback" in rollback["strategy"]["matrix"]
     runs = {
         (entry["os"], entry["template"], entry["slice"])
-        for entry in expand({k: v for k, v in matrix.items() if k != "exclude"})
-        if not any(
-            all(entry[key] == value for key, value in excluded.items())
-            for excluded in matrix["exclude"]
-        )
+        for entry in rollback_matrix()["include"]
     }
     assert runs == {
-        (os, template, part)
+        (os, template, f"{part}/{count}")
         for os in OPERATING_SYSTEMS
         for template in built_in_templates()
-        for part in (range(1, 7) if os == "windows-latest" else [1])
+        for count in [6 if os == "windows-latest" else 1]
+        for part in range(1, count + 1)
     }
+
+
+def test_a_manual_nightly_can_narrow_the_rollback_jobs():
+    from scripts.nightly_matrix import rollback_matrix
+
+    jobs = rollback_matrix("windows-latest", "cli")["include"]
+    assert [(j["os"], j["template"]) for j in jobs] == [("windows-latest", "cli")] * 6
+    assert {j["slice"] for j in jobs} == {f"{part}/6" for part in range(1, 7)}
+    rollback = job("nightly.yml", "rollback")
     (step,) = [
         s for s in rollback["steps"] if s.get("uses") == "./.github/actions/pytest"
     ]
