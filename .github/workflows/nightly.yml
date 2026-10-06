@@ -6,11 +6,28 @@ name: Nightly
 # init at every write and command of every template, with real commands, on
 # every OS. A release requires CI and Nightly to have passed on the commit it
 # bumps. Nightly Report files the outcome as an issue. After its gate, the run
-# starts 51 jobs, eight of them on macOS: a scheduled run has no runner limit.
+# starts 52 jobs, eight of them on macOS: a scheduled run has no runner limit.
 on:
   schedule:
-    - cron: "17 9 * * *"
+    # 10:30pm Pacific daylight time (9:30pm in winter), when nothing waits on
+    # the runners. GitHub can start a scheduled run late.
+    - cron: "30 5 * * *"
   workflow_dispatch:
+    inputs:
+      rollback-only:
+        description: "Run only the rollback jobs, to reproduce a rollback failure."
+        type: boolean
+        default: false
+      os:
+        description: "Limit the rollback jobs to one operating system."
+        type: choice
+        default: all
+        options: [all, ubuntu-latest, macos-latest, windows-latest]
+      template:
+        description: "Limit the rollback jobs to one template."
+        type: choice
+        default: all
+        options: [all, api, astro, cli, lib, ml]
 
 permissions:
   contents: read
@@ -42,11 +59,28 @@ jobs:
           echo "changed=true" >> "$GITHUB_OUTPUT"
         fi
 
+  select:
+    name: Select rollback jobs
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      rollback: ${{ steps.matrix.outputs.rollback }}
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Build the rollback matrix
+      id: matrix
+      env:
+        OS: ${{ inputs.os || 'all' }}
+        TEMPLATE: ${{ inputs.template || 'all' }}
+      run: echo "rollback=$(python3 scripts/nightly_matrix.py --os "$OS" --template "$TEMPLATE")" >> "$GITHUB_OUTPUT"
+
   platforms:
     name: Platforms
     needs: gate
     # A failed gate runs the checks anyway, so a broken gate can't hide a broken main.
-    if: ${{ !cancelled() && needs.gate.outputs.changed != 'false' }}
+    if: ${{ !cancelled() && needs.gate.outputs.changed != 'false' && !inputs.rollback-only }}
     uses: ./.github/workflows/platforms.yml
     with:
       retry: true
@@ -71,29 +105,16 @@ jobs:
   # template per job, and on Windows, where each run is slowest, six slices of
   # each so no job runs for hours. Pull requests run it with commands faked.
   rollback:
-    name: Rollback (${{ matrix.os }} / ${{ matrix.template }}${{ matrix.os == 'windows-latest' && format(' {0}/6', matrix.slice) || '' }})
-    needs: gate
-    if: ${{ !cancelled() && needs.gate.outputs.changed != 'false' }}
+    name: Rollback (${{ matrix.os }} / ${{ matrix.template }}${{ matrix.slice != '1/1' && format(' {0}', matrix.slice) || '' }})
+    needs: [gate, select]
+    if: ${{ !cancelled() && needs.gate.outputs.changed != 'false' && needs.select.result == 'success' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        template: [api, astro, cli, lib, ml]
-        slice: [1, 2, 3, 4, 5, 6]
-        # Linux and macOS run each template whole, as slice 1 of 1.
-        exclude:
-          - {os: ubuntu-latest, slice: 2}
-          - {os: ubuntu-latest, slice: 3}
-          - {os: ubuntu-latest, slice: 4}
-          - {os: ubuntu-latest, slice: 5}
-          - {os: ubuntu-latest, slice: 6}
-          - {os: macos-latest, slice: 2}
-          - {os: macos-latest, slice: 3}
-          - {os: macos-latest, slice: 4}
-          - {os: macos-latest, slice: 5}
-          - {os: macos-latest, slice: 6}
+      # scripts/nightly_matrix.py: every template on every OS, in six slices
+      # on Windows.
+      matrix: ${{ fromJSON(needs.select.outputs.rollback) }}
 
     env:
       PYTHONIOENCODING: "utf-8"
@@ -118,6 +139,6 @@ jobs:
         args: >-
           tests/test_rollback.py --rollback-scope full --rollback-real all
           --rollback-templates ${{ matrix.template }} -o faulthandler_timeout=300
-          --rollback-shard ${{ matrix.os == 'windows-latest' && format('{0}/6', matrix.slice) || '1/1' }}
+          --rollback-shard ${{ matrix.slice }}
         retry: "true"
-        flaky-artifact: flaky-tests-rollback-${{ matrix.os }}-${{ matrix.template }}-${{ matrix.slice }}
+        flaky-artifact: flaky-tests-rollback-${{ matrix.os }}-${{ matrix.template }}-${{ strategy.job-index }}

@@ -5,7 +5,8 @@ name: Mutation Testing
 # under [tool.mutmut-shards] in pyproject.toml gets one runner per shard.
 on:
   schedule:
-    - cron: "23 2 * * *"
+    # 10:30pm Pacific daylight time (9:30pm in winter), with Nightly.
+    - cron: "30 5 * * *"
   workflow_dispatch:
     inputs:
       modules:

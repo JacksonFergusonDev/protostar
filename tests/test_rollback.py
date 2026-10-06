@@ -277,10 +277,25 @@ def _assert_rolled_back(
     assert not rewritten, "rewritten outside the journal:\n" + "\n".join(rewritten)
 
 
+def _warnings(outcome: Outcome) -> list[str]:
+    """Returns each warning a finished run reported, with its detail."""
+    diagnostics = outcome.payload.get("result", {}).get("diagnostics", [])
+    return [
+        f"{d.get('message')}\n{d.get('detail') or ''}".strip()
+        for d in diagnostics
+        if d.get("severity") == "warning"
+    ]
+
+
 def _unreached(site: str, outcome: Outcome) -> str:
-    """Says the fault never fired, listing every site the run did pass."""
+    """Says the fault never fired, listing the sites passed and any warnings.
+
+    A command that fails on its own, where the run only warns about it (sync's
+    hook install), finishes the run before the fault after it can fire.
+    """
     passed = "\n".join(outcome.sites) or "(none)"
-    return f"the run never reached {site}; it passed:\n{passed}"
+    warned = "\n".join(_warnings(outcome)) or "(none)"
+    return f"the run never reached {site}; it passed:\n{passed}\nit warned:\n{warned}"
 
 
 def _assert_unchanged(name: str, before: Tree, after: Tree) -> None:
@@ -291,8 +306,10 @@ def _assert_unchanged(name: str, before: Tree, after: Tree) -> None:
 def _assert_clean_run(
     outcome: Outcome, workspace: Workspace, before: tuple[Tree, Tree]
 ) -> None:
-    """Checks a run succeeded, journaled every change, and left home alone."""
+    """Checks a run succeeded without a warning, journaled every change, and left home alone."""
     assert outcome.code == 0, outcome.payload
+    warnings = _warnings(outcome)
+    assert not warnings, "a clean run warned:\n" + "\n".join(warnings)
     project, home = workspace.capture()
     root = workspace.project.resolve()
     paths = unaccounted(root, before[0], project, outcome.journaled)
