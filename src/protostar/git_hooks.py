@@ -41,7 +41,9 @@ def install_task(tooling: ToolingManifest) -> SystemTask:
     runner = tooling.hook_runner
     return SystemTask(
         ["uv", "run", runner.value, "install"],
-        timeout=30,
+        # `uv run` first builds the project environment when a fresh clone has
+        # none, installing every dev dependency: as long as the resolver gets.
+        timeout=600,
         description=f"Installing {runner.value} git hooks",
         # Every hook type is known only once all modules build, so each is owned.
         owned_files=[
