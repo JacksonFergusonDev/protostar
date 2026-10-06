@@ -10,7 +10,7 @@ on:
   workflow_call:
     inputs:
       tests:
-        description: 'pytest matrix as JSON: "os" and "python" axes, plus "coverage": true on at most one entry and a "smoke" list of templates to smoke-test after the suite. Empty skips the suite.'
+        description: 'pytest matrix as JSON: "os" and "python" axes, plus "coverage": true on at most one entry, a "smoke" list of templates to smoke-test after the suite, and "rollback": "full" to raise every rollback fault. Empty skips the suite.'
         required: false
         default: ""
         type: string
@@ -77,8 +77,9 @@ jobs:
       env:
         RETRY: ${{ inputs.retry }}
         FLAKY_LIST: flaky-tests.txt
+        ROLLBACK_SCOPE: ${{ matrix.rollback || 'pr' }}
       run: |
-        pytest=(uv run pytest -n auto --dist worksteal --durations=25 -o faulthandler_timeout=90)
+        pytest=(uv run pytest -n auto --dist worksteal --durations=25 -o faulthandler_timeout=90 --rollback-scope "$ROLLBACK_SCOPE")
         if "${pytest[@]}"; then
           exit 0
         fi
