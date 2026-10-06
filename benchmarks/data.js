@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791256715588,
+  "lastUpdate": 1791257925051,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21731,6 +21731,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1275.12,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5d3adb11a828d2c64478f8af54336d31157da186",
+          "message": "ci: split the rollback faults across jobs (#452)\n\nThe full fake scope made one Linux pull-request job the slowest at 6.7\nminutes. The three Linux jobs now take a third each (--rollback-shard,\na stable split by test id), and Nightly runs each template in six slices\non Windows, where a whole template ran past an hour.",
+          "timestamp": "2026-10-05T20:36:07-07:00",
+          "tree_id": "d56189511ccc8cc19c8c957f8610aeec87cae044",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/5d3adb11a828d2c64478f8af54336d31157da186"
+        },
+        "date": 1791257923065,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 140.38,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 973.02,
             "unit": "ms"
           }
         ]
