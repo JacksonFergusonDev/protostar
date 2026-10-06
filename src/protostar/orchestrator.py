@@ -333,11 +333,15 @@ class Orchestrator:
             for ig in blueprint.vcs_ignores:
                 manifest.filesystem.add_vcs_ignore(ig)
 
-            for cmd in blueprint.system_tasks:
-                manifest.tasks.add_system_task(cmd)
+            for task in blueprint.system_tasks:
+                manifest.tasks.add_system_task(
+                    list(task.command), owned_files=list(task.owned_files)
+                )
 
-            for cmd in blueprint.post_install_tasks:
-                manifest.tasks.add_post_install_task(cmd)
+            for task in blueprint.post_install_tasks:
+                manifest.tasks.add_post_install_task(
+                    list(task.command), owned_files=list(task.owned_files)
+                )
 
             if blueprint.pyproject_injections:
                 logger.debug("Injecting pyproject.toml payloads from configuration.")

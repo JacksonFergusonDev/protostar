@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from protostar.config import TemplateBlueprint, UserConfig
+from protostar.config import TemplateBlueprint, TemplateTask, UserConfig
 from protostar.errors import (
     ConfigurationError,
     ExecutionInterruptedError,
@@ -171,6 +171,26 @@ def test_plan_injects_blueprint_fields(mocker, mock_config):
     assert "fastapi" in manifest.dependencies.dependencies
     assert "pytest" in manifest.dependencies.dev_dependencies
     assert "src/main.py" in manifest.filesystem.file_injections
+
+
+def test_plan_carries_the_files_a_template_task_declares(mocker, mock_config):
+    """A template task's owned_files reach the task, so execution journals them."""
+    command = ("uv", "run", "nbdime", "config-git", "--enable")
+    blueprint = TemplateBlueprint(
+        system_tasks=[TemplateTask(("git", "lfs", "install"))],
+        post_install_tasks=[TemplateTask(command, (".git/config",))],
+    )
+    engine = Orchestrator(
+        [], mock_config, request=InitRequest(template_blueprint=blueprint)
+    )
+    mocker.patch.object(Path, "exists", return_value=False)
+
+    manifest = engine.plan()
+
+    (lfs,) = manifest.tasks.system_tasks
+    assert (lfs.command, lfs.owned_files) == (["git", "lfs", "install"], [])
+    (nbdime,) = manifest.tasks.post_install_tasks
+    assert (nbdime.command, nbdime.owned_files) == (list(command), [".git/config"])
 
 
 def test_plan_injects_pyproject_injections_from_blueprint(mocker, mock_config):

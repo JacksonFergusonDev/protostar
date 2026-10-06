@@ -7,7 +7,7 @@ version = "1.0.0"
 
 # Typed dependency-group include edges.
 dependency_includes = [
-    {group = "dev",include = "docs"},
+    {group = "dev", include = "docs"},
 ]
 
 # Human-readable display name of the template.
@@ -47,14 +47,14 @@ vcs_ignores = [
 ]
 
 # --- Subprocess Tasks ---
-# Commands run once the project's files are written, before its dependencies are installed.
+# Commands run once the project's files are written, before its dependencies are installed. A task is an argument array, or a table that also lists the files the command writes (owned_files), so a failed run restores them.
 system_tasks = [
-    ["git", "lfs", "install", "--local"],
+    {command = ["git", "lfs", "install", "--local"], owned_files = [".git/config"]},
 ]
 
-# Commands run after the project's dependencies are installed.
+# Commands run after the project's dependencies are installed, in the same form as system_tasks.
 post_install_tasks = [
-    ["uv", "run", "nbdime", "config-git", "--enable"],
+    {command = ["uv", "run", "nbdime", "config-git", "--enable"], owned_files = [".git/config"]},
 ]
 
 # --- Tooling Opinions & Overrides ---

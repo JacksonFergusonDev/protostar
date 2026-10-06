@@ -3,7 +3,7 @@
     "template_reference": {
         "origin": "built-in",
         "locator": "astro",
-        "digest": "42c3bd341e140b185bad7155f8c47c9f405667048166337e81e0be6c12f65159",
+        "digest": "5e7a245c134d38f81d155335e6712c1d3fa2c7fc9a850ddb3464e0505fb122f8",
         "display_name": null,
         "version": null,
         "path": "",
@@ -135,7 +135,9 @@
                 ],
                 "description": null,
                 "timeout": 30,
-                "owned_files": [],
+                "owned_files": [
+                    ".git/config"
+                ],
                 "owned_trees": []
             }
         ]

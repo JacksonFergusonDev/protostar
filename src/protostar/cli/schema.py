@@ -201,10 +201,30 @@ def handle_export_schema(args: argparse.Namespace) -> None:
                     "additionalProperties": False,
                 },
             }
-        elif "list[list[str]]" in type_str:
+        elif "TemplateTask" in type_str:
+            command = {"type": "array", "items": {"type": "string"}, "minItems": 1}
             prop = {
                 "type": "array",
-                "items": {"type": "array", "items": {"type": "string"}},
+                "items": {
+                    "oneOf": [
+                        command,
+                        {
+                            "type": "object",
+                            "properties": {
+                                "command": command,
+                                "owned_files": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string",
+                                        "pattern": r"^(?!/)(?!.*:)(?!.*(?:^|/)\.\.(?:/|$)).+$",
+                                    },
+                                },
+                            },
+                            "required": ["command"],
+                            "additionalProperties": False,
+                        },
+                    ]
+                },
             }
         elif "dict[str, list[str]]" in type_str:
             prop = {
