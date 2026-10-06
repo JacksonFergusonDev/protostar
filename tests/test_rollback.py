@@ -147,16 +147,13 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             "failed_restore", restores, ids=lambda p: f"{p[0].scenario.name}:{p[1]}"
         )
     if "retried_case" in metafunc.fixturenames:
-        # A pull request retries after an interrupt at the last write, when
-        # the most is rolled back; the full scope, after one at each site.
+        # Every fault case already proves a rolled-back project is byte for
+        # byte the seed, so running again matters once per scenario: after an
+        # interrupt at the last write, when the most is rolled back, for state
+        # a run keeps outside the files.
         selected = [
-            case
+            Case(scenario, _last_write(scenario).site, Position.AFTER, Fault.INTERRUPT)
             for scenario in scenarios
-            for case in cases(scenario)
-            if case.position is Position.AFTER
-            and case.fault is Fault.INTERRUPT
-            and not _commits(case)
-            and (full or case.site == _last_write(scenario).site)
         ]
         metafunc.parametrize("retried_case", selected, ids=lambda c: c.id)
     if "case" in metafunc.fixturenames:
