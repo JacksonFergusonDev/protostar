@@ -291,14 +291,14 @@ def test_every_rollback_job_uploads_its_fault_report_even_when_it_fails():
     assert upload["if"] == "${{ !cancelled() }}"
 
 
-def test_rollback_metrics_are_recorded_apart_from_nightly_and_only_for_scheduled_runs():
+def test_rollback_metrics_are_recorded_apart_from_nightly_for_scheduled_and_manual_runs():
     """A publishing failure must not fail the run a release requires."""
     workflow = yaml_workflow("rollback-metrics.yml")
     trigger = workflow["on"]["workflow_run"]
     assert trigger["workflows"] == ["Nightly"]
     assert "rollback-metrics.yml" not in (WORKFLOWS / "nightly.yml").read_text()
     record = workflow["jobs"]["record"]
-    assert "workflow_run.event == 'schedule'" in record["if"]
+    assert '"schedule", "workflow_dispatch"' in record["if"]
     assert "head_branch == 'main'" in record["if"]
     assert record["permissions"]["contents"] == "write"
     (download,) = [
@@ -306,6 +306,9 @@ def test_rollback_metrics_are_recorded_apart_from_nightly_and_only_for_scheduled
     ]
     assert download["with"]["pattern"] == "rollback-*"
     assert download["with"]["run-id"] == "${{ github.event.workflow_run.id }}"
+    (step,) = [s for s in record["steps"] if s.get("id") == "record"]
+    # Only a manual run may end quietly when the matrix was narrowed.
+    assert 'EVENT" == workflow_dispatch' in step["run"]
     assert workflow["jobs"]["publish-pages"]["uses"] == "./.github/workflows/pages.yml"
     assert workflow["jobs"]["refresh-site"]["needs"] == "publish-pages"
 

@@ -5,7 +5,8 @@ name: Rollback Metrics
 # its rollback jobs injected and records them on gh-pages beside the
 # mutation score: a history file for the dashboard and a badge endpoint the
 # README and jacksonferguson.me read. Only a run in which every rollback job
-# reported publishes; manual runs, which may narrow the jobs, never do.
+# reported publishes. A manual Nightly that covers the whole matrix records
+# too; one narrowed to an OS or template is incomplete, so it records nothing.
 on:
   workflow_run:
     workflows: ["Nightly"]
@@ -27,7 +28,7 @@ jobs:
     timeout-minutes: 10
     if: >-
       github.event.workflow_run.head_branch == 'main' &&
-      github.event.workflow_run.event == 'schedule' &&
+      contains(fromJSON('["schedule", "workflow_dispatch"]'), github.event.workflow_run.event) &&
       contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion)
     permissions:
       actions: read
@@ -57,6 +58,7 @@ jobs:
       id: record
       env:
         COMMIT: ${{ github.event.workflow_run.head_sha }}
+        EVENT: ${{ github.event.workflow_run.event }}
       run: |
         # A night with no new commits skips its rollback jobs: nothing to record.
         if [[ ! -d results ]] || [[ -z "$(ls -A results)" ]]; then
@@ -70,10 +72,19 @@ jobs:
         git -C pages-data config user.email '41898282+github-actions[bot]@users.noreply.github.com'
         for attempt in 1 2 3 4 5; do
           echo "Publishing rollback results (attempt $attempt/5)."
-          python3 scripts/rollback_report.py record \
+          if ! python3 scripts/rollback_report.py record \
             --results results --matrix "$matrix" --commit "$COMMIT" --date "$recorded_at" \
             --history pages-data/metrics/rollback-history.json \
-            --latest pages-data/metrics/rollback-latest.json
+            --latest pages-data/metrics/rollback-latest.json; then
+            # A manual run may be narrowed to one OS or template on purpose.
+            # A scheduled one never is, so an incomplete set there is a failure.
+            if [[ "$EVENT" == workflow_dispatch ]]; then
+              echo "::notice::Not every rollback job reported, so this manual run records nothing."
+              echo "published=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            exit 1
+          fi
           git -C pages-data add metrics/rollback-history.json metrics/rollback-latest.json
           if ! git -C pages-data diff --cached --quiet; then
             git -C pages-data commit -m "Record rollback faults for ${COMMIT:0:7}"
