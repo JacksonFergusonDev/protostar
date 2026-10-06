@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791326049163,
+  "lastUpdate": 1791326627505,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21969,6 +21969,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 787.42,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "95c1f17a9ea49d1e545239f18195f61cb6172d32",
+          "message": "feat(ci): verify flaky-test fixes across three clean nightly runs (#464)\n\n* feat(ci): verify flaky-test fixes across three clean nightly runs\n\n* fix(ci): run existing checks for stacked pull requests",
+          "timestamp": "2026-10-06T15:39:59-07:00",
+          "tree_id": "ad85de256820721203579bcbd2092fa366b925d7",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/95c1f17a9ea49d1e545239f18195f61cb6172d32"
+        },
+        "date": 1791326625171,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 173.13,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1207.68,
             "unit": "ms"
           }
         ]
