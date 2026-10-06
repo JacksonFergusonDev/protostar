@@ -360,6 +360,7 @@ def test_a_clean_run_passes_the_recorded_sites_and_journals_every_change(
 # ----------------------------------------------------------------- faults -- #
 
 
+@pytest.mark.rollback_fault
 def test_rollback_restores_the_seed(case: Case, monkeypatch, seed):
     workspace = seed(case.scenario)
     before = workspace.capture()
@@ -373,6 +374,7 @@ def test_rollback_restores_the_seed(case: Case, monkeypatch, seed):
     _assert_handled(case, outcome, workspace, before, clean)
 
 
+@pytest.mark.rollback_fault
 def test_a_failed_restore_is_reported_and_everything_else_restored(
     failed_restore: tuple[Case, str], monkeypatch, seed
 ):
@@ -408,6 +410,7 @@ def test_a_failed_restore_is_reported_and_everything_else_restored(
     assert changed <= allowed, sorted(changed)
 
 
+@pytest.mark.rollback_fault
 @pytest.mark.skipif(sys.platform == "win32", reason="Ctrl+C is a POSIX signal here")
 def test_rollback_finishes_through_a_second_interrupt(
     scoped_scenario: Scenario, monkeypatch, seed
@@ -427,6 +430,7 @@ def test_rollback_finishes_through_a_second_interrupt(
     _assert_rolled_back(case, outcome, workspace, before)
 
 
+@pytest.mark.rollback_fault
 def test_a_rolled_back_run_succeeds_when_retried(retried_case: Case, monkeypatch, seed):
     """Rollback leaves a project init can start over in, not just one that looks right."""
     scenario = retried_case.scenario
@@ -497,6 +501,7 @@ def test_real_commands_pass_the_recorded_sites(
     assert outcome.sites == scenario.recorded_sites()
 
 
+@pytest.mark.rollback_fault
 @pytest.mark.integration
 @pytest.mark.usefixtures("real_commands")
 def test_real_commands_roll_back(real_case: Case, monkeypatch, seed):

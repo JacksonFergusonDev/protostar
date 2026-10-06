@@ -238,3 +238,143 @@ test('a chart-library failure preserves mutation scores and the accessible table
   assert.equal(element('mutation-modules').rows[0][1].textContent, '100.0%');
   assert.match(element('mutation-status').textContent, /Scores and commit links remain available/);
 });
+
+// Rollback history is another raw-count dataset, kept per operating system and template.
+const { rollbackTotal, rollbackHistory, rollbackSeries } = await import('../metrics/rollbacks.mjs');
+const rollbackCell = (os, template, passed) => ({ os, template, passed });
+const rollbackRun = (date, cells) => ({ commit: 'c'.repeat(40), date, cells });
+
+test('rollback totals add every job and the series split them by system and template', () => {
+  const history = rollbackHistory([rollbackRun('2026-10-01T00:00:00Z', [
+    rollbackCell('ubuntu', 'cli', 10), rollbackCell('ubuntu', 'lib', 5),
+    rollbackCell('windows', 'cli', 10)])]);
+  assert.equal(history[0].value, 25);
+  assert.equal(rollbackTotal([]), 0);
+  const series = rollbackSeries(history);
+  assert.deepEqual(series.map(line => line.name), ['Overall', 'ubuntu', 'windows', 'cli', 'lib']);
+  assert.deepEqual(series.map(line => line.data[0]), [25, 15, 10, 20, 5]);
+});
+
+test('rollback scope changes follow the set of jobs, not the counts', () => {
+  const history = rollbackHistory([
+    rollbackRun('2026-10-03T00:00:00Z', [rollbackCell('ubuntu', 'cli', 12), rollbackCell('ubuntu', 'lib', 1)]),
+    rollbackRun('2026-10-01T00:00:00Z', [rollbackCell('ubuntu', 'cli', 10)]),
+    rollbackRun('2026-10-02T00:00:00Z', [rollbackCell('ubuntu', 'cli', 11)])]);
+  assert.deepEqual(history.map(entry => entry.scopeChanged), [false, false, true]);
+  assert.deepEqual(history[2].added, ['ubuntu/lib']);
+  assert.deepEqual(history[2].removed, []);
+  const series = rollbackSeries(history);
+  assert.deepEqual(series.find(line => line.name === 'lib').data, [null, null, 1]);
+  assert.equal(series[0].connectNulls, false);
+  assert.deepEqual(rollbackHistory([]), []);
+});
+
+test('rollback data rejects malformed dates, unsafe commits, duplicate jobs, and invalid counts', () => {
+  const valid = rollbackRun('2026-10-01T00:00:00Z', [rollbackCell('ubuntu', 'cli', 1)]);
+  for (const entry of [
+    { ...valid, commit: 'javascript:alert(1)' }, { ...valid, date: 'invalid' },
+    { ...valid, cells: [] }, { ...valid, cells: [rollbackCell('ubuntu', 'cli', -1)] },
+    { ...valid, cells: [rollbackCell('ubuntu', 'cli', 1.5)] },
+    { ...valid, cells: [rollbackCell('', 'cli', 1)] },
+    { ...valid, cells: [rollbackCell('ubuntu', 'cli', 1), rollbackCell('ubuntu', 'cli', 2)] },
+  ]) assert.throws(() => rollbackHistory([entry]), /Invalid/);
+  assert.throws(() => rollbackHistory({}), /array/);
+  assert.equal(rollbackHistory([valid])[0].url,
+    `https://github.com/JacksonFergusonDev/protostar/commit/${valid.commit}`);
+});
+
+async function renderRollbacks(responses, chartFailure = false) {
+  const elements = new Map();
+  const charts = [];
+  const element = id => {
+    if (!elements.has(id)) elements.set(id, {
+      textContent: '', hidden: true, rows: [], children: [],
+      appendChild(child) { this.children.push(child); },
+      insertRow() {
+        const cells = [];
+        this.rows.push(cells);
+        return { insertCell() {
+          const cell = { textContent: '', appendChild(child) { this.child = child; } };
+          cells.push(cell);
+          return cell;
+        } };
+      },
+    });
+    return elements.get(id);
+  };
+  const source = await readFile(new URL('../metrics/rollback-dashboard.js', import.meta.url), 'utf8');
+  await runInNewContext(source.replace(/^import[^\n]*\n/gm, ''), {
+    rollbackHistory, rollbackSeries, escapeHtml,
+    fetch: async url => responses[url],
+    loadCharts: async () => { if (chartFailure) throw new Error('CDN unavailable'); },
+    window: { addEventListener() {} },
+    document: {
+      documentElement: {}, fonts: { ready: Promise.resolve() }, getElementById: element,
+      createElement() { return { style: {}, setAttribute() {}, prepend() {}, remove() {} }; },
+      body: { appendChild() {} },
+    },
+    getComputedStyle() {
+      return { color: '#22d3ee', getPropertyValue(name) {
+        return ({ '--text': '#e8edef', '--muted': '#939da6', '--line': '#252c31',
+          '--accent': '#22d3ee', '--mono': 'JetBrains Mono', '--panel': '#0e1114',
+          '--fs-ui': '14px', '--fs-label': '11px' })[name];
+      } };
+    },
+    echarts: { init() { return { setOption(options) { charts.push(options); }, on() {} }; } },
+  });
+  return { element, charts };
+}
+
+const rollbackEntries = [
+  rollbackRun('2026-10-01T00:00:00Z', [rollbackCell('ubuntu', 'cli', 1200), rollbackCell('windows', 'cli', 1200)]),
+  rollbackRun('2026-10-02T00:00:00Z', [rollbackCell('ubuntu', 'cli', 1300), rollbackCell('windows', 'cli', 1300),
+    rollbackCell('windows', 'lib', 800)])];
+
+test('rollback panel renders counts, a per-template table, scope markers, and safe commit links', async () => {
+  const { element, charts } = await renderRollbacks({
+    'rollback-history.json': { ok: true, json: async () => rollbackEntries },
+    'rollback-latest.json': { ok: true, json: async () => ({ message: '3,400' }) } });
+  assert.equal(element('rollback-status').textContent, '');
+  assert.equal(element('rollback-failing').textContent, '');
+  assert.equal(element('rollback-results').hidden, false);
+  assert.match(element('rollback-latest').textContent, /^3,400 faults restored/);
+  assert.deepEqual(element('rollback-os').children.map(cell => cell.textContent), ['ubuntu', 'windows']);
+  assert.deepEqual(element('rollback-cells').rows[0].map(cell => cell.textContent), ['cli', '1,300', '1,300']);
+  assert.deepEqual(element('rollback-cells').rows[1].map(cell => cell.textContent), ['lib', 'N/A', '800']);
+  assert.equal(element('rollback-runs').rows[0][2].child.href,
+    `https://github.com/JacksonFergusonDev/protostar/commit/${'c'.repeat(40)}`);
+  assert.match(element('rollback-runs').rows[0][3].textContent, /added windows\/lib/);
+  assert.equal(charts[0].series[0].markLine.data[0].xAxis, 1);
+  assert.equal(charts[0].legend.selected.Overall, true);
+  assert.equal(charts[0].legend.selected.cli, false);
+});
+
+test('rollback panel says when the latest run failed, without putting it in the history', async () => {
+  const { element } = await renderRollbacks({
+    'rollback-history.json': { ok: true, json: async () => rollbackEntries },
+    'rollback-latest.json': { ok: true, json: async () => ({ message: '2 failing' }) } });
+  assert.match(element('rollback-failing').textContent, /most recent run had 2 failing/);
+  assert.equal(element('rollback-results').hidden, false);
+});
+
+test('rollback panel handles unpublished, empty, malformed, and unavailable history', async () => {
+  for (const response of [{ status: 404 }, { ok: true, json: async () => [] }]) {
+    const { element, charts } = await renderRollbacks({ 'rollback-history.json': response });
+    assert.equal(element('rollback-status').textContent, 'No complete rollback runs published yet.');
+    assert.equal(element('rollback-results').hidden, true);
+    assert.equal(charts.length, 0);
+  }
+  for (const response of [{ status: 500, ok: false }, { ok: true, json: async () => ({}) }]) {
+    const { element } = await renderRollbacks({ 'rollback-history.json': response });
+    assert.match(element('rollback-status').textContent, /could not load/);
+  }
+});
+
+test('a missing badge file or a chart-library failure keeps the rollback counts', async () => {
+  const { element } = await renderRollbacks({
+    'rollback-history.json': { ok: true, json: async () => rollbackEntries },
+    'rollback-latest.json': { status: 404, ok: false } }, true);
+  assert.equal(element('rollback-failing').textContent, '');
+  assert.equal(element('rollback-results').hidden, false);
+  assert.match(element('rollback-status').textContent, /Counts and commit links remain available/);
+});
