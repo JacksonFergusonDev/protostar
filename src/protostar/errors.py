@@ -658,6 +658,17 @@ class RollbackFailedError(ProtostarError):
         self.rollback_result = rollback_result
         self.original_error = original_error
 
+    def details(self) -> dict[str, Any]:
+        """Returns each path rollback could not restore, and why."""
+        return {
+            "unrestored": [
+                {"path": failure.path.as_posix(), "detail": failure.detail}
+                for failure in sorted(
+                    self.rollback_result.errors, key=lambda failure: failure.path
+                )
+            ]
+        }
+
 
 # First match wins, so a subclass listed before its base takes its own code.
 EXIT_CODE_ROUTES: tuple[tuple[type[ProtostarError], ExitCode], ...] = (

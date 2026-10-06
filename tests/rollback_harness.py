@@ -27,6 +27,7 @@ import dataclasses
 import enum
 import errno
 import os
+import signal
 import stat
 import sys
 from collections import Counter
@@ -71,6 +72,7 @@ class SiteKind(enum.StrEnum):
     MKDIR = "mkdir"
     REMOVE = "remove"
     COMMAND = "command"
+    COMMIT = "commit"
 
 
 class Position(enum.StrEnum):
@@ -100,7 +102,12 @@ POSITIONS = {
     SiteKind.MKDIR: (Position.BEFORE, Position.AFTER),
     SiteKind.REMOVE: (Position.BEFORE, Position.AFTER),
     SiteKind.COMMAND: (Position.BEFORE, Position.MID, Position.AFTER),
+    SiteKind.COMMIT: (Position.BEFORE, Position.AFTER),
 }
+
+# Committing only changes the journal in memory, so nothing there can fail
+# with an error; only an interrupt can arrive on either side of it.
+FAULTS = {SiteKind.COMMIT: (Fault.INTERRUPT,)}
 
 
 @dataclasses.dataclass(frozen=True)
@@ -147,13 +154,18 @@ def site_kind(site: str) -> SiteKind:
     return SiteKind(site.split(":", 1)[0])
 
 
+def site_target(site: str) -> str:
+    """Returns what a site acts on: a path, a command, or the transaction."""
+    return site.split(":", 1)[1].rsplit("#", 1)[0]
+
+
 def cases(scenario: Scenario) -> list[Case]:
     """Returns every fault at every recorded site of a scenario."""
     return [
         Case(scenario, site, position, fault)
         for site in scenario.recorded_sites()
         for position in POSITIONS[site_kind(site)]
-        for fault in Fault
+        for fault in FAULTS.get(site_kind(site), tuple(Fault))
     ]
 
 
@@ -271,13 +283,19 @@ class Tree:
                     nodes[relative] = Node("other", None, mode)
         return cls(nodes, identities)
 
+    def changed(self, other: Tree) -> list[str]:
+        """Returns every path whose node differs in ``other``, sorted."""
+        return sorted(
+            path
+            for path in self.nodes.keys() | other.nodes.keys()
+            if self.nodes.get(path) != other.nodes.get(path)
+        )
+
     def differences(self, other: Tree) -> list[str]:
         """Describes how ``other`` differs from this tree, one line per path."""
         lines = []
-        for path in sorted(self.nodes.keys() | other.nodes.keys()):
+        for path in self.changed(other):
             before, after = self.nodes.get(path), other.nodes.get(path)
-            if before == after:
-                continue
             if before is None:
                 lines.append(f"left behind: {path}")
             elif after is None:
@@ -292,6 +310,19 @@ class Tree:
 
 
 # ------------------------------------------------------------ the harness -- #
+
+
+@dataclasses.dataclass(frozen=True)
+class RollbackFault:
+    """A second fault, raised while rollback restores the first one's damage.
+
+    Attributes:
+        path: A journaled path whose restore fails, relative to the project.
+        interrupt: Whether a real SIGINT arrives as rollback starts.
+    """
+
+    path: str | None = None
+    interrupt: bool = False
 
 
 @dataclasses.dataclass(frozen=True)
@@ -310,12 +341,16 @@ class FaultInjector:
         workspace: Path,
         runner: Runner,
         armed: Case | None = None,
+        rollback: RollbackFault | None = None,
     ) -> None:
         self.workspace = workspace
         self.runner = runner
         self.armed = armed
+        self.rollback = rollback
         self.sites: list[str] = []
         self.fired = False
+        # The project as the commit left it, when a fault fires just after it.
+        self.committed: Tree | None = None
         # Every path the journal captured, and those captured since the last
         # site: what the executor declared for the command about to run.
         self.journaled: set[Path] = set()
@@ -377,6 +412,8 @@ class FaultInjector:
         remove_file = fs_class.remove_file
         record_mutation = journal.MutationJournal.record_mutation
         record_tree_creation = journal.MutationJournal.record_tree_creation
+        commit = journal.MutationJournal.commit
+        restore = journal.MutationJournal._restore
 
         def journaled(
             original: Callable[..., None], *, tree: bool
@@ -449,7 +486,34 @@ class FaultInjector:
             "record_tree_creation",
             journaled(record_tree_creation, tree=True),
         )
+
+        def transaction(self: journal.MutationJournal) -> None:
+            position = injector._enter(SiteKind.COMMIT, "transaction")
+            if position is Position.BEFORE:
+                injector._raise(SiteKind.COMMIT)
+            commit(self)
+            if position is Position.AFTER:
+                injector.committed = Tree.capture(injector.workspace, DISCLAIMED)
+                injector._raise(SiteKind.COMMIT)
+
+        def restoring(path: Path, state: journal.OriginalState) -> str | None:
+            fault = injector.rollback
+            if fault is not None and fault.interrupt:
+                # A real Ctrl+C, once, which rollback must shield itself from.
+                injector.rollback = None
+                os.kill(os.getpid(), signal.SIGINT)
+            if (
+                fault is not None
+                and fault.path == path.relative_to(injector.workspace).as_posix()
+            ):
+                raise OSError(errno.EIO, "injected restore fault")
+            return restore(path, state)
+
         monkeypatch.setattr(system.ProcessRunner, "run", command)
+        monkeypatch.setattr(journal.MutationJournal, "commit", transaction)
+        monkeypatch.setattr(
+            journal.MutationJournal, "_restore", staticmethod(restoring)
+        )
 
     def _failing_replace(self) -> contextlib.AbstractContextManager[Any]:
         """Fails the atomic write's final rename, after its temporary file exists.
@@ -540,6 +604,7 @@ class Outcome:
     sites: list[str]
     journaled: frozenset[Path]
     fired: bool
+    committed: Tree | None
 
 
 @dataclasses.dataclass
@@ -555,7 +620,7 @@ class Workspace:
         # A fixed name: an empty project takes its package name from it.
         project = root / "project"
         home = root / "home"
-        project.mkdir()
+        project.mkdir(parents=True)
         home.mkdir()
         SEEDS[scenario.seed](project)
         return cls(project, home)
@@ -575,8 +640,13 @@ def init(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     armed: Case | None = None,
+    rollback: RollbackFault | None = None,
 ) -> Outcome:
-    """Runs ``protostar init --json`` in-process, failing it at the armed site."""
+    """Runs ``protostar init --json`` in-process, failing it at the armed site.
+
+    A run interrupted after it committed prints no payload: the CLI reports
+    a plain interrupt on stderr, so the payload is empty.
+    """
     import json
 
     from protostar.cli import ui
@@ -596,7 +666,7 @@ def init(
         "sys.argv",
         ["protostar", "init", "--json", "--no-config", "-t", scenario.template, *flags],
     )
-    injector = FaultInjector(workspace.project.resolve(), runner, armed)
+    injector = FaultInjector(workspace.project.resolve(), runner, armed, rollback)
     with monkeypatch.context() as patches:
         injector.install(patches)
         code = 0
@@ -606,12 +676,14 @@ def init(
             code = int(exit_.code or 0)
         finally:
             clear_hook_registry_cache()
+    out = capsys.readouterr().out
     return Outcome(
         code=code,
-        payload=json.loads(capsys.readouterr().out),
+        payload=json.loads(out) if out else {},
         sites=injector.sites,
         journaled=frozenset(injector.journaled),
         fired=injector.fired,
+        committed=injector.committed,
     )
 
 
@@ -624,11 +696,7 @@ def unaccounted(
     declared tree accounts for everything a command writes inside it.
     """
     covered = {path.relative_to(workspace).as_posix() for path in journaled}
-    changed = {
-        path
-        for path in before.nodes.keys() | after.nodes.keys()
-        if before.nodes.get(path) != after.nodes.get(path)
-    }
+    changed = before.changed(after)
 
     def is_covered(path: str) -> bool:
         parts = path.split("/")

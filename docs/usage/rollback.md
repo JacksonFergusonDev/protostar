@@ -45,11 +45,13 @@ Rarely, a path can't be put back, and Protostar raises `RollbackFailedError` lis
 - **A directory it created now holds other files,** dropped there by an editor or another program during the run. Protostar never deletes files it didn't create, so it leaves the directory.
 - **Permissions changed during the run,** so the original bytes can't be written back.
 
-Look at each listed path, remove or restore it by hand, and run the command again.
+Every other path is still restored. Look at each listed path, remove or restore it by hand, and run the command again. With `--json`, the error lists them as `unrestored`, each with its `path` and why it failed.
 
 ## Interrupting with Ctrl+C (`ExecutionInterruptedError`)
 
 `Ctrl+C` during a run starts rollback at once. A second `Ctrl+C` can't interrupt the restore halfway. When it finishes, Protostar raises `ExecutionInterruptedError` and exits with code `130`, meaning the run was cancelled and every change was undone, so you can run the command again.
+
+A `Ctrl+C` that lands after the run has finished its last change undoes nothing: the run is complete, so Protostar keeps it and exits with code `130` as a plain interrupt, without `ExecutionInterruptedError`.
 
 ## Symbolic Links and Special Files (`UnsupportedFilesystemNodeError`)
 

@@ -454,6 +454,9 @@ class Orchestrator:
         try:
             executor.execute()
         except KeyboardInterrupt:
+            if executor.journal.state is TransactionState.COMMITTED:
+                # Nothing was rolled back, so it is a plain interrupt.
+                raise
             raise ExecutionInterruptedError(
                 RollbackContext(
                     touched_paths=frozenset(executor.journal.touched_paths),

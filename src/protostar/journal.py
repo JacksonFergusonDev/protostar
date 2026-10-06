@@ -254,6 +254,38 @@ class MutationJournal:
         self._mutated_paths.add(path)
         self._touched_display_paths.add(self._format_display_path(path, is_dir=is_dir))
 
+    @staticmethod
+    def _restore(path: Path, state: OriginalState) -> str | None:
+        """Puts one path back in its captured state.
+
+        Args:
+            path: The journaled path.
+            state: What it was before its first mutation.
+
+        Returns:
+            What a created tree left behind, or None when the path is restored.
+        """
+        if state.kind is NodeKind.ABSENT:
+            if path.exists() or path.is_symlink():
+                if state.created_as_tree:
+                    return _remove_tree(path)
+                if path.is_dir() and not path.is_symlink():
+                    path.rmdir()
+                else:
+                    path.unlink()
+        elif state.kind is NodeKind.DIRECTORY:
+            if not path.is_dir() or path.is_symlink():
+                if path.exists() or path.is_symlink():
+                    path.unlink()
+                path.mkdir(parents=True)
+            if state.mode is not None:
+                path.chmod(state.mode)
+        elif state.file_content is not None:
+            if path.exists() and path.is_dir():
+                path.rmdir()
+            atomic_write_bytes(path, state.file_content, mode=state.mode)
+        return None
+
     def commit(self) -> None:
         """Accepts every mutation and discards the captures.
 
@@ -284,31 +316,13 @@ class MutationJournal:
 
         failures: list[RollbackFailure] = []
         for path in reversed(self._journal.keys()):
-            state = self._journal[path]
             try:
-                if state.kind is NodeKind.ABSENT:
-                    if path.exists() or path.is_symlink():
-                        if state.created_as_tree:
-                            leftover = _remove_tree(path)
-                            if leftover is not None:
-                                failures.append(RollbackFailure(path, leftover))
-                        elif path.is_dir() and not path.is_symlink():
-                            path.rmdir()
-                        else:
-                            path.unlink()
-                elif state.kind is NodeKind.DIRECTORY:
-                    if not path.is_dir() or path.is_symlink():
-                        if path.exists() or path.is_symlink():
-                            path.unlink()
-                        path.mkdir(parents=True)
-                    if state.mode is not None:
-                        path.chmod(state.mode)
-                elif state.file_content is not None:
-                    if path.exists() and path.is_dir():
-                        path.rmdir()
-                    atomic_write_bytes(path, state.file_content, mode=state.mode)
+                leftover = self._restore(path, self._journal[path])
             except Exception as e:
                 failures.append(RollbackFailure(path=path, detail=str(e)))
+            else:
+                if leftover is not None:
+                    failures.append(RollbackFailure(path, leftover))
 
         self._state = TransactionState.ROLLED_BACK
         self._journal.clear()

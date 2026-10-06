@@ -16,7 +16,7 @@ from .fs_transaction import TransactionAwareFS
 from .git_hooks import HookAction
 from .ide import check_ide_extensions
 from .intent import ResolverFootprint
-from .journal import MutationJournal
+from .journal import MutationJournal, TransactionState
 from .manifest import (
     DiagnosticEvent,
     DiagnosticPhase,
@@ -170,6 +170,9 @@ class SystemExecutor(Reconciliation):
                 self._write_state()
             self.journal.commit()
         except BaseException as original_error:
+            if self.journal.state is TransactionState.COMMITTED:
+                # Interrupted after the commit: every change stands.
+                raise
             self.process_runner.terminate_active_process_tree()
             with shield_sigint():
                 rollback_result = self.journal.rollback()
