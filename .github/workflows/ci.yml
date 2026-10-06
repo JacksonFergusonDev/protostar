@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main", "renovate/**" ]
   pull_request:
-    branches: [ "main" ]
+    # Stacked PRs need the same checks before their parent merges.
 
 # A new push to a pull request cancels the run it replaces; every push to a
 # branch keeps its own run.

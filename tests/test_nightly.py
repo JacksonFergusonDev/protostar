@@ -243,6 +243,13 @@ def test_a_pull_request_stays_within_the_accounts_runner_limits():
     assert macos_jobs(PULL_REQUEST) <= 3
 
 
+def test_ci_checks_stacked_pull_requests_without_filtering_their_base_branch():
+    trigger = yaml_workflow("ci.yml")["on"]
+    assert "pull_request" in trigger
+    assert trigger["pull_request"] is None
+    assert trigger["push"]["branches"] == ["main", "renovate/**"]
+
+
 def test_nightly_fails_every_template_at_every_site_on_every_os():
     """Scheduled runs have no runner limit: a job per template, six on Windows."""
     from scripts.nightly_matrix import rollback_matrix
