@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791306094658,
+  "lastUpdate": 1791308732093,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21833,6 +21833,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1486.59,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2d691433f820b7c2254d23e7a208e009a1c3b300",
+          "message": "refactor(docs): move the benchmark dashboard to /metrics/ (#457)\n\nThe page now carries performance and mutation history, with rollback to come, so\nit is the metrics dashboard. Source, published path, gh-pages data directory,\nbadge, and docs follow; the old /benchmarks/ page redirects.",
+          "timestamp": "2026-10-06T10:42:18-07:00",
+          "tree_id": "3eb6f63237d98bf572d01bd457f4245f44130b48",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/2d691433f820b7c2254d23e7a208e009a1c3b300"
+        },
+        "date": 1791308730012,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 182.44,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1247.12,
             "unit": "ms"
           }
         ]
