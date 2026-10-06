@@ -17,7 +17,7 @@ write:src/demo/core/config.py#1
 write:src/demo/main.py#1
 write:tests/test_health.py#1
 write:pyproject.toml#1
-command:uv add#1
+command:uv add --no-sync#1
 command:uv add --dev#1
 write:.dockerignore#1
 write:.gitignore#1

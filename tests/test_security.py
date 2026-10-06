@@ -232,7 +232,7 @@ def test_untrusted_commands_include_the_dependency_installs(mocker: Any) -> None
     manifest.dependencies.add_dev("pytest")
     assert untrusted_commands(InitRequest(is_external=True), manifest) == (
         ("git", "init"),
-        ("uv", "add", "fastapi"),
+        ("uv", "add", "--no-sync", "fastapi"),
         ("uv", "add", "--dev", "pytest"),
         ("uv", "run", "setup"),
     )
