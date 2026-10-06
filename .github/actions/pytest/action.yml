@@ -1,6 +1,10 @@
 name: "Run pytest"
 description: "Runs pytest in parallel; with retry, a test that fails and then passes alone is recorded as flaky for the nightly report instead of failing the job"
 inputs:
+  workers:
+    description: "Number of pytest workers (auto uses every available CPU)"
+    required: false
+    default: "auto"
   args:
     description: "Extra pytest arguments, separated by spaces"
     required: false
@@ -21,10 +25,11 @@ runs:
       env:
         ARGS: ${{ inputs.args }}
         RETRY: ${{ inputs.retry }}
+        WORKERS: ${{ inputs.workers }}
         FLAKY_LIST: flaky-tests.txt
       run: |
         read -ra extra <<< "$ARGS"
-        pytest=(uv run pytest -n auto --dist worksteal --durations=25 "${extra[@]}")
+        pytest=(uv run pytest -n "$WORKERS" --dist worksteal --durations=25 "${extra[@]}")
         if "${pytest[@]}"; then
           exit 0
         fi
@@ -35,9 +40,16 @@ runs:
         # A test that fails and then passes alone is flaky, not broken: record
         # it for the nightly report instead of failing the run.
         uv run --no-sync python -c 'import json; print("\n".join(sorted(json.load(open(".pytest_cache/v/cache/lastfailed")))))' > "$FLAKY_LIST"
-        echo "flaky=true" >> "$GITHUB_OUTPUT"
         echo "Retrying $(wc -l < "$FLAKY_LIST") failed test(s) once"
-        "${pytest[@]}" --last-failed --last-failed-no-failures none
+        retry_status=0
+        "${pytest[@]}" --last-failed --last-failed-no-failures none || retry_status=$?
+        # The retry can still fail. Only tests removed from lastfailed passed;
+        # don't label persistent failures as flaky or claim the run passed.
+        uv run --no-sync python -c 'import json, os; from pathlib import Path; p = Path(os.environ["FLAKY_LIST"]); failed = json.load(open(".pytest_cache/v/cache/lastfailed")); passed = sorted(set(p.read_text().splitlines()) - failed.keys()); p.write_text("".join(t + "\n" for t in passed))'
+        if [ ! -s "$FLAKY_LIST" ]; then
+          exit "$retry_status"
+        fi
+        echo "flaky=true" >> "$GITHUB_OUTPUT"
         {
           echo "### Flaky tests"
           echo
@@ -47,9 +59,10 @@ runs:
           sed 's/^/- `/; s/$/`/' "$FLAKY_LIST"
         } >> "$GITHUB_STEP_SUMMARY"
         echo "::warning title=Flaky tests::$(wc -l < "$FLAKY_LIST") test(s) passed only when retried; see the job summary"
+        exit "$retry_status"
 
     - name: Upload flaky tests
-      if: ${{ steps.run.outputs.flaky == 'true' }}
+      if: ${{ !cancelled() && steps.run.outputs.flaky == 'true' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ inputs.flaky-artifact }}
