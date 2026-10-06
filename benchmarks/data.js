@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791240541247,
+  "lastUpdate": 1791255936952,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21663,6 +21663,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1265.62,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dedc4b14573f7e0b75992bdbbcdb3efe85f3029e",
+          "message": "test(rollback): keep the pull-request scope within a few minutes (#451)\n\n* test(rollback): keep the pull-request scope within a few minutes\n\n#445 took the Windows test jobs from about 4 to 7.5 minutes. Pull requests\nnow raise one fault per site (an error after it) in the representative\nscenario, check every scenario's site list and journal in one clean run,\nand run real commands once, off Windows. Every fault, and faults around\nreal commands, stay in the full scope. The harness skips fsync, which is\nslow on Windows and irrelevant to what rollback restores.\n\n* ci: raise every rollback fault on one Linux pull-request job\n\nWith commands faked the full scope is cheap on Linux, so pull requests keep\nevery position and fault while the other jobs run the trimmed scope.",
+          "timestamp": "2026-10-05T20:02:21-07:00",
+          "tree_id": "2b7871cb252f42e672840b3f9d8d3c5952e0840f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/dedc4b14573f7e0b75992bdbbcdb3efe85f3029e"
+        },
+        "date": 1791255935357,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 175.53,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1262.16,
             "unit": "ms"
           }
         ]
