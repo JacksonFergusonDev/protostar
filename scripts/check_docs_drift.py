@@ -60,7 +60,7 @@ MAINTAINER_PAGES = (
 )
 
 # Pages the site publishes from outside docs/, so no Markdown file backs them.
-PUBLISHED_ELSEWHERE = frozenset({"metrics/"})
+PUBLISHED_ELSEWHERE = {"metrics/": "metrics/index.html"}
 
 # Paths a maintainer page shows as examples of the pattern, not as files.
 PLACEHOLDER_PATHS = frozenset({"tests/path/to/test.py", "tests/test_foo.py"})
@@ -500,9 +500,12 @@ def check_site_links() -> list[str]:
         for target in sorted(
             set(re.findall(re.escape(site_url) + r"/([^\s)>\"']*)", text))
         ):
-            if target in PUBLISHED_ELSEWHERE:
-                continue
-            file_path, anchor = docs_path_to_file(target)
+            path, _, fragment = target.partition("#")
+            if path in PUBLISHED_ELSEWHERE:
+                file_path = REPO_ROOT / PUBLISHED_ELSEWHERE[path]
+                anchor = fragment or None
+            else:
+                file_path, anchor = docs_path_to_file(target)
             if not file_path.is_file():
                 problems.append(f"{_rel(page)}: {site_url}/{target} has no page")
             elif anchor and anchor not in extract_anchors(file_path):

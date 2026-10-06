@@ -8,6 +8,8 @@ Protostar's automatic rollback is implemented as a three-layer stack that collab
 
 For the user-facing guide covering what rollback restores, what it doesn't, and how to remediate failures, see [Automatic Rollback](../usage/rollback.md).
 
+The [published rollback results](https://protostar.jacksonferguson.me/metrics/#rollback) show how many injected faults the nightly suite restored, split by template and operating system. When changing these layers, use the [fault-injection harness](../developer/testing.md#rollback-fault-injection) to exercise the new failure points; the public count complements those checks and changes with their scope.
+
 ## The Three-Layer Stack
 
 ```mermaid
