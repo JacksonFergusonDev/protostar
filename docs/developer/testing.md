@@ -78,6 +78,12 @@ Execution is one transaction: a failure anywhere must leave the project and the 
 
 A case passes when the run exits with a domain error (or 130 for an interrupt), every path is restored byte for byte with its mode, nothing is left behind, and no file the run never journaled was rewritten. Only what the rollback boundary disclaims goes uncompared: uv's `.venv/` and tool caches in the home directory, listed with their reasons in the harness.
 
+The commit is a site too. An interrupt just before it rolls everything back; one just after it must keep the finished run whole and report a plain interrupt, never a rollback. Three more checks cover rollback itself:
+
+- **A restore that fails:** each path the run writes fails its restore in turn. Rollback must name that path (and any directory it created above it) in `RollbackFailedError`, and restore everything else.
+- **A second `Ctrl+C`:** a real `SIGINT` arrives as rollback starts, and every path must still come back. POSIX only.
+- **Running again:** after an interrupt at the last write, which rolls back the most, a second `init` must leave exactly the project a clean run does. Once per scenario is enough: every fault case already proves a rolled-back project matches the seed byte for byte, so this catches only state a run keeps outside the files.
+
 Commands run through a fake that writes exactly what the executor journaled for them, so the cases stay fast and offline. A clean run must journal every path it changes, which catches a write made around the seams. Integration tests run the real commands for one scenario: they pass the same sites as the fake, and an error after each command, or an interrupt after the last, rolls back what it really did.
 
 The sites each scenario passes are committed in `tests/rollback_sites/`, and the cases are generated from them. A change that adds, removes, or reorders a site fails until the lists are regenerated:

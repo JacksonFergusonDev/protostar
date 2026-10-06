@@ -29,12 +29,14 @@ from pathlib import Path
 import pytest
 
 from tests.rollback_harness import (
+    POSITIONS,
     SCENARIOS,
     SITES_DIR,
     Case,
     Fault,
     Outcome,
     Position,
+    RollbackFault,
     Runner,
     Scenario,
     SiteKind,
@@ -43,6 +45,7 @@ from tests.rollback_harness import (
     cases,
     init,
     site_kind,
+    site_target,
     unaccounted,
 )
 
@@ -73,13 +76,20 @@ def _one_per_site(scenario: Scenario) -> list[Case]:
     """The pull-request faults: an error after each write, directory, and command.
 
     That is the fault that proves a path was journaled before it changed. The
-    other positions and the interrupt run in the full scope, so a pull
-    request's test jobs stay within a few minutes on every platform.
+    commit takes an interrupt on either side, where the run either rolls back
+    or stands. The other positions and faults run in the full scope, so a
+    pull request's test jobs stay within a few minutes on every platform.
     """
-    return [
-        Case(scenario, site, Position.AFTER, Fault.ERROR)
-        for site in scenario.recorded_sites()
-    ]
+    selected = []
+    for site in scenario.recorded_sites():
+        if site_kind(site) is SiteKind.COMMIT:
+            selected += [
+                Case(scenario, site, position, Fault.INTERRUPT)
+                for position in POSITIONS[SiteKind.COMMIT]
+            ]
+        else:
+            selected.append(Case(scenario, site, Position.AFTER, Fault.ERROR))
+    return selected
 
 
 def _real_cases(scenario: Scenario) -> list[Case]:
@@ -98,12 +108,56 @@ def _real_cases(scenario: Scenario) -> list[Case]:
     ]
 
 
+def _last_write(scenario: Scenario) -> Case:
+    """An error after the last write: everything the run does is journaled."""
+    writes = [s for s in scenario.recorded_sites() if site_kind(s) is SiteKind.WRITE]
+    return Case(scenario, writes[-1], Position.AFTER, Fault.ERROR)
+
+
+def _failed_restores(scenario: Scenario) -> list[tuple[Case, str]]:
+    """Each path the run writes or creates, failing its restore in turn."""
+    paths = dict.fromkeys(
+        site_target(site)
+        for site in scenario.recorded_sites()
+        if site_kind(site) in (SiteKind.WRITE, SiteKind.MKDIR)
+    )
+    return [(_last_write(scenario), path) for path in paths]
+
+
+def _commits(case: Case) -> bool:
+    """Whether the run commits before the fault, so nothing rolls back."""
+    return site_kind(case.site) is SiteKind.COMMIT and case.position is Position.AFTER
+
+
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     scenarios = _scenarios(metafunc.config)
     if "scenario" in metafunc.fixturenames:
         metafunc.parametrize("scenario", SCENARIOS, ids=lambda s: s.name)
+    if "scoped_scenario" in metafunc.fixturenames:
+        metafunc.parametrize("scoped_scenario", scenarios, ids=lambda s: s.name)
+    full = _full(metafunc.config)
+    if "failed_restore" in metafunc.fixturenames:
+        # A pull request fails one restore per scenario; the full scope, each.
+        restores = [
+            pair
+            for scenario in scenarios
+            for pair in _failed_restores(scenario)[: None if full else 1]
+        ]
+        metafunc.parametrize(
+            "failed_restore", restores, ids=lambda p: f"{p[0].scenario.name}:{p[1]}"
+        )
+    if "retried_case" in metafunc.fixturenames:
+        # Every fault case already proves a rolled-back project is byte for
+        # byte the seed, so running again matters once per scenario: after an
+        # interrupt at the last write, when the most is rolled back, for state
+        # a run keeps outside the files.
+        selected = [
+            Case(scenario, _last_write(scenario).site, Position.AFTER, Fault.INTERRUPT)
+            for scenario in scenarios
+        ]
+        metafunc.parametrize("retried_case", selected, ids=lambda c: c.id)
     if "case" in metafunc.fixturenames:
-        select = cases if _full(metafunc.config) else _one_per_site
+        select = cases if full else _one_per_site
         selected = [case for scenario in scenarios for case in select(scenario)]
         metafunc.parametrize("case", selected, ids=lambda c: c.id)
     if "real_scenario" in metafunc.fixturenames:
@@ -118,6 +172,30 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             else []
         )
         metafunc.parametrize("real_case", selected, ids=lambda c: c.id)
+
+
+def _assert_handled(
+    case: Case, outcome: Outcome, workspace: Workspace, before: tuple[Tree, Tree]
+) -> None:
+    """Checks a fault rolled the run back, or left a committed run whole."""
+    if _commits(case):
+        _assert_committed(outcome, workspace, before)
+    else:
+        _assert_rolled_back(case, outcome, workspace, before)
+
+
+def _assert_committed(
+    outcome: Outcome, workspace: Workspace, before: tuple[Tree, Tree]
+) -> None:
+    """Checks an interrupt after the commit kept every change and claimed no rollback."""
+    assert outcome.fired, "the run never committed"
+    assert outcome.code == 130
+    # A plain interrupt: no payload says the run was rolled back.
+    assert outcome.payload == {}
+    assert outcome.committed is not None
+    project, home = workspace.capture()
+    _assert_unchanged("the committed project", outcome.committed, project)
+    _assert_unchanged("the home directory", before[1], home)
 
 
 def _assert_rolled_back(
@@ -198,7 +276,77 @@ def test_rollback_restores_the_seed(case: Case, tmp_path, monkeypatch, capsys):
     workspace = Workspace.seed(tmp_path, case.scenario)
     before = workspace.capture()
     outcome = init(workspace, case.scenario, Runner.FAKE, monkeypatch, capsys, case)
+    _assert_handled(case, outcome, workspace, before)
+
+
+def test_a_failed_restore_is_reported_and_everything_else_restored(
+    failed_restore: tuple[Case, str], tmp_path, monkeypatch, capsys
+):
+    """A path rollback can't restore is named; every other path still comes back.
+
+    A created directory above that path can't be removed while the path is
+    there, so it is reported too. Nothing else may differ from the seed.
+    """
+    case, path = failed_restore
+    workspace = Workspace.seed(tmp_path, case.scenario)
+    before = workspace.capture()
+    outcome = init(
+        workspace,
+        case.scenario,
+        Runner.FAKE,
+        monkeypatch,
+        capsys,
+        case,
+        RollbackFault(path=path),
+    )
+    assert outcome.code == 1, outcome.payload
+    error = outcome.payload["error"]
+    assert error["type"] == "RollbackFailedError"
+    root = workspace.project.resolve()
+    unrestored = {
+        Path(entry["path"]).relative_to(root).as_posix()
+        for entry in error["unrestored"]
+    }
+    parts = path.split("/")
+    allowed = {"/".join(parts[:i]) for i in range(1, len(parts) + 1)}
+    assert path in unrestored
+    assert unrestored <= allowed, unrestored
+    changed = set(before[0].changed(workspace.capture()[0]))
+    assert changed <= allowed, sorted(changed)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Ctrl+C is a POSIX signal here")
+def test_rollback_finishes_through_a_second_interrupt(
+    scoped_scenario: Scenario, tmp_path, monkeypatch, capsys
+):
+    """A Ctrl+C while rollback runs is held off until every path is restored."""
+    case = _last_write(scoped_scenario)
+    workspace = Workspace.seed(tmp_path, scoped_scenario)
+    before = workspace.capture()
+    outcome = init(
+        workspace,
+        scoped_scenario,
+        Runner.FAKE,
+        monkeypatch,
+        capsys,
+        case,
+        RollbackFault(interrupt=True),
+    )
     _assert_rolled_back(case, outcome, workspace, before)
+
+
+def test_a_rolled_back_run_succeeds_when_retried(
+    retried_case: Case, tmp_path, monkeypatch, capsys
+):
+    """Rollback leaves a project init can start over in, not just one that looks right."""
+    scenario = retried_case.scenario
+    clean = Workspace.seed(tmp_path / "clean", scenario)
+    assert init(clean, scenario, Runner.FAKE, monkeypatch, capsys).code == 0
+    workspace = Workspace.seed(tmp_path / "retried", scenario)
+    init(workspace, scenario, Runner.FAKE, monkeypatch, capsys, retried_case)
+    retried = init(workspace, scenario, Runner.FAKE, monkeypatch, capsys)
+    assert retried.code == 0, retried.payload
+    _assert_unchanged("the retried project", clean.capture()[0], workspace.capture()[0])
 
 
 # ---------------------------------------------------------- real commands -- #
@@ -267,4 +415,4 @@ def test_real_commands_roll_back(real_case: Case, tmp_path, monkeypatch, capsys)
     outcome = init(
         workspace, real_case.scenario, Runner.REAL, monkeypatch, capsys, real_case
     )
-    _assert_rolled_back(real_case, outcome, workspace, before)
+    _assert_handled(real_case, outcome, workspace, before)

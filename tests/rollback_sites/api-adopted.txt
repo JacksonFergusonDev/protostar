@@ -27,3 +27,4 @@ command:direnv allow#1
 command:uv run prek install#1
 write:pyproject.toml#2
 write:protostar.lock#1
+commit:transaction#1
