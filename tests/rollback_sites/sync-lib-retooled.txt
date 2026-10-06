@@ -1,0 +1,12 @@
+remove:.github/codecov.yml#1
+remove:.github/renovate.json#1
+write:.github/workflows/ci.yml#1
+write:.pre-commit-config.yaml#1
+write:AGENTS.md#1
+remove:CHANGELOG.md#1
+write:CONTRIBUTING.md#1
+write:pyproject.toml#1
+command:uv lock#1
+command:uv run prek install#1
+write:protostar.lock#1
+commit:transaction#1

@@ -19,6 +19,7 @@ around real commands too (``--rollback-real all``), one template per job
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from collections.abc import Callable
@@ -30,6 +31,7 @@ from tests.rollback_harness import (
     SCENARIOS,
     SITES_DIR,
     Case,
+    Command,
     Fault,
     Outcome,
     Position,
@@ -40,20 +42,26 @@ from tests.rollback_harness import (
     Tree,
     Workspace,
     cases,
-    init,
+    run,
     site_kind,
     site_target,
     unaccounted,
 )
 
-# The scenario pull requests run: the richest seed (merges, proposals, kept
-# modes, an unrelated tree) under the template with the most sites.
+# The scenarios pull requests run: the richest seed (merges, proposals, kept
+# modes, an unrelated tree) under the template with the most sites, and a sync
+# that removes, adds, resolves, and reinstalls hooks. Real commands run only
+# for the first; the sync's are covered nightly.
 REPRESENTATIVE = Scenario("cli", "adopted")
+REPRESENTATIVE_SYNC = Scenario("cli", "retooled", Command.SYNC)
+
+# Sync installs missing hooks as a convenience: a failed install only warns.
+HOOK_INSTALLS = frozenset({"uv run prek install", "uv run pre-commit install"})
 
 
 def _scenarios(config: pytest.Config) -> tuple[Scenario, ...]:
     if config.getoption("--rollback-scope") == "pr":
-        return (REPRESENTATIVE,)
+        return (REPRESENTATIVE, REPRESENTATIVE_SYNC)
     templates = {t for t in config.getoption("--rollback-templates").split(",") if t}
     unknown = templates - {scenario.template for scenario in SCENARIOS}
     if unknown:
@@ -101,7 +109,7 @@ def _failed_restores(scenario: Scenario) -> list[tuple[Case, str]]:
     paths = dict.fromkeys(
         site_target(site)
         for site in scenario.recorded_sites()
-        if site_kind(site) in (SiteKind.WRITE, SiteKind.MKDIR)
+        if site_kind(site) in (SiteKind.WRITE, SiteKind.MKDIR, SiteKind.REMOVE)
     )
     return [(_last_write(scenario), path) for path in paths]
 
@@ -109,6 +117,16 @@ def _failed_restores(scenario: Scenario) -> list[tuple[Case, str]]:
 def _commits(case: Case) -> bool:
     """Whether the run commits before the fault, so nothing rolls back."""
     return site_kind(case.site) is SiteKind.COMMIT and case.position is Position.AFTER
+
+
+def _survives(case: Case) -> bool:
+    """Whether the run outlives the fault: sync's hook install only warns."""
+    return (
+        case.scenario.command is Command.SYNC
+        and case.fault is Fault.ERROR
+        and site_kind(case.site) is SiteKind.COMMAND
+        and site_target(case.site) in HOOK_INSTALLS
+    )
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
@@ -132,11 +150,14 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             if case.position is Position.AFTER
             and case.fault is Fault.INTERRUPT
             and not _commits(case)
+            and not _survives(case)
         ]
         metafunc.parametrize("retried_case", selected, ids=lambda c: c.id)
     if "case" in metafunc.fixturenames:
         selected = [case for scenario in scenarios for case in cases(scenario)]
         metafunc.parametrize("case", selected, ids=lambda c: c.id)
+    if metafunc.config.getoption("--rollback-scope") == "pr":
+        scenarios = (REPRESENTATIVE,)
     if "real_scenario" in metafunc.fixturenames:
         metafunc.parametrize("real_scenario", scenarios, ids=lambda s: s.name)
     if "real_case" in metafunc.fixturenames:
@@ -148,13 +169,42 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
 
 def _assert_handled(
-    case: Case, outcome: Outcome, workspace: Workspace, before: tuple[Tree, Tree]
+    case: Case,
+    outcome: Outcome,
+    workspace: Workspace,
+    before: tuple[Tree, Tree],
+    clean: Callable[[], Workspace],
 ) -> None:
-    """Checks a fault rolled the run back, or left a committed run whole."""
+    """Checks a fault rolled the run back, or left the run whole.
+
+    Args:
+        case: The fault raised.
+        outcome: How the run ended.
+        workspace: The project it ran in.
+        before: The project and home directory before it ran.
+        clean: Runs the scenario without a fault, for a run that survives.
+    """
     if _commits(case):
         _assert_committed(outcome, workspace, before)
+    elif _survives(case):
+        _assert_survived(outcome, workspace, clean())
     else:
         _assert_rolled_back(case, outcome, workspace, before)
+
+
+def _assert_survived(outcome: Outcome, workspace: Workspace, clean: Workspace) -> None:
+    """Checks a non-fatal failure warned and left what a clean run leaves.
+
+    Only the hooks the failed install would have written may differ.
+    """
+    assert outcome.fired, "the run never reached the hook install"
+    assert outcome.code == 0, outcome.payload
+    assert "Could not install git hooks" in json.dumps(outcome.payload)
+    expected, project = clean.capture()[0], workspace.capture()[0]
+    differences = [
+        path for path in expected.changed(project) if not path.startswith(".git/hooks/")
+    ]
+    assert not differences, "differs from a clean run:\n" + "\n".join(differences)
 
 
 def _assert_committed(
@@ -220,14 +270,32 @@ def _assert_clean_run(
     _assert_unchanged("the home directory", before[1], home)
 
 
+@pytest.fixture(scope="session")
+def seed_cache(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Initialized projects the sync scenarios start from, built once per worker."""
+    return tmp_path_factory.mktemp("initialized")
+
+
+@pytest.fixture
+def seed(tmp_path: Path, seed_cache: Path) -> Callable[..., Workspace]:
+    """Seeds a scenario's project under ``tmp_path`` (or a folder in it)."""
+
+    def _seed(
+        scenario: Scenario, runner: Runner = Runner.FAKE, under: str = ""
+    ) -> Workspace:
+        return Workspace.seed(tmp_path / under, scenario, runner, seed_cache)
+
+    return _seed
+
+
 # ------------------------------------------------------------ site lists -- #
 
 
 def test_the_sites_match_the_recorded_list(
-    scenario: Scenario, tmp_path, monkeypatch, capsys, request
+    scenario: Scenario, monkeypatch, seed, request
 ):
-    workspace = Workspace.seed(tmp_path, scenario)
-    outcome = init(workspace, scenario, Runner.FAKE, monkeypatch, capsys)
+    workspace = seed(scenario)
+    outcome = run(workspace, scenario, Runner.FAKE, monkeypatch)
     assert outcome.code == 0, outcome.payload
     if request.config.getoption("--snapshot-update"):
         SITES_DIR.mkdir(exist_ok=True)
@@ -236,31 +304,37 @@ def test_the_sites_match_the_recorded_list(
 
 
 def test_a_clean_run_journals_every_path_it_changes(
-    scenario: Scenario, tmp_path, monkeypatch, capsys
+    scenario: Scenario, monkeypatch, seed
 ):
     """Every write goes through the seams the fault cases cover.
 
     A file written around ``TransactionAwareFS`` would survive a rollback;
     this fails first, naming it.
     """
-    workspace = Workspace.seed(tmp_path, scenario)
+    workspace = seed(scenario)
     before = workspace.capture()
-    outcome = init(workspace, scenario, Runner.FAKE, monkeypatch, capsys)
+    outcome = run(workspace, scenario, Runner.FAKE, monkeypatch)
     _assert_clean_run(outcome, workspace, before)
 
 
 # ----------------------------------------------------------------- faults -- #
 
 
-def test_rollback_restores_the_seed(case: Case, tmp_path, monkeypatch, capsys):
-    workspace = Workspace.seed(tmp_path, case.scenario)
+def test_rollback_restores_the_seed(case: Case, monkeypatch, seed):
+    workspace = seed(case.scenario)
     before = workspace.capture()
-    outcome = init(workspace, case.scenario, Runner.FAKE, monkeypatch, capsys, case)
-    _assert_handled(case, outcome, workspace, before)
+    outcome = run(workspace, case.scenario, Runner.FAKE, monkeypatch, case)
+
+    def clean() -> Workspace:
+        reference = seed(case.scenario, under="clean")
+        assert run(reference, case.scenario, Runner.FAKE, monkeypatch).code == 0
+        return reference
+
+    _assert_handled(case, outcome, workspace, before, clean)
 
 
 def test_a_failed_restore_is_reported_and_everything_else_restored(
-    failed_restore: tuple[Case, str], tmp_path, monkeypatch, capsys
+    failed_restore: tuple[Case, str], monkeypatch, seed
 ):
     """A path rollback can't restore is named; every other path still comes back.
 
@@ -268,14 +342,13 @@ def test_a_failed_restore_is_reported_and_everything_else_restored(
     there, so it is reported too. Nothing else may differ from the seed.
     """
     case, path = failed_restore
-    workspace = Workspace.seed(tmp_path, case.scenario)
+    workspace = seed(case.scenario)
     before = workspace.capture()
-    outcome = init(
+    outcome = run(
         workspace,
         case.scenario,
         Runner.FAKE,
         monkeypatch,
-        capsys,
         case,
         RollbackFault(path=path),
     )
@@ -297,34 +370,31 @@ def test_a_failed_restore_is_reported_and_everything_else_restored(
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Ctrl+C is a POSIX signal here")
 def test_rollback_finishes_through_a_second_interrupt(
-    scoped_scenario: Scenario, tmp_path, monkeypatch, capsys
+    scoped_scenario: Scenario, monkeypatch, seed
 ):
     """A Ctrl+C while rollback runs is held off until every path is restored."""
     case = _last_write(scoped_scenario)
-    workspace = Workspace.seed(tmp_path, scoped_scenario)
+    workspace = seed(scoped_scenario)
     before = workspace.capture()
-    outcome = init(
+    outcome = run(
         workspace,
         scoped_scenario,
         Runner.FAKE,
         monkeypatch,
-        capsys,
         case,
         RollbackFault(interrupt=True),
     )
     _assert_rolled_back(case, outcome, workspace, before)
 
 
-def test_a_rolled_back_run_succeeds_when_retried(
-    retried_case: Case, tmp_path, monkeypatch, capsys
-):
+def test_a_rolled_back_run_succeeds_when_retried(retried_case: Case, monkeypatch, seed):
     """Rollback leaves a project init can start over in, not just one that looks right."""
     scenario = retried_case.scenario
-    clean = Workspace.seed(tmp_path / "clean", scenario)
-    assert init(clean, scenario, Runner.FAKE, monkeypatch, capsys).code == 0
-    workspace = Workspace.seed(tmp_path / "retried", scenario)
-    init(workspace, scenario, Runner.FAKE, monkeypatch, capsys, retried_case)
-    retried = init(workspace, scenario, Runner.FAKE, monkeypatch, capsys)
+    clean = seed(scenario, under="clean")
+    assert run(clean, scenario, Runner.FAKE, monkeypatch).code == 0
+    workspace = seed(scenario, under="retried")
+    run(workspace, scenario, Runner.FAKE, monkeypatch, retried_case)
+    retried = run(workspace, scenario, Runner.FAKE, monkeypatch)
     assert retried.code == 0, retried.payload
     _assert_unchanged("the retried project", clean.capture()[0], workspace.capture()[0])
 
@@ -361,23 +431,27 @@ def real_commands(
 @pytest.mark.integration
 @pytest.mark.usefixtures("real_commands")
 def test_real_commands_pass_the_recorded_sites(
-    real_scenario: Scenario, tmp_path, monkeypatch, capsys
+    real_scenario: Scenario, monkeypatch, seed
 ):
     """The fake runner stands in faithfully: real commands pass the same sites."""
     scenario = real_scenario
-    workspace = Workspace.seed(tmp_path, scenario)
+    workspace = seed(scenario, Runner.REAL)
     before = workspace.capture()
-    outcome = init(workspace, scenario, Runner.REAL, monkeypatch, capsys)
+    outcome = run(workspace, scenario, Runner.REAL, monkeypatch)
     _assert_clean_run(outcome, workspace, before)
     assert outcome.sites == scenario.recorded_sites()
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("real_commands")
-def test_real_commands_roll_back(real_case: Case, tmp_path, monkeypatch, capsys):
-    workspace = Workspace.seed(tmp_path, real_case.scenario)
+def test_real_commands_roll_back(real_case: Case, monkeypatch, seed):
+    workspace = seed(real_case.scenario, Runner.REAL)
     before = workspace.capture()
-    outcome = init(
-        workspace, real_case.scenario, Runner.REAL, monkeypatch, capsys, real_case
-    )
-    _assert_handled(real_case, outcome, workspace, before)
+    outcome = run(workspace, real_case.scenario, Runner.REAL, monkeypatch, real_case)
+
+    def clean() -> Workspace:
+        reference = seed(real_case.scenario, Runner.REAL, under="clean")
+        assert run(reference, real_case.scenario, Runner.REAL, monkeypatch).code == 0
+        return reference
+
+    _assert_handled(real_case, outcome, workspace, before, clean)

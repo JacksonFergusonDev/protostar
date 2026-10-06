@@ -1,4 +1,4 @@
-"""Fault injection for rollback: fail a real init at one site, then compare trees.
+"""Fault injection for rollback: fail a real init or sync at one site, then compare trees.
 
 Every mutation execution makes goes through four seams: the three
 ``TransactionAwareFS`` operations and ``ProcessRunner.run``. The harness wraps
@@ -27,6 +27,7 @@ import dataclasses
 import enum
 import errno
 import os
+import shutil
 import signal
 import stat
 import sys
@@ -90,6 +91,13 @@ class Fault(enum.StrEnum):
     INTERRUPT = "interrupt"
 
 
+class Command(enum.StrEnum):
+    """The command a scenario runs."""
+
+    INIT = "init"
+    SYNC = "sync"
+
+
 class Runner(enum.StrEnum):
     """Whether commands run for real or through the fake."""
 
@@ -112,15 +120,33 @@ FAULTS = {SiteKind.COMMIT: (Fault.INTERRUPT,)}
 
 @dataclasses.dataclass(frozen=True)
 class Scenario:
-    """One template initialized into one seed project."""
+    """One command run on one template's seed project."""
 
     template: str
     seed: str
+    command: Command = Command.INIT
 
     @property
     def name(self) -> str:
         """The scenario's name, as its site list file is named."""
-        return f"{self.template}-{self.seed}"
+        prefix = "" if self.command is Command.INIT else f"{self.command}-"
+        return f"{prefix}{self.template}-{self.seed}"
+
+    @property
+    def argv(self) -> list[str]:
+        """The command line the scenario runs."""
+        if self.command is Command.SYNC:
+            return ["protostar", "sync", "--json", "--no-config"]
+        flags = [] if self.seed == "empty" else ["--force-merge"]
+        return [
+            "protostar",
+            "init",
+            "--json",
+            "--no-config",
+            "-t",
+            self.template,
+            *flags,
+        ]
 
     @property
     def sites_file(self) -> Path:
@@ -229,7 +255,33 @@ SEEDS: dict[str, Callable[[Path], None]] = {
     "repository": _seed_repository,
 }
 
-SCENARIOS = tuple(Scenario(t, s) for t in TEMPLATES for s in SEEDS)
+
+def _retool(project: Path) -> None:
+    """Edits an initialized project's recipe so sync has every kind of work.
+
+    Turning tools off retracts their files, a dependency, and a generated
+    hook (removals); turning one on adds a file; and a deleted hook makes
+    sync install the hooks again.
+    """
+    import tomlkit
+
+    pyproject = project / "pyproject.toml"
+    document = tomlkit.parse(pyproject.read_text(encoding="utf-8"))
+    recipe = document["tool"]["protostar"]
+    tools = recipe.setdefault("tools", tomlkit.table())
+    tools.update(
+        {"renovate": False, "codecov": False, "commitizen": False, "agents": True}
+    )
+    pyproject.write_text(tomlkit.dumps(document), encoding="utf-8")
+    (project / ".git" / "hooks" / "pre-push").unlink()
+
+
+# What a sync scenario does to a freshly initialized empty project first.
+SYNC_SEEDS: dict[str, Callable[[Path], None]] = {"retooled": _retool}
+
+SCENARIOS = tuple(Scenario(t, s) for t in TEMPLATES for s in SEEDS) + tuple(
+    Scenario(t, s, Command.SYNC) for t in ("cli", "lib") for s in SYNC_SEEDS
+)
 
 
 # ----------------------------------------------------------------- trees --- #
@@ -421,9 +473,13 @@ class FaultInjector:
             def capture(self: journal.MutationJournal, path: Path) -> None:
                 original(self, path)
                 normalized = self.normalize_path(path)
-                if normalized not in injector.journaled:
-                    injector.journaled.add(normalized)
-                    injector._declared.append(Declared(normalized, tree))
+                injector.journaled.add(normalized)
+                # A path journaled earlier in the run is declared again for
+                # the command about to run, as the resolver does with
+                # pyproject.toml.
+                declared = Declared(normalized, tree)
+                if declared not in injector._declared:
+                    injector._declared.append(declared)
 
             return capture
 
@@ -538,8 +594,9 @@ class FaultInjector:
     ) -> str:
         if self.runner is Runner.REAL:
             return self._real_run(runner, cmd, timeout=timeout, env=env)
-        for output in declared:
-            fake_output(output, cmd)
+        if not fake_resolver(self.workspace, cmd, partial=False):
+            for output in declared:
+                fake_output(output, cmd)
         fake_environment(self.workspace, cmd)
         return ""
 
@@ -550,8 +607,9 @@ class FaultInjector:
         failed mid-way.
         """
         assert self.runner is Runner.FAKE
-        for output in declared[: (len(declared) + 1) // 2]:
-            fake_output(output, cmd)
+        if not fake_resolver(self.workspace, cmd, partial=True):
+            for output in declared[: (len(declared) + 1) // 2]:
+                fake_output(output, cmd)
 
 
 # A file a fake command creates, as the real command would leave it.
@@ -582,6 +640,57 @@ def fake_output(output: Declared, command: list[str]) -> None:
     elif not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(_FAKE_CONTENT.get(path.name, line))
+
+
+def fake_resolver(workspace: Path, command: list[str], *, partial: bool) -> bool:
+    """Does what ``uv add`` and ``uv lock`` do to the project, if it is one.
+
+    The resolver journals ``pyproject.toml`` and ``uv.lock`` once and then
+    runs several commands, so these write the files uv writes rather than
+    what was declared since the last site. A later sync reads the
+    requirements, so ``uv add`` records them as uv does.
+
+    Args:
+        workspace: The project.
+        command: The command being faked.
+        partial: Whether the command stops before it locks.
+
+    Returns:
+        Whether the command was a resolver command.
+    """
+    if command[:2] not in (["uv", "add"], ["uv", "lock"]):
+        return False
+    if command[1] == "add":
+        _add_requirements(workspace / "pyproject.toml", command[2:])
+    if not partial:
+        lock = workspace / "uv.lock"
+        line = f"# locked by {' '.join(command[:2])}\n".encode()
+        lock.write_bytes(
+            lock.read_bytes() + line if lock.exists() else _FAKE_CONTENT["uv.lock"]
+        )
+    return True
+
+
+def _add_requirements(pyproject: Path, arguments: list[str]) -> None:
+    """Adds requirements to a project, or a dependency group, as ``uv add`` does."""
+    import tomlkit
+
+    document = tomlkit.parse(pyproject.read_text(encoding="utf-8"))
+    group = "dev" if "--dev" in arguments else None
+    if "--group" in arguments:
+        group = arguments[arguments.index("--group") + 1]
+    packages = [
+        word for word in arguments if not word.startswith("-") and word != group
+    ]
+    if group is None:
+        target = document.setdefault("project", tomlkit.table())
+        requirements = target.setdefault("dependencies", tomlkit.array())
+    else:
+        groups = document.setdefault("dependency-groups", tomlkit.table())
+        requirements = groups.setdefault(group, tomlkit.array())
+    for package in packages:
+        requirements.append(f"{package}>=1.0")
+    pyproject.write_text(tomlkit.dumps(document), encoding="utf-8")
 
 
 def fake_environment(workspace: Path, command: list[str]) -> None:
@@ -615,14 +724,34 @@ class Workspace:
     home: Path
 
     @classmethod
-    def seed(cls, root: Path, scenario: Scenario) -> Workspace:
-        """Creates the scenario's seed project under ``root``."""
+    def seed(
+        cls, root: Path, scenario: Scenario, runner: Runner, cache: Path
+    ) -> Workspace:
+        """Creates the scenario's seed project under ``root``.
+
+        A sync scenario starts from a project initialized with the same
+        runner, built once in ``cache`` and copied, then changed by its seed.
+
+        Args:
+            root: Where the project and its home directory go.
+            scenario: The scenario to seed.
+            runner: How commands run, for a project a sync starts from.
+            cache: Where initialized projects are kept between tests.
+        """
         # A fixed name: an empty project takes its package name from it.
         project = root / "project"
         home = root / "home"
-        project.mkdir(parents=True)
-        home.mkdir()
-        SEEDS[scenario.seed](project)
+        home.mkdir(parents=True)
+        if scenario.command is Command.SYNC:
+            initialized = _initialized(scenario, runner, cache)
+            # The environment's scripts name its own path; uv rebuilds it.
+            shutil.copytree(
+                initialized, project, symlinks=True, ignore=_ignore_environment
+            )
+            SYNC_SEEDS[scenario.seed](project)
+        else:
+            project.mkdir(parents=True)
+            SEEDS[scenario.seed](project)
         return cls(project, home)
 
     def capture(self) -> tuple[Tree, Tree]:
@@ -633,20 +762,36 @@ class Workspace:
         )
 
 
-def init(
+def _ignore_environment(directory: str, names: list[str]) -> set[str]:
+    return {".venv"} & set(names) if Path(directory).name == "project" else set()
+
+
+def _initialized(scenario: Scenario, runner: Runner, cache: Path) -> Path:
+    """Returns the project a sync scenario's template initializes, built once."""
+    root = cache / f"{scenario.template}-{runner}"
+    if not root.exists():
+        start = Scenario(scenario.template, "empty")
+        workspace = Workspace.seed(root, start, runner, cache)
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            outcome = run(workspace, start, runner, monkeypatch)
+        assert outcome.code == 0, outcome.payload
+    return root / "project"
+
+
+def run(
     workspace: Workspace,
     scenario: Scenario,
     runner: Runner,
     monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
     armed: Case | None = None,
     rollback: RollbackFault | None = None,
 ) -> Outcome:
-    """Runs ``protostar init --json`` in-process, failing it at the armed site.
+    """Runs the scenario's command in-process, failing it at the armed site.
 
     A run interrupted after it committed prints no payload: the CLI reports
     a plain interrupt on stderr, so the payload is empty.
     """
+    import io
     import json
 
     from protostar.cli import ui
@@ -661,13 +806,10 @@ def init(
     monkeypatch.setenv("PROTOSTAR_OFFLINE_HOOK_REGISTRY", "1")
     clear_hook_registry_cache()
     monkeypatch.setattr(ui, "is_json_mode", False)
-    flags = [] if scenario.seed == "empty" else ["--force-merge"]
-    monkeypatch.setattr(
-        "sys.argv",
-        ["protostar", "init", "--json", "--no-config", "-t", scenario.template, *flags],
-    )
+    monkeypatch.setattr("sys.argv", scenario.argv)
     injector = FaultInjector(workspace.project.resolve(), runner, armed, rollback)
-    with monkeypatch.context() as patches:
+    stdout = io.StringIO()
+    with monkeypatch.context() as patches, contextlib.redirect_stdout(stdout):
         injector.install(patches)
         code = 0
         try:
@@ -676,7 +818,7 @@ def init(
             code = int(exit_.code or 0)
         finally:
             clear_hook_registry_cache()
-    out = capsys.readouterr().out
+    out = stdout.getvalue()
     return Outcome(
         code=code,
         payload=json.loads(out) if out else {},
