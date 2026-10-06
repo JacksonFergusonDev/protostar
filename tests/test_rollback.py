@@ -21,8 +21,9 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
@@ -400,6 +401,19 @@ def test_a_rolled_back_run_succeeds_when_retried(retried_case: Case, monkeypatch
 
 
 # ---------------------------------------------------------- real commands -- #
+
+
+@pytest.fixture(autouse=True)
+def _drop_environments(tmp_path: Path) -> Iterator[None]:
+    """Removes each run's uv environment once its test is done.
+
+    pytest keeps every test's directory until the session ends. Where uv
+    can't link packages from its cache (Windows), it copies them, and a few
+    hundred kept environments fill the runner's disk.
+    """
+    yield
+    for environment in tmp_path.rglob(".venv"):
+        shutil.rmtree(environment, ignore_errors=True)
 
 
 @pytest.fixture
