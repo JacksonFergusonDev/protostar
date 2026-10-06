@@ -82,7 +82,7 @@ The commit is a site too. An interrupt just before it rolls everything back; one
 
 - **A restore that fails:** each path the run writes fails its restore in turn. Rollback must name that path (and any directory it created above it) in `RollbackFailedError`, and restore everything else.
 - **A second `Ctrl+C`:** a real `SIGINT` arrives as rollback starts, and every path must still come back. POSIX only.
-- **Running again:** after each rolled-back interrupt, a second `init` must leave exactly the project a clean run does.
+- **Running again:** after an interrupt at the last write, which rolls back the most, a second `init` must leave exactly the project a clean run does. Once per scenario is enough: every fault case already proves a rolled-back project matches the seed byte for byte, so this catches only state a run keeps outside the files.
 
 Commands run through a fake that writes exactly what the executor journaled for them, so the cases stay fast and offline. A clean run must journal every path it changes, which catches a write made around the seams. Integration tests run the real commands for one scenario: they pass the same sites as the fake, and an error after each command, or an interrupt after the last, rolls back what it really did.
 
