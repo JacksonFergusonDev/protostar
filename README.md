@@ -14,7 +14,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/jacksonfergusondev/protostar/ci.yml?color=22d3ee&labelColor=0A0A0A&label=CI)](https://github.com/jacksonfergusondev/protostar/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/actions/workflow/status/jacksonfergusondev/protostar/release.yml?color=22d3ee&labelColor=0A0A0A&label=release)](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml)
 [![Codecov](https://img.shields.io/codecov/c/github/JacksonFergusonDev/protostar?color=22d3ee&labelColor=0A0A0A&logo=codecov&logoColor=white)](https://codecov.io/gh/JacksonFergusonDev/protostar)
-[![Engine mutation score](https://img.shields.io/endpoint?url=https%3A%2F%2Fprotostar.jacksonferguson.me%2Fbenchmarks%2Fmutation-latest.json&label=engine%20mutation%20score&color=22d3ee&labelColor=0A0A0A)](https://protostar.jacksonferguson.me/benchmarks/)
+[![Engine mutation score](https://img.shields.io/endpoint?url=https%3A%2F%2Fprotostar.jacksonferguson.me%2Fmetrics%2Fmutation-latest.json&label=engine%20mutation%20score&color=22d3ee&labelColor=0A0A0A)](https://protostar.jacksonferguson.me/metrics/)
 [![Python](https://img.shields.io/badge/python-3.12+-22d3ee?labelColor=0A0A0A&logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![Documentation](https://img.shields.io/badge/docs-gh--pages-22d3ee?labelColor=0A0A0A&logo=github&logoColor=white)](https://protostar.jacksonferguson.me/)
 [![License](https://img.shields.io/badge/license-MIT-22d3ee?labelColor=0A0A0A)](LICENSE)
@@ -212,7 +212,7 @@ Protostar edits other people's work, so it's built to be careful:
 - **The engine is separate from the interface.** The same core runs behind the interactive editor, the command line, and coding agents, which is why every command can also answer in JSON.
 - **It's tested thoroughly.** Over 3,500 tests, including runs of the real tools, pass on Linux, macOS, and Windows, with strict type checking and at least 85% coverage.
 - **Its docs are checked against its code.** Before every push, a script confirms that the commands, errors, exit codes, and file paths the docs mention still match the code.
-- **Performance stays visible.** CI tracks help-command startup and the recipe editor's first frame, flagging large regressions; see the [CI performance history](https://protostar.jacksonferguson.me/benchmarks/).
+- **Performance stays visible.** CI tracks help-command startup and the recipe editor's first frame, flagging large regressions; see the [metrics dashboard](https://protostar.jacksonferguson.me/metrics/).
 
 ---
 

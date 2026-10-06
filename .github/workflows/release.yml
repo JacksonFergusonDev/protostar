@@ -204,7 +204,7 @@ jobs:
           git push origin gh-pages
 
   publish-pages:
-    name: Publish documentation and benchmarks
+    name: Publish documentation and metrics
     needs: build-docs
     if: ${{ !cancelled() && needs.build-docs.result == 'success' }}
     permissions:

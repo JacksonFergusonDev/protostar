@@ -60,7 +60,7 @@ MAINTAINER_PAGES = (
 )
 
 # Pages the site publishes from outside docs/, so no Markdown file backs them.
-PUBLISHED_ELSEWHERE = frozenset({"benchmarks/"})
+PUBLISHED_ELSEWHERE = frozenset({"metrics/"})
 
 # Paths a maintainer page shows as examples of the pattern, not as files.
 PLACEHOLDER_PATHS = frozenset({"tests/path/to/test.py", "tests/test_foo.py"})
