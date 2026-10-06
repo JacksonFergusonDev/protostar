@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791259230757,
+  "lastUpdate": 1791306094658,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -21799,6 +21799,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 789.08,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c1ee2b4e75182c7d63150c5d93021e9019643fd9",
+          "message": "ci(nightly): run at 10:30pm Pacific and narrow rollback jobs on demand (#456)\n\n* ci(nightly): run at 10:30pm Pacific and narrow rollback jobs on demand\n\nNightly and mutation testing now start at 05:30 UTC (10:30pm PDT), when no\npull request waits on the runners. A manual Nightly can run only the\nrollback jobs of one OS and template, built by scripts/nightly_matrix.py.\nA clean rollback run must not warn, and a fault that never fires reports\nthe warnings of the run, so a command failing on its own (as prek install\ndoes on Windows sync) shows its error.\n\n* fix(hooks): give the hook install as long as the resolver\n\nOn a fresh clone, `uv run prek install` first builds the project\nenvironment and installs every dev dependency, which ran past the\n30-second limit on Windows, so sync left the hooks uninstalled with a\nwarning. The rollback suite's real sync runs found it once a clean run\nhad to finish without warnings.",
+          "timestamp": "2026-10-06T09:57:49-07:00",
+          "tree_id": "dbc64bdefec3ce07c13d5f43bfe742f467b2550c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/c1ee2b4e75182c7d63150c5d93021e9019643fd9"
+        },
+        "date": 1791306093343,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 208.38,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1486.59,
             "unit": "ms"
           }
         ]
