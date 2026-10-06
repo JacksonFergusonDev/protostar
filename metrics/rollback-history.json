@@ -1,0 +1,83 @@
+[
+  {
+    "commit": "57cb0fcb4f083cedf9df878e30fed2aa82b9979d",
+    "date": "2026-10-06T19:18:49+00:00",
+    "cells": [
+      {
+        "os": "macos",
+        "template": "api",
+        "passed": 1018
+      },
+      {
+        "os": "macos",
+        "template": "astro",
+        "passed": 541
+      },
+      {
+        "os": "macos",
+        "template": "cli",
+        "passed": 1321
+      },
+      {
+        "os": "macos",
+        "template": "lib",
+        "passed": 1330
+      },
+      {
+        "os": "macos",
+        "template": "ml",
+        "passed": 667
+      },
+      {
+        "os": "ubuntu",
+        "template": "api",
+        "passed": 1018
+      },
+      {
+        "os": "ubuntu",
+        "template": "astro",
+        "passed": 541
+      },
+      {
+        "os": "ubuntu",
+        "template": "cli",
+        "passed": 1321
+      },
+      {
+        "os": "ubuntu",
+        "template": "lib",
+        "passed": 1330
+      },
+      {
+        "os": "ubuntu",
+        "template": "ml",
+        "passed": 667
+      },
+      {
+        "os": "windows",
+        "template": "api",
+        "passed": 1015
+      },
+      {
+        "os": "windows",
+        "template": "astro",
+        "passed": 538
+      },
+      {
+        "os": "windows",
+        "template": "cli",
+        "passed": 1317
+      },
+      {
+        "os": "windows",
+        "template": "lib",
+        "passed": 1326
+      },
+      {
+        "os": "windows",
+        "template": "ml",
+        "passed": 664
+      }
+    ]
+  }
+]
