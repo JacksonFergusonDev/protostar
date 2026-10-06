@@ -10,7 +10,7 @@ on:
   workflow_call:
     inputs:
       tests:
-        description: 'pytest matrix as JSON: "os" and "python" axes, plus "coverage": true on at most one entry and a "smoke" list of templates to smoke-test after the suite. Empty skips the suite.'
+        description: 'pytest matrix as JSON: "os" and "python" axes, plus "coverage": true on at most one entry, a "smoke" list of templates to smoke-test after the suite, and "rollback": "full" to raise every rollback fault. Empty skips the suite.'
         required: false
         default: ""
         type: string
@@ -75,7 +75,7 @@ jobs:
       if: ${{ !matrix.coverage }}
       uses: ./.github/actions/pytest
       with:
-        args: -o faulthandler_timeout=90
+        args: -o faulthandler_timeout=90 --rollback-scope ${{ matrix.rollback || 'pr' }}
         retry: ${{ inputs.retry }}
         flaky-artifact: flaky-tests-${{ matrix.os }}-py${{ matrix.python }}
 

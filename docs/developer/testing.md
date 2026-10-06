@@ -86,13 +86,13 @@ The sites each scenario passes are committed in `tests/rollback_sites/`, and the
 uv run pytest tests/test_rollback.py -k sites_match --snapshot-update
 ```
 
-Pull requests run one representative scenario, `cli` merged into an existing project, with real commands only for an error after each one. Nightly runs every template and seed, and raises every fault around real commands too, in one job per template and operating system:
+Pull requests keep to what guards coverage, so their test jobs stay within a few minutes on every platform: every scenario's clean run and site list, an error after each site of one representative scenario (`cli` merged into an existing project), and that scenario's real commands once, except on Windows, where a real init takes a minute. One Linux pull-request job raises every position and fault in every template and seed (`--rollback-scope full`), which faked commands make cheap there. Nightly does the same with every fault raised around real commands too (`--rollback-real all`), in one job per template and operating system:
 
 ```bash
 uv run pytest tests/test_rollback.py --rollback-scope full --rollback-real all --rollback-templates ml
 ```
 
-`just test-rollback` runs every template and seed with the fake runner, and the pull-request subset of real commands for each.
+`just test-rollback` runs the full scope with faked commands. The harness skips `fsync`: rollback restores what is on disk, and durability through a power cut isn't under test.
 
 ### Template Hooks Smoke Matrix (CI)
 

@@ -589,6 +589,9 @@ def init(
     # Fallback hook pins: no network, and the same files on every host. The
     # registry is fetched once per process, so drop an earlier test's fetch.
     monkeypatch.setenv("PROTOSTAR_OFFLINE_HOOK_REGISTRY", "1")
+    # Rollback restores what is on disk; whether it would survive a power cut
+    # is not under test, and syncing every write is slow on Windows.
+    monkeypatch.setattr(os, "fsync", lambda _descriptor: None)
     clear_hook_registry_cache()
     monkeypatch.setattr(ui, "is_json_mode", False)
     flags = [] if scenario.seed == "empty" else ["--force-merge"]
