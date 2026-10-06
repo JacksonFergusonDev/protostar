@@ -10,7 +10,7 @@ on:
   workflow_call:
     inputs:
       tests:
-        description: 'pytest matrix as JSON: "os" and "python" axes, plus "coverage": true on at most one entry, a "smoke" list of templates to smoke-test after the suite, and "rollback": "full" to raise every rollback fault. Empty skips the suite.'
+        description: 'pytest matrix as JSON: "os" and "python" axes, plus "coverage": true on at most one entry, a "smoke" list of templates to smoke-test after the suite, and "rollback": "I/N" to raise every rollback fault in that slice of them. Empty skips the suite.'
         required: false
         default: ""
         type: string
@@ -69,13 +69,13 @@ jobs:
 
     - name: Run tests with coverage # (for Codecov)
       if: matrix.coverage
-      run: uv run pytest -n auto --dist worksteal --durations=25 -o faulthandler_timeout=90 --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+      run: uv run pytest -n auto --dist worksteal --durations=25 -o faulthandler_timeout=90 --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy ${{ matrix.rollback && format('--rollback-scope full --rollback-shard {0}', matrix.rollback) || '--rollback-scope pr' }}
 
     - name: Run tests # (without coverage to avoid overhead on non-Codecov runs)
       if: ${{ !matrix.coverage }}
       uses: ./.github/actions/pytest
       with:
-        args: -o faulthandler_timeout=90 --rollback-scope ${{ matrix.rollback || 'pr' }}
+        args: -o faulthandler_timeout=90 ${{ matrix.rollback && format('--rollback-scope full --rollback-shard {0}', matrix.rollback) || '--rollback-scope pr' }}
         retry: ${{ inputs.retry }}
         flaky-artifact: flaky-tests-${{ matrix.os }}-py${{ matrix.python }}
 
