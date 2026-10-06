@@ -12,11 +12,16 @@ on:
 permissions:
   contents: read
 
+# Issue state is shared by scheduled/manual runs and reporter reruns.
+concurrency:
+  group: nightly-issue-report
+  cancel-in-progress: false
+
 jobs:
   report:
     name: File the outcome
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     if: >-
       github.event.workflow_run.head_branch == 'main' &&
       contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion)
@@ -34,4 +39,4 @@ jobs:
         REPO: ${{ github.repository }}
         RUN_ID: ${{ github.event.workflow_run.id }}
         SHA: ${{ github.event.workflow_run.head_sha }}
-      run: python3 scripts/nightly_report.py --repo "$REPO" --run-id "$RUN_ID" --sha "$SHA"
+      run: python3 -m scripts.nightly_report --repo "$REPO" --run-id "$RUN_ID" --sha "$SHA"

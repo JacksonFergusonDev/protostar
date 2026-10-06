@@ -3,6 +3,7 @@
 import itertools
 import json
 import re
+import sys
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -12,7 +13,6 @@ from ruamel.yaml import YAML
 
 from scripts.nightly_report import (
     FAILING,
-    FLAKY,
     GATE_JOB,
     GhCli,
     Job,
@@ -243,6 +243,13 @@ def test_a_pull_request_stays_within_the_accounts_runner_limits():
     assert macos_jobs(PULL_REQUEST) <= 3
 
 
+def test_ci_checks_stacked_pull_requests_without_filtering_their_base_branch():
+    trigger = yaml_workflow("ci.yml")["on"]
+    assert "pull_request" in trigger
+    assert trigger["pull_request"] is None
+    assert trigger["push"]["branches"] == ["main", "renovate/**"]
+
+
 def test_nightly_fails_every_template_at_every_site_on_every_os():
     """Scheduled runs have no runner limit: a job per template, six on Windows."""
     from scripts.nightly_matrix import rollback_matrix
@@ -359,12 +366,16 @@ class FakeGitHub:
         self._last_passing = last_passing
         self.calls: list[tuple[str, object, str]] = []
         self.bodies: dict[int, list[str]] = {}
+        self.tracked: list[Run] = []
 
     def jobs(self, run):
         return self._jobs
 
     def flaky_lists(self, run):
         return self._flaky
+
+    def track_tests(self, run):
+        self.tracked.append(run)
 
     def last_passing_sha(self, run):
         return self._last_passing
@@ -446,33 +457,11 @@ def test_a_pass_closes_the_open_failure_issue(open_issues):
     )
 
 
-def test_flaky_tests_are_filed_apart_from_failures_even_when_the_run_passes():
-    flaky = {
-        "flaky-tests-macos-latest-py3.13": "tests/test_tui.py::test_a\n",
-        "flaky-tests-windows-latest-py3.13": "tests/test_tui.py::test_a\ntests/test_tui.py::test_b\n",
-    }
-    github = FakeGitHub(PASSED, flaky=flaky, open_issues={FAILING.label: 7})
-    report(github, RUN)
-    assert [call[:2] for call in github.calls] == [
-        ("close", 7),
-        ("create", FLAKY.label),
-    ]
-    body = github.calls[1][2]
-    assert (
-        "- `tests/test_tui.py::test_a` (macos-latest-py3.13, windows-latest-py3.13)"
-        in body
-    )
-    assert "- `tests/test_tui.py::test_b` (windows-latest-py3.13)" in body
-
-
-def test_flaky_tests_comment_on_the_open_flaky_issue():
-    github = FakeGitHub(
-        PASSED,
-        flaky={"flaky-tests-macos-latest-py3.13": "tests/test_x.py::test_y\n"},
-        open_issues={FLAKY.label: 9},
-    )
-    report(github, RUN)
-    assert [call[:2] for call in github.calls] == [("comment", 9)]
+def test_flaky_tests_are_handed_to_the_per_test_tracker_even_when_the_run_passes():
+    github = FakeGitHub(PASSED, flaky={"flaky-tests-windows-py3.14": "t::a\n"})
+    assert report(github, RUN).flaky == {"t::a": ("windows-py3.14",)}
+    assert github.calls == []
+    assert github.tracked == [RUN]
 
 
 def test_summarize_ignores_blank_lines_in_flaky_lists():
@@ -480,17 +469,12 @@ def test_summarize_ignores_blank_lines_in_flaky_lists():
     assert outcome.flaky == {"t::a": ("ubuntu-latest-py3.12",)}
 
 
-@pytest.mark.parametrize("jobs", [PASSED, FAILED], ids=["flaky", "failed-and-flaky"])
 @pytest.mark.parametrize("existing", [False, True], ids=["new-issue", "open-issue"])
-def test_reporting_the_same_run_twice_does_not_repeat_its_report(jobs, existing):
+def test_reporting_the_same_run_twice_does_not_repeat_its_report(existing):
     github = FakeGitHub(
-        jobs,
-        flaky={"flaky-tests-windows": "tests/test_x.py::test_y\n"},
-        open_issues={FAILING.label: 7, FLAKY.label: 9} if existing else {},
+        FAILED,
+        open_issues={FAILING.label: 7} if existing else {},
     )
-    # A passing run closes a failure issue only once in real GitHub.
-    if jobs == PASSED:
-        github._open.pop(FAILING.label, None)
     report(github, RUN)
     first = list(github.calls)
     report(github, RUN)
@@ -527,3 +511,53 @@ def test_report_lookup_reads_the_issue_body_and_every_comment_page(
         "--paginate",
         "--slurp",
     )
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="The gate runs in bash")
+@pytest.mark.parametrize(
+    ("last", "pending", "changed"),
+    [("same", "0", False), ("same", "1", True), ("older", "0", True)],
+)
+def test_scheduled_nightly_keeps_running_while_a_fix_awaits_verification(
+    tmp_path, last, pending, changed
+):
+    import os
+    import shutil
+    import subprocess
+    import sys
+
+    gate = job("nightly.yml", "gate")
+    assert gate["permissions"]["issues"] == "read"
+    step = gate["steps"][0]
+    gh = tmp_path / "gh"
+    gh.write_text(
+        f"#!{sys.executable}\n"
+        "import os, sys\n"
+        "if sys.argv[1:3] == ['run', 'list']:\n"
+        "    print(os.environ['LAST'])\n"
+        "else:\n"
+        "    assert sys.argv[1:3] == ['issue', 'list'], sys.argv\n"
+        "    assert sys.argv[sys.argv.index('--label') + 1] == 'awaiting-verification'\n"
+        "    print(os.environ['PENDING'])\n"
+    )
+    gh.chmod(0o755)
+    output = tmp_path / "output"
+    bash = shutil.which("bash")
+    assert bash is not None
+    result = subprocess.run(
+        [bash, "-e", "-o", "pipefail", "-c", step["run"]],
+        cwd=tmp_path,
+        env={
+            **os.environ,
+            "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}",
+            "REPO": "owner/repo",
+            "GITHUB_SHA": "same",
+            "GITHUB_OUTPUT": str(output),
+            "LAST": last,
+            "PENDING": pending,
+        },
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert output.read_text() == f"changed={str(changed).lower()}\n"

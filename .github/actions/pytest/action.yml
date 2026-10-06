@@ -27,9 +27,11 @@ runs:
         RETRY: ${{ inputs.retry }}
         WORKERS: ${{ inputs.workers }}
         FLAKY_LIST: flaky-tests.txt
+        PROTOSTAR_TEST_RESULTS: test-results/first.json
       run: |
         read -ra extra <<< "$ARGS"
-        pytest=(uv run pytest -n "$WORKERS" --dist worksteal --durations=25 "${extra[@]}")
+        rm -rf test-results
+        pytest=(uv run pytest -p scripts.pytest_results -n "$WORKERS" --dist worksteal --durations=25 "${extra[@]}")
         if "${pytest[@]}"; then
           exit 0
         fi
@@ -42,6 +44,7 @@ runs:
         uv run --no-sync python -c 'import json; print("\n".join(sorted(json.load(open(".pytest_cache/v/cache/lastfailed")))))' > "$FLAKY_LIST"
         echo "Retrying $(wc -l < "$FLAKY_LIST") failed test(s) once"
         retry_status=0
+        export PROTOSTAR_TEST_RESULTS=test-results/retry.json
         "${pytest[@]}" --last-failed --last-failed-no-failures none || retry_status=$?
         # The retry can still fail. Only tests removed from lastfailed passed;
         # don't label persistent failures as flaky or claim the run passed.
@@ -67,4 +70,14 @@ runs:
       with:
         name: ${{ inputs.flaky-artifact }}
         path: flaky-tests.txt
+        retention-days: 30
+
+    - name: Upload test evidence
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: test-results-${{ inputs.flaky-artifact }}
+        path: test-results/*.json
+        if-no-files-found: ignore
+        overwrite: true
         retention-days: 30
