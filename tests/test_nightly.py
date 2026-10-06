@@ -198,8 +198,23 @@ def test_a_pull_request_stays_within_the_accounts_runner_limits():
     assert macos_jobs(PULL_REQUEST) <= 3
 
 
-def test_nightly_stays_within_the_accounts_macos_limit():
-    assert macos_jobs(NIGHTLY) <= 3
+def test_nightly_fails_every_template_at_every_site_on_every_os():
+    """Scheduled runs have no runner limit, so each template gets its own job."""
+    rollback = job("nightly.yml", "rollback")
+    runs = {
+        (entry["os"], entry["template"])
+        for entry in expand(rollback["strategy"]["matrix"])
+    }
+    assert runs == {
+        (os, template) for os in OPERATING_SYSTEMS for template in built_in_templates()
+    }
+    (step,) = [
+        s for s in rollback["steps"] if s.get("uses") == "./.github/actions/pytest"
+    ]
+    args = step["with"]["args"].split()
+    assert "tests/test_rollback.py" in args
+    assert args[args.index("--rollback-scope") + 1] == "full"
+    assert args[args.index("--rollback-real") + 1] == "all"
 
 
 def test_a_release_smoke_tests_the_wheel_it_publishes_on_every_os():

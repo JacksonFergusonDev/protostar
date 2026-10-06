@@ -47,7 +47,7 @@ test: sync
     uv run pytest -n auto --dist worksteal
     @printf "{{ green }}✔ All tests passed{{ nc }}\n"
 
-# Fail init at every write and command of every template and seed, checking each rollback (the nightly scope)
+# Fail init at every write and command of every template and seed, checking each rollback (nightly also raises every fault around real commands)
 test-rollback: sync
     @printf "\n{{ blue }}=== Running Every Rollback Fault ==={{ nc }}\n"
     uv run pytest tests/test_rollback.py --rollback-scope full -n auto --dist worksteal

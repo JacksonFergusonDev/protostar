@@ -11,7 +11,10 @@ reorders a site fails ``test_the_sites_match_the_recorded_list`` until the
 list is regenerated with ``--snapshot-update``, so new sites show in review.
 
 Pull requests run one representative scenario (``--rollback-scope pr``, the
-default); the nightly run covers every template and seed (``full``).
+default), with real commands only around an error after each one. Nightly runs
+every template and seed (``--rollback-scope full``) and raises every fault
+around real commands too (``--rollback-real all``), one template per job
+(``--rollback-templates``).
 """
 
 from __future__ import annotations
@@ -47,17 +50,33 @@ REPRESENTATIVE = Scenario("cli", "adopted")
 
 
 def _scenarios(config: pytest.Config) -> tuple[Scenario, ...]:
-    if config.getoption("--rollback-scope") == "full":
-        return SCENARIOS
-    return (REPRESENTATIVE,)
+    if config.getoption("--rollback-scope") == "pr":
+        return (REPRESENTATIVE,)
+    templates = {t for t in config.getoption("--rollback-templates").split(",") if t}
+    unknown = templates - {scenario.template for scenario in SCENARIOS}
+    if unknown:
+        raise pytest.UsageError(f"--rollback-templates: unknown {sorted(unknown)}")
+    return tuple(s for s in SCENARIOS if not templates or s.template in templates)
 
 
-def _real_cases(scenario: Scenario) -> list[Case]:
-    """An error after each command, and an interrupt after the last.
+def _real_cases(scenario: Scenario, every: bool) -> list[Case]:
+    """The faults raised around real commands in one scenario.
 
-    These are where real commands differ from the fake: what a real `git
-    init`, `uv add`, or hook install leaves on disk must roll back too.
+    Every case but a command stopped mid-way, which only the fake can do at a
+    known point; or, by default, an error after each command and an
+    interrupt after the last. Those are where real commands differ from the
+    fake: what a real `git init`, `uv add`, or hook install leaves on disk
+    must roll back too.
     """
+    if every:
+        return [
+            case
+            for case in cases(scenario)
+            if not (
+                site_kind(case.site) is SiteKind.COMMAND
+                and case.position is Position.MID
+            )
+        ]
     commands = [
         site
         for site in scenario.recorded_sites()
@@ -76,8 +95,13 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if "case" in metafunc.fixturenames:
         selected = [case for scenario in scenarios for case in cases(scenario)]
         metafunc.parametrize("case", selected, ids=lambda c: c.id)
+    if "real_scenario" in metafunc.fixturenames:
+        metafunc.parametrize("real_scenario", scenarios, ids=lambda s: s.name)
     if "real_case" in metafunc.fixturenames:
-        selected = _real_cases(REPRESENTATIVE)
+        every = metafunc.config.getoption("--rollback-real") == "all"
+        selected = [
+            case for scenario in scenarios for case in _real_cases(scenario, every)
+        ]
         metafunc.parametrize("real_case", selected, ids=lambda c: c.id)
 
 
@@ -200,9 +224,11 @@ def real_commands(
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("real_commands")
-def test_real_commands_pass_the_recorded_sites(tmp_path, monkeypatch, capsys):
+def test_real_commands_pass_the_recorded_sites(
+    real_scenario: Scenario, tmp_path, monkeypatch, capsys
+):
     """The fake runner stands in faithfully: real commands pass the same sites."""
-    scenario = REPRESENTATIVE
+    scenario = real_scenario
     workspace = Workspace.seed(tmp_path, scenario)
     before = workspace.capture()
     outcome = init(workspace, scenario, Runner.REAL, monkeypatch, capsys)

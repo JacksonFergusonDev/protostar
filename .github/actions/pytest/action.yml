@@ -1,0 +1,57 @@
+name: "Run pytest"
+description: "Runs pytest in parallel; with retry, a test that fails and then passes alone is recorded as flaky for the nightly report instead of failing the job"
+inputs:
+  args:
+    description: "Extra pytest arguments, separated by spaces"
+    required: false
+    default: ""
+  retry:
+    description: "Retry failed tests once, passing the job when the retry passes"
+    required: false
+    default: "false"
+  flaky-artifact:
+    description: "Name of the artifact listing flaky tests (the nightly report reads every flaky-tests-* artifact)"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Run tests
+      id: run
+      shell: bash
+      env:
+        ARGS: ${{ inputs.args }}
+        RETRY: ${{ inputs.retry }}
+        FLAKY_LIST: flaky-tests.txt
+      run: |
+        read -ra extra <<< "$ARGS"
+        pytest=(uv run pytest -n auto --dist worksteal --durations=25 "${extra[@]}")
+        if "${pytest[@]}"; then
+          exit 0
+        fi
+        if [ "$RETRY" != true ]; then
+          exit 1
+        fi
+
+        # A test that fails and then passes alone is flaky, not broken: record
+        # it for the nightly report instead of failing the run.
+        uv run --no-sync python -c 'import json; print("\n".join(sorted(json.load(open(".pytest_cache/v/cache/lastfailed")))))' > "$FLAKY_LIST"
+        echo "flaky=true" >> "$GITHUB_OUTPUT"
+        echo "Retrying $(wc -l < "$FLAKY_LIST") failed test(s) once"
+        "${pytest[@]}" --last-failed --last-failed-no-failures none
+        {
+          echo "### Flaky tests"
+          echo
+          echo "These failed, then passed when retried:"
+          echo
+          # shellcheck disable=SC2016 # the backticks are Markdown
+          sed 's/^/- `/; s/$/`/' "$FLAKY_LIST"
+        } >> "$GITHUB_STEP_SUMMARY"
+        echo "::warning title=Flaky tests::$(wc -l < "$FLAKY_LIST") test(s) passed only when retried; see the job summary"
+
+    - name: Upload flaky tests
+      if: ${{ steps.run.outputs.flaky == 'true' }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ inputs.flaky-artifact }}
+        path: flaky-tests.txt
+        retention-days: 30

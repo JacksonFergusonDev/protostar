@@ -20,14 +20,29 @@ from protostar.system_deps import GlobalExecutable
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
-    parser.addoption(
+    group = parser.getgroup("rollback", "fault-injection rollback cases")
+    group.addoption(
         "--rollback-scope",
         choices=("pr", "full"),
         default="pr",
         help=(
-            "Fault-injection rollback cases to run: a representative scenario "
-            "(pr) or every template and seed (full, run nightly)."
+            "Scenarios to fail: one representative scenario (pr) or every "
+            "template and seed (full)."
         ),
+    )
+    group.addoption(
+        "--rollback-real",
+        choices=("subset", "all"),
+        default="subset",
+        help=(
+            "Faults to raise around real commands in each scenario: an error "
+            "after each command (subset), or at every site (all, run nightly)."
+        ),
+    )
+    group.addoption(
+        "--rollback-templates",
+        default="",
+        help="Comma-separated templates to limit the full scope to (a nightly shard).",
     )
 
 

@@ -86,7 +86,13 @@ The sites each scenario passes are committed in `tests/rollback_sites/`, and the
 uv run pytest tests/test_rollback.py -k sites_match --snapshot-update
 ```
 
-Pull requests run one representative scenario, `cli` merged into an existing project. Every template and seed runs with `--rollback-scope full`, or locally with `just test-rollback`.
+Pull requests run one representative scenario, `cli` merged into an existing project, with real commands only for an error after each one. Nightly runs every template and seed, and raises every fault around real commands too, in one job per template and operating system:
+
+```bash
+uv run pytest tests/test_rollback.py --rollback-scope full --rollback-real all --rollback-templates ml
+```
+
+`just test-rollback` runs every template and seed with the fake runner, and the pull-request subset of real commands for each.
 
 ### Template Hooks Smoke Matrix (CI)
 
@@ -97,12 +103,12 @@ End-to-end template validation runs through the `template-smoke` action (`.githu
 The pytest suite and the smoke matrix are defined once, in `.github/workflows/platforms.yml`, and each caller hands it the matrix to run:
 
 - **Pull requests** (`ci.yml`) run the suite on every operating system and supported Python. They smoke-test every template at every Python on Linux, at the oldest and newest on Windows, and once on macOS, where each test job scaffolds a template or two after its suite.
-- **Nightly** (`nightly.yml`) runs, each day on `main`, the smoke tests pull requests leave out, so the two together scaffold every template on every operating system and Python exactly once. It also runs the suite everywhere again, with retries, which is how a flaky test is found. It skips a day when `main` hasn't changed since its last pass.
+- **Nightly** (`nightly.yml`) runs, each day on `main`, the smoke tests pull requests leave out, so the two together scaffold every template on every operating system and Python exactly once. It also runs the suite everywhere again, with retries, which is how a flaky test is found, and the full [rollback fault injection](#rollback-fault-injection) with real commands. It skips a day when `main` hasn't changed since its last pass.
 - **A release** (`release.yml`) publishes only when CI and Nightly have both passed on the tagged commit, or on its parent when the tagged commit only changes `pyproject.toml` and `uv.lock` (the version bump). It also smoke-tests the wheel it is about to publish on each operating system, and publishes that same wheel.
 
-The account runs 20 jobs at a time, five of them on macOS, across every open pull request and push. A pull request starts 20, three on macOS. The quick checks share two runners (`Lint, Docs & Secrets` and `Benchmark & Docker Images`), since each finishes well before the Windows suite that sets how long a run takes. A new push to a pull request cancels the run it replaces.
+The account runs 20 jobs at a time, five of them on macOS, so a pull request starts at most 20, three on macOS, and every job starts at once. Nightly has no such limit: it runs overnight, when nothing waits on it, and starts as many jobs as its work needs. The quick checks share two runners (`Lint, Docs & Secrets` and `Benchmark & Docker Images`), since each finishes well before the Windows suite that sets how long a run takes. A new push to a pull request cancels the run it replaces.
 
-`tests/test_nightly.py` checks that both test every operating system and Python, that together they smoke-test every template on every platform once, that a pull request stays within the runner limits, and that a release can't publish before CI, Nightly, and its smoke test pass.
+`tests/test_nightly.py` checks that both test every operating system and Python, that together they smoke-test every template on every platform once, that a pull request stays within the runner limits, that Nightly fails every template at every site on every operating system, and that a release can't publish before CI, Nightly, and its smoke test pass.
 
 Nightly retries a failed test or smoke run once. A test that then passes doesn't fail the run; it is filed as flaky instead. Nightly Report (`nightly-report.yml`) opens a `nightly-failure` issue when the run fails, naming the failing jobs and the commits since the last pass, and closes it when a later run passes. Flaky tests go to a separate `flaky-test` issue that stays open until they are fixed.
 
