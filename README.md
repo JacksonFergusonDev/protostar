@@ -14,8 +14,8 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/jacksonfergusondev/protostar/ci.yml?color=22d3ee&labelColor=0A0A0A&label=CI)](https://github.com/jacksonfergusondev/protostar/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/actions/workflow/status/jacksonfergusondev/protostar/release.yml?color=22d3ee&labelColor=0A0A0A&label=release)](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml)
 [![Codecov](https://img.shields.io/codecov/c/github/JacksonFergusonDev/protostar?color=22d3ee&labelColor=0A0A0A&logo=codecov&logoColor=white)](https://codecov.io/gh/JacksonFergusonDev/protostar)
-[![Engine mutation score](https://img.shields.io/endpoint?url=https%3A%2F%2Fprotostar.jacksonferguson.me%2Fmetrics%2Fmutation-latest.json&label=engine%20mutation%20score&color=22d3ee&labelColor=0A0A0A)](https://protostar.jacksonferguson.me/metrics/)
-[![Rollback faults restored](https://img.shields.io/endpoint?url=https%3A%2F%2Fprotostar.jacksonferguson.me%2Fmetrics%2Frollback-latest.json&label=rollback%20faults%20restored&color=22d3ee&labelColor=0A0A0A)](https://protostar.jacksonferguson.me/metrics/)
+[![Engine mutation score](https://img.shields.io/endpoint?url=https%3A%2F%2Fprotostar.jacksonferguson.me%2Fmetrics%2Fmutation-latest.json&label=engine%20mutation%20score&color=22d3ee&labelColor=0A0A0A)](https://protostar.jacksonferguson.me/metrics/#mutations)
+[![Rollback faults restored](https://img.shields.io/endpoint?url=https%3A%2F%2Fprotostar.jacksonferguson.me%2Fmetrics%2Frollback-latest.json&label=rollback%20faults%20restored&color=22d3ee&labelColor=0A0A0A)](https://protostar.jacksonferguson.me/metrics/#rollback)
 [![Python](https://img.shields.io/badge/python-3.12+-22d3ee?labelColor=0A0A0A&logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![Documentation](https://img.shields.io/badge/docs-gh--pages-22d3ee?labelColor=0A0A0A&logo=github&logoColor=white)](https://protostar.jacksonferguson.me/)
 [![License](https://img.shields.io/badge/license-MIT-22d3ee?labelColor=0A0A0A)](LICENSE)
@@ -58,7 +58,7 @@ Plenty of tools can create a Python project. What sets Protostar apart is that i
 
 - **Updates that understand your files.** When a template improves, Protostar merges the change into your project by meaning, not line by line. Your own edits stay, and if you and the update changed the same setting, you get one clear choice instead of a mess to untangle.
 
-- **Nothing breaks halfway.** Protostar shows you every change before making it, and undoes everything if a step fails.
+- **Preview first, recover on failure.** Protostar shows you every change before making it and restores the files it changed if a step fails. The [published rollback results](https://protostar.jacksonferguson.me/metrics/#rollback) show this recovery tested across Linux, macOS, and Windows; the [rollback guide](https://protostar.jacksonferguson.me/usage/rollback/) explains what is covered.
 
 - **Fits the project you already have**, and runs from scripts, CI, and coding agents without stopping to ask questions.
 
@@ -209,11 +209,12 @@ Written for people who already know Python tooling:
 
 Protostar edits other people's work, so it's built to be careful:
 
-- **It plans before it acts.** Every change is worked out in memory and shown to you first. If a step fails or you press Ctrl+C, every file it wrote is restored exactly as it was, and a nightly run proves it by failing a real run at every step.
+- **It plans before it acts.** Every change is worked out in memory and shown to you first. If a step fails or you press Ctrl+C, every file it wrote is restored exactly as it was, and nightly tests exercise that recovery by failing real runs at every step; see the [rollback results](https://protostar.jacksonferguson.me/metrics/#rollback).
 - **The engine is separate from the interface.** The same core runs behind the interactive editor, the command line, and coding agents, which is why every command can also answer in JSON.
 - **It's tested thoroughly.** Over 3,500 tests, including runs of the real tools, pass on Linux, macOS, and Windows, with strict type checking and at least 85% coverage.
+- **The tests are challenged with deliberate bugs.** Mutation testing changes selected engine modules one small edit at a time to check whether the tests notice. The [mutation testing results](https://protostar.jacksonferguson.me/metrics/#mutations) show the score and the modules it covers.
 - **Its docs are checked against its code.** Before every push, a script confirms that the commands, errors, exit codes, and file paths the docs mention still match the code.
-- **Performance stays visible.** CI tracks help-command startup and the recipe editor's first frame, flagging large regressions; see the [metrics dashboard](https://protostar.jacksonferguson.me/metrics/).
+- **Performance stays visible.** CI tracks help-command startup and the recipe editor's first frame, flagging large regressions; see the [benchmarks](https://protostar.jacksonferguson.me/metrics/#benchmarks).
 
 ---
 
