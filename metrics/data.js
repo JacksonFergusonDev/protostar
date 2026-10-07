@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791333120832,
+  "lastUpdate": 1791335203766,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -22105,6 +22105,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1270.16,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "17571668e5e1cad176ea1675c495a0b1671244c8",
+          "message": "perf(registry): fetch the hook registry in the background while the command plans (#522)\n\n* perf(dependencies): update the environment once per run, not once per group\n\n`init` ran one `uv add` per dependency group, and each one re-resolved the\nlock and re-synced the environment. Every add except the last now passes\n`--no-sync`: each still resolves and locks, so a bad requirement still fails\nat its own command, and the last add installs the whole environment once.\nA lone group keeps its plain `uv add`.\n\nMeasured on a warm uv cache, `init` goes from 1.70s to 1.50s (library) and\nfrom 1.92s to 1.50s (cli), with byte-identical files and the same installed\npackages.\n\n* fix(docs): let the terminal-asset stub ignore uv add's --no-sync\n\nThe stub that records each `uv add` for the generated terminal images read\nevery word after `add` as a package, so a skipped sync was taken for one.\n\n* perf(yaml): build a document from the tree already checked, not a second parse\n\n`_load` composed the text to check its bounds and tags, then parsed the same\ntext again to build the document, so every YAML read cost two parses. It now\nbuilds the document from the checked tree. The limits still run before the\ndocument exists.\n\nOn a no-op `sync`, ruamel time falls from 0.109s to 0.058s and the command\nfrom 0.665s to 0.607s.\n\n* perf(registry): fetch the hook registry in the background while the command plans\n\nThe hook-pin snapshot made its one request in the middle of a command, so\nevery `sync`, `status`, `diff`, and `init` that pins hooks waited on the\nnetwork (about 60-85ms, and up to the 1.5s timeout on a bad connection)\nbefore it could go on. The request now starts on a daemon thread as the\ncommand begins and the snapshot waits for it.\n\nThe fetch is single-flight: callers that arrive while it is under way share\nits result, an error it raises reaches the first caller that waits, and\nclearing the cache cannot be overwritten by a fetch already in flight. The\nthread reads nothing from the project, and no result changes.",
+          "timestamp": "2026-10-06T18:03:43-07:00",
+          "tree_id": "81686724510658896d99c3d6fd5af18b327cf9f2",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/17571668e5e1cad176ea1675c495a0b1671244c8"
+        },
+        "date": 1791335202247,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 119.08,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 830.7,
             "unit": "ms"
           }
         ]
