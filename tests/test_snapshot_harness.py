@@ -12,6 +12,7 @@ from pytest_mock import MockerFixture
 
 from scripts._common import DOCS_GENERATED_DIR, SNAPSHOTS_DIR
 from scripts.run_snapshots import (
+    PlanDriftError,
     RegressionScenario,
     TreePaths,
     _extract_and_write_targets,
@@ -48,6 +49,58 @@ def test_snapshot_children_ignore_host_configuration(
     assert "GIT_DIR" not in env
     assert Path(env["HOME"]).is_relative_to(tmp_path)
     assert env["XDG_CONFIG_HOME"] == env["HOME"]
+
+
+@pytest.mark.parametrize("drift", [False, True])
+def test_only_a_valid_scaffold_replaces_snapshot_bytes_and_the_documentation_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture, drift: bool
+) -> None:
+    snapshots = tmp_path / "snapshots"
+    fixture = snapshots / "fixture"
+    fixture.mkdir(parents=True)
+    (fixture / "new.txt").write_bytes(b"original\r\n")
+    (fixture / "old.txt").write_bytes(b"keep until validated\n")
+    docs = tmp_path / "generated"
+    docs.mkdir()
+    tree = docs / "tree_fixture.txt"
+    tree.write_bytes(b"original tree\n")
+    before = {path: path.read_bytes() for path in (*fixture.iterdir(), tree)}
+    monkeypatch.setattr("scripts.run_snapshots.SNAPSHOTS_DIR", snapshots)
+    monkeypatch.setattr("scripts.run_snapshots.DOCS_GENERATED_DIR", docs)
+    monkeypatch.setattr("scripts.run_snapshots.tempfile.tempdir", str(tmp_path))
+    mocker.patch(
+        "scripts.run_snapshots._get_host_uv_cache_dir", return_value=tmp_path / "cache"
+    )
+    scenario = RegressionScenario("fixture", ((),), "A scaffold awaiting validation.")
+    mocker.patch("scripts.run_snapshots.SCENARIOS", {"fixture": scenario})
+
+    def execute(_commands, cwd, _env):
+        (cwd / "new.txt").write_bytes(b"updated\n")
+        if drift:
+            (cwd / "unexpected.txt").write_bytes(b"unplanned\n")
+        return TreePaths(frozenset({"new.txt"}), frozenset()), TreePaths(
+            frozenset(), frozenset()
+        )
+
+    mocker.patch("scripts.run_snapshots._execute_fixture_scenario", side_effect=execute)
+    mocker.patch(
+        "scripts.run_snapshots.scaffold_paths",
+        side_effect=lambda cwd: TreePaths(
+            frozenset(path.name for path in cwd.iterdir()), frozenset()
+        ),
+    )
+    mocker.patch("scripts.run_snapshots.generate_tree", return_value="updated tree")
+    if drift:
+        with pytest.raises(PlanDriftError, match=r"unexpected\.txt"):
+            build_snapshots("fixture")
+        assert {
+            path: path.read_bytes() for path in (*fixture.iterdir(), tree)
+        } == before
+    else:
+        build_snapshots("fixture")
+        assert (fixture / "new.txt").read_bytes() == b"updated\n"
+        assert not (fixture / "old.txt").exists()
+        assert tree.read_bytes() == b"updated tree\n"
 
 
 def _mock_subprocess_run_factory(
