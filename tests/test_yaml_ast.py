@@ -131,6 +131,39 @@ def test_decoded_floats_and_anchored_booleans_keep_their_types():
     assert [type(value) for value in data.values()] == [float, bool, bool]
 
 
+def test_a_document_is_parsed_once_and_built_from_the_checked_tree(mocker):
+    """The bounds check and the document share one parse of the text."""
+    from ruamel.yaml.main import YAML
+
+    compose = mocker.spy(YAML, "compose")
+    load = mocker.spy(YAML, "load")
+
+    yaml_ast._load("a: 1\nb: [x, y]\n")
+
+    assert compose.call_count == 1
+    assert load.call_count == 0
+
+
+def test_a_document_built_from_the_checked_tree_matches_a_plain_load():
+    """Anchors, merge keys, quotes, and comments come out as a fresh parse gives."""
+    from io import StringIO
+
+    text = (
+        "# top\nd: &d {a: 1}  # anchored\njob:\n  <<: *d\n  b: 'kept'\n"
+        'e: *d\nlist:\n  - one  # first\n  - "two"\n'
+    )
+
+    document = yaml_ast._load(text)
+    reference = yaml_ast._codec().load(text)
+
+    assert document["job"].merge.value[0] is document["d"]
+    assert document["e"] is document["d"]
+    dumped, expected = StringIO(), StringIO()
+    yaml_ast._codec().dump(document, dumped)
+    yaml_ast._codec().dump(reference, expected)
+    assert dumped.getvalue() == expected.getvalue() == text
+
+
 def test_encoding_rejects_a_missing_value():
     with pytest.raises(ConfigurationError) as error:
         encode_yaml_baseline({"a": MISSING})
