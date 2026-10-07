@@ -31,10 +31,9 @@ def _write_generated_doc(filepath: str | Path, content: str) -> None:
         filepath: Target filename or Path relative to DOCS_GENERATED_DIR or absolute.
         content: Raw string data to write to disk.
     """
-    import scripts.generate_docs_assets as pkg
-
-    docs_dir = getattr(pkg, "DOCS_GENERATED_DIR", DOCS_GENERATED_DIR)
-    output_path = docs_dir / filepath if isinstance(filepath, str) else filepath
+    output_path = (
+        DOCS_GENERATED_DIR / filepath if isinstance(filepath, str) else filepath
+    )
     content = content.rstrip() + "\n"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     atomic_write_text(output_path, content)
