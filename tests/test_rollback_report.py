@@ -138,8 +138,11 @@ def run(tmp_path):
         matrix=json.dumps({"include": ONE}),
         history=tmp_path / "pages/metrics/rollback-history.json",
         latest=tmp_path / "pages/metrics/rollback-latest.json",
+        state=tmp_path / "pages/metrics/rollback-state.json",
         commit="a" * 40,
         date="2026-10-06T05:30:00+00:00",
+        run_id=42,
+        run_attempt=1,
     )
 
 
@@ -196,8 +199,10 @@ def test_a_failure_changes_the_badge_but_not_the_history(run):
 
 def test_a_retried_commit_is_recorded_once(run):
     record(run)
+    run.run_attempt = 2
     record(run)
     assert len(json.loads(run.history.read_text())) == 1
+    assert json.loads(run.state.read_text())["run_attempt"] == 2
 
 
 def test_an_older_run_is_refused(run):
@@ -206,6 +211,95 @@ def test_an_older_run_is_refused(run):
     run.date = "2026-10-05T05:30:00+00:00"
     with pytest.raises(SystemExit, match="older"):
         record(run)
+
+
+def published_files(run):
+    return {path: path.read_bytes() for path in (run.history, run.latest, run.state)}
+
+
+def set_failures(run, failures):
+    path = run.results / ONE[0]["artifact"] / "report.json"
+    data = json.loads(path.read_text())
+    data["scenarios"]["cli-adopted"]["failed"] = failures
+    path.write_text(json.dumps(data))
+
+
+@pytest.mark.parametrize("newer_failed", [False, True])
+@pytest.mark.parametrize("replay_failed", [False, True])
+def test_an_older_recorded_commit_cannot_replace_any_newer_publication(
+    run, newer_failed, replay_failed
+):
+    record(run)
+    run.commit = "b" * 40
+    run.date = "2026-10-07T05:30:00+00:00"
+    run.run_id = 43
+    set_failures(run, ["newer failure"] if newer_failed else [])
+    record(run)
+    before = published_files(run)
+
+    run.commit = "a" * 40
+    run.date = "2026-10-06T05:30:00+00:00"
+    run.run_id = 42
+    run.run_attempt = 2
+    set_failures(run, ["older failure"] if replay_failed else [])
+    with pytest.raises(SystemExit, match="older"):
+        record(run)
+    assert published_files(run) == before
+
+
+def test_republishing_the_same_attempt_changes_no_files(run):
+    record(run)
+    before = published_files(run)
+    set_failures(run, ["changed artifact"])
+    record(run)
+    assert published_files(run) == before
+
+
+def test_a_newer_run_of_the_same_commit_updates_the_badge_without_duplicate_history(
+    run,
+):
+    record(run)
+    history = run.history.read_bytes()
+    run.date = "2026-10-07T05:30:00+00:00"
+    run.run_id = 43
+    set_failures(run, ["new failure"])
+    record(run)
+    assert run.history.read_bytes() == history
+    assert json.loads(run.latest.read_text())["message"] == "1 failing"
+    assert json.loads(run.state.read_text())["run_id"] == 43
+
+
+def test_a_newer_attempt_can_replace_a_failed_badge_and_add_green_history(run):
+    set_failures(run, ["failure"])
+    record(run)
+    assert json.loads(run.history.read_text()) == []
+    run.run_attempt = 2
+    set_failures(run, [])
+    record(run)
+    assert len(json.loads(run.history.read_text())) == 1
+    assert json.loads(run.latest.read_text())["message"] == "20"
+
+
+def test_run_ids_order_publications_created_at_the_same_time(run):
+    record(run)
+    run.run_id = 43
+    set_failures(run, ["new failure"])
+    record(run)
+    before = published_files(run)
+    run.run_id = 42
+    run.run_attempt = 99
+    with pytest.raises(SystemExit, match="older"):
+        record(run)
+    assert published_files(run) == before
+
+
+@pytest.mark.parametrize(("run_id", "run_attempt"), [(0, 1), (42, 0)])
+def test_invalid_run_identity_publishes_nothing(run, run_id, run_attempt):
+    run.run_id, run.run_attempt = run_id, run_attempt
+    with pytest.raises(SystemExit, match="positive"):
+        record(run)
+    assert not run.state.exists()
+    assert not run.latest.exists()
 
 
 @pytest.mark.parametrize(
@@ -231,6 +325,7 @@ def test_an_incomplete_run_publishes_nothing(run, problem):
         record(run)
     assert not run.history.exists()
     assert not run.latest.exists()
+    assert not run.state.exists()
 
 
 @pytest.mark.parametrize(

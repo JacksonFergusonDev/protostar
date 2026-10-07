@@ -334,6 +334,16 @@ def test_rollback_metrics_are_recorded_apart_from_nightly_for_scheduled_and_manu
     assert download["with"]["pattern"] == "rollback-*"
     assert download["with"]["run-id"] == "${{ github.event.workflow_run.id }}"
     (step,) = [s for s in record["steps"] if s.get("id") == "record"]
+    assert step["env"]["RUN_DATE"] == "${{ github.event.workflow_run.created_at }}"
+    assert step["env"]["RUN_ID"] == "${{ github.event.workflow_run.id }}"
+    assert step["env"]["RUN_ATTEMPT"] == "${{ github.event.workflow_run.run_attempt }}"
+    assert '--date "$RUN_DATE"' in step["run"]
+    assert '--run-id "$RUN_ID" --run-attempt "$RUN_ATTEMPT"' in step["run"]
+    assert "--state pages-data/metrics/rollback-state.json" in step["run"]
+    assert (
+        "git -C pages-data add metrics/rollback-history.json metrics/rollback-latest.json metrics/rollback-state.json"
+        in step["run"]
+    )
     # Only a manual run may end quietly when the matrix was narrowed.
     assert 'EVENT" == workflow_dispatch' in step["run"]
     assert workflow["jobs"]["publish-pages"]["uses"] == "./.github/workflows/pages.yml"
