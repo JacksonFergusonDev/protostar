@@ -63,14 +63,23 @@ def test_the_default_port_is_separate_from_zensical() -> None:
     assert serve_metrics.DEFAULT_PORT != 8000
 
 
+@pytest.mark.parametrize("optional_published", [False, True])
 def test_preview_fetches_every_dashboard_dataset(
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    optional_published: bool,
 ) -> None:
     fetched: list[str] = []
+    optional_fetched: list[str] = []
 
     def fetch(url: str) -> bytes:
         fetched.append(url)
         return url.encode()
+
+    def fetch_optional(url: str, destination: Path) -> None:
+        optional_fetched.append(url)
+        if optional_published:
+            destination.write_bytes(url.encode())
 
     def server(
         address: tuple[str, int], handler: partial[serve_metrics.PreviewHandler]
@@ -82,6 +91,8 @@ def test_preview_fetches_every_dashboard_dataset(
             "rollback-history.json",
             "rollback-latest.json",
         }
+        if optional_published:
+            expected.add("benchmark-history.json")
         assert {path.name for path in (directory / "metrics").iterdir()} == expected
         for filename in expected:
             assert (directory / "metrics" / filename).read_bytes() == (
@@ -90,12 +101,18 @@ def test_preview_fetches_every_dashboard_dataset(
         raise KeyboardInterrupt
 
     monkeypatch.setattr(serve_metrics, "fetch_bytes", fetch)
+    monkeypatch.setattr(serve_metrics, "fetch_optional", fetch_optional)
     monkeypatch.setattr(serve_metrics, "ThreadingHTTPServer", server)
+    monkeypatch.setattr("scripts.serve_metrics.tempfile.tempdir", str(tmp_path))
     monkeypatch.setattr("sys.argv", ["serve_metrics.py", "--no-open"])
     with pytest.raises(KeyboardInterrupt):
         serve_metrics.main()
     assert set(fetched) == {
         serve_metrics.DATA_URL + filename for filename in serve_metrics.DATA_FILES
+    }
+    assert set(optional_fetched) == {
+        serve_metrics.DATA_URL + filename
+        for filename in serve_metrics.OPTIONAL_DATA_FILES
     }
 
 
