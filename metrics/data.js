@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791336591731,
+  "lastUpdate": 1791398903637,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -22173,6 +22173,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1017.95,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5328ae444c2dbc33c6018839817533501d909f27",
+          "message": "feat(benchmarks): time, compare, and profile commands in a local harness (#527)\n\n`python -m scripts.benchmarks` (`just bench`, `bench-compare`, `bench-profile`)\ntimes the same scenarios the cost budgets count, for real. Each sample runs\nthe command in a fresh interpreter, in an isolated home and project, with\nconfiguration off, the hook registry offline, and uv offline from a cache the\nwarm-up round fills, so the network never enters a timing. A sample records\nthe process's duration, its own CPU time, and the time it waited on commands.\n\n`compare REF` checks the other version out into a temporary worktree with its\nown locked environment and alternates the two round by round, each going\nfirst in turn; each change is the median ratio across rounds with a 95%\nbootstrap interval. Comparing against an identical commit reports no\ndetectable change; comparing against the commit before #521 reports `sync`\n10.1% faster.\n\nThe recipe editor's first frame becomes a timed (not budgeted) scenario. The\nHyperfine recipes are replaced, pyinstrument becomes a dev dependency, and\nAGENTS.md says when an agent may run any of this.",
+          "timestamp": "2026-10-07T11:45:05-07:00",
+          "tree_id": "422ba424930c8805c3bb0e6d4afd2316df2ee465",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/5328ae444c2dbc33c6018839817533501d909f27"
+        },
+        "date": 1791398901512,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 178.48,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1250.38,
             "unit": "ms"
           }
         ]
