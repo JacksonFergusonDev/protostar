@@ -111,9 +111,14 @@ def test_the_docs_load_only_vendored_house_files():
     vendored = committed_files(REPO_ROOT / "docs" / "house")
     config = (REPO_ROOT / "zensical.toml").read_text(encoding="utf-8")
     template = (REPO_ROOT / "overrides" / "home.html").read_text(encoding="utf-8")
-    for referenced in ("css/fonts.css", "css/tokens.css", "css/terminal.css"):
+    for referenced in (
+        "css/fonts.css",
+        "css/tokens.css",
+        "css/terminal.css",
+        "css/icons.css",
+    ):
         assert f'"house/{referenced}"' in config
         assert referenced in vendored
-    for referenced in ("css/components.css", "css/install.css", "css/icons.css"):
+    for referenced in ("css/components.css", "css/install.css"):
         assert f"'house/{referenced}'" in template
         assert referenced in vendored

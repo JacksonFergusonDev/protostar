@@ -28,7 +28,7 @@ A `pyproject.toml` that Protostar creates always has the same shape. Everything 
 
 The order is a fixed property of the tool, not of when a section happened to be written. `uv add` appends `[dependency-groups]` to the end of the file, and the recipe is written after that, so a finished project needs one last pass to settle it.
 
-## One definition
+## One Definition
 
 `src/protostar/documents/pyproject_layout.py` is the only place that knows the layout:
 
@@ -49,12 +49,12 @@ The file is handled as a list of `Section` pieces: each root table, and each chi
 
 The banner and headers that trail a piece are kept apart in `Section.tail`, and are recognized by exact line match, never by pattern. Nothing in Protostar reads or writes tomlkit's private container state, and a test enforces that.
 
-## Two ways the layout is applied
+## Two Ways the Layout Is Applied
 
 - **Files Protostar creates** are formatted whole. Managed decoration is discarded and rebuilt from the spec, so the result never depends on where a previous layout left it.
 - **Files you already had** are never reformatted. A table a run adds is placed by the spec, and every section that already existed keeps its text.
 
-### Adding a table to an existing file
+### Adding a Table to an Existing File
 
 A merge, or a later run that enables a tool, can add a table to a file the user already owns. The new section goes **after the last existing section that ranks at or below it**, so the file's own order is kept, a new tool lands before `[tool.protostar]`, and a new build backend lands after `[project]`. Then:
 
@@ -63,12 +63,12 @@ A merge, or a later run that enables a tool, can add a table to a file the user 
 - **A comment directly above a table stays with it.** A comment set apart by a blank line stays where it was.
 - **Order does not matter.** Adding tool A then B gives the same file as B then A, and inserting into a canonical file gives the canonical file. The tests check both.
 
-## The safety fallback
+## The Safety Fallback
 
 Formatting must not change a project's configuration. The formatted text is parsed and compared with the original data, and if they differ the file is left as it was. That is reported as a warning diagnostic (`Left pyproject.toml unformatted: ...`) as well as logged, so it is never silent. The same check guards placing an added table, where the fallback is a plain dump of the merged document. The test suite checks every combination of the known tools and asserts the fallback never triggers.
 
 ## Related Pages
 
-- **[Built-in Templates](./built-in-templates.md):** The contract a template's tool configuration follows.
-- **[Project Recipes](../usage/project-recipes.md):** What `[tool.protostar]` records.
-- **[Testing Architecture & Philosophy](./testing.md):** How the layout tests fit the unit and exhaustive tiers.
+- **[Built-in Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./built-in-templates.md):** The contract a template's tool configuration follows.
+- **[Project Recipes<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/project-recipes.md):** What `[tool.protostar]` records.
+- **[Testing Architecture & Philosophy<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./testing.md):** How the layout tests fit the unit and exhaustive tiers.

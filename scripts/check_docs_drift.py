@@ -490,6 +490,31 @@ def check_card_grids() -> list[str]:
     return problems
 
 
+# A list item that is a link and a colon in bold, then its description: the
+# "Next Steps" shape. A link that only starts a sentence doesn't match.
+_LINK_ITEM = re.compile(
+    r"^\s*[-*] (?:\*\*|__)\[([^\]]+)\]\([^)]+\):(?:\*\*|__)", re.MULTILINE
+)
+
+
+def check_link_icons() -> list[str]:
+    """Every standalone link in a list carries a house-style icon (house-style)."""
+    problems: list[str] = []
+    for page in _hand_written_pages():
+        if DOCS_DIR not in page.parents:
+            continue
+        text = page.read_text(encoding="utf-8")
+        for item in _LINK_ITEM.finditer(text):
+            if "hs-icon" not in item.group(1):
+                line = text.count("\n", 0, item.start()) + 1
+                problems.append(
+                    f"{_rel(page)}:{line}: the link to {item.group(1)!r} needs an icon "
+                    'saying where it goes, such as <span class="hs-icon hs-icon-arrow-right" '
+                    'aria-hidden="true"></span> after its label'
+                )
+    return problems
+
+
 def check_site_links() -> list[str]:
     """Links to the published site resolve to a page, and an anchor that exists."""
     config = tomllib.loads((REPO_ROOT / "zensical.toml").read_text(encoding="utf-8"))
@@ -876,7 +901,7 @@ def check_project_description() -> list[str]:
         README: (f"### {description.removesuffix('.')}",),
         DOCS_DIR / "index.md": (
             f'description: "{description}"',
-            f"<h1>{description}</h1>",
+            re.compile(rf"<h1( [^>]*)?>{re.escape(description)}</h1>"),
         ),
         REPO_ROOT / ".github" / "ISSUE_TEMPLATE" / "feature_request.yml": (
             f"Protostar is {description[0].lower()}{description[1:]}",
@@ -885,9 +910,15 @@ def check_project_description() -> list[str]:
     for path, fragments in expected.items():
         lines = {line.strip() for line in path.read_text(encoding="utf-8").splitlines()}
         for fragment in fragments:
-            if fragment not in lines:
+            if isinstance(fragment, re.Pattern):
+                found = any(fragment.fullmatch(line) for line in lines)
+                shown = fragment.pattern
+            else:
+                found = fragment in lines
+                shown = fragment
+            if not found:
                 problems.append(
-                    f"{_rel(path)}: expected {fragment!r} to agree with "
+                    f"{_rel(path)}: expected {shown!r} to agree with "
                     "pyproject.toml's project.description"
                 )
     return problems
@@ -923,6 +954,7 @@ CHECKS: tuple[Callable[[], list[str]], ...] = (
     check_navigation,
     check_page_front_matter,
     check_card_grids,
+    check_link_icons,
     check_site_links,
     check_cli_reference_sections,
     check_execution_order,

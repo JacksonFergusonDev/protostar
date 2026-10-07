@@ -96,6 +96,6 @@ See the [machine interface](agent-interface.md) for the full payloads.
 
 ## Next Steps
 
-- **[Project Lifecycle](lifecycle.md):** Review, apply, and settle updates with `status`, `diff`, and `sync`.
-- **[Project Recipes](project-recipes.md):** Everything the recipe records, and which choice wins.
-- **[Automatic Rollback](rollback.md):** What happens when a run fails part-way.
+- **[Project Lifecycle<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](lifecycle.md):** Review, apply, and settle updates with `status`, `diff`, and `sync`.
+- **[Project Recipes<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](project-recipes.md):** Everything the recipe records, and which choice wins.
+- **[Automatic Rollback<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](rollback.md):** What happens when a run fails part-way.

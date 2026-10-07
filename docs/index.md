@@ -36,7 +36,8 @@ hide:
 <section class="ps-hero">
   <canvas class="ps-field" aria-hidden="true"></canvas>
   <button type="button" class="ps-motion" data-ps-motion aria-pressed="false" aria-label="Pause background animation" hidden><span data-ps-motion-label>Pause motion</span><span class="hs-icon hs-icon-pause" aria-hidden="true"></span></button>
-  <h1>Simple Python project scaffolding that understands your tools.</h1>
+  <!-- The theme's "Skip to content" link targets #__skip on a page without a table of contents. -->
+  <h1 id="__skip" tabindex="-1">Simple Python project scaffolding that understands your tools.</h1>
   <p class="ps-hero__lede">Pick your tools, and Protostar writes their configuration, hooks, and CI. When your template improves, updates merge into your files by meaning, so your edits stay.</p>
   <div class="hs-install-header">
     <span class="hs-install-label">Install globally</span>

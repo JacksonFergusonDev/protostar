@@ -173,8 +173,8 @@ Some conventions rely on review rather than tests: which tier a tool belongs in,
 
 ## Related Pages
 
-- **[Authoring Custom Templates](../usage/authoring-templates.md):** Writing templates for your own team, including the same baseline-and-delta habit.
-- **[Templates](../usage/templates.md):** Using built-ins, aliases, and remote templates, and the trust model behind them.
-- **[The Module Architecture](../mechanics/modules.md):** How modules declare their baseline into the manifest.
-- **[Design Principles](../design-principles.md):** Why baselines live in modules and shape lives in templates.
-- **[Testing Architecture & Philosophy](./testing.md):** The unit, integration, and exhaustive tiers behind the enforcement above.
+- **[Authoring Custom Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/authoring-templates.md):** Writing templates for your own team, including the same baseline-and-delta habit.
+- **[Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/templates.md):** Using built-ins, aliases, and remote templates, and the trust model behind them.
+- **[The Module Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/modules.md):** How modules declare their baseline into the manifest.
+- **[Design Principles<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../design-principles.md):** Why baselines live in modules and shape lives in templates.
+- **[Testing Architecture & Philosophy<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./testing.md):** The unit, integration, and exhaustive tiers behind the enforcement above.

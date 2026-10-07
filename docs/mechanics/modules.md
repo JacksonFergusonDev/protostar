@@ -52,7 +52,7 @@ The Mypy module, as Protostar ships it:
 
 ## Next Steps & Developer Guides
 
-- **[Built-in Modules](https://github.com/JacksonFergusonDev/protostar/tree/main/src/protostar/modules):** Browse the source code for official implementations.
-- **[Extending Protostar](../developer/extending-protostar.md):** How to add a tool module.
-- **[The Environment Manifest](./manifest.md):** Full breakdown of the manifest namespaces and mutation methods used during `build()`.
-- **[Testing Architecture & Philosophy](../developer/testing.md):** Learn how to test modules in-memory with strict subprocess mocking.
+- **[<span class="hs-icon hs-icon-brand-github" aria-hidden="true"></span>Built-in Modules](https://github.com/JacksonFergusonDev/protostar/tree/main/src/protostar/modules):** Browse the source code for official implementations.
+- **[Extending Protostar<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../developer/extending-protostar.md):** How to add a tool module.
+- **[The Environment Manifest<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./manifest.md):** Full breakdown of the manifest namespaces and mutation methods used during `build()`.
+- **[Testing Architecture & Philosophy<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../developer/testing.md):** Learn how to test modules in-memory with strict subprocess mocking.

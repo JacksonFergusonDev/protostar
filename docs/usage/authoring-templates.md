@@ -441,6 +441,6 @@ When building templates for your team or the open-source community, keep the fol
 
 ## Next Steps
 
-- **[Templates](./templates.md):** Learn about CLI options, repository URLs, template versions, and template consumption.
-- **[Global Configuration](./configuration.md):** Register your custom templates under `[templates]` in your `config.toml`.
-- **[Extending Protostar](../developer/extending-protostar.md):** Add support for a new tool to Protostar itself, when no template setting can do the job.
+- **[Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./templates.md):** Learn about CLI options, repository URLs, template versions, and template consumption.
+- **[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):** Register your custom templates under `[templates]` in your `config.toml`.
+- **[Extending Protostar<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../developer/extending-protostar.md):** Add support for a new tool to Protostar itself, when no template setting can do the job.

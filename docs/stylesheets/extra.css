@@ -171,3 +171,12 @@
         letter-spacing: 0.03em;
     }
 }
+
+/* --- Link icons: an arrow follows its label, a brand mark leads it --- */
+.md-typeset a .hs-icon[class*="hs-icon-arrow"] {
+    margin-left: 0.3em;
+}
+
+.md-typeset a .hs-icon[class*="hs-icon-brand"] {
+    margin-right: 0.35em;
+}

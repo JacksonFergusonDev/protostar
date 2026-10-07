@@ -192,18 +192,9 @@ Pass Protostar arguments to run one command without entering a shell, such as `j
 === "Snapshot Regression & Verification"
     Generates scenario regression snapshots in `tests/snapshots/` and documentation presentation assets in `docs/generated/` and `docs/assets/terminals/`, verifying there is no snapshot drift.
 
-    Scenario snapshot directories include `protostar.lock` alongside the
-    generated workspace files. Dependency versions are frozen consistently across
-    the state record and `pyproject.toml`, so snapshot review covers ownership changes
-    as well as user-visible output. The snapshot's `producer_version` is normalized
-    to `0.0.0`, so a package version bump alone does not cause drift. Real project
-    lock files still record the installed version.
+    Scenario snapshot directories include `protostar.lock` alongside the generated workspace files. Dependency versions are frozen consistently across the state record and `pyproject.toml`, so snapshot review covers ownership changes as well as user-visible output. The snapshot's `producer_version` is normalized to `0.0.0`, so a package version bump alone does not cause drift. Real project lock files still record the installed version.
 
-    Before each scenario command, the runner also takes the `--dry-run --json`
-    plan and fails when the finished scaffold's tree (the one the docs show)
-    has a file no plan listed, or lacks one a plan listed. The dry-run tree,
-    the recipe editor's preview, and the change review all read that plan, so
-    this keeps every preview tree true to what `init` leaves behind.
+    Before each scenario command, the runner also takes the `--dry-run --json` plan and fails when the finished scaffold's tree (the one the docs show) has a file no plan listed, or lacks one a plan listed. The dry-run tree, the recipe editor's preview, and the change review all read that plan, so this keeps every preview tree true to what `init` leaves behind.
     ```bash
     just check-snapshots
     ```
@@ -318,6 +309,6 @@ Run `uv run pytest tests/test_tui_code.py tests/test_conflict_tui.py tests/test_
 
 ## Related Developer Guides
 
-- **[Developer Overview & Contributing](./overview.md):** Setup instructions, coding standards, and PR workflows.
-- **[Extending Protostar](./extending-protostar.md):** Build new tooling modules to accompany your tests.
-- **[The Orchestrator](../mechanics/orchestrator.md):** Understand the headless core and execution lifecycle under test.
+- **[Developer Overview & Contributing<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./overview.md):** Setup instructions, coding standards, and PR workflows.
+- **[Extending Protostar<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./extending-protostar.md):** Build new tooling modules to accompany your tests.
+- **[The Orchestrator<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/orchestrator.md):** Understand the headless core and execution lifecycle under test.

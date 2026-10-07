@@ -206,7 +206,7 @@ This is the one place the trust rules are written down; other pages link here.
 
 A template you haven't trusted runs no command until you confirm it. That covers more than its own `system_tasks` and `post_install_tasks`. Protostar's own commands run in the files the template writes, and those files can make them run its code: `uv add` builds the project through the build backend and any build hooks the template configured, and `direnv allow` authorizes the `.envrc` it ships. So the confirmation lists every command the run executes: setup commands such as `git init` and `uv init`, each dependency install, and the commands after install.
 
-### Which templates are trusted
+### Which Templates Are Trusted
 
 - __Built-in templates__ are trusted, because they ship inside Protostar.
 - __An alias with `trusted = true`__ in your [global configuration](configuration.md#global-template-aliases-templates) trusts the template it names, wherever you use it: the same local `protostar.toml`, or the same repository and path, even through `--from`.
@@ -214,7 +214,7 @@ A template you haven't trusted runs no command until you confirm it. That covers
 
 A project's recipe and `protostar.lock` never grant trust, so cloning a project never trusts its template for you.
 
-### What happens with an untrusted template
+### What Happens with an Untrusted Template
 
 | Command | In a terminal | Without a terminal, or with `--json` |
 | :--- | :--- | :--- |
@@ -228,13 +228,13 @@ The confirmation screen `sync` shows takes these keys:
 
 --8<-- "keys_trust.md"
 
-### What else protects you
+### What Else Protects You
 
 Whether or not a template is trusted, Protostar writes nothing outside the project directory or into `.git/`, and runs only these programs: `uv`, `git`, `npm`, `yarn`, `pnpm`, `pre-commit`, `prek`, `direnv`, and `just`. A template can't call a shell such as `/bin/sh` directly. Those programs can still run code the template ships, which is why trust exists.
 
 ## Related Guides & Next Steps
 
-- __[Authoring Custom Templates](./authoring-templates.md):__ Build your own single-file blueprints or multi-file repository archives with dynamic variables.
-- __[Tooling & Flags Matrix](./tooling-matrix.md):__ Explore all tools and built-in templates available in Protostar.
-- __[Global Configuration](./configuration.md):__ Learn how to register shorthand aliases under `[templates]` in your `config.toml`.
-- __[Agent & Machine Interface](./agent-interface.md):__ Inspect blueprints and validate template JSON schemas in automated agent pipelines.
+- __[Authoring Custom Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./authoring-templates.md):__ Build your own single-file blueprints or multi-file repository archives with dynamic variables.
+- __[Tooling & Flags Matrix<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./tooling-matrix.md):__ Explore all tools and built-in templates available in Protostar.
+- __[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):__ Learn how to register shorthand aliases under `[templates]` in your `config.toml`.
+- __[Agent & Machine Interface<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./agent-interface.md):__ Inspect blueprints and validate template JSON schemas in automated agent pipelines.

@@ -166,8 +166,8 @@ alias proto="protostar"
 
 ## Next Steps
 
-- **[Configuration](./usage/configuration.md):** Set your name, editor, Python version, and the tools new projects start with, once.
-- **[Tooling & Flags Matrix](./usage/tooling-matrix.md):** Every tool, its flag, and the built-in templates.
-- **[CLI Reference](./usage/cli-reference.md):** Comprehensive reference for all subcommands, global options, and POSIX exit codes.
-- **[Troubleshooting & FAQ](./usage/troubleshooting.md):** Solutions for missing dependencies, workspace collisions, and IDE schema integration.
-- **[Project Lifecycle](./usage/lifecycle.md):** Keep the project current with `status`, `diff`, and `sync`.
+- **[Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./usage/configuration.md):** Set your name, editor, Python version, and the tools new projects start with, once.
+- **[Tooling & Flags Matrix<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./usage/tooling-matrix.md):** Every tool, its flag, and the built-in templates.
+- **[CLI Reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./usage/cli-reference.md):** Comprehensive reference for all subcommands, global options, and POSIX exit codes.
+- **[Troubleshooting & FAQ<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./usage/troubleshooting.md):** Solutions for missing dependencies, workspace collisions, and IDE schema integration.
+- **[Project Lifecycle<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./usage/lifecycle.md):** Keep the project current with `status`, `diff`, and `sync`.
