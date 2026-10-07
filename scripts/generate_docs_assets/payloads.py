@@ -27,10 +27,7 @@ from scripts.generate_docs_assets.common import _write_generated_doc
 def generate_agent_payloads() -> None:
     """Generates JSON payloads for the Agent & Machine Interface documentation."""
     orig_cwd = Path.cwd()
-    import scripts.generate_docs_assets as pkg
-
-    temp_dir_cls = getattr(pkg, "tempfile", tempfile).TemporaryDirectory
-    with temp_dir_cls() as tmp_dir:
+    with tempfile.TemporaryDirectory() as tmp_dir:
         try:
             os.chdir(tmp_dir)
             # 1. Planned payload computed dynamically from an EnvironmentManifest
@@ -94,7 +91,7 @@ def generate_agent_payloads() -> None:
     from protostar.cli.reviews import review_payload
     from protostar.sync_state import serialize_state
 
-    with temp_dir_cls() as tmp_dir:
+    with tempfile.TemporaryDirectory() as tmp_dir:
         try:
             os.chdir(tmp_dir)
             baseline = EnvironmentManifest(collision_strategy=CollisionStrategy.MERGE)

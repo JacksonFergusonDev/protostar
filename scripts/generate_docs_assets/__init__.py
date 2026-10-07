@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-import tempfile
 from pathlib import Path
 
 _repo_root = Path(__file__).resolve().parent.parent.parent
@@ -64,7 +63,6 @@ __all__ = [
     "generate_schema_tables",
     "generate_template_schema_fixture",
     "generate_tui_svgs",
-    "tempfile",
 ]
 
 

@@ -672,12 +672,14 @@ def test_generated_lifecycle_examples_use_real_decisions_and_are_repeatable(
     from scripts import generate_docs_assets as assets
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(assets, "DOCS_GENERATED_DIR", tmp_path / "generated")
+    monkeypatch.setattr(
+        "scripts.generate_docs_assets.common.DOCS_GENERATED_DIR", tmp_path / "generated"
+    )
     import tempfile
 
     temporary_directory = tempfile.TemporaryDirectory
     mocker.patch(
-        "scripts.generate_docs_assets.tempfile.TemporaryDirectory",
+        "scripts.generate_docs_assets.payloads.tempfile.TemporaryDirectory",
         side_effect=lambda: temporary_directory(dir=tmp_path),
     )
     mocker.patch("subprocess.run", side_effect=AssertionError("subprocess"))
@@ -697,3 +699,35 @@ def test_generated_lifecycle_examples_use_real_decisions_and_are_repeatable(
     assert {
         path.name: path.read_bytes() for path in (tmp_path / "generated").iterdir()
     } == before
+
+
+@pytest.mark.parametrize(
+    "failed_output", ["agent_payload_planned.json", "agent_payload_reviewed.json"]
+)
+def test_payload_generation_restores_the_working_directory_when_writing_fails(
+    tmp_path, monkeypatch, mocker, failed_output
+):
+    from scripts.generate_docs_assets import payloads
+    from scripts.generate_docs_assets.common import _write_generated_doc
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "scripts.generate_docs_assets.payloads.tempfile.tempdir", str(tmp_path)
+    )
+    monkeypatch.setattr(
+        "scripts.generate_docs_assets.common.DOCS_GENERATED_DIR", tmp_path / "generated"
+    )
+
+    def fail_output(name, content):
+        if name == failed_output:
+            raise OSError("cannot write generated output")
+        _write_generated_doc(name, content)
+
+    mocker.patch.object(payloads, "_write_generated_doc", side_effect=fail_output)
+    mocker.patch("subprocess.run", side_effect=AssertionError("subprocess"))
+    mocker.patch("subprocess.Popen", side_effect=AssertionError("subprocess"))
+    with pytest.raises(OSError, match="cannot write generated output"):
+        payloads.generate_agent_payloads()
+    assert Path.cwd() == tmp_path
+    assert not (tmp_path / "pyproject.toml").exists()
+    assert not (tmp_path / "protostar.lock").exists()
