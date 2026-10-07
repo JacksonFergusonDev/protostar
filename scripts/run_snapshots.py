@@ -423,10 +423,10 @@ def _build_fixture_scenario(
             planned, existing = _execute_fixture_scenario(
                 [list(c) for c in scenario.commands], static_cwd, isolated_env
             )
+        check_planned_tree(scenario.name, static_cwd, planned, existing)
         _extract_and_write_targets(
             static_cwd, scenario.name, publish_tree=scenario.publishes_tree
         )
-        check_planned_tree(scenario.name, static_cwd, planned, existing)
         report(
             f"  OK Scenario [{scenario.name}] snapshots generated",
             style=OutputStyle.SUCCESS,
