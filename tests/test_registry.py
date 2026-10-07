@@ -1,4 +1,5 @@
 import json
+import threading
 import urllib.error
 from email.message import Message
 from unittest.mock import MagicMock
@@ -12,6 +13,7 @@ from protostar.registry import (
     RemoteHook,
     clear_hook_registry_cache,
     hook_registry_unreachable,
+    prefetch_hook_registry,
 )
 
 
@@ -277,3 +279,113 @@ def test_reachability_shares_the_one_fetch(mocker):
     HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
     assert hook_registry_unreachable()
     urlopen.assert_called_once()
+
+
+def _answer(revision: str) -> MagicMock:
+    """A registry response that pins one hook to a revision."""
+    body = MagicMock()
+    body.read.return_value = json.dumps(
+        {"schema_version": 1, "hooks": {RemoteHook.PRE_COMMIT_HOOKS.value: revision}}
+    ).encode("utf-8")
+    response = MagicMock()
+    response.__enter__.return_value = body
+    return response
+
+
+def _held_request(mocker, revision: str = "v9.9.9"):
+    """Patches urlopen to answer only once the test lets it, as a slow network does."""
+    started, release = threading.Event(), threading.Event()
+
+    def held(*_args, **_kwargs):
+        started.set()
+        assert release.wait(5)
+        return _answer(revision)
+
+    return started, release, mocker.patch("urllib.request.urlopen", side_effect=held)
+
+
+def test_prefetch_returns_before_the_request_finishes(mocker):
+    """The fetch runs in the background; a snapshot taken later waits for it."""
+    started, release, urlopen = _held_request(mocker)
+
+    prefetch_hook_registry()
+
+    assert started.wait(5)
+    taken: list[str] = []
+    waiting = threading.Thread(
+        target=lambda: taken.append(
+            HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+        )
+    )
+    waiting.start()
+    waiting.join(0.2)
+    assert waiting.is_alive()
+    release.set()
+    waiting.join(5)
+    assert taken == ["v9.9.9"]
+    assert urlopen.call_count == 1
+
+
+def test_callers_that_arrive_during_a_fetch_share_its_request(mocker):
+    """However many ask while it is under way, the registry is asked once."""
+    started, release, urlopen = _held_request(mocker)
+    prefetch_hook_registry()
+    assert started.wait(5)
+    results: list[bool] = []
+    callers = [
+        threading.Thread(target=lambda: results.append(hook_registry_unreachable()))
+        for _ in range(8)
+    ]
+    for caller in callers:
+        caller.start()
+
+    release.set()
+    for caller in callers:
+        caller.join(5)
+
+    assert results == [False] * 8
+    assert urlopen.call_count == 1
+
+
+def test_prefetching_twice_makes_one_request(mocker):
+    urlopen = mocker.patch("urllib.request.urlopen", return_value=_answer("v9.9.9"))
+
+    prefetch_hook_registry()
+    prefetch_hook_registry()
+
+    assert HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS) == "v9.9.9"
+    assert urlopen.call_count == 1
+
+
+def test_clearing_during_a_fetch_is_not_overwritten_by_its_late_answer(mocker):
+    """A fetch that was cleared away finishes into its own result, which no one reads."""
+    started, release = threading.Event(), threading.Event()
+    requests: list[str] = []
+
+    def urlopen(*_args, **_kwargs):
+        requests.append("request")
+        if len(requests) == 1:
+            started.set()
+            assert release.wait(5)
+            return _answer("v1.0.0")
+        return _answer("v2.0.0")
+
+    mocker.patch("urllib.request.urlopen", side_effect=urlopen)
+    prefetch_hook_registry()
+    assert started.wait(5)
+
+    clear_hook_registry_cache()
+    assert HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS) == "v2.0.0"
+    release.set()
+
+    assert HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS) == "v2.0.0"
+
+
+def test_an_unexpected_error_in_the_fetch_reaches_the_caller(mocker):
+    """Prefetching in the background does not swallow what a direct fetch raised."""
+    mocker.patch("urllib.request.urlopen", side_effect=RuntimeError("boom"))
+
+    prefetch_hook_registry()
+
+    with pytest.raises(RuntimeError, match="boom"):
+        HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)

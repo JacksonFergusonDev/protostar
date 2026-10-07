@@ -30,6 +30,7 @@ from protostar.docs_registry import DocsPage
 from protostar.errors import ExecutionAbortedError, InvalidUsageError
 from protostar.intent import TemplateOrigin
 from protostar.modules import TOOLING_MODULES
+from protostar.registry import prefetch_hook_registry
 from protostar.system import is_interactive
 from protostar.system_deps import check_required_executables
 from protostar.templates import discover_templates
@@ -798,6 +799,9 @@ def maybe_run_interactive_init(parser: argparse.ArgumentParser) -> None:
     if cmd == "init":
         if not is_interactive():
             return
+        # The editor previews hook pins; its request overlaps everything before
+        # the first frame.
+        prefetch_hook_registry()
         from protostar.analysis import analyze_project
         from protostar.cli.tui.launch import edit_recipe
         from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
