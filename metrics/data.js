@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791335203766,
+  "lastUpdate": 1791336591731,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -22139,6 +22139,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 830.7,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "63a0374c80d8adb88ba3c905deb8638c8b969d19",
+          "message": "perf(ide): list editor extensions while the run installs, not after it (#524)\n\nWith VS Code or Cursor configured, `init` ran `code --list-extensions` after\nevery other step, only to produce a warning, and waited about 0.16s for it.\nThe listing now starts when execution begins, on its own runner and a daemon\nthread, and the executor collects it where it used to run.\n\nIf the run fails first, the probe is cancelled before rollback begins, so its\nprocess is reaped before any file is restored, and a probe that cannot be\nreaped still lets the run's own command be terminated. A `finally` stops a\nprobe nobody collected. Diagnostics, their order, and the progress step are\nunchanged.\n\nWith VS Code configured, `init` goes from 1.735s to 1.578s.",
+          "timestamp": "2026-10-06T18:26:11-07:00",
+          "tree_id": "36e2862577771af244f6832b48766b97f14698d2",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/63a0374c80d8adb88ba3c905deb8638c8b969d19"
+        },
+        "date": 1791336589472,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 145.28,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1017.95,
             "unit": "ms"
           }
         ]
