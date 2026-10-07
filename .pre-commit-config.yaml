@@ -117,7 +117,7 @@ repos:
 
       - id: check-schemas
         name: check schema validity
-        entry: uv run python scripts/check_schemas.py
+        entry: uv run --locked python scripts/check_schemas.py
         language: system
         pass_filenames: false
         files: ^(\.pre-commit-config\.yaml|\.github/|docs/generated/|tests/snapshots/|scripts/check_schemas\.py)

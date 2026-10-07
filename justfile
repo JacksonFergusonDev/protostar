@@ -15,7 +15,7 @@ default:
 
 # Sync/install dependencies using uv
 sync:
-    uv sync --quiet
+    uv sync --locked --quiet
 
 # Auto-format Python and Markdown
 format: sync
@@ -135,7 +135,7 @@ check-docs-drift: sync
 # Validate repository and snapshot configurations against official schemas
 check-schemas: sync
     @printf "\n{{ blue }}=== Validating JSON & YAML Schemas ==={{ nc }}\n"
-    uv run python scripts/check_schemas.py
+    uv run --locked python scripts/check_schemas.py
 
 # Alias for check-schemas
 schema-check: check-schemas
