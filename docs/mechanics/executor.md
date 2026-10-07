@@ -50,7 +50,7 @@ flowchart TD
 
 The executor prepares and applies its decisions in batches, between the commands whose output later batches read. [Execution Order](../developer/reconciliation/execution.md#execution-order) lists the batches for `init` and `sync`.
 
-If anything fails, or the user presses `Ctrl+C`, the executor stops the running command and every process it started, shields the restore from a second `Ctrl+C`, and rolls the journal back. A successful restore re-raises the original error (`ExecutionInterruptedError` for `Ctrl+C`); a failed one raises `RollbackFailedError`. See [Automatic Rollback](../usage/rollback.md) for what is and isn't restored.
+If anything fails, or the user presses `Ctrl+C`, the executor stops the running command and every process it started, shields the restore from a second `Ctrl+C`, and rolls the journal back. A successful restore re-raises the original error (`ExecutionInterruptedError` for `Ctrl+C`), or `ProcessTerminationError` when a process wouldn't stop; a failed one raises `RollbackFailedError`. See [Automatic Rollback](../usage/rollback.md) for what is and isn't restored.
 
 ## Security Checks
 

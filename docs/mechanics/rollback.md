@@ -32,7 +32,7 @@ flowchart TD
 
 - **`MutationJournal`** is the ledger. Before Protostar writes or modifies any path, it records that path's original state (bytes, mode, or absence). On rollback, it replays the journal in reverse, restoring each entry.
 - **`TransactionAwareFS`** is the gated write interface. All filesystem mutations in the execution phase route through this class, which calls into the journal before performing any disk operation.
-- **`ProcessRunner`** owns the active subprocess. When an error or interrupt fires, the executor calls `terminate_active_process_tree()` first — before touching the journal — ensuring no process is still writing to disk while rollback is in progress.
+- **`ProcessRunner`** owns the active subprocess. When an error or interrupt fires, the executor stops it, and the editor-extension listing that may be running beside it, before touching the journal, so no process is still writing to disk while rollback is in progress.
 
 ## Transactional Execution Flow
 
@@ -62,15 +62,17 @@ flowchart TD
 
     subgraph RB ["Rollback Sequence"]
         direction TB
-        R1["terminate_active_process_tree()"]:::rollback
+        R1["_stop_processes() — the command and the editor probe;<br/>one that won't stop is noted, not raised"]:::rollback
         R2["shield_sigint() — defer further Ctrl+C"]:::rollback
         R3["journal.rollback() — restore in reverse order"]:::rollback
         R1 --> R2 --> R3
     end
 
     R3 --> Check{Rollback\nsucceeded?}:::decision
-    Check -- "Yes" --> ReRaise["Re-raise original error\n(ExecutionInterruptedError on Ctrl+C)"]:::error
-    Check -- "Partial failure" --> RFE["Raise RollbackFailedError\n(failed_paths attached)"]:::error
+    Check -- "Yes" --> Stopped{Every process\nstopped?}:::decision
+    Stopped -- "Yes" --> ReRaise["Re-raise original error\n(ExecutionInterruptedError on Ctrl+C)"]:::error
+    Stopped -- "No" --> PTE["Raise ProcessTerminationError\n(original error chained)"]:::error
+    Check -- "Partial failure" --> RFE["Raise RollbackFailedError\n(failed paths and unstopped processes)"]:::error
 ```
 
 ## `MutationJournal`
@@ -138,11 +140,11 @@ When writing a file at a path like `src/myproject/__init__.py`, any parent direc
 
 ## `ProcessRunner` & Subprocess Termination
 
-`ProcessRunner` (`src/protostar/system.py`) owns the single active subprocess at any moment. It launches subprocesses in **isolated process groups** (`start_new_session=True` on POSIX, `CREATE_NEW_PROCESS_GROUP` on Windows) so the entire child process tree can be signalled atomically.
+`ProcessRunner` (`src/protostar/system.py`) owns one active subprocess at a time. The executor's runner runs the run's commands; the editor-extension listing, which overlaps the run, has a runner of its own. It launches subprocesses in **isolated process groups** (`start_new_session=True` on POSIX, `CREATE_NEW_PROCESS_GROUP` on Windows) so the entire child process tree can be signalled atomically.
 
 ### Two-Stage Termination
 
-`terminate_active_process_tree()` is the first thing called when an error or interrupt fires, before `journal.rollback()`:
+`terminate_active_process_tree()` is called for the run's command when an error or interrupt fires, before `journal.rollback()`, and the editor-extension listing is cancelled the same way:
 
 ```text
 1. Send SIGTERM to the process group (or CTRL_BREAK_EVENT on Windows)
@@ -152,7 +154,7 @@ When writing a file at a path like `src/myproject/__init__.py`, any parent direc
 5. If still alive: raise ProcessTerminationError
 ```
 
-This sequence ensures no subprocess is still writing to disk while rollback is in progress. If a process cannot be reaped within the grace window, `ProcessTerminationError` propagates up through the executor's exception handler, which still attempts rollback before re-raising.
+This sequence ensures no subprocess is still writing to disk while rollback is in progress. A process that survives it never stops the restore: after `SIGKILL` it runs none of its own code, and the editor-extension listing only reads. The executor tries to stop both processes, collects each `ProcessTerminationError`, rolls back, and then raises the first of them, chained to the original error. If rollback also fails, `RollbackFailedError` lists them as `unstopped` beside the paths it couldn't restore.
 
 ### Environment Sanitization
 

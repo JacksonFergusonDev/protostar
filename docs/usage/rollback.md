@@ -16,7 +16,7 @@ Rollback starts on any failure after Protostar begins changing the project:
 - Something unexpected goes wrong, such as a file that can't be written.
 - You press `Ctrl+C`.
 
-Before restoring anything, Protostar stops the command that was running, along with every process it started, so nothing is still writing while the files go back. The error that follows says what failed and whether everything was restored.
+Before restoring anything, Protostar stops the command that was running, along with every process it started, so nothing is still writing while the files go back. A process that won't stop never prevents the restore; see [When a Process Won't Stop](#when-a-process-wont-stop-processterminationerror). The error that follows says what failed and whether everything was restored.
 
 Previews never need it: `--dry-run`, `status`, `diff`, and `sync --check` change nothing.
 
@@ -52,6 +52,12 @@ Rarely, a path can't be put back, and Protostar raises `RollbackFailedError` lis
 - **Permissions changed during the run,** so the original bytes can't be written back.
 
 Every other path is still restored. Look at each listed path, remove or restore it by hand, and run the command again. With `--json`, the error lists them as `unrestored`, each with its `path` and why it failed.
+
+## When a Process Won't Stop (`ProcessTerminationError`)
+
+Before restoring anything, Protostar stops the command that was running: it asks the command to stop, then forces it. In rare cases, such as a process stuck waiting on a disk or network drive, it is still there afterwards. Protostar restores your files anyway, then raises `ProcessTerminationError` naming the process, so you can stop it yourself before running the command again. With `--json`, the error carries its `process_id` and the `rollback_context` of what was restored.
+
+If a restore also fails, `RollbackFailedError` lists the processes that wouldn't stop beside the paths, as `unstopped` in JSON.
 
 ## Interrupting with Ctrl+C (`ExecutionInterruptedError`)
 

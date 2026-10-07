@@ -40,12 +40,15 @@ from unittest import mock
 import pytest
 
 from protostar import fs_transaction, journal, system
-from protostar.errors import CommandExecutionError
+from protostar.errors import CommandExecutionError, ProcessTerminationError
 from scripts.benchmarks.probes import command_label
 
 SITES_DIR = Path(__file__).parent / "rollback_sites"
 
 TEMPLATES = ("api", "astro", "cli", "lib", "ml")
+
+# The process a command that won't stop reports (RollbackFault.unstoppable).
+UNSTOPPABLE_PID = 4242
 
 # Paths outside the transacted boundary (AGENTS.md, "Rollback Boundary"):
 # never compared, before or after a run. Each needs its reason.
@@ -368,10 +371,13 @@ class RollbackFault:
     Attributes:
         path: A journaled path whose restore fails, relative to the project.
         interrupt: Whether a real SIGINT arrives as rollback starts.
+        unstoppable: Whether the run's command survives being stopped before
+            rollback.
     """
 
     path: str | None = None
     interrupt: bool = False
+    unstoppable: bool = False
 
 
 @dataclasses.dataclass(frozen=True)
@@ -542,8 +548,15 @@ class FaultInjector:
                 raise OSError(errno.EIO, "injected restore fault")
             return restore(path, state)
 
+        def unstoppable(_self: system.ProcessRunner) -> None:
+            raise ProcessTerminationError(UNSTOPPABLE_PID, "injected: still running")
+
         monkeypatch.setattr(system.ProcessRunner, "run", command)
         monkeypatch.setattr(journal.MutationJournal, "commit", transaction)
+        if self.rollback is not None and self.rollback.unstoppable:
+            monkeypatch.setattr(
+                system.ProcessRunner, "terminate_active_process_tree", unstoppable
+            )
         monkeypatch.setattr(
             journal.MutationJournal, "_restore", staticmethod(restoring)
         )

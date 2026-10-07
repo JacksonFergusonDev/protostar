@@ -33,6 +33,7 @@ from tests.rollback_harness import (
     POSITIONS,
     SCENARIOS,
     SITES_DIR,
+    UNSTOPPABLE_PID,
     Case,
     Command,
     Fault,
@@ -120,6 +121,16 @@ def _last_write(scenario: Scenario) -> Case:
     """An error after the last write: everything the run does is journaled."""
     writes = [s for s in scenario.recorded_sites() if site_kind(s) is SiteKind.WRITE]
     return Case(scenario, writes[-1], Position.AFTER, Fault.ERROR)
+
+
+def _first_command(scenario: Scenario) -> Case:
+    """An error half-way through the run's first command that rolls back."""
+    commands = [
+        s
+        for s in scenario.recorded_sites()
+        if site_kind(s) is SiteKind.COMMAND and site_target(s) not in HOOK_INSTALLS
+    ]
+    return Case(scenario, commands[0], Position.MID, Fault.ERROR)
 
 
 def _failed_restores(scenario: Scenario) -> list[tuple[Case, str]]:
@@ -458,6 +469,29 @@ def test_rollback_finishes_through_a_second_interrupt(
         RollbackFault(interrupt=True),
     )
     _assert_rolled_back(case, outcome, workspace, before)
+
+
+@pytest.mark.rollback_fault
+def test_a_command_that_will_not_stop_is_reported_after_rollback(
+    scoped_scenario: Scenario, monkeypatch, seed
+):
+    """A process that survives being stopped never keeps the project from coming back."""
+    case = _first_command(scoped_scenario)
+    workspace = seed(scoped_scenario)
+    before = workspace.capture()
+    outcome = run(
+        workspace,
+        scoped_scenario,
+        Runner.FAKE,
+        monkeypatch,
+        case,
+        RollbackFault(unstoppable=True),
+    )
+    _assert_rolled_back(case, outcome, workspace, before)
+    error = outcome.payload["error"]
+    assert error["type"] == "ProcessTerminationError", outcome.payload
+    assert error["process_id"] == UNSTOPPABLE_PID
+    assert "rollback_context" in error
 
 
 @pytest.mark.rollback_fault

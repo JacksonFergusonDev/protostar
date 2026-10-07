@@ -50,6 +50,10 @@ class DocsPage(Enum):
         "A Project Can't Switch Templates",
     )
     ROLLBACK = ("usage/rollback/", "Rollback")
+    ROLLBACK_UNSTOPPED = (
+        "usage/rollback/#when-a-process-wont-stop-processterminationerror",
+        "When a Process Won't Stop",
+    )
     RESOLVE_CONFLICTS = ("usage/lifecycle/#resolve-conflicts", "Resolve Conflicts")
     VERSION_SKEW = (
         "usage/automating-updates/#keep-protostar-versions-in-step",
