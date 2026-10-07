@@ -76,16 +76,16 @@ jobs:
 protostar sync --check --json > review.json
 ```
 
-| Invocation/outcome | Exit code |
+| Command and outcome | Exit code |
 | --- | --- |
-| Valid status, diff, or dry-run review, including conflicts | `0` |
-| Sync completes with no unresolved conflicts, including a no-op | `0` |
-| Sync commits safe work and retains unresolved conflicts | `1` |
-| Check finds accepted edits, resolver work, state advancement, or conflicts | `1` |
-| Check finds only preserved local deviations or no work | `0` |
-| Fatal error | Domain-specific code; interruption uses `130` |
+| `status`, `diff`, or a `--dry-run`, even with conflicts | `0` |
+| `sync` that applied everything, or had nothing to do | `0` |
+| `sync` that applied the safe changes and left conflicts open | `1` |
+| `sync --check` with an update to apply or a conflict open | `1` |
+| `sync --check` with nothing pending, or only edits you kept | `0` |
+| An error | That error's [exit code](cli-reference.md#posix-exit-codes); `Ctrl+C` exits `130` |
 
-`--check` and `--dry-run` are mutually exclusive. Check never applies work. All commands accept `--json` without prompts: stdout contains one deterministic JSON envelope; diagnostics and subprocess output go to stderr. Check includes `check_passed`; review uses `status: "reviewed"`; application uses `"success"` or `"partial"`. See the [machine interface](agent-interface.md) for generated examples and schema discovery.
+`--check` never changes anything, and can't be combined with `--dry-run`. With `--json`, every command prints one JSON payload on stdout and never prompts; diagnostics and command output go to stderr. A check's payload includes `check_passed`, a review's has `status: "reviewed"`, and an applied sync's has `"success"` or `"partial"`. See the [machine interface](agent-interface.md) for examples and schemas.
 
 ## Keep Protostar versions in step
 

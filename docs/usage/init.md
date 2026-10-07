@@ -1,5 +1,5 @@
 ---
-description: "Learn how to use protostar init to safely construct and manage your Python project architecture."
+description: "Set up a new or existing project with protostar init: templates, tool flags, the recipe editor, and the change review."
 ---
 
 # Environment Initialization
@@ -12,7 +12,7 @@ Running `init --force-merge` again in a tracked project reapplies the same templ
 
 ## Built-in Templates
 
-While Protostar is fully modular, you often want a vetted, turnkey environment without selecting individual flags manually. Protostar ships with built-in templates that bundle domain-specific tools, directories, and AST configurations. Each one is a project *shape* (a command-line app, a web service, an analysis workbench), not a fixed stack of libraries.
+A built-in template is a tested starting point, so you don't have to choose every tool yourself. Each one is a project *shape* (a command-line app, a web service, an analysis workbench) with the tools, directories, and settings that shape needs, not a fixed stack of libraries.
 
 How much tooling a shape starts with is its [tier](./templates.md#choosing-a-tier), chosen with `--tier`. The __production__ tier adds the full quality gate: strict typing, tests, CI, and commit hooks. The __workbench__ tier stays lean, with just Ruff, direnv, and `just`, so exploratory work isn't buried in opinions on day one. Every built-in offers both: `cli`, `api`, and `lib` start in production, and `astro` and `ml` in workbench. Either tier is only a starting point: every tool can be turned on or off with the flags below.
 
@@ -36,7 +36,7 @@ To explore all built-in templates, load remote team standards (`--from`), supply
 
 ## Example Setups
 
-To understand how Protostar interprets your flags, observe what happens when we execute different workflows in an empty directory.
+Here is what each built-in template writes into an empty folder.
 
 !!! note "IDE Configurations"
     The following repository tree examples assume you have configured an IDE in your global settings (e.g., `ide = "vscode"`) in addition to enabling direnv. If your config remains set to the default `None`, the `.vscode/settings.json` file will not be generated, though the universal `.vscode/` exclusion will still be safely appended to your `.gitignore`.
@@ -67,7 +67,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
     __What Protostar sets up:__
 
     - __Dependency Locking:__ Protostar locks `typer` and `rich` from the CLI template.
-    - __AST Configuration:__ It constructs the TOML Abstract Syntax Tree (AST), configuring `[tool.ruff]`, `[tool.mypy]`, `[tool.pytest.ini_options]`, and `[tool.rumdl]` alongside development dependency groups.
+    - __Tool Settings:__ It writes `[tool.ruff]`, `[tool.mypy]`, `[tool.pytest.ini_options]`, and `[tool.rumdl]` into `pyproject.toml`, with the development dependency group.
     - __Local Toolchain Hooks:__ In `.pre-commit-config.yaml`, Protostar scaffolds local toolchain hooks (`ruff-check`, `ruff-format`, `mypy`, `rumdl-check`, `rumdl-fmt`) that execute directly in your project environment via `uv run`, so each runs the version locked in `uv.lock`. `mypy` checks the whole project, as CI does, because checking only the staged files misses errors they cause elsewhere. Workflows are linted with `actionlint`, and the Renovate and Read the Docs configurations are validated against their schemas with `check-jsonschema`, wherever those files live.
     - __Hook Stages:__ `default_install_hook_types` always includes `pre-commit`. Commitizen adds `commit-msg`, and Pytest adds `pre-push`: the test suite runs before a push that changes `src/`, `tests/`, `pyproject.toml`, or `uv.lock`, rather than on every commit. `default_stages` is `pre-commit`, so every other hook runs at commit time.
 
@@ -101,7 +101,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
     __What Protostar sets up:__
 
     - __PEP 561 Typing:__ Injects `py.typed` to signal inline type annotations to downstream type checkers like Mypy and Pyright.
-    - __Package Packaging:__ Configures the `hatchling` build backend with a standard `src/` layout for wheel and sdist builds.
+    - __Packaging:__ Configures the `hatchling` build backend with a standard `src/` layout for wheel and sdist builds.
     - __Public API Architecture:__ Scaffolds `__init__.py` with explicit `__all__` re-exports and dynamic `__version__` lookup via `importlib.metadata`.
     - __Strict Typing & Quality:__ Enables strict Mypy checking, docstring linting (Ruff's `D` rules), and `TC` (flake8-type-checking) to keep type-only imports from becoming runtime transitive dependencies.
 
@@ -258,18 +258,18 @@ When Protostar detects existing configuration files (like `pyproject.toml`), the
 
 Choosing either re-prepares the review with its diffs. Press __Cancel__ to exit without modifying the environment.
 
-Under __Merge__, a file Protostar can't merge into is kept as it is and marked `conflict`, such as an existing `justfile` it has never managed. Highlight it to see your version beside Protostar's and settle it under __Conflicts__: __Keep mine__ (`k`) leaves the file untouched and adopts it, so later updates merge into it three ways; __Take update__ (`u`) replaces it. __Keep both__ (`b`) is offered for overlapping lines, and __Leave open__ (`x`) keeps today's behavior.
+Under __Merge__, a file Protostar can't merge into is kept as it is and marked `conflict`, such as an existing `justfile` it has never managed. Highlight it to see your version beside Protostar's and settle it under __Conflicts__: __Keep mine__ (`k`) leaves the file untouched and adopts it, so later updates merge into it three ways; __Take update__ (`u`) replaces it. __Keep both__ (`b`) is offered for overlapping lines, and __Leave open__ (`x`) decides nothing now: your file stays, and `protostar status` keeps listing the conflict.
 
 Everything else Merge would change in a file you already have is listed too, as __Changes to your file__: each key, table, list member, or dependency it adds. Each applies unless you keep it out with `k`; keeping it out records Protostar's version without writing it, so `protostar sync` can take it later. __Keep all mine__ (`K`) keeps your side of every conflict and change at once, which keeps the project exactly as it is. The review shows the result before anything runs. It covers the files written before setup commands, and the configuration merges and dependencies after them whenever no command creates their files; anything later is listed after setup, and `protostar sync` settles it the same way (see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have)).
 
-Selecting __Merge__ reconciles declared TOML configuration against `protostar.lock`. A tracked project requires the same explicitly selected template source; switching templates or adding a template to tracked tooling-only state is unsupported.
+In a project Protostar already tracks, Merge works from what `protostar.lock` records, and only with the template the project already follows; see [A Project Can't Switch Templates](troubleshooting.md#a-project-cant-switch-templates).
 
-The example below starts from a tracked ML workspace, adds representative astronomy dependencies, ignore rules, and data directories as foreign local content, then repeats the ML template with `--mypy --docker --force-merge`:
+The example below starts from a tracked ML project to which someone added their own astronomy dependencies, ignore rules, and data directories, then runs the ML template again with `--mypy --docker --force-merge`:
 
-- Leaves the existing foreign dependencies, ignores, and directories untouched.
-- Adds accepted new dependencies through `uv add`.
-- Updates unchanged owned tooling values and preserves local edits/deletions with structured warnings.
-- Appends new file patterns to `.gitignore` without duplicating existing rules.
+- Their dependencies, ignore rules, and directories stay as they were.
+- The new dependencies are added through `uv add`.
+- Settings Protostar wrote and nobody edited take the template's current values; edits and deletions stay, and the run reports each one.
+- `.gitignore` gains the patterns it was missing, without duplicates.
 
     ??? abstract "See the injected changes"
         ```diff
@@ -277,12 +277,12 @@ The example below starts from a tracked ML workspace, adds representative astron
         --8<-- "diff_ml_ml_merged__gitignore.diff"
         ```
 
-!!! tip "Headless Operations"
-    In CI/CD environments where interactive prompts are impossible, pass `--force-merge` or `--force-replace` to bypass collision prompts deterministically.
+!!! tip "Without a terminal"
+    In CI, or anywhere nothing can ask, choose with `--force-merge` or `--force-replace`.
 
 ## Advanced Flags
 
-- __Dry-Run Simulation__: Append `--dry-run` to see what a run would do without writing files or running shell commands (e.g., `protostar init --template cli --dry-run`). It shows the same review as the recipe editor: each file labelled `new`, `modified`, or `conflict`, the commands and packages, and every conflict and proposal with its id. ![Protostar Dry Run](../assets/terminals/cli_dry_run.svg)
+- __Dry Run__: Append `--dry-run` to see what a run would do without writing files or running shell commands (e.g., `protostar init --template cli --dry-run`). It shows the same review as the recipe editor: each file labelled `new`, `modified`, or `conflict`, the commands and packages, and every conflict and proposal with its id. ![Protostar Dry Run](../assets/terminals/cli_dry_run.svg)
 - __Settling Decisions Headlessly__: Pass `--resolve SELECTOR=CHOICE`, once per decision, to settle the conflicts and proposals `--dry-run` lists without the change review (e.g., `protostar init --template cli --force-merge --resolve 89cd01278762=desired`). `CHOICE` is `desired` (take the update), `local` (keep yours, or keep a proposal out), or `both` (text lines only); a file path settles every decision in that file. Without it, a run keeps your version of every conflict and applies every proposal. `--resolve` chooses no collision strategy, so existing files still need `--force-merge`. Combine it with `--dry-run` to see the settled outcome first. It works like [`sync --resolve`](lifecycle.md#resolve-conflicts).
 - __Machine-Readable Output__: Pass the position-independent `--json` flag to emit structured JSON envelopes to `stdout` and route logs to `stderr` (e.g., `protostar init --template cli --json`). See the __[Agent & Machine Interface](./agent-interface.md)__ for the full protocol specification.
 - __Template Shorthand__: Use `-t` as shorthand for `--template` (e.g., `protostar init -t cli`).

@@ -4,7 +4,7 @@ description: "Fixes for missing programs, editor setup, and the other problems p
 
 # Troubleshooting & FAQ
 
-This guide provides remediation steps for common operational errors, environment constraints, and editor integrations when using Protostar.
+Fixes for the problems people run into most: missing programs, existing files, untrusted templates, errors from `status` and `sync`, and editor setup.
 
 ## Missing Dependencies & Environment Checks
 
@@ -217,11 +217,10 @@ protostar init --template cli --verbose
 
 ### Automated Crash Reporting
 
-If Protostar encounters an unexpected internal error or AST parse failure:
+If Protostar itself crashes, which is a bug rather than a problem with your project:
 
-1. It traps the exception to prevent incomplete disk operations.
-1. It collects non-sensitive system environment details (OS, Python version, command invocation).
-1. It outputs a URL-encoded link that opens a pre-formatted GitHub issue ticket with the exact crash details attached.
+1. A crash during a run rolls the project back, like any other failure.
+1. It prints a link that opens a GitHub issue filled in with your operating system, Python version, the command you ran, and the traceback. Nothing is sent until you submit it, so read it first: a traceback can name paths on your machine.
 
 ### Filing Bugs & Asking Questions
 

@@ -274,11 +274,11 @@ Every entry in `template/` must also be a regular file or directory. A symbolic 
 
 ## Level 3: Variable Interpolation
 
-Protostar features a lightweight, regex-based templating engine that evaluates placeholders wrapped in `<% VARIABLE_NAME %>` delimiters. This interpolation runs across the `protostar.toml` manifest, inline `[files]` strings, and physical files housed within the `template/` directory.
+A placeholder such as `<% VARIABLE_NAME %>` is replaced with its value wherever it appears: in `protostar.toml`, in `[files]` strings, and in the files under `template/`. Placeholders only insert values; there are no conditions or loops.
 
 ### Built-in Variables
 
-The execution engine automatically computes and injects the following variables based on your CLI inputs, Git configuration, and directory context:
+Protostar fills these in itself, from the project folder, your configuration, and Git:
 
 - `<% PROJECT_NAME %>`: The human-readable project name (e.g., `my-cool-app`).
 - `<% PACKAGE_NAME %>`: The PEP 8 sanitized Python module identifier (e.g., `my_cool_app`).
