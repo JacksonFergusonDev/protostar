@@ -1,4 +1,5 @@
 import argparse
+import contextlib
 import importlib.metadata
 import json
 import shutil
@@ -2057,3 +2058,33 @@ def test_dry_run_takes_the_registry_snapshot_only_for_hooks(
     assert exc.value.code == 0
     assert registry.called is fetches
     shown.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("command", "prefetches"),
+    [
+        ("init", True),
+        ("sync", True),
+        ("status", True),
+        ("diff", True),
+        ("guide", False),
+        ("eject", False),
+        ("export-schema", False),
+    ],
+)
+def test_only_commands_that_pin_hooks_start_the_registry_fetch(
+    command, prefetches, mocker, monkeypatch
+):
+    """The fetch is started before the handler runs, and not for a command that never pins."""
+    prefetch = mocker.patch("protostar.cli.main.prefetch_hook_registry")
+    mocker.patch("protostar.cli.main.handle_init")
+    mocker.patch("protostar.cli.parser.dispatch_operation")
+    mocker.patch("protostar.cli.schema.handle_export_schema")
+    # main() sets this module global from --json, which would outlive the test.
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", False)
+    monkeypatch.setattr("sys.argv", ["protostar", command, "--json"])
+
+    with contextlib.suppress(SystemExit):
+        main()
+
+    assert prefetch.called is prefetches

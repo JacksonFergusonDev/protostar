@@ -59,6 +59,7 @@ from protostar.modules import (
     BootstrapModule,
 )
 from protostar.options import OptionValue
+from protostar.registry import prefetch_hook_registry
 from protostar.system import is_interactive
 from protostar.system_deps import check_required_executables, find_executable
 from protostar.tiers import Tier
@@ -731,6 +732,9 @@ def _check_allowed_secrets(
     return frozenset(names)
 
 
+_HOOK_PIN_COMMANDS = frozenset({"init", "sync", "status", "diff"})
+
+
 def main() -> None:
     """Main execution pipeline for the Protostar CLI."""
     ui.replace_unencodable_output()
@@ -755,6 +759,11 @@ def main() -> None:
         if not getattr(args, "command", None):
             arg_parser.print_help()
             sys.exit(1)
+
+        # These commands may pin hooks from the registry; its request then
+        # overlaps the planning that comes first.
+        if args.command in _HOOK_PIN_COMMANDS:
+            prefetch_hook_registry()
 
         args.func(args)
 
