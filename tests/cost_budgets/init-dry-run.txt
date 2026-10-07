@@ -1,0 +1,13 @@
+# What `protostar init --dry-run --json --no-config -t lib` costs.
+# Regenerate with: uv run pytest tests/test_cost_budgets.py --snapshot-update
+exit 0
+import:argcomplete
+import:packaging
+import:rich
+import:ruamel
+import:tomlkit
+parse:jsonc 8
+parse:toml 13
+parse:yaml 14
+registry:fetch 1
+subprocess:git config --global user.email 1

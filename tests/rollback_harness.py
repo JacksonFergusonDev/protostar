@@ -41,6 +41,7 @@ import pytest
 
 from protostar import fs_transaction, journal, system
 from protostar.errors import CommandExecutionError
+from scripts.benchmarks.probes import command_label
 
 SITES_DIR = Path(__file__).parent / "rollback_sites"
 
@@ -60,10 +61,6 @@ DISCLAIMED_HOME = frozenset(
         ".cache",
     }
 )
-
-# Command-line tokens that take the following token as their value, so a
-# site label never mistakes the value for a package.
-_VALUED_OPTIONS = frozenset({"--group", "--python"})
 
 
 class SiteKind(enum.StrEnum):
@@ -421,26 +418,6 @@ class FaultInjector:
             return self.armed.position
         return None
 
-    @staticmethod
-    def command_label(command: list[str]) -> str:
-        """Names a command by its program, words, and options.
-
-        Option values (a Python version) and the packages ``uv add`` takes are
-        left out, so the id is the same on every host and for every package.
-        """
-        words = [Path(command[0]).stem]
-        is_add = command[1:2] == ["add"]
-        skip = False
-        for word in command[1:]:
-            if skip:
-                skip = False
-            elif word.startswith("-"):
-                words.append(word)
-                skip = word in _VALUED_OPTIONS
-            elif not (is_add and len(words) > 1):
-                words.append(word)
-        return " ".join(words)
-
     # -- faults -- #
 
     def _raise(self, kind: SiteKind, command: list[str] | None = None) -> None:
@@ -511,7 +488,7 @@ class FaultInjector:
             timeout: int | None = None,
             env: dict[str, str] | None = None,
         ) -> str:
-            position = injector._enter(SiteKind.COMMAND, injector.command_label(cmd))
+            position = injector._enter(SiteKind.COMMAND, command_label(cmd))
             declared, injector._declared = injector._declared, []
             if position is Position.BEFORE:
                 injector._raise(SiteKind.COMMAND, cmd)

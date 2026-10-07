@@ -1,0 +1,18 @@
+# What `protostar init --json --no-config -t api` costs.
+# Regenerate with: uv run pytest tests/test_cost_budgets.py --snapshot-update
+exit 0
+command:direnv allow 1
+command:git init 1
+command:uv add --dev 1
+command:uv add --no-sync 1
+command:uv init --no-workspace --bare --pin-python --python 1
+command:uv run prek install 1
+import:argcomplete
+import:packaging
+import:rich
+import:ruamel
+import:tomlkit
+parse:jsonc 14
+parse:toml 48
+parse:yaml 8
+registry:fetch 1

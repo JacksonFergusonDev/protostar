@@ -1,0 +1,12 @@
+# What `protostar status --json --no-config` costs.
+# Regenerate with: uv run pytest tests/test_cost_budgets.py --snapshot-update
+exit 0
+import:argcomplete
+import:packaging
+import:rich
+import:ruamel
+import:tomlkit
+parse:jsonc 10
+parse:toml 32
+parse:yaml 20
+registry:fetch 1
