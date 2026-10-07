@@ -1,0 +1,16 @@
+# What `protostar init --json --no-config -t ml` costs.
+# Regenerate with: uv run pytest tests/test_cost_budgets.py --snapshot-update
+exit 0
+command:direnv allow 1
+command:git init 1
+command:uv add --dev 1
+command:uv add --no-sync 1
+command:uv init --no-workspace --bare --pin-python --python 1
+command:uv run nbdime config-git --enable 1
+import:argcomplete
+import:packaging
+import:rich
+import:ruamel
+import:tomlkit
+parse:toml 28
+registry:fetch 1

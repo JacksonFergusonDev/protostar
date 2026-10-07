@@ -58,6 +58,7 @@ Some tests exist to keep a rule from AGENTS.md true:
 - **`tests/test_legacy_encoding.py`** renders output to a strict cp1252 stream, as Windows does for redirected output. Test new output there; macOS and Linux never hit it.
 - **`tests/test_tui_theme.py`** fails when TUI code names a color outside the theme.
 - **`tests/test_rollback.py`** fails `init` and `sync` at every write, directory, removal, and command, and fails when a run changes a file it never journaled (see [Rollback Fault Injection](#rollback-fault-injection)).
+- **`tests/test_cost_budgets.py`** fails when what a command does changes: the commands and processes it runs, its hook registry fetches, the documents it parses, and the packages it imports (see [Cost Budgets](#cost-budgets)).
 - **TUI snapshots** compare each screen's rendering, and `check_layout` measures its spacing against the layout rule, so every new screen needs a snapshot. Drive TUI tests with `pilot.press`, and use `pilot.click` only in tests about the mouse.
 
 ## Test Categories
@@ -105,6 +106,26 @@ uv run pytest tests/test_rollback.py --rollback-scope full --rollback-real all -
 Every test that injects a fault carries the `rollback_fault` marker, and `--rollback-report PATH` writes how many of them passed, and which failed, per scenario (`tests/rollback_report.py`). A retry of failed tests updates the same file, so it holds each fault's last outcome, and a run that is killed or interrupted writes nothing. Nightly's rollback jobs pass the option and upload the file as an artifact, even when the job fails.
 
 The `Rollback Metrics` workflow (`rollback-metrics.yml`) runs after each scheduled Nightly, apart from it so a publishing failure can never fail the run a release requires. It adds the reports up with `scripts/rollback_report.py` and writes two files under `metrics/` on `gh-pages`: `rollback-history.json`, one entry per fully green run with the count for each operating system and template, and `rollback-latest.json`, a Shields endpoint that reads `rollback faults restored` with the total. The badge stays cyan like the others, so a failure shows in its text, as `N failing`, and never in its color; only green runs reach the history. A run publishes only when every job in the rollback matrix reported: a missing, empty, or foreign report means the result is unknown, so nothing changes. A manual Nightly that covers the whole matrix publishes too; one narrowed to an OS or template is incomplete and records nothing. The count adds every operating system, so the same fault restored on three platforms counts three times. The [rollback section of the metrics dashboard](https://protostar.jacksonferguson.me/metrics/#rollback) graphs the history by operating system and template, and the Pages workflow deploys both files, after which the site is asked to rebuild as it is for the mutation score.
+
+### Cost Budgets
+
+A command's duration on a shared CI runner varies more from one machine to the next than most regressions change it, so no test fails on a timing. What a test can check exactly is what a command does. `tests/test_cost_budgets.py` runs each scenario in `scripts/benchmarks/scenarios.py`: every built-in template's `init`, an `init --dry-run`, and `sync`, `sync --check`, `status`, and `diff` on a project with nothing to update, plus `--version` and `help init`. For each it counts:
+
+- every command it runs and any other process it starts, labelled as the rollback sites are (`command:uv add --no-sync --dev`);
+- each hook registry fetch;
+- each YAML, TOML, and JSONC parse;
+- the third-party packages it imports;
+- its exit code.
+
+The counts must equal the scenario's file in `tests/cost_budgets/`. Each scenario runs in a fresh interpreter (`tests/cost_budget_runner.py`), because what a run parses or imports depends on what earlier code in the same process cached. Commands are faked as the rollback suite fakes them, every tool counts as installed, and the registry is offline, so the counts are the same on every host. `scripts/benchmarks/probes.py` wraps the seams the costs pass through. It wraps a parser only when its module is first imported, so recording loads nothing extra, and a test fails if a seam it wraps moves.
+
+A change that adds or removes a cost fails until the budgets are regenerated:
+
+```bash
+uv run pytest tests/test_cost_budgets.py --snapshot-update
+```
+
+The diff then shows the change in review. Say in the pull request why it changed: a new parse or process is fine when the feature needs it, and a cost that falls is worth a line too.
 
 ### Template Hooks Smoke Matrix (CI)
 
