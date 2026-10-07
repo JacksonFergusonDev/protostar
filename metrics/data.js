@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791332220305,
+  "lastUpdate": 1791333120832,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -22071,6 +22071,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1269.58,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "390811dd326515f48d351b8231a1f46a4b483804",
+          "message": "perf(yaml): build a document from the tree already checked, not a second parse (#521)\n\n* perf(dependencies): update the environment once per run, not once per group\n\n`init` ran one `uv add` per dependency group, and each one re-resolved the\nlock and re-synced the environment. Every add except the last now passes\n`--no-sync`: each still resolves and locks, so a bad requirement still fails\nat its own command, and the last add installs the whole environment once.\nA lone group keeps its plain `uv add`.\n\nMeasured on a warm uv cache, `init` goes from 1.70s to 1.50s (library) and\nfrom 1.92s to 1.50s (cli), with byte-identical files and the same installed\npackages.\n\n* fix(docs): let the terminal-asset stub ignore uv add's --no-sync\n\nThe stub that records each `uv add` for the generated terminal images read\nevery word after `add` as a package, so a skipped sync was taken for one.\n\n* perf(yaml): build a document from the tree already checked, not a second parse\n\n`_load` composed the text to check its bounds and tags, then parsed the same\ntext again to build the document, so every YAML read cost two parses. It now\nbuilds the document from the checked tree. The limits still run before the\ndocument exists.\n\nOn a no-op `sync`, ruamel time falls from 0.109s to 0.058s and the command\nfrom 0.665s to 0.607s.",
+          "timestamp": "2026-10-06T17:28:18-07:00",
+          "tree_id": "c5df7f7fef0e8e0c65791fdcc98896a45b7cc79e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/390811dd326515f48d351b8231a1f46a4b483804"
+        },
+        "date": 1791333119205,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 182.01,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1270.16,
             "unit": "ms"
           }
         ]
