@@ -340,6 +340,63 @@ def test_rollback_metrics_are_recorded_apart_from_nightly_for_scheduled_and_manu
     assert workflow["jobs"]["refresh-site"]["needs"] == "publish-pages"
 
 
+def test_benchmarks_run_apart_from_nightly_so_a_slowdown_never_blocks_a_release():
+    workflow = yaml_workflow("benchmark.yml")
+    assert workflow["on"]["schedule"]
+    assert "benchmark" not in (WORKFLOWS / "nightly.yml").read_text()
+    measure = workflow["jobs"]["measure"]
+    assert measure["strategy"]["matrix"] == "${{ fromJSON(needs.plan.outputs.matrix) }}"
+    (compare,) = [
+        s for s in measure["steps"] if "scripts.benchmarks compare" in s.get("run", "")
+    ]
+    assert '"$BASELINE" --all' in compare["run"]
+    (upload,) = [s for s in measure["steps"] if "upload-artifact" in s.get("uses", "")]
+    assert upload["with"]["name"] == "${{ matrix.artifact }}"
+    assert upload["if"] == "${{ !cancelled() }}"
+
+
+def test_a_pull_request_is_benchmarked_only_when_labelled_and_never_recorded():
+    """A labelled pull request takes one runner at a time and only gets a comment."""
+    from scripts.benchmarks.report import plan
+
+    workflow = yaml_workflow("benchmark.yml")
+    assert workflow["on"]["pull_request"]["types"] == ["labeled"]
+    assert (
+        "github.event.label.name == 'run-benchmark'" in workflow["jobs"]["plan"]["if"]
+    )
+    assert [job["os"] for job in plan("pull_request", "a" * 40, base="b" * 40)] == [
+        "ubuntu-latest"
+    ]
+    jobs = workflow["jobs"]
+    assert "github.event_name == 'pull_request'" in jobs["comment"]["if"]
+    for name in ("record", "calibration"):
+        assert "pull_request" not in jobs[name]["if"]
+
+
+def test_only_a_complete_comparison_on_main_is_recorded_and_published():
+    jobs = yaml_workflow("benchmark.yml")["jobs"]
+    record = jobs["record"]
+    assert "needs.measure.result == 'success'" in record["if"]
+    assert "github.ref == 'refs/heads/main'" in record["if"]
+    assert "!inputs.calibrate" in record["if"]
+    assert record["permissions"] == {"contents": "write", "issues": "write"}
+    (download,) = [
+        s for s in record["steps"] if "download-artifact" in s.get("uses", "")
+    ]
+    assert download["with"]["pattern"] == "benchmarks-*"
+    (issue,) = [s for s in record["steps"] if "report issue" in s.get("run", "")]
+    assert issue["if"] == "steps.record.outputs.published == 'true'"
+    assert jobs["publish-pages"]["uses"] == "./.github/workflows/pages.yml"
+    assert "inputs.calibrate" in jobs["calibration"]["if"]
+
+
+def test_a_pull_request_is_never_failed_by_a_timing():
+    """Timing varies by runner; the cost budgets are the pull request's check."""
+    ci = (WORKFLOWS / "ci.yml").read_text()
+    assert "hyperfine" not in ci
+    assert "github-action-benchmark" not in ci
+
+
 def test_a_release_smoke_tests_the_wheel_it_publishes_on_every_os():
     smoke = job("release.yml", "smoke")
     assert smoke["needs"] == "build"

@@ -164,7 +164,7 @@ Most of the contract is checked by tests, parametrized over discovered built-ins
 | No trailing whitespace in scaffolded files | `test_builtin_templates_no_trailing_whitespace` in `tests/test_blueprint_loader.py` |
 | The `api` Dockerfile targets an importable app | `test_api_dockerfile_targets_an_importable_app` in `tests/test_integration.py` |
 | A fresh default scaffold passes its commit hooks | The `template-hooks-smoke` CI job |
-| The `cli` and `api` images build and run | The `benchmark-and-images` CI job |
+| The `cli` and `api` images build and run | The `images-and-dashboard` CI job |
 
 Unless another file is named, the tests live in `tests/test_builtin_template_contract.py`. The strict template check is the one [`protostar check-template`](../usage/authoring-templates.md#checking-a-template) runs for any author: it covers the name and description, flags that name real tools, payloads that state only the delta from module baselines, and tool configuration and packages bound to their tool with `requires`. It plans a default `init` in each tier, so a tier that cannot be planned fails the contract.
 

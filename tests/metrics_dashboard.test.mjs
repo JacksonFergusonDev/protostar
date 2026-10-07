@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
-import { escapeHtml, metricHistory, precedingAverage } from '../metrics/metrics.mjs';
+import { escapeHtml, metricHistory } from '../metrics/metrics.mjs';
+import { MEASURES, VERDICTS, benchmarkHistory, benchmarkSeries, changeText, osName, systems }
+  from '../metrics/benchmarks.mjs';
 
+// The archived Hyperfine history, measured on a different runner each push.
 const editor = 'Protostar Recipe Editor First Frame Latency';
 const wizard = 'Protostar TUI Wizard Latency';
 const headless = 'Protostar Headless Latency';
@@ -12,34 +15,20 @@ function run(date, name, value, id = 'a'.repeat(40)) {
     benches: [{ name, value, unit: 'ms' }] };
 }
 
-test('current editor measurements exclude historical wizard and headless results', () => {
+test('archived editor measurements exclude historical wizard and headless results', () => {
   const runs = [run(1, wizard, 1500), run(2, headless, 200), run(3, editor, 900)];
   const history = metricHistory(runs, editor);
   assert.equal(history.length, 1);
   assert.equal(history[0].value, 900);
   assert.equal(history[0].date, 3);
-  assert.equal(runs.length, 3); // The full export still contains every measurement.
 });
 
-test('measurement dates determine latest values, independently of storage order', () => {
+test('measurement dates determine order, independently of storage order', () => {
   const history = metricHistory([run(3, editor, 300), run(1, editor, 100), run(2, editor, 200)], editor);
   assert.deepEqual(history.map(item => item.value), [100, 200, 300]);
-  assert.equal(history.at(-1).date, 3);
 });
 
-test('a short history uses its actual preceding count and excludes the current point', () => {
-  assert.deepEqual(precedingAverage([{ value: 10 }, { value: 20 }, { value: 90 }], 100),
-    { value: 15, count: 2 });
-  assert.equal(precedingAverage([], 100), null);
-  assert.equal(precedingAverage([{ value: 90 }], 100), null);
-});
-
-test('the rolling baseline includes only the requested number of preceding runs', () => {
-  const history = Array.from({ length: 102 }, (_, value) => ({ value }));
-  assert.deepEqual(precedingAverage(history, 100), { value: 50.5, count: 100 });
-});
-
-test('invalid measurements cannot contaminate comparisons or commit links', () => {
+test('invalid measurements cannot contaminate the archive or its commit links', () => {
   const invalidUnit = run(1, editor, 20);
   invalidUnit.benches[0].unit = 'seconds';
   assert.deepEqual(metricHistory([
@@ -57,54 +46,226 @@ test('tooltip data escapes ampersands, quotes, and HTML rather than rendering ma
     '&lt;img onerror=&quot;bad&quot;&gt; &amp; &#39;author&#39;');
 });
 
-test('dashboard wiring displays the current editor result, preceding count, and current chart', async () => {
+// The nightly comparisons: one entry per night and operating system.
+const timing = (wall, status = 'steady', change = { ratio: 1, low: 0.98, high: 1.02 }) =>
+  ({ wall, protostar: wall * 0.6, cpu: wall * 0.5, commands: wall * 0.4, change, status });
+const night = (date, os, scenarios, commit = 'd'.repeat(40), baseline = 'e'.repeat(40)) =>
+  ({ commit, baseline, date, os, run_id: '1', python: '3.14.0', runs: 10, scenarios });
+
+test('benchmark history sorts by date, keeps safe links, and lists slower scenarios', () => {
+  const history = benchmarkHistory([
+    night('2026-10-02T00:00:00Z', 'ubuntu-latest', { sync: timing(600, 'suspect'), version: timing(200) }),
+    night('2026-10-01T00:00:00Z', 'macos-latest', { sync: timing(500, 'regression') }),
+  ]);
+  assert.deepEqual(history.map(entry => entry.os), ['macos-latest', 'ubuntu-latest']);
+  assert.deepEqual(history[1].flagged, ['sync']);
+  assert.equal(history[1].url, `https://github.com/JacksonFergusonDev/protostar/commit/${'d'.repeat(40)}`);
+  assert.equal(history[1].compareUrl,
+    `https://github.com/JacksonFergusonDev/protostar/compare/${'e'.repeat(40)}...${'d'.repeat(40)}`);
+  assert.deepEqual(systems(history), ['macos-latest', 'ubuntu-latest']);
+  assert.deepEqual(benchmarkHistory([]), []);
+});
+
+test('benchmark data rejects unsafe commits, bad dates, and malformed timings or changes', () => {
+  const valid = night('2026-10-01T00:00:00Z', 'ubuntu-latest', { sync: timing(500) });
+  for (const entry of [
+    { ...valid, commit: 'javascript:alert(1)' }, { ...valid, baseline: 'main' },
+    { ...valid, date: 'invalid' }, { ...valid, os: ' ' }, { ...valid, scenarios: {} },
+    { ...valid, scenarios: [timing(500)] }, { ...valid, scenarios: { sync: timing(-1) } },
+    { ...valid, scenarios: { sync: timing(NaN) } },
+    { ...valid, scenarios: { sync: timing(500, 'steady', { ratio: 1, low: 1.1, high: 1.2 }) } },
+    { ...valid, scenarios: { sync: timing(500, 'steady', { ratio: 0, low: 0, high: 0 }) } },
+    { ...valid, scenarios: { sync: timing(500, 'unknown') } },
+  ]) assert.throws(() => benchmarkHistory([entry]), /Invalid/);
+  assert.throws(() => benchmarkHistory({}), /array/);
+});
+
+test('each scenario is one line across one operating system, with gaps left empty', () => {
+  const history = benchmarkHistory([
+    night('2026-10-01T00:00:00Z', 'ubuntu-latest', { sync: timing(500) }),
+    night('2026-10-01T00:00:00Z', 'macos-latest', { sync: timing(300) }),
+    night('2026-10-02T00:00:00Z', 'ubuntu-latest', { sync: timing(550), version: timing(200) }),
+  ]);
+  const { runs, series } = benchmarkSeries(history, 'ubuntu-latest', 'cpu');
+  assert.equal(runs.length, 2);
+  assert.deepEqual(series.map(line => line.name), ['sync', 'version']);
+  assert.deepEqual(series[0].data, [250, 275]);
+  assert.deepEqual(series[1].data, [null, 100]);
+  assert.equal(series[0].connectNulls, false);
+});
+
+test('a change reads as its percentage and interval, and systems by their names', () => {
+  assert.equal(changeText({ ratio: 1.123, low: 1.1, high: 1.15 }), '+12.3% (+10.0% to +15.0%)');
+  assert.equal(changeText({ ratio: 0.9, low: 0.85, high: 1 }), '-10.0% (-15.0% to +0.0%)');
+  assert.equal(osName('ubuntu-latest'), 'Linux');
+  assert.equal(osName('macos-latest'), 'macOS');
+  assert.equal(osName('freebsd'), 'freebsd');
+});
+
+function fakeElement() {
+  return {
+    textContent: '', hidden: true, value: '', rows: [], children: [], handlers: {},
+    appendChild(child) { this.children.push(child); },
+    addEventListener(type, handler) { this.handlers[type] = handler; },
+    replaceChildren() { this.rows = []; },
+    insertRow() {
+      const cells = [];
+      this.rows.push(cells);
+      return { insertCell() {
+        const cell = { textContent: '', appendChild(child) { this.child = child; } };
+        cells.push(cell);
+        return cell;
+      } };
+    },
+  };
+}
+
+const themeTokens = { '--text': '#e8edef', '--muted': '#939da6', '--line': '#252c31',
+  '--accent': '#22d3ee', '--mono': 'JetBrains Mono', '--panel': '#0e1114',
+  '--fs-ui': '14px', '--fs-label': '11px' };
+
+async function renderBenchmarks(response, chartFailure = false) {
   const elements = new Map();
   const charts = [];
   const element = id => {
-    if (!elements.has(id)) elements.set(id, {
-      textContent: '', hidden: false,
-      addEventListener() {},
-      insertRow() { return { insertCell() { return { appendChild() {} }; } }; },
-    });
+    if (!elements.has(id)) elements.set(id, fakeElement());
     return elements.get(id);
   };
-  const source = await readFile(new URL('../metrics/dashboard.js', import.meta.url), 'utf8');
-  const complete = runInNewContext(source.replace(/^import[^\n]*\n/gm, ''), {
-    metricHistory, precedingAverage, escapeHtml, loadCharts: async () => {},
-    window: { BENCHMARK_DATA: { entries: { 'Protostar Initialization Latency': [
-      run(1, wizard, 1500), run(2, editor, 800), run(3, editor, 1000),
-    ] } }, addEventListener() {} },
+  const source = await readFile(new URL('../metrics/benchmark-dashboard.js', import.meta.url), 'utf8');
+  await runInNewContext(source.replace(/^import[\s\S]*?from[^\n]*\n/gm, ''), {
+    MEASURES, VERDICTS, benchmarkHistory, benchmarkSeries, changeText, osName, systems, escapeHtml,
+    fetch: async () => response,
+    loadCharts: async () => { if (chartFailure) throw new Error('CDN unavailable'); },
+    window: { addEventListener() {}, open() {} },
     document: {
-      documentElement: {},
-      fonts: { ready: Promise.resolve() },
-      getElementById: element,
-      querySelectorAll() { return []; },
-      createElement() { return { setAttribute() {}, appendChild() {}, prepend() {} }; },
-      body: { appendChild(script) { script.onload(); } },
+      documentElement: {}, fonts: { ready: Promise.resolve() }, getElementById: element,
+      createElement() { return { style: {}, setAttribute() {}, prepend() {} }; },
     },
-    getComputedStyle() {
-      const tokens = { '--panel': '#0e1114', '--text': '#e8edef', '--muted': '#939da6',
-        '--accent': '#22d3ee', '--line': '#252c31', '--mono': 'JetBrains Mono',
-        '--fs-ui': '14px', '--fs-label': '11px' };
-      return { getPropertyValue(name) { return tokens[name]; } };
-    },
-    echarts: {
-      init() {
-        return { setOption(options) { charts.push(options); }, on() {} };
-      },
-      graphic: { LinearGradient: function() {} },
-    },
+    getComputedStyle() { return { getPropertyValue(name) { return themeTokens[name]; } }; },
+    echarts: { init() { return { setOption(options) { charts.push(options); }, on() {}, off() {}, resize() {} }; } },
   });
-  await complete;
+  return { element, charts };
+}
+
+const benchmarkEntries = [
+  night('2026-10-01T00:00:00Z', 'ubuntu-latest', { sync: timing(600), version: timing(200) }),
+  night('2026-10-01T00:00:00Z', 'macos-latest', { sync: timing(400, 'suspect',
+    { ratio: 1.2, low: 1.12, high: 1.25 }), 'init-api': timing(1500) }),
+];
+
+test('benchmark panel renders the latest run, recent runs, and featured chart lines', async () => {
+  const { element, charts } = await renderBenchmarks({ ok: true, json: async () => benchmarkEntries });
   assert.equal(element('benchmark-status').textContent, '');
-  assert.equal(element('kpi-editor-val').textContent, '1000.0');
-  assert.equal(element('kpi-editor-avg').textContent, '800.0');
-  assert.equal(element('kpi-editor-count').textContent, 1);
-  assert.equal(element('kpi-editor-delta').textContent, '+25.0%');
-  assert.equal(element('kpi-headless-val').textContent, 'N/A');
-  assert.deepEqual(Array.from(charts[1].series[0].data), [800, 1000]);
-  assert.equal(charts[1].series[0].lineStyle.color, '#22d3ee');
-  assert.equal(charts[1].xAxis.axisLabel.fontFamily, 'JetBrains Mono');
+  assert.equal(element('benchmark-results').hidden, false);
+  assert.equal(element('benchmark-latest').textContent,
+    `macOS: ${'d'.repeat(7)}, 1 slower · Linux: ${'d'.repeat(7)}, nothing slower`);
+  assert.deepEqual(element('benchmark-os').children.map(option => option.textContent), ['macOS', 'Linux']);
+  assert.deepEqual(element('benchmark-measure').children.map(option => option.value), Object.keys(MEASURES));
+  const scenarios = element('benchmark-scenarios').rows;
+  assert.deepEqual(scenarios.map(row => row[0].textContent), ['init-api', 'sync']);
+  assert.deepEqual(scenarios[1].map(cell => cell.textContent),
+    ['sync', '400 ms', '200 ms', '160 ms', '+20.0% (+12.0% to +25.0%)', VERDICTS.suspect]);
+  const runs = element('benchmark-runs').rows;
+  assert.equal(runs[0][2].child.href, `https://github.com/JacksonFergusonDev/protostar/commit/${'d'.repeat(40)}`);
+  assert.equal(runs[0][3].child.href,
+    `https://github.com/JacksonFergusonDev/protostar/compare/${'e'.repeat(40)}...${'d'.repeat(40)}`);
+  assert.deepEqual(charts[0].series.map(line => line.name), ['init-api', 'sync']);
+  assert.equal(charts[0].legend.selected['init-api'], false);
+  assert.equal(charts[0].legend.selected.sync, true);
+});
+
+test('choosing another system or measure redraws the chart and the latest run', async () => {
+  const { element, charts } = await renderBenchmarks({ ok: true, json: async () => benchmarkEntries });
+  element('benchmark-os').value = 'ubuntu-latest';
+  element('benchmark-os').handlers.change();
+  assert.deepEqual(element('benchmark-scenarios').rows.map(row => row[0].textContent), ['sync', 'version']);
+  assert.deepEqual(charts.at(-1).series.map(line => line.name), ['sync', 'version']);
+  element('benchmark-measure').value = 'cpu';
+  element('benchmark-measure').handlers.change();
+  assert.equal(element('benchmark-caption').textContent, 'Protostar CPU time / ms');
+  assert.deepEqual(charts.at(-1).series[0].data, [300]);
+});
+
+test('benchmark panel handles unpublished, empty, malformed, and unavailable history', async () => {
+  for (const response of [{ status: 404 }, { ok: true, json: async () => [] }]) {
+    const { element, charts } = await renderBenchmarks(response);
+    assert.equal(element('benchmark-status').textContent, 'No benchmark runs published yet.');
+    assert.equal(element('benchmark-results').hidden, true);
+    assert.equal(charts.length, 0);
+  }
+  for (const response of [{ status: 500, ok: false }, { ok: true, json: async () => ({}) }]) {
+    const { element } = await renderBenchmarks(response);
+    assert.match(element('benchmark-status').textContent, /could not load/);
+  }
+});
+
+test('a chart-library failure keeps the timings, and choosing a system still updates them', async () => {
+  const { element } = await renderBenchmarks({ ok: true, json: async () => benchmarkEntries }, true);
+  assert.equal(element('benchmark-results').hidden, false);
+  assert.match(element('benchmark-status').textContent, /Timings and commit links remain available/);
+  element('benchmark-os').value = 'ubuntu-latest';
+  element('benchmark-os').handlers.change();
+  assert.deepEqual(element('benchmark-scenarios').rows.map(row => row[0].textContent), ['sync', 'version']);
+});
+
+async function renderArchive(data, { chartFailure = false } = {}) {
+  const elements = new Map();
+  const charts = [];
+  const scripts = [];
+  const window = { addEventListener() {} };
+  const element = id => {
+    if (!elements.has(id)) elements.set(id, fakeElement());
+    return elements.get(id);
+  };
+  const source = await readFile(new URL('../metrics/archive-dashboard.js', import.meta.url), 'utf8');
+  runInNewContext(source.replace(/^import[^\n]*\n/gm, ''), {
+    escapeHtml, metricHistory, window,
+    loadCharts: async () => { if (chartFailure) throw new Error('CDN unavailable'); },
+    document: {
+      documentElement: {}, fonts: { ready: Promise.resolve() }, getElementById: element,
+      createElement() { return {}; },
+      body: { appendChild(script) {
+        scripts.push(script.src);
+        if (data === undefined) return script.onerror();
+        window.BENCHMARK_DATA = data;
+        script.onload();
+      } },
+    },
+    getComputedStyle() { return { getPropertyValue(name) { return themeTokens[name]; } }; },
+    echarts: { init() { return { setOption(options) { charts.push(options); }, resize() {} }; } },
+  });
+  const archive = element('benchmark-archive');
+  return { element, charts, scripts, archive,
+    async open() { archive.open = true; await archive.handlers.toggle(); } };
+}
+
+const archived = { entries: { 'Protostar Initialization Latency': [
+  run(Date.parse('2026-03-07T00:00:00Z'), headless, 150), run(Date.parse('2026-03-08T00:00:00Z'), wizard, 1500),
+  run(Date.parse('2026-10-06T00:00:00Z'), editor, 1200), run(Date.parse('2026-10-06T00:00:00Z'), headless, 140),
+] } };
+
+test('the archive loads its data only when opened, and charts both startup series', async () => {
+  const archive = await renderArchive(archived);
+  assert.deepEqual(archive.scripts, []);
+  await archive.open();
+  await archive.open();
+  assert.deepEqual(archive.scripts, ['data.js']);
+  assert.equal(archive.element('archive-status').textContent, '3 points, March 2026 to October 2026.');
+  // Built inside the panel's own realm, so compared as plain arrays.
+  assert.deepEqual(Array.from(archive.charts[0].series, line => line.name),
+    ['Help-command startup', 'Recipe editor first frame']);
+  assert.deepEqual(Array.from(archive.charts[0].series[0].data, point => point[1]), [150, 140]);
+  assert.equal(archive.charts[0].xAxis.type, 'time');
+});
+
+test('an archive that cannot load or has no points says so', async () => {
+  const missing = await renderArchive(undefined);
+  await missing.open();
+  assert.match(missing.element('archive-status').textContent, /could not load/);
+  const empty = await renderArchive({ entries: {} });
+  await empty.open();
+  assert.match(empty.element('archive-status').textContent, /could not be read/);
+  assert.equal(empty.charts.length, 0);
 });
 
 // Mutation history is a separate raw-count dataset, independent of latency runs.

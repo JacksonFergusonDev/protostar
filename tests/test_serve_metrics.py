@@ -1,5 +1,6 @@
 """The metrics preview reads live source without sharing the docs server's port."""
 
+from email.message import Message
 from functools import partial
 from pathlib import Path
 
@@ -28,7 +29,7 @@ def handler(
         ("/metrics/index.html", "source/index.html"),
         ("/metrics/style.css?reload=1", "source/style.css"),
         ("/metrics/site-header.css", "header.css"),
-        ("/metrics/dashboard.js", "source/dashboard.js"),
+        ("/metrics/benchmark-dashboard.js", "source/benchmark-dashboard.js"),
         ("/metrics/metrics.mjs", "source/metrics.mjs"),
         ("/metrics/house/css/tokens.css", "house/css/tokens.css"),
         (
@@ -96,3 +97,23 @@ def test_preview_fetches_every_dashboard_dataset(
     assert set(fetched) == {
         serve_metrics.DATA_URL + filename for filename in serve_metrics.DATA_FILES
     }
+
+
+def test_a_data_file_not_published_yet_is_skipped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Benchmark history appears with the first nightly comparison."""
+    import urllib.error
+    import urllib.request
+
+    def missing(*_args: object, **_kwargs: object) -> None:
+        raise urllib.error.HTTPError("url", 404, "Not Found", Message(), None)
+
+    monkeypatch.setattr(urllib.request, "urlopen", missing)
+    destination = tmp_path / "benchmark-history.json"
+
+    serve_metrics.fetch_optional(
+        "https://example.test/benchmark-history.json", destination
+    )
+
+    assert not destination.exists()

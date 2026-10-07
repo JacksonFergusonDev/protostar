@@ -22,15 +22,6 @@ export function metricHistory(runs, name) {
   return history.sort((a, b) => a.date - b.date);
 }
 
-export function precedingAverage(history, count) {
-  const preceding = history.slice(Math.max(0, history.length - count - 1), -1);
-  if (!preceding.length) return null;
-  return {
-    value: preceding.reduce((sum, item) => sum + item.value, 0) / preceding.length,
-    count: preceding.length,
-  };
-}
-
 export function escapeHtml(value) {
   const entities = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
   return String(value).replace(/[&<>"']/g, character => entities[character]);

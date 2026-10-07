@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Protostar · Metrics</title>
   <meta name="description"
-    content="Startup performance, mutation scores, and rollback fault counts for Protostar, recorded from CI.">
+    content="Nightly benchmark comparisons, mutation scores, and rollback fault counts for Protostar, recorded from CI.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="alternate icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="house/css/fonts.css">
@@ -142,136 +142,75 @@
     <section class="history-section" id="benchmarks" aria-labelledby="benchmarks-title">
       <div class="page-width">
         <div class="hs-section-marker"><span>03 / BENCHMARKS</span></div>
-        <h2 id="benchmarks-title">Performance over time</h2>
-        <div class="benchmark-overview">
-          <aside class="ci-notice" aria-label="CI timings are not local performance estimates">
-            <p class="ci-notice-title">These timings are likely much slower than local runs.</p>
-            <p>Protostar is measured on shared GitHub Actions runners. The numbers below track changes in CI, not the
-              speed to expect on your computer. Your local results depend on your hardware and setup.</p>
-          </aside>
-          <div class="intro-actions">
-            <a class="text-link" href="#methodology">How to read these results<span class="hs-icon hs-icon-arrow-down"
-                aria-hidden="true"></span></a>
-            <button id="btn-export-json" class="export-button" title="Export the full benchmark dataset as JSON">Export
-              JSON</button>
-          </div>
-          <p id="benchmark-status" class="status" role="status"></p>
-          <noscript>
-            <p class="status">JavaScript is required to display measurements. <a href="data.js">Download the benchmark
-                data</a>.</p>
-          </noscript>
-
-          <section class="summary" aria-label="Latest measurements">
-            <article class="metric">
-              <p class="eyebrow">Help-command startup</p>
-              <p class="metric-value"><span id="kpi-headless-val">—</span><span class="metric-unit">ms</span></p>
-              <p class="metric-comparison"><span id="kpi-headless-delta" class="delta">—</span><span
-                  id="kpi-headless-comparison">vs previous <span id="kpi-headless-count">—</span> runs (<span
-                    id="kpi-headless-avg">—</span> ms)</span></p>
-              <p id="kpi-headless-measurement" class="metric-measurement"></p>
-            </article>
-            <article class="metric">
-              <p class="eyebrow">Recipe editor first frame</p>
-              <p class="metric-value"><span id="kpi-editor-val">—</span><span class="metric-unit">ms</span></p>
-              <p class="metric-comparison"><span id="kpi-editor-delta" class="delta">—</span><span
-                  id="kpi-editor-comparison">vs previous <span id="kpi-editor-count">—</span> runs (<span
-                    id="kpi-editor-avg">—</span> ms)</span></p>
-              <p id="kpi-editor-measurement" class="metric-measurement"></p>
-            </article>
-          </section>
-          <div class="run-context" aria-label="Recording history">
-            <span><span id="kpi-total-runs">—</span> benchmark runs since March 2026</span>
-            <span>Latest run <span id="kpi-latest-sha">—</span><span class="context-divider"
-                aria-hidden="true">/</span><span id="kpi-latest-date">—</span></span>
-          </div>
-        </div>
-
-        <section class="benchmark-subsection" id="startup" aria-labelledby="startup-title">
-          <h3 id="startup-title">Help-command startup</h3>
-          <p class="section-note">Time to run <code>protostar help init</code> and exit.</p>
+        <h2 id="benchmarks-title">Is Protostar getting slower?</h2>
+        <p class="section-note">Every night, a new commit on main is timed against the last one recorded, on Linux and
+          macOS: <code>init</code> for every built-in template, <code>sync</code>, <code>status</code>, and
+          <code>diff</code> on a project with nothing to update, the recipe editor&rsquo;s first frame, and startup.
+          Both versions run on the same runner in alternating rounds, so the comparison holds even though a shared
+          runner&rsquo;s speed varies from one night to the next.</p>
+        <p class="section-note">A scenario counts as slower when Protostar&rsquo;s own CPU time is at least 10% slower
+          across its whole 95% interval, and a second run against the same baseline must find it again before an issue
+          opens. Wall time includes the commands Protostar waits on, such as uv. Shared runners are slower than most
+          computers, so read the trend rather than the number.</p>
+        <p id="benchmark-status" class="status" role="status">Loading benchmark history…</p>
+        <div id="benchmark-results" hidden>
+          <p id="benchmark-latest" class="metric-measurement"></p>
           <div class="chart-panel">
             <div class="chart-header">
-              <span class="chart-caption">Mean execution time / ms</span>
-              <div class="chart-toolbar" role="group" aria-label="Help-command chart range">
-                <button class="zoom-btn" data-chart="headless" data-range="30">Last 30</button>
-                <button class="zoom-btn active" data-chart="headless" data-range="100">Last 100</button>
-                <button class="zoom-btn" data-chart="headless" data-range="all">All time</button>
+              <span id="benchmark-caption" class="chart-caption">Wall time / ms</span>
+              <div class="chart-toolbar">
+                <label class="chart-select">OS<select id="benchmark-os"></select></label>
+                <label class="chart-select">Measure<select id="benchmark-measure"></select></label>
               </div>
             </div>
-            <div id="chart-headless" class="chart-canvas" role="img"
-              aria-label="Help-command startup history. Exact values and commit links are in the recent measurements table below.">
-            </div>
+            <div id="chart-benchmarks" class="chart-canvas" role="img"
+              aria-label="Median timing of each scenario per nightly run on the chosen operating system. Exact values and changes are in the tables below."></div>
           </div>
-        </section>
-
-        <section class="benchmark-subsection" id="editor" aria-labelledby="editor-title">
-          <h3 id="editor-title">Recipe editor first frame</h3>
-          <p class="section-note">Time to open the recipe editor and exit after its first frame, including process startup
-            and shutdown.</p>
-          <p class="benchmark-command"><code>PROTOSTAR_BENCHMARK_RECIPE_EDITOR=1 .venv/bin/protostar init</code></p>
-          <div class="chart-panel">
-            <div class="chart-header">
-              <span class="chart-caption">Mean execution time / ms</span>
-              <div class="chart-toolbar" role="group" aria-label="Recipe-editor chart range">
-                <button class="zoom-btn" data-chart="editor" data-range="30">Last 30</button>
-                <button class="zoom-btn active" data-chart="editor" data-range="100">Last 100</button>
-                <button class="zoom-btn" data-chart="editor" data-range="all">All time</button>
-              </div>
-            </div>
-            <div id="chart-editor" class="chart-canvas" role="img"
-              aria-label="Recipe-editor first-frame history. Exact values and commit links are in the recent measurements table below.">
-            </div>
-          </div>
-        </section>
-
-        <section class="benchmark-subsection methodology" id="methodology" aria-labelledby="methodology-title">
-          <h3 id="methodology-title">Methodology</h3>
-          <div class="methodology-grid">
-            <div>
-              <h4>What each point measures</h4>
-              <p>Each point is the mean of 90 Hyperfine executions after 30 warmups, on GitHub Actions Ubuntu runners with
-                Python 3.14, in the checked-out repository. Neither benchmark measures a completed scaffold or dependency
-                installation.</p>
-              <p>Runner variability and changes to the runner image or project checkout can affect comparisons. Sustained
-                trends are more useful than an isolated increase.</p>
-            </div>
-            <div>
-              <h4>What the comparisons mean</h4>
-              <p>The summary compares the latest measurement with up to 100 preceding runs of the same benchmark. CI uses
-                a separate check: 30 executions after 5 warmups, failing above 250% of the preceding recorded result.
-                Historical tracking alerts above 200%.</p>
-              <p>Older wizard measurements remain in the JSON export, but are excluded from the recipe-editor chart and
-                its comparisons.</p>
-            </div>
-          </div>
-          <details class="measurements">
-            <summary>Recent measurements and commit links<span class="table-range">Last 30 per benchmark</span></summary>
-            <div class="table-scroll" tabindex="0" role="region" aria-label="Recent benchmark measurements">
+          <details class="measurements" open>
+            <summary>Latest run<span id="benchmark-latest-range" class="table-range"></span></summary>
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Latest benchmark run">
               <table>
-                <caption>Recorded means; dates are shown in your local timezone.</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Benchmark</th>
-                    <th scope="col">Measured</th>
-                    <th scope="col">Mean</th>
-                    <th scope="col">Commit</th>
-                  </tr>
-                </thead>
-                <tbody id="recent-measurements"></tbody>
+                <caption>Medians of the run; the change is Protostar&rsquo;s CPU time against the baseline, with its
+                  95% interval.</caption>
+                <thead><tr><th scope="col">Scenario</th><th scope="col">Wall</th><th scope="col">CPU</th><th scope="col">Commands</th><th scope="col">CPU change</th><th scope="col">Verdict</th></tr></thead>
+                <tbody id="benchmark-scenarios"></tbody>
               </table>
             </div>
           </details>
-          <a class="text-link guide-link"
-            href="https://protostar.jacksonferguson.me/developer/testing/#performance-latency-testing">Run the benchmarks
-            locally<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a>
-        </section>
+          <details class="measurements">
+            <summary>Recent runs<span class="table-range">Last 30 runs</span></summary>
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Recent benchmark runs">
+              <table>
+                <caption>Dates are shown in your local timezone. Use the JSON history for every run.</caption>
+                <thead><tr><th scope="col">Recorded</th><th scope="col">OS</th><th scope="col">Commit</th><th scope="col">Compared with</th><th scope="col">Slower</th></tr></thead>
+                <tbody id="benchmark-runs"></tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+        <a class="text-link guide-link" href="benchmark-history.json">Download benchmark history<span class="hs-icon hs-icon-arrow-down" aria-hidden="true"></span></a>
+        <a class="text-link guide-link guide-link--after" href="https://protostar.jacksonferguson.me/developer/testing/#local-benchmarks">Time a change locally<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a>
+        <noscript><p class="status">JavaScript is required to display benchmarks. Download the history to read the timings.</p></noscript>
+        <details class="measurements" id="benchmark-archive">
+          <summary>Archived startup timings<span class="table-range">March to October 2026</span></summary>
+          <p class="section-note">Until October 2026, CI timed <code>protostar help init</code> and the recipe
+            editor&rsquo;s first frame with Hyperfine on every push to main, as the mean of 90 runs. Each push ran on
+            whichever runner it got, so these points compare different machines, and they are kept apart from the
+            nightly comparisons above.</p>
+          <p id="archive-status" class="status" role="status"></p>
+          <div class="chart-panel">
+            <div id="chart-archive" class="chart-canvas" role="img"
+              aria-label="Archived help-command startup and recipe-editor first-frame timings, March to October 2026."></div>
+          </div>
+          <a class="text-link guide-link" href="data.js">Download the archived timings<span class="hs-icon hs-icon-arrow-down" aria-hidden="true"></span></a>
+        </details>
       </div>
     </section>
   </main>
 
   <!-- site-footer -->
-  <script src="data.js" defer></script>
-  <script type="module" src="dashboard.js"></script>
+  <script type="module" src="benchmark-dashboard.js"></script>
+  <script type="module" src="archive-dashboard.js"></script>
   <script type="module" src="mutation-dashboard.js"></script>
   <script type="module" src="rollback-dashboard.js"></script>
 </body>

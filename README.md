@@ -210,7 +210,7 @@ Protostar edits other people's work, so it's built to be careful:
 - **It's tested thoroughly.** Over 3,500 tests, including runs of the real tools, pass on Linux, macOS, and Windows, with strict type checking and at least 85% coverage.
 - **The tests are challenged with deliberate bugs.** Mutation testing changes selected engine modules one small edit at a time to check whether the tests notice. The [mutation testing results](https://protostar.jacksonferguson.me/metrics/#mutations) show the score and the modules it covers.
 - **Its docs are checked against its code.** Before every push, a script confirms that the commands, errors, exit codes, and file paths the docs mention still match the code.
-- **Performance stays visible.** CI tracks help-command startup and the recipe editor's first frame, flagging large regressions; see the [benchmarks](https://protostar.jacksonferguson.me/metrics/#benchmarks).
+- **Performance stays visible.** Every pull request checks what each command costs (its processes, parses, and imports), and each night times every command against the previous commit on Linux and macOS, opening an issue for a confirmed slowdown; see the [benchmarks](https://protostar.jacksonferguson.me/metrics/#benchmarks).
 
 ---
 
