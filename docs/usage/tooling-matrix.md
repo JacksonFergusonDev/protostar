@@ -72,4 +72,4 @@ Built-in templates are project shapes: a command-line app, a library, a web serv
 
 - __[Environment Initialization](./init.md):__ See complete generated directory trees and configuration footprints for CLI, Library, API, ML, and Astro templates.
 - __[Global Configuration](./configuration.md):__ Configure persistent default tooling selections so your preferred flags apply automatically.
-- __[CLI Reference](./cli-reference.md):__ Comprehensive reference table for all tri-state tooling flags and CLI options.
+- __[CLI Reference](./cli-reference.md):__ Every tool flag and command-line option.

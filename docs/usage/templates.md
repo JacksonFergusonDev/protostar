@@ -52,23 +52,9 @@ protostar init --list-templates
 
 This displays a structured overview in the terminal outlining template aliases, display names, descriptions, types (Built-in or Global Alias), trust status, and origin sources. When invoked with `--json`, it emits a machine-readable JSON array of discovered templates.
 
-### Dynamic Tri-State CLI Toggles
+### Turning a Template's Tools On and Off
 
-Templates declare opinions about which tools to enable (e.g., `ruff = true`, `mypy = true`, `direnv = true`). However, Protostar uses __tri-state toggling__, meaning you can always override a template's default on the fly using `--<flag>` or `--no-<flag>`:
-
-```bash
-# Load the astro template, but disable direnv and enable mypy
-protostar init -t astro --no-direnv --mypy
-```
-
-Container scaffolding follows the same rules. A template can opt in with `docker = true` (the built-in `api` template does), and `--no-docker` turns it back off:
-
-```bash
-# The api template scaffolds a Dockerfile by default; skip it for this project
-protostar init -t api --no-docker
-```
-
-A flag wins over the template, and the template wins over your global configuration. The full order, including the template's tiers and what the project records, is in [which choice wins](project-recipes.md#which-choice-wins).
+A template's tool choices are defaults. `--<tool>` and `--no-<tool>` override any of them for the project, as [Initialization](init.md#turning-tools-on-and-off) shows, and [which choice wins](project-recipes.md#which-choice-wins) gives the full order.
 
 ## External & Remote Templates (`--from`)
 
@@ -245,10 +231,6 @@ The confirmation screen `sync` shows takes these keys:
 ### What else protects you
 
 Whether or not a template is trusted, Protostar writes nothing outside the project directory or into `.git/`, and runs only these programs: `uv`, `git`, `npm`, `yarn`, `pnpm`, `pre-commit`, `prek`, `direnv`, and `just`. A template can't call a shell such as `/bin/sh` directly. Those programs can still run code the template ships, which is why trust exists.
-
-## Ready to Author Your Own Templates?
-
-If you want to build reusable blueprints for your team, inject custom configurations into `pyproject.toml`, or package full multi-file template repositories with dynamic variables, head over to the __[Authoring Custom Templates](./authoring-templates.md)__ guide.
 
 ## Related Guides & Next Steps
 

@@ -63,7 +63,7 @@ A template is a shape; how much tooling that shape starts with is a separate swi
 The default tier follows what most people starting the shape want: `cli`, `api`, and `lib` start in production, and `astro` and `ml` in workbench.
 
 !!! note "Tiers are defaults, not restrictions"
-    Protostar's tri-state toggling still applies within a tier. `protostar init -t astro --tier production --no-ci` is valid, and so is `protostar init -t api --mypy`. A tier describes what a built-in *starts* with, not what it allows.
+    A tool's flags still apply within a tier. `protostar init -t astro --tier production --no-ci` is valid, and so is `protostar init -t api --mypy`. A tier describes what a built-in *starts* with, not what it allows.
 
 ### Tier-Specific Content
 
@@ -73,7 +73,7 @@ A tier must also pass the gates it enables. Production `astro` and `ml` ship a s
 
 ### Container Scaffolding
 
-Docker follows the same precedence as the tooling flags. In order: an explicit `--docker` or `--no-docker`, then the project's saved recipe, then the template's `docker` opinion, then off. A template that declares `docker = true` (the `api` template does) scaffolds a `Dockerfile` by default, and an already-initialized project keeps its saved choice even if the template later changes its mind.
+Docker is a tool like any other, decided by the same order ([which choice wins](../usage/project-recipes.md#which-choice-wins)). The `api` template turns it on in production, so a production `api` project gets a `Dockerfile` unless the project turns Docker off.
 
 ## Baseline in Modules, Delta in Templates
 
@@ -125,10 +125,9 @@ A payload that configures a tool declares it with `requires`, so `protostar init
 1. **No version pins.** Dependencies are passed to `uv` so the environment resolves the latest compatible versions when the project is created.
 1. **Keep tasks to a minimum.** No `system_tasks`. A `post_install_tasks` entry is allowed only when the domain truly needs it (`nbdime` for notebook diffs), and it must be on the allowlist in the contract test, because built-ins run without a trust prompt.
 1. **Generated code formats cleanly for any project name.** Do not interpolate `<% PROJECT_NAME %>` into a line that `ruff format` would wrap for longer names. The `cli` template defines an `APP_NAME` constant for this reason: a version line that embedded the name failed `ruff format --check` for names over about 16 characters.
-1. **Tool configuration and tool packages declare the tool they need.** Test plugins such as `pytest-cov` go in an `[[optional]]` block with `requires = "pytest"`, so disabling the tool installs none of them.
 1. **Development tooling goes in the dev group; the docs group is for the documentation toolchain.** Built-ins declare no `docs_dependencies` at all, because the Zensical module supplies `zensical` and `mkdocstrings`. `uv sync` installs the dev group by default but not docs, so a notebook tool placed in the docs group is removed by the first `just sync`.
 1. **A new tool table needs a layout entry.** If a template writes a `[tool.<name>]` that `TOOL_SECTIONS` in `documents/pyproject_layout.py` does not list, it sorts unlabelled after the known tools. See [The pyproject.toml Layout](./pyproject-layout.md).
-1. **Tool configuration declares the tool it needs.** A payload that configures `ruff`, `mypy`, `pytest`, or another tool is a table with `requires = "<tool>"`, so disabling the tool leaves none of its configuration behind. Tool-agnostic payloads, such as `[build-system]`, stay plain strings.
+1. **Tool configuration and tool packages declare the tool they need,** as [Tool Configuration Follows the Tool](#tool-configuration-follows-the-tool) describes.
 1. **Explain decisions in the template file, not the payload.** A comment inside a `[dev.pyproject]` string is copied into every user's `pyproject.toml`. Put maintainer-facing comments above the payload instead.
 1. **Web services expose `<package>.main:app`.** The generated `Dockerfile` starts `uvicorn <package>.main:app`. For projects that are not from the `api` template but list FastAPI or Uvicorn, this is the best available guess. If it is wrong for a project, the container fails at start with a clear `ModuleNotFoundError`.
 

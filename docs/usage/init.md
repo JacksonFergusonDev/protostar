@@ -14,7 +14,7 @@ Running `init --force-merge` again in a tracked project reapplies the same templ
 
 While Protostar is fully modular, you often want a vetted, turnkey environment without selecting individual flags manually. Protostar ships with built-in templates that bundle domain-specific tools, directories, and AST configurations. Each one is a project *shape* (a command-line app, a web service, an analysis workbench), not a fixed stack of libraries.
 
-How much tooling a shape starts with is its [tier](./templates.md#choosing-a-tier), chosen with `--tier`. The __production__ tier adds the full quality gate: strict typing, tests, CI, and commit hooks. The __workbench__ tier stays lean, with just Ruff, direnv, and `just`, so exploratory work isn't buried in opinions on day one. Every built-in offers both: `cli`, `api`, and `lib` start in production, and `astro` and `ml` in workbench. Either tier is only a starting point: every tool can be overridden with the tri-state flags below.
+How much tooling a shape starts with is its [tier](./templates.md#choosing-a-tier), chosen with `--tier`. The __production__ tier adds the full quality gate: strict typing, tests, CI, and commit hooks. The __workbench__ tier stays lean, with just Ruff, direnv, and `just`, so exploratory work isn't buried in opinions on day one. Every built-in offers both: `cli`, `api`, and `lib` start in production, and `astro` and `ml` in workbench. Either tier is only a starting point: every tool can be turned on or off with the flags below.
 
 To scaffold from a template headlessly, pass `--template` (or `-t`):
 
@@ -23,9 +23,9 @@ To scaffold from a template headlessly, pass `--template` (or `-t`):
 protostar init --template astro
 ```
 
-### Tri-State CLI Toggles
+### Turning Tools On and Off
 
-Every tooling option supports tri-state evaluation. You can load a template's baseline and explicitly override any tool: passing `--<tool>` forces it on, while passing `--no-<tool>` forces it off:
+Every tool has a pair of flags. `--<tool>` turns it on and `--no-<tool>` turns it off, whatever the template chose; a tool you pass neither for follows the template. The project records your choice, so `sync` keeps it ([which choice wins](project-recipes.md#which-choice-wins)):
 
 ```bash
 # Scaffold the astro template with direnv disabled and mypy enabled
