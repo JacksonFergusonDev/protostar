@@ -10,6 +10,7 @@ from .errors import (
     CommandTimeoutError,
     ConfigurationError,
     FileSystemError,
+    ProcessTerminationError,
     StaleReviewError,
 )
 from .fs_transaction import TransactionAwareFS
@@ -177,18 +178,20 @@ class SystemExecutor(Reconciliation):
             if self.journal.state is TransactionState.COMMITTED:
                 # Interrupted after the commit: every change stands.
                 raise
-            try:
-                self._cancel_ide_probe()
-            finally:
-                self.process_runner.terminate_active_process_tree()
+            # A process that won't stop is reported, never a reason to leave
+            # the project half-written: a killed process runs none of its own
+            # code, and the editor probe only reads.
+            unstopped = self._stop_processes()
             with shield_sigint():
                 rollback_result = self.journal.rollback()
             if not rollback_result.succeeded:
                 from .errors import RollbackFailedError
 
                 raise RollbackFailedError(
-                    rollback_result, original_error
+                    rollback_result, original_error, unstopped=unstopped
                 ) from original_error
+            if unstopped:
+                raise unstopped[0] from original_error
             raise
         finally:
             # Nothing outlives the run: a probe nobody collected is stopped here.
@@ -231,6 +234,27 @@ class SystemExecutor(Reconciliation):
         probe, self._ide_probe = self._ide_probe, None
         if probe is not None:
             probe.cancel()
+
+    def _stop_processes(self) -> tuple[ProcessTerminationError, ...]:
+        """Stops the editor probe and the run's own command before rollback.
+
+        Tries both even when one won't stop, so neither is left running
+        because of the other.
+
+        Returns:
+            The run's own command first, then the probe, for each process that
+            could not be stopped.
+        """
+        unstopped: list[ProcessTerminationError] = []
+        try:
+            self.process_runner.terminate_active_process_tree()
+        except ProcessTerminationError as error:
+            unstopped.append(error)
+        try:
+            self._cancel_ide_probe()
+        except ProcessTerminationError as error:
+            unstopped.append(error)
+        return tuple(unstopped)
 
     def _run_tasks(self, tasks: list[SystemTask]) -> None:
         """Runs a sequence of system tasks (e.g., initialization or post-install commands)."""

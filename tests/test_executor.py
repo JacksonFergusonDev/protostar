@@ -15,6 +15,7 @@ from protostar.errors import (
 )
 from protostar.executor import SystemExecutor
 from protostar.intent import DependencyGroup, region_tag
+from protostar.journal import TransactionState
 from protostar.manifest import (
     CollisionStrategy,
     DiagnosticEvent,
@@ -1606,30 +1607,101 @@ def test_executor_cancels_the_editor_probe_before_rolling_back(
     probe.finish.assert_not_called()
 
 
-def test_executor_still_terminates_its_own_process_when_the_probe_will_not_stop(
+def _failing_install(
+    tmp_path: Path, mocker: MockerFixture, mock_config: UserConfig
+) -> tuple[SystemExecutor, CommandExecutionError]:
+    """An executor that writes a file and then fails its dependency install."""
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'original'\n")
+    (tmp_path / "uv.lock").write_text("original lock")
+    manifest = EnvironmentManifest()
+    manifest.filesystem.add_file_injection("notes.txt", "written by the run\n")
+    manifest.dependencies.add("example")
+    executor = SystemExecutor(manifest, mock_config)
+    failure = CommandExecutionError(["uv", "add", "example"], 1)
+    mocker.patch.object(executor.process_runner, "run", side_effect=failure)
+    return executor, failure
+
+
+def test_executor_rolls_back_when_the_probe_will_not_stop(
     tmp_path, monkeypatch, mocker, mock_config
 ):
-    """A probe that cannot be reaped does not leave the run's own command running."""
+    """A probe that can't be reaped only reads, so the project still comes back."""
     monkeypatch.chdir(tmp_path)
     probe = mocker.MagicMock()
     probe.cancel.side_effect = ProcessTerminationError(1, "stuck")
     mocker.patch("protostar.executor.start_ide_probe", return_value=probe)
-    manifest = EnvironmentManifest()
-    manifest.dependencies.add("example")
-    executor = SystemExecutor(manifest, mock_config)
+    executor, failure = _failing_install(tmp_path, mocker, mock_config)
     terminate = mocker.patch.object(
         executor.process_runner, "terminate_active_process_tree"
     )
-    mocker.patch.object(
-        executor.process_runner,
-        "run",
-        side_effect=CommandExecutionError(["uv", "add", "example"], 1),
-    )
 
-    with pytest.raises(ProcessTerminationError):
+    with pytest.raises(ProcessTerminationError) as exc_info:
         executor.execute()
 
     terminate.assert_called_once()
+    assert not (tmp_path / "notes.txt").exists()
+    assert executor.journal.state is TransactionState.ROLLED_BACK
+    assert exc_info.value.process_id == 1
+    assert exc_info.value.__cause__ is failure
+
+
+def test_executor_rolls_back_when_its_own_command_will_not_stop(
+    tmp_path, monkeypatch, mocker, mock_config
+):
+    """A command that survives SIGKILL is reported, after the probe stops and files return."""
+    monkeypatch.chdir(tmp_path)
+    probe = mocker.MagicMock()
+    mocker.patch("protostar.executor.start_ide_probe", return_value=probe)
+    executor, failure = _failing_install(tmp_path, mocker, mock_config)
+    mocker.patch.object(
+        executor.process_runner,
+        "terminate_active_process_tree",
+        side_effect=ProcessTerminationError(2, "still running"),
+    )
+
+    with pytest.raises(ProcessTerminationError) as exc_info:
+        executor.execute()
+
+    probe.cancel.assert_called_once()
+    assert not (tmp_path / "notes.txt").exists()
+    assert exc_info.value.process_id == 2
+    assert exc_info.value.__cause__ is failure
+
+
+def test_a_failed_rollback_names_the_processes_that_would_not_stop(
+    tmp_path, monkeypatch, mocker, mock_config
+):
+    """When rollback also fails, its error lists every process still running."""
+    monkeypatch.chdir(tmp_path)
+    probe = mocker.MagicMock()
+    probe.cancel.side_effect = ProcessTerminationError(1, "stuck")
+    mocker.patch("protostar.executor.start_ide_probe", return_value=probe)
+    executor, failure = _failing_install(tmp_path, mocker, mock_config)
+    mocker.patch.object(
+        executor.process_runner,
+        "terminate_active_process_tree",
+        side_effect=ProcessTerminationError(2, "still running"),
+    )
+    restore = executor.journal._restore
+
+    def failing_restore(path, state):
+        if path.name == "notes.txt":
+            raise OSError("locked")
+        return restore(path, state)
+
+    mocker.patch.object(executor.journal, "_restore", side_effect=failing_restore)
+
+    with pytest.raises(RollbackFailedError) as exc_info:
+        executor.execute()
+
+    error = exc_info.value
+    assert [unstopped.process_id for unstopped in error.unstopped] == [2, 1]
+    assert error.details()["unstopped"] == [
+        {"process_id": 2, "detail": "still running"},
+        {"process_id": 1, "detail": "stuck"},
+    ]
+    assert "These processes could not be stopped" in str(error)
+    assert error.__cause__ is failure
 
 
 def test_executor_stops_a_probe_that_was_never_collected(

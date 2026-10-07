@@ -453,11 +453,16 @@ class ProcessTerminationError(ProtostarError):
     def __init__(self, process_id: int, detail: str) -> None:
         message = f"Failed to terminate managed process tree {process_id}: {detail}"
         hint = (
-            "Stop the reported process tree before modifying or retrying the workspace."
+            f"Process {process_id} may still be running. Stop it before you run "
+            "the command again."
         )
-        super().__init__(message, hint=hint)
+        super().__init__(message, hint=hint, docs_path=DocsPage.ROLLBACK_UNSTOPPED)
         self.process_id = process_id
         self.detail = detail
+
+    def details(self) -> dict[str, Any]:
+        """Returns the process that would not stop."""
+        return {"process_id": self.process_id}
 
 
 class FileSystemError(ProtostarError):
@@ -640,8 +645,17 @@ class RollbackFailedError(ProtostarError):
         rollback_result: RollbackResult,
         original_error: BaseException,
         *,
+        unstopped: tuple[ProcessTerminationError, ...] = (),
         docs_path: DocsPage | None = DocsPage.ROLLBACK,
     ) -> None:
+        """Initializes the error with what rollback could not undo.
+
+        Args:
+            rollback_result: The paths rollback could not restore.
+            original_error: The failure that started the rollback.
+            unstopped: Processes that were still running when rollback began.
+            docs_path: Optional path to relevant documentation.
+        """
         failed_list = "\n".join(
             f"- {failure.path}: {failure.detail}" for failure in rollback_result.errors
         )
@@ -649,24 +663,34 @@ class RollbackFailedError(ProtostarError):
             "Protostar execution failed and the automated rollback was only partially successful.\n\n"
             "The following paths could not be restored to their original state:\n"
             f"{failed_list}\n\n"
-            f"Original execution error: {original_error}"
         )
+        if unstopped:
+            running = "\n".join(
+                f"- {error.process_id}: {error.detail}" for error in unstopped
+            )
+            message += f"These processes could not be stopped:\n{running}\n\n"
+        message += f"Original execution error: {original_error}"
         hint = (
             "Manual intervention is required to restore the workspace to a clean state."
         )
         super().__init__(message, hint=hint, docs_path=docs_path)
         self.rollback_result = rollback_result
         self.original_error = original_error
+        self.unstopped = unstopped
 
     def details(self) -> dict[str, Any]:
-        """Returns each path rollback could not restore, and why."""
+        """Returns each path rollback could not restore, and each process left running."""
         return {
             "unrestored": [
                 {"path": failure.path.as_posix(), "detail": failure.detail}
                 for failure in sorted(
                     self.rollback_result.errors, key=lambda failure: failure.path
                 )
-            ]
+            ],
+            "unstopped": [
+                {"process_id": error.process_id, "detail": error.detail}
+                for error in self.unstopped
+            ],
         }
 
 
