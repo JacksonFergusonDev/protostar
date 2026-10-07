@@ -52,7 +52,8 @@ if [ $commit_code -ne 0 ]; then
 fi
 
 # 4. Verify hook execution output is present in commit output
-echo "$commit_output" | grep -qE "(uv lock check|ruff check|ruff format|Passed)" || {
+# A here-string has no upstream writer for grep's early exit to interrupt.
+grep -qE "(uv lock check|ruff check|ruff format|Passed)" <<< "$commit_output" || {
   echo "ERROR: Prek hook execution not detected in commit output"
   exit 1
 }

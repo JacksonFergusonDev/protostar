@@ -15,7 +15,6 @@ Run:
 
 from __future__ import annotations
 
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -33,19 +32,6 @@ from scripts._common import (
     report,
     run_repo_cmd,
 )
-
-
-def ensure_environment_synced() -> None:
-    """Ensures the virtual environment is synced via uv before validation checks."""
-    try:
-        run_repo_cmd(["uv", "sync", "--quiet"], check=True)
-    except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        report(
-            f"FAIL Failed to sync environment with uv: {e}",
-            stderr=True,
-            style=OutputStyle.ERROR,
-        )
-        sys.exit(1)
 
 
 def _run_validator(name: str, cmd: list[str]) -> bool:
@@ -243,8 +229,6 @@ def validate_pyproject_files() -> bool:
 
 def main() -> None:
     """Runs all schema validation checks and exits with non-zero on failure."""
-    ensure_environment_synced()
-
     checks = [
         validate_prek_configs,
         validate_github_workflows,

@@ -93,7 +93,7 @@ jobs:
 
     - name: Validate schemas
       if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-      run: uv run python scripts/check_schemas.py
+      run: uv run --locked python scripts/check_schemas.py
 
   # Every OS and Python runs the suite; macOS smoke-tests templates after it,
   # so it takes no runner of its own. Linux smoke-tests every template at every
