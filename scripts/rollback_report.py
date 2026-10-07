@@ -7,7 +7,8 @@ only changes the badge, so the history stays a record of green runs.
 
 Run:
     python3 scripts/rollback_report.py record --results DIR --matrix JSON \\
-        --history PATH --latest PATH --commit SHA
+        --history PATH --latest PATH --state PATH --commit SHA \\
+        --date UTC --run-id ID --run-attempt ATTEMPT
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import TypedDict
 
@@ -30,6 +31,24 @@ class HistoryEntry(TypedDict):
     commit: str
     date: str
     cells: list[dict[str, object]]
+
+
+class Publication(TypedDict):
+    """The latest published attempt, including runs that only changed the badge."""
+
+    commit: str
+    date: str
+    run_id: int
+    run_attempt: int
+
+
+def publication_key(publication: Publication) -> tuple[datetime, int, int]:
+    """Order runs by creation time, breaking ties by run id and then attempt."""
+    return (
+        datetime.fromisoformat(publication["date"]),
+        publication["run_id"],
+        publication["run_attempt"],
+    )
 
 
 class RollbackReportError(Exception):
@@ -106,22 +125,39 @@ def record(args: argparse.Namespace) -> None:
     offset = date.utcoffset()
     if offset is None or offset.total_seconds() != 0:
         raise SystemExit("--date must be a UTC timestamp.")
+    if args.run_id < 1 or args.run_attempt < 1:
+        raise SystemExit("--run-id and --run-attempt must be positive integers.")
+    publication: Publication = {
+        "commit": args.commit,
+        "date": args.date,
+        "run_id": args.run_id,
+        "run_attempt": args.run_attempt,
+    }
+    if args.state.exists():
+        previous: Publication = json.loads(args.state.read_text(encoding="utf-8"))
+        if publication_key(publication) < publication_key(previous):
+            raise SystemExit(
+                "Refusing to publish a run older than the latest publication."
+            )
+        if publication_key(publication) == publication_key(previous):
+            return
+    entries = read_history(args.history)
+    if entries and datetime.fromisoformat(entries[-1]["date"]) > date:
+        raise SystemExit(
+            "Refusing to publish a run older than the latest recorded run."
+        )
     try:
         rows, failed = combine(args.results, json.loads(args.matrix)["include"])
     except RollbackReportError as error:
         raise SystemExit(str(error)) from error
     passed = sum(row["passed"] for row in rows)  # type: ignore[misc]
-    entries = read_history(args.history)
-    # A retry of a recorded commit neither appends twice nor replaces a newer run.
+    # Several attempts or runs of one commit add only one green history point.
     if not failed and not any(item["commit"] == args.commit for item in entries):
-        if entries and datetime.fromisoformat(entries[-1]["date"]) > date:
-            raise SystemExit(
-                "Refusing to publish a run older than the latest recorded run."
-            )
         entries.append({"commit": args.commit, "date": args.date, "cells": rows})
     for path, payload in (
         (args.history, entries),
         (args.latest, badge(passed, failed)),
+        (args.state, publication),
     ):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -137,8 +173,13 @@ def parse_args() -> argparse.Namespace:
     command.add_argument("--matrix", required=True)
     command.add_argument("--history", type=Path, required=True)
     command.add_argument("--latest", type=Path, required=True)
+    command.add_argument("--state", type=Path, required=True)
     command.add_argument("--commit", required=True)
-    command.add_argument("--date", default=datetime.now(UTC).isoformat())
+    command.add_argument(
+        "--date", required=True, help="The originating run's creation time in UTC."
+    )
+    command.add_argument("--run-id", type=int, required=True)
+    command.add_argument("--run-attempt", type=int, required=True)
     command.set_defaults(func=record)
     return parser.parse_args()
 

@@ -59,6 +59,9 @@ jobs:
       env:
         COMMIT: ${{ github.event.workflow_run.head_sha }}
         EVENT: ${{ github.event.workflow_run.event }}
+        RUN_DATE: ${{ github.event.workflow_run.created_at }}
+        RUN_ID: ${{ github.event.workflow_run.id }}
+        RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
       run: |
         # A night with no new commits skips its rollback jobs: nothing to record.
         if [[ ! -d results ]] || [[ -z "$(ls -A results)" ]]; then
@@ -67,15 +70,16 @@ jobs:
           exit 0
         fi
         matrix="$(python3 scripts/nightly_matrix.py)"
-        recorded_at="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
         git -C pages-data config user.name 'github-actions[bot]'
         git -C pages-data config user.email '41898282+github-actions[bot]@users.noreply.github.com'
         for attempt in 1 2 3 4 5; do
           echo "Publishing rollback results (attempt $attempt/5)."
           if ! python3 scripts/rollback_report.py record \
-            --results results --matrix "$matrix" --commit "$COMMIT" --date "$recorded_at" \
+            --results results --matrix "$matrix" --commit "$COMMIT" --date "$RUN_DATE" \
+            --run-id "$RUN_ID" --run-attempt "$RUN_ATTEMPT" \
             --history pages-data/metrics/rollback-history.json \
-            --latest pages-data/metrics/rollback-latest.json; then
+            --latest pages-data/metrics/rollback-latest.json \
+            --state pages-data/metrics/rollback-state.json; then
             # A manual run may be narrowed to one OS or template on purpose.
             # A scheduled one never is, so an incomplete set there is a failure.
             if [[ "$EVENT" == workflow_dispatch ]]; then
@@ -85,7 +89,7 @@ jobs:
             fi
             exit 1
           fi
-          git -C pages-data add metrics/rollback-history.json metrics/rollback-latest.json
+          git -C pages-data add metrics/rollback-history.json metrics/rollback-latest.json metrics/rollback-state.json
           if ! git -C pages-data diff --cached --quiet; then
             git -C pages-data commit -m "Record rollback faults for ${COMMIT:0:7}"
           fi
