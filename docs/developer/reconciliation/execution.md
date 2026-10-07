@@ -21,7 +21,7 @@ This is the one description of the order execution runs in; the mechanics pages 
 
 1. **`BEFORE_INITIALIZERS`**: migrations, released content, directories, and whole files no command creates. The CLI shows this as "Writing project files".
 1. **System tasks**: the initializers `git init` and `uv init` when the project lacks them, then the template's `system_tasks`.
-1. **`BEFORE_RESOLVER`**: merged configuration, append regions, and dependency selection, then the resolver: one `uv add` per dependency group, or a single `uv lock` when only metadata or include edges changed. By this point every choice the change review made must have matched a decision, or execution raises `StaleReviewError`.
+1. **`BEFORE_RESOLVER`**: merged configuration, append regions, and dependency selection, then the resolver: one `uv add` per dependency group, or a single `uv lock` when only metadata or include edges changed. Every `uv add` but the last passes `--no-sync`: each still resolves and locks, so a bad requirement fails at its own command, and the last installs the whole environment once instead of once per group. By this point every choice the change review made must have matched a decision, or execution raises `StaleReviewError`.
 1. **`AFTER_RESOLVER`**: ignore rules, container files, and editor settings, which depend on the resolved project.
 1. **Post-install tasks**, such as a hook install, then the editor extension probe.
 1. **`RECIPE`**: the recipe in `pyproject.toml`, written after everything it records. A one-shot run skips it.

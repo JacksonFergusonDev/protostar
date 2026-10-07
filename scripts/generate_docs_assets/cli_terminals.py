@@ -245,7 +245,7 @@ def _stub_subprocess_adding(
     if command[:2] != ["uv", "add"]:
         _stub_subprocess(runner, command, **kwargs)
         return
-    packages = command[2:]
+    packages = [word for word in command[2:] if word != "--no-sync"]
     group = None
     if packages[0] == "--dev":
         group, packages = "dev", packages[1:]

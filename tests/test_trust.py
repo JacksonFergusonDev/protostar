@@ -118,7 +118,7 @@ def test_trust_screen_snapshot(snap_compare, monkeypatch):
         (
             ((DependencyGroup.MAIN, ("fastapi",)), (DependencyGroup.DEV, ("pytest",))),
             False,
-            (("uv", "add", "fastapi"), ("uv", "add", "--dev", "pytest")),
+            (("uv", "add", "--no-sync", "fastapi"), ("uv", "add", "--dev", "pytest")),
         ),
         ((), True, (("uv", "lock"),)),
         ((), False, ()),

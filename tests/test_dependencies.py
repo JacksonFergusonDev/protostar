@@ -10,6 +10,7 @@ from protostar.dependencies import (
     preserved_requirement,
     requirement_entries,
     requirement_identity,
+    resolver_commands,
     retract_requirements,
     select_dependencies,
 )
@@ -46,10 +47,43 @@ def test_install_dependencies_uv(mocker):
     )
 
     assert runner.run.call_args_list == [
-        mocker.call(["uv", "add", "fastapi"], timeout=600),
-        mocker.call(["uv", "add", "--dev", "pytest"], timeout=600),
+        mocker.call(["uv", "add", "--no-sync", "fastapi"], timeout=600),
+        mocker.call(["uv", "add", "--no-sync", "--dev", "pytest"], timeout=600),
         mocker.call(["uv", "add", "--group", "docs", "mkdocs"], timeout=600),
     ]
+
+
+@pytest.mark.parametrize(
+    ("manifest", "commands"),
+    [
+        (
+            DependencyManifest(dev_dependencies=["pytest"]),
+            [("uv", "add", "--dev", "pytest")],
+        ),
+        (
+            DependencyManifest(dependencies=["fastapi"], docs_dependencies=["mkdocs"]),
+            [
+                ("uv", "add", "--no-sync", "fastapi"),
+                ("uv", "add", "--group", "docs", "mkdocs"),
+            ],
+        ),
+        (
+            DependencyManifest(dependencies=["fastapi"], dev_dependencies=["pytest"]),
+            [
+                ("uv", "add", "--no-sync", "fastapi"),
+                ("uv", "add", "--dev", "pytest"),
+            ],
+        ),
+    ],
+    ids=["one-group", "skips-empty-groups", "main-and-dev"],
+)
+def test_only_the_last_add_installs_into_the_environment(manifest, commands):
+    """Each add locks, but the last one alone updates the environment.
+
+    A lone add keeps its default sync, and a group with no requests is not
+    counted when choosing which add is last.
+    """
+    assert resolver_commands(manifest) == tuple(commands)
 
 
 def test_install_dependencies_brackets_each_group_in_a_step(mocker, progress):
@@ -126,7 +160,9 @@ def test_install_dependencies_command_failure_is_fatal(mocker):
         )
 
     assert exc_info.value is error
-    runner.run.assert_called_once_with(["uv", "add", "invalid"], timeout=600)
+    runner.run.assert_called_once_with(
+        ["uv", "add", "--no-sync", "invalid"], timeout=600
+    )
 
 
 def test_install_dependencies_timeout_is_fatal(mocker):

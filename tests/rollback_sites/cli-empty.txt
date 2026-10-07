@@ -26,8 +26,8 @@ write:.readthedocs.yaml#1
 write:CONTRIBUTING.md#1
 write:pyproject.toml#1
 write:zensical.toml#1
-command:uv add#1
-command:uv add --dev#1
+command:uv add --no-sync#1
+command:uv add --no-sync --dev#1
 command:uv add --group#1
 write:.gitignore#1
 command:direnv allow#1

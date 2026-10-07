@@ -20,7 +20,7 @@ write:tests/test_health.py#1
 command:git init#1
 command:uv init --no-workspace --bare --pin-python --python#1
 write:pyproject.toml#1
-command:uv add#1
+command:uv add --no-sync#1
 command:uv add --dev#1
 write:.dockerignore#1
 write:.gitignore#1

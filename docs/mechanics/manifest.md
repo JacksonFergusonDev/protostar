@@ -35,7 +35,7 @@ Rather than storing all state in a monolithic structure, `EnvironmentManifest` d
 During the `build()` phase, modules route their state declarations through these explicit domain namespaces (e.g., `manifest.dependencies`, `manifest.filesystem`, `manifest.tooling`, `manifest.tasks`). This structure allows the `SystemExecutor` to run setup tasks and write files in the correct dependency order.
 
 === "Dependency Resolution (`manifest.dependencies`)"
-    Managed by `DependencyManifest`. Holds the packages the project needs, by group. Execution adds them with uv, one `uv add` per group, after the merged configuration is written, so uv resolves them against the final `pyproject.toml` and writes `uv.lock` itself.
+    Managed by `DependencyManifest`. Holds the packages the project needs, by group. Execution adds them with uv, one `uv add` per group, after the merged configuration is written, so uv resolves them against the final `pyproject.toml` and writes `uv.lock` itself. Only the last `uv add` installs into the environment; the earlier ones just resolve and lock, so a run updates the environment once.
 
     * `dependencies`: Core application or scientific libraries (`manifest.dependencies.add()`).
     * `dev_dependencies`: Tooling, linters, and testing frameworks (`manifest.dependencies.add_dev()`).

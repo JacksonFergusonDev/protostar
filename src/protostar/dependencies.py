@@ -44,17 +44,21 @@ LOCK_COMMAND = ("uv", "lock")
 """Refreshes ``uv.lock`` when only dependency-group includes changed."""
 
 
-def add_command(group: DependencyGroup, packages: Sequence[str]) -> tuple[str, ...]:
+def add_command(
+    group: DependencyGroup, packages: Sequence[str], *, sync: bool = True
+) -> tuple[str, ...]:
     """Returns the uv command that adds packages to a dependency group.
 
     Args:
         group: The dependency group the packages join.
         packages: The requirements to add.
+        sync: Whether uv also installs into the environment. A later add that
+            syncs makes this one's install redundant.
 
     Returns:
         The command, as its arguments.
     """
-    return ("uv", "add", *group.cli_args, *packages)
+    return ("uv", "add", *(() if sync else ("--no-sync",)), *group.cli_args, *packages)
 
 
 def _groups(
@@ -65,6 +69,28 @@ def _groups(
         (DependencyGroup.MAIN, dependencies_manifest.dependencies),
         (DependencyGroup.DEV, dependencies_manifest.dev_dependencies),
         (DependencyGroup.DOCS, dependencies_manifest.docs_dependencies),
+    )
+
+
+def _requests(
+    dependencies_manifest: DependencyManifest,
+) -> tuple[tuple[DependencyGroup, list[str], bool], ...]:
+    """Returns each group with requests and whether its add installs.
+
+    Groups install in order and ``uv add`` syncs the default groups plus its
+    own, so only the last add needs to sync: it installs what the earlier ones
+    recorded. Each earlier add still resolves and locks, so a bad requirement
+    fails at its own command. Skipped installs make it one environment update
+    per run instead of one per group.
+    """
+    requests = [
+        (group, packages)
+        for group, packages in _groups(dependencies_manifest)
+        if packages
+    ]
+    return tuple(
+        (group, packages, index == len(requests) - 1)
+        for index, (group, packages) in enumerate(requests)
     )
 
 
@@ -86,9 +112,8 @@ def resolver_commands(
         ``uv lock`` when only dependency-group includes are declared.
     """
     commands = tuple(
-        add_command(group, packages)
-        for group, packages in _groups(dependencies_manifest)
-        if packages
+        add_command(group, packages, sync=sync)
+        for group, packages, sync in _requests(dependencies_manifest)
     )
     if not commands and dependencies_manifest.includes:
         return (LOCK_COMMAND,)
@@ -100,16 +125,15 @@ def _install_group(
     group: DependencyGroup,
     process_runner: ProcessRunner,
     progress: ProgressStep,
+    *,
+    sync: bool,
 ) -> None:
     """Installs a specific group of packages using uv add, as one progress step.
 
     Raises:
         CommandExecutionError | CommandTimeoutError: If installation fails.
     """
-    if not packages:
-        return
-
-    cmd = list(add_command(group, packages))
+    cmd = list(add_command(group, packages, sync=sync))
     noun = "dependency" if len(packages) == 1 else "dependencies"
     with progress(f"Installing {len(packages)} {group.label} {noun}"):
         process_runner.run(cmd, timeout=600)
@@ -125,8 +149,8 @@ def install_dependencies(
     Raises:
         CommandExecutionError | CommandTimeoutError: If any installation fails.
     """
-    for group, packages in _groups(dependencies_manifest):
-        _install_group(packages, group, process_runner, progress)
+    for group, packages, sync in _requests(dependencies_manifest):
+        _install_group(packages, group, process_runner, progress, sync=sync)
 
 
 @dataclass(frozen=True)
