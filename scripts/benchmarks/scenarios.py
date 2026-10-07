@@ -28,11 +28,17 @@ class Scenario:
         name: Names its budget file and its benchmark series.
         argv: The arguments after ``protostar``.
         start: The project the command runs in.
+        environment: Variables the command runs with, beyond the isolated ones.
+        budgeted: Whether its cost is checked. A full-screen app can't draw
+            into the output the budget runner captures, so the recipe editor
+            is only timed.
     """
 
     name: str
     argv: tuple[str, ...]
     start: Start = Start.EMPTY
+    environment: tuple[tuple[str, str], ...] = ()
+    budgeted: bool = True
 
 
 # The built-in templates, each initialized once: each writes different documents.
@@ -56,6 +62,14 @@ SCENARIOS: tuple[Scenario, ...] = (
     # Human output loads what the JSON payload never needs, such as Rich's renderers.
     Scenario("status-human", ("status", "--no-config"), Start.INITIALIZED),
     Scenario("diff", ("diff", "--json", "--no-config"), Start.INITIALIZED),
+    # Interactive init, until the recipe editor's first frame is drawn.
+    Scenario(
+        "editor",
+        ("init",),
+        environment=(("PROTOSTAR_BENCHMARK_RECIPE_EDITOR", "1"),),
+        budgeted=False,
+    ),
 )
 
 BY_NAME = {scenario.name: scenario for scenario in SCENARIOS}
+BUDGETED = tuple(scenario for scenario in SCENARIOS if scenario.budgeted)

@@ -65,21 +65,17 @@ test-cov-report: sync
     uv run pytest -n auto --dist worksteal --cov --cov-report=term-missing --cov-report=annotate:coverage_annotations/ | tee coverage_report.txt
     @printf "{{ green }}✔ Coverage reports generated{{ nc }}\n"
 
-# Run quick Hyperfine benchmarks
-test-benchmark: sync
-    @printf "\n{{ blue }}=== Running Quick Hyperfine Benchmarks ==={{ nc }}\n"
-    hyperfine --warmup 5 --runs 30 --export-json benchmark.json \
-        '.venv/bin/protostar help init' \
-        'PROTOSTAR_BENCHMARK_RECIPE_EDITOR=1 .venv/bin/protostar init'
-    @printf "{{ green }}✔ Benchmark complete{{ nc }}\n"
+# Time scenarios under the working tree, e.g. `just bench sync 'init-*'` (performance work only; see AGENTS.md)
+bench *args: sync
+    uv run python -m scripts.benchmarks run {{ args }}
 
-# Run slower, more accurate Hyperfine benchmarks
-test-benchmark-slower: sync
-    @printf "\n{{ blue }}=== Running Full Hyperfine Benchmarks ==={{ nc }}\n"
-    hyperfine --warmup 30 --runs 90 --export-json benchmark.json \
-        '.venv/bin/protostar help init' \
-        'PROTOSTAR_BENCHMARK_RECIPE_EDITOR=1 .venv/bin/protostar init'
-    @printf "{{ green }}✔ Benchmark complete{{ nc }}\n"
+# Compare the working tree with another version, e.g. `just bench-compare main sync`
+bench-compare ref *args: sync
+    uv run python -m scripts.benchmarks compare {{ ref }} {{ args }}
+
+# Profile one scenario with pyinstrument, e.g. `just bench-profile sync` (writes .benchmarks/)
+bench-profile scenario *args: sync
+    uv run python -m scripts.benchmarks profile {{ scenario }} {{ args }}
 
 # Run mutation testing on one module, e.g. `just mutate journal` (slow; the full set runs in the Mutation Testing workflow)
 mutate module workers="2":

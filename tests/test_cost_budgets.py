@@ -1,6 +1,6 @@
 """What each command costs, counted exactly and checked in.
 
-Each scenario in ``scripts/benchmarks/scenarios.py`` runs in a fresh interpreter
+Each budgeted scenario in ``scripts/benchmarks/scenarios.py`` runs in a fresh interpreter
 (``cost_budget_runner.py``) with commands faked as in the rollback suite. The
 run's cost is its exit code, every managed command and other process, hook
 registry fetch, and YAML, TOML, or JSONC parse by count, and the third-party
@@ -26,7 +26,7 @@ from pathlib import Path
 import pytest
 
 from scripts.benchmarks import probes
-from scripts.benchmarks.scenarios import SCENARIOS, Scenario, Start
+from scripts.benchmarks.scenarios import BUDGETED, Scenario, Start
 from tests.rollback_harness import Runner, Workspace, run
 from tests.rollback_harness import Scenario as SeedScenario
 
@@ -110,7 +110,7 @@ def initialized(tmp_path_factory: pytest.TempPathFactory) -> Path:
     return workspace.project
 
 
-@pytest.mark.parametrize("scenario", SCENARIOS, ids=lambda scenario: scenario.name)
+@pytest.mark.parametrize("scenario", BUDGETED, ids=lambda scenario: scenario.name)
 def test_a_command_costs_what_its_budget_records(
     scenario: Scenario, tmp_path: Path, request: pytest.FixtureRequest
 ) -> None:
@@ -160,7 +160,7 @@ def test_every_budget_names_a_scenario() -> None:
     """A removed scenario takes its budget with it."""
     recorded = {budget.stem for budget in BUDGETS.glob("*.txt")}
 
-    assert recorded == {scenario.name for scenario in SCENARIOS}
+    assert recorded == {scenario.name for scenario in BUDGETED}
 
 
 @pytest.mark.parametrize(
