@@ -352,17 +352,11 @@ def test_recipe_opt_out_filters_producer_before_shared_target_build(
         def name(self):
             return "Ruff"
 
-        def pre_flight(self):
-            raise AssertionError("opted-out producer preflight")
-
         def build(self, manifest):
             raise AssertionError("opted-out producer build")
 
     class Mypy(Ruff):
         config_key = "mypy"
-
-        def pre_flight(self):
-            pass
 
         def build(self, manifest):
             manifest.filesystem.add_structured(
