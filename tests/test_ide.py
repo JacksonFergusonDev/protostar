@@ -1,7 +1,11 @@
+import sys
+import threading
+import time
+
 import pytest
 
 from protostar.errors import CommandTimeoutError, ProcessTerminationError
-from protostar.ide import IDEType, check_ide_extensions
+from protostar.ide import IDEType, check_ide_extensions, start_ide_probe
 from protostar.manifest import Severity
 from protostar.system import ProcessRunner
 
@@ -49,27 +53,28 @@ def test_ide_extension_check_with_enum(mocker):
     assert "Missing recommended vscode extensions" in msg
 
 
-def test_ide_extension_probe_runs_inside_a_step(mocker, progress):
-    """The IDE CLI probe is bracketed by a progress step."""
+def test_ide_extension_probe_lists_in_the_background_and_the_step_brackets_the_wait(
+    mocker, progress
+):
+    """The CLI runs as soon as the probe starts; the step covers collecting it."""
     mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
-    mocker.patch.object(
-        ProcessRunner,
-        "run",
-        side_effect=lambda *_, **__: (
-            progress.events.append(("run", "")) or "charliermarsh.ruff\n"
-        ),
-    )
+    ran = threading.Event()
 
-    check_ide_extensions(
-        ide=IDEType.VSCODE,
-        ide_extensions={"charliermarsh.ruff"},
-        on_diagnostic=lambda msg, sev: None,
-        progress=progress,
-    )
+    def listing(*_args, **_kwargs):
+        progress.events.append(("run", ""))
+        ran.set()
+        return "charliermarsh.ruff\n"
+
+    mocker.patch.object(ProcessRunner, "run", side_effect=listing)
+
+    probe = start_ide_probe(IDEType.VSCODE, {"charliermarsh.ruff"})
+    assert probe is not None
+    assert ran.wait(5)
+    probe.finish(lambda msg, sev: None, progress)
 
     assert progress.events == [
-        ("start", "Checking editor extensions"),
         ("run", ""),
+        ("start", "Checking editor extensions"),
         ("done", "Checking editor extensions"),
     ]
 
@@ -293,3 +298,28 @@ def test_ide_extension_check_uses_provided_process_runner(mocker):
         ["/usr/local/bin/code", "--list-extensions"], timeout=5
     )
     assert diagnostics == []
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="needs a POSIX shell script")
+def test_cancelling_a_probe_reaps_a_process_that_is_still_listing(tmp_path, mocker):
+    """A listing that never ends is stopped from another thread, and its process reaped."""
+    editor = tmp_path / "code"
+    editor.write_text("#!/bin/sh\nsleep 30\n")
+    editor.chmod(0o755)
+    mocker.patch("protostar.ide.find_executable", return_value=str(editor))
+    runner = ProcessRunner()
+    probe = start_ide_probe(IDEType.VSCODE, {"charliermarsh.ruff"}, runner)
+    assert probe is not None
+    deadline = time.monotonic() + 5
+    while runner.active_process is None and time.monotonic() < deadline:
+        time.sleep(0.01)
+    process = runner.active_process
+    assert process is not None
+
+    started = time.monotonic()
+    probe.cancel()
+
+    assert time.monotonic() - started < 5
+    assert process.poll() is not None
+    assert runner.active_process is None
+    probe.cancel()

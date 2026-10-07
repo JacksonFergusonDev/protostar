@@ -14,7 +14,7 @@ from .errors import (
 )
 from .fs_transaction import TransactionAwareFS
 from .git_hooks import HookAction
-from .ide import check_ide_extensions
+from .ide import IDEProbe, start_ide_probe
 from .intent import ResolverFootprint
 from .journal import MutationJournal, TransactionState
 from .manifest import (
@@ -90,6 +90,7 @@ class SystemExecutor(Reconciliation):
         self.journal = MutationJournal()
         self.fs = TransactionAwareFS(self.journal)
         self.process_runner = ProcessRunner()
+        self._ide_probe: IDEProbe | None = None
         self.diagnostics: list[DiagnosticEvent] = list(manifest.diagnostics)
         self.proposals: list[MergeConflict] = []
         self.preserved: list[MergeConflict] = []
@@ -148,6 +149,9 @@ class SystemExecutor(Reconciliation):
                         "Initialization requires phased preparation.",
                         hint="Execute initialization without a lifecycle review.",
                     )
+                # The editor probe only reads, so it overlaps the whole run and
+                # is collected after the post-install commands.
+                self._start_ide_probe()
                 with self.progress("Writing project files"):
                     early = self._prepare(PreparationPhase.BEFORE_INITIALIZERS)
                     self._apply_review(early)
@@ -173,7 +177,10 @@ class SystemExecutor(Reconciliation):
             if self.journal.state is TransactionState.COMMITTED:
                 # Interrupted after the commit: every change stands.
                 raise
-            self.process_runner.terminate_active_process_tree()
+            try:
+                self._cancel_ide_probe()
+            finally:
+                self.process_runner.terminate_active_process_tree()
             with shield_sigint():
                 rollback_result = self.journal.rollback()
             if not rollback_result.succeeded:
@@ -183,25 +190,47 @@ class SystemExecutor(Reconciliation):
                     rollback_result, original_error
                 ) from original_error
             raise
+        finally:
+            # Nothing outlives the run: a probe nobody collected is stopped here.
+            self._cancel_ide_probe()
 
-    def _check_ide_extensions(self) -> None:
-        """Verifies that the configured IDE has the recommended extensions installed.
+    def _start_ide_probe(self) -> None:
+        """Starts listing the configured editor's extensions in the background.
 
         Does nothing when no editor with an extension CLI is configured or its
-        CLI is not installed. A probe that fails is reported as a skip; a probe
-        that finds extensions missing is reported as a warning.
+        CLI is not installed. The probe has its own runner, because a runner
+        owns one process at a time and the commands the run executes use this
+        executor's.
         """
-        check_ide_extensions(
+        self._ide_probe = start_ide_probe(
             ide=self.manifest.recipe.ide if self.manifest.recipe else self.config.ide,
             ide_extensions=self.manifest.tooling.ide_extensions,
+            process_runner=ProcessRunner(),
+        )
+
+    def _check_ide_extensions(self) -> None:
+        """Reports which recommended editor extensions the probe found missing.
+
+        Waits for the probe if it is still listing. A probe that fails is
+        reported as a skip; one that finds extensions missing, as a warning.
+        """
+        probe, self._ide_probe = self._ide_probe, None
+        if probe is None:
+            return
+        probe.finish(
             on_diagnostic=lambda msg, sev: self.add_diagnostic(
                 phase=DiagnosticPhase.IDE,
                 message=msg,
                 severity=sev,
             ),
-            process_runner=self.process_runner,
             progress=self.progress,
         )
+
+    def _cancel_ide_probe(self) -> None:
+        """Stops a probe that was started and never collected, reaping its process."""
+        probe, self._ide_probe = self._ide_probe, None
+        if probe is not None:
+            probe.cancel()
 
     def _run_tasks(self, tasks: list[SystemTask]) -> None:
         """Runs a sequence of system tasks (e.g., initialization or post-install commands)."""

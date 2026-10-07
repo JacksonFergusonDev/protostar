@@ -10,6 +10,7 @@ from protostar.errors import (
     CommandExecutionError,
     ConfigurationError,
     FileSystemError,
+    ProcessTerminationError,
     RollbackFailedError,
 )
 from protostar.executor import SystemExecutor
@@ -1553,6 +1554,98 @@ def test_executor_dependency_failure_restores_bounded_uv_files(
         executor.execute()
 
     assert _workspace_snapshot(tmp_path) == before
+
+
+def test_executor_collects_the_editor_probe_it_started(
+    tmp_path, monkeypatch, mocker, mock_config
+):
+    """The probe starts with the run and is collected once, never cancelled."""
+    monkeypatch.chdir(tmp_path)
+    probe = mocker.MagicMock()
+    start = mocker.patch("protostar.executor.start_ide_probe", return_value=probe)
+    executor = SystemExecutor(EnvironmentManifest(), mock_config)
+
+    executor.execute()
+
+    start.assert_called_once()
+    probe.finish.assert_called_once()
+    probe.cancel.assert_not_called()
+
+
+def test_executor_cancels_the_editor_probe_before_rolling_back(
+    tmp_path, monkeypatch, mocker, mock_config
+):
+    """A failing run stops the probe, so its process is gone before files are restored."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'original'\n")
+    (tmp_path / "uv.lock").write_text("original lock")
+    order: list[str] = []
+    probe = mocker.MagicMock()
+    probe.cancel.side_effect = lambda: order.append("cancel")
+    mocker.patch("protostar.executor.start_ide_probe", return_value=probe)
+    manifest = EnvironmentManifest()
+    manifest.dependencies.add("example")
+    executor = SystemExecutor(manifest, mock_config)
+    rollback = executor.journal.rollback
+
+    def traced_rollback():
+        order.append("rollback")
+        return rollback()
+
+    mocker.patch.object(executor.journal, "rollback", side_effect=traced_rollback)
+    mocker.patch.object(
+        executor.process_runner,
+        "run",
+        side_effect=CommandExecutionError(["uv", "add", "example"], 1),
+    )
+
+    with pytest.raises(CommandExecutionError):
+        executor.execute()
+
+    assert order == ["cancel", "rollback"]
+    probe.finish.assert_not_called()
+
+
+def test_executor_still_terminates_its_own_process_when_the_probe_will_not_stop(
+    tmp_path, monkeypatch, mocker, mock_config
+):
+    """A probe that cannot be reaped does not leave the run's own command running."""
+    monkeypatch.chdir(tmp_path)
+    probe = mocker.MagicMock()
+    probe.cancel.side_effect = ProcessTerminationError(1, "stuck")
+    mocker.patch("protostar.executor.start_ide_probe", return_value=probe)
+    manifest = EnvironmentManifest()
+    manifest.dependencies.add("example")
+    executor = SystemExecutor(manifest, mock_config)
+    terminate = mocker.patch.object(
+        executor.process_runner, "terminate_active_process_tree"
+    )
+    mocker.patch.object(
+        executor.process_runner,
+        "run",
+        side_effect=CommandExecutionError(["uv", "add", "example"], 1),
+    )
+
+    with pytest.raises(ProcessTerminationError):
+        executor.execute()
+
+    terminate.assert_called_once()
+
+
+def test_executor_stops_a_probe_that_was_never_collected(
+    tmp_path, monkeypatch, mocker, mock_config
+):
+    """Nothing outlives the run, even if the step that collects the probe is skipped."""
+    monkeypatch.chdir(tmp_path)
+    probe = mocker.MagicMock()
+    mocker.patch("protostar.executor.start_ide_probe", return_value=probe)
+    executor = SystemExecutor(EnvironmentManifest(), mock_config)
+    mocker.patch.object(executor, "_check_ide_extensions")
+
+    executor.execute()
+
+    probe.finish.assert_not_called()
+    probe.cancel.assert_called_once()
 
 
 def test_executor_surfaces_non_destructive_rollback_failure(
