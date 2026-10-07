@@ -171,7 +171,8 @@ The repository uses **`prek`** hooks (`.pre-commit-config.yaml`) for automated g
 ## CI Runner Budget
 
 - **Workflows triggered by a pull request or a push to `main` stay within 20 runners, at most 5 of them macOS**, so every job in a run starts at once. Count matrix expansions and jobs from reusable workflows. `ci.yml` is already at the limit, so a new check on those triggers rides inside an existing job (usually the pytest suite) rather than adding a runner.
-- **Scheduled workflows (`nightly.yml`, `mutation.yml`) have no runner limit.** They run overnight, when nothing waits on them, so give them as many runners, macOS included, as the work needs. Exhaustive or slow checks belong there, with a quick representative subset in the pull request suite.
+- **Timing never gates a pull request.** `benchmark.yml` times commands nightly on Linux and macOS, apart from Nightly, and runs on a pull request only when it is labelled `run-benchmark`, on one runner. The cost budgets are a pull request's performance check.
+- **Scheduled workflows (`nightly.yml`, `mutation.yml`, `benchmark.yml`) have no runner limit.** They run overnight, when nothing waits on them, so give them as many runners, macOS included, as the work needs. Exhaustive or slow checks belong there, with a quick representative subset in the pull request suite.
 
 ## Development & Inspection Commands
 

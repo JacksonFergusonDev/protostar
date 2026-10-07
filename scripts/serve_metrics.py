@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import argparse
 import io
+import shutil
 import sys
 import tempfile
+import urllib.error
+import urllib.request
 import webbrowser
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -34,6 +37,9 @@ DATA_FILES = (
     "rollback-history.json",
     "rollback-latest.json",
 )
+# Published once the first nightly comparison is recorded; until then the
+# dashboard says no runs are published, and so does the preview.
+OPTIONAL_DATA_FILES = ("benchmark-history.json",)
 
 
 class PreviewHandler(SimpleHTTPRequestHandler):
@@ -76,17 +82,46 @@ class PreviewHandler(SimpleHTTPRequestHandler):
         super().end_headers()
 
 
+def fetch_optional(url: str, destination: Path) -> None:
+    """Downloads a data file that may not be published yet, skipping it if absent.
+
+    Args:
+        url: The published file.
+        destination: Where to write it.
+    """
+    try:
+        with urllib.request.urlopen(url, timeout=10) as response:
+            destination.write_bytes(response.read(10 * 1024 * 1024))
+    except urllib.error.HTTPError as error:
+        if error.code != 404:
+            report(
+                f"Failed to fetch {url}: {error}", style=OutputStyle.ERROR, stderr=True
+            )
+            sys.exit(1)
+
+
 def main() -> None:
     """Fetch published measurements, open the preview, and serve until interrupted."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--no-open", action="store_true", help="Do not open a browser.")
+    parser.add_argument(
+        "--benchmark-history",
+        type=Path,
+        help="Preview this benchmark history instead of the published one.",
+    )
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="protostar-metrics-") as directory:
         root = Path(directory)
         (root / "metrics").mkdir()
         for filename in DATA_FILES:
             (root / "metrics" / filename).write_bytes(fetch_bytes(DATA_URL + filename))
+        for filename in OPTIONAL_DATA_FILES:
+            fetch_optional(DATA_URL + filename, root / "metrics" / filename)
+        if args.benchmark_history:
+            shutil.copyfile(
+                args.benchmark_history, root / "metrics" / "benchmark-history.json"
+            )
         (root / "index.html").write_text(
             '<meta http-equiv="refresh" content="0; url=/metrics/">',
             encoding="utf-8",

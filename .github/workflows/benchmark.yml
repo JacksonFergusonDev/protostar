@@ -1,28 +1,96 @@
-name: Performance Benchmarks
+name: Benchmarks
 
+# Every night on main, the commit is compared with the last one recorded, on
+# Linux and macOS, in alternating rounds on one runner per OS
+# (python -m scripts.benchmarks compare), and the result is added to
+# metrics/benchmark-history.json on gh-pages. A slowdown in Protostar's own CPU
+# time found twice against the same baseline opens a performance-regression
+# issue. This workflow stands apart from Nightly, so nothing here can fail the
+# run a release requires.
+#
+# A pull request labelled run-benchmark is compared with its base the same
+# way, on one runner, and gets the table as a comment. A manual run with
+# calibrate compares the commit with itself to measure the noise.
 on:
-  push:
-    branches: [ "main" ]
+  schedule:
+    # An hour after Nightly, so the two don't compete for the account's runners.
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+    inputs:
+      calibrate:
+        description: "Compare the commit with itself, to measure the noise, and record nothing."
+        type: boolean
+        default: false
+      repeats:
+        description: "With calibrate, how many comparisons on each OS."
+        type: number
+        default: 3
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
-    branches: [ "main" ]
+    types: [labeled]
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
+
+concurrency:
+  group: benchmarks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  benchmark:
-    name: Execute & Evaluate
-    # Condition: Run on main branch pushes, OR if the PR has the specific label
-    if: >
-      github.event_name == 'push' ||
-      contains(github.event.pull_request.labels.*.name, 'run-benchmark')
-
+  plan:
+    name: Choose what to compare
+    if: github.event_name != 'pull_request' || github.event.label.name == 'run-benchmark'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
 
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        fetch-depth: 0
+
+    - name: Read the recorded runs
+      if: github.event_name != 'pull_request'
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        ref: gh-pages
+        path: pages-data
+
+    - name: Choose each OS's baseline
+      id: plan
+      env:
+        EVENT: ${{ github.event_name }}
+        BASE: ${{ github.event.pull_request.base.sha }}
+        REPEATS: ${{ inputs.calibrate && inputs.repeats || 0 }}
+      run: |
+        args=(--event "$EVENT" --head "$GITHUB_SHA" --repeats "$REPEATS")
+        if [[ -n "$BASE" ]]; then
+          args+=(--base "$BASE")
+        fi
+        if [[ -f pages-data/metrics/benchmark-history.json ]]; then
+          args+=(--history pages-data/metrics/benchmark-history.json)
+        fi
+        echo "matrix=$(python3 -m scripts.benchmarks.report plan "${args[@]}")" >> "$GITHUB_OUTPUT"
+
+  measure:
+    name: Compare (${{ matrix.artifact }})
+    needs: plan
+    # A night with nothing new to measure plans no jobs.
+    if: ${{ fromJSON(needs.plan.outputs.matrix).include[0] != null }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+
+    env:
+      PYTHONIOENCODING: "utf-8"
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        # The baseline commit is checked out beside this one.
+        fetch-depth: 0
 
     - name: Install uv
       uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
@@ -30,41 +98,146 @@ jobs:
         enable-cache: true
         python-version: "3.14"
 
-    - name: Install hyperfine
-      uses: taiki-e/install-action@d8055f5aa4515e0781b947765fa3d1559d2d3f45 # hyperfine
-
     - name: Install dependencies
       run: uv sync --no-dev --locked
 
-    - name: Run benchmarks
-      run: |
-        hyperfine --warmup 30 --runs 90 --export-json benchmark.json \
-          '.venv/bin/protostar help init' \
-          'PROTOSTAR_BENCHMARK_RECIPE_EDITOR=1 .venv/bin/protostar init'
+    - name: Compare with ${{ matrix.baseline }}
+      env:
+        BASELINE: ${{ matrix.baseline }}
+      run: uv run --no-sync python -m scripts.benchmarks compare "$BASELINE" --all --runs 10 --json results/benchmarks.json
 
-    - name: Convert hyperfine output for benchmark action
-      run: uv run python scripts/parse_benchmarks.py --input benchmark.json --output benchmark-gh.json
-
-    - name: Store benchmark result
-      uses: benchmark-action/github-action-benchmark@v1
+    - name: Upload the comparison
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: Protostar Initialization Latency
-        tool: 'customSmallerIsBetter'
-        output-file-path: benchmark-gh.json
-        gh-pages-branch: 'gh-pages'
-        benchmark-data-dir-path: 'metrics'
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        fail-on-alert: false
-        alert-threshold: '200%'
-        comment-on-alert: true
-        auto-push: ${{ github.event_name == 'push' }}
+        name: ${{ matrix.artifact }}
+        path: results/benchmarks.json
+        if-no-files-found: ignore
+        retention-days: 30
+
+  record:
+    name: Record the comparison
+    needs: measure
+    # Only a complete run on main is recorded; a calibration never is.
+    if: >-
+      needs.measure.result == 'success' && github.ref == 'refs/heads/main' &&
+      (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.calibrate))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+    outputs:
+      published: ${{ steps.record.outputs.published }}
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Download every comparison
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        pattern: benchmarks-*
+        path: results
+
+    - name: Read the published data branch
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        ref: gh-pages
+        path: pages-data
+        fetch-depth: 0
+
+    - name: Append the comparison
+      id: record
+      run: |
+        recorded_at="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
+        git -C pages-data config user.name 'github-actions[bot]'
+        git -C pages-data config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+        for attempt in 1 2 3 4 5; do
+          echo "Publishing benchmark results (attempt $attempt/5)."
+          python3 -m scripts.benchmarks.report record \
+            --results results --history pages-data/metrics/benchmark-history.json \
+            --commit "$GITHUB_SHA" --date "$recorded_at" --run-id "$GITHUB_RUN_ID" \
+            --regressions regressions.json
+          git -C pages-data add metrics/benchmark-history.json
+          if ! git -C pages-data diff --cached --quiet; then
+            git -C pages-data commit -m "Record benchmarks for ${GITHUB_SHA:0:7}"
+          fi
+          if git -C pages-data push origin HEAD:gh-pages; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Mutation scores, rollback counts, and releases also write here.
+          # Rebase non-conflicting edits; if the history itself changed, regenerate it.
+          if ! git -C pages-data pull --rebase origin gh-pages; then
+            git -C pages-data rebase --abort
+            git -C pages-data reset --hard origin/gh-pages
+          fi
+        done
+        echo 'Could not publish benchmark results after five attempts.' >&2
+        exit 1
+
+    - name: File a confirmed slowdown
+      if: steps.record.outputs.published == 'true'
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        python3 -m scripts.benchmarks.report issue --regressions regressions.json \
+          --repo "$GITHUB_REPOSITORY" \
+          --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
   publish-pages:
-    name: Publish updated metrics
-    needs: benchmark
-    if: github.event_name == 'push'
+    name: Publish updated benchmarks
+    needs: record
+    if: needs.record.outputs.published == 'true'
     permissions:
       contents: read
       pages: write
       id-token: write
     uses: ./.github/workflows/pages.yml
+
+  comment:
+    name: Comment the comparison
+    needs: measure
+    if: github.event_name == 'pull_request' && needs.measure.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Download the comparison
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        name: benchmarks-ubuntu-latest
+        path: results
+
+    - name: Comment the table
+      env:
+        GH_TOKEN: ${{ github.token }}
+        BASE: ${{ github.event.pull_request.base.sha }}
+        NUMBER: ${{ github.event.pull_request.number }}
+      run: |
+        python3 -m scripts.benchmarks.report comment --result results/benchmarks.json \
+          --base "$BASE" --head "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --number "$NUMBER"
+
+  calibration:
+    name: Summarize the calibration
+    needs: measure
+    if: github.event_name == 'workflow_dispatch' && inputs.calibrate && needs.measure.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Download every comparison
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        pattern: benchmarks-*
+        path: results
+
+    - name: Summarize the noise
+      run: python3 -m scripts.benchmarks.report calibrate --results results >> "$GITHUB_STEP_SUMMARY"

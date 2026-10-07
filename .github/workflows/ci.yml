@@ -134,9 +134,10 @@ jobs:
           ]
         }
 
-  # The benchmark runs first, alone on the runner, and the images build after it.
-  benchmark-and-images:
-    name: Benchmark & Docker Images
+  # The metrics dashboard's data handling, then the cli and api images. Timing
+  # never gates a pull request: benchmark.yml measures it nightly.
+  images-and-dashboard:
+    name: Docker Images & Dashboard
     runs-on: ubuntu-latest
     timeout-minutes: 8
 
@@ -148,7 +149,7 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-    - name: Test benchmark dashboard data handling
+    - name: Test metrics dashboard data handling
       run: node --test tests/metrics_dashboard.test.mjs
 
     - name: Install uv
@@ -157,35 +158,9 @@ jobs:
         enable-cache: true
         python-version: "3.14"
 
-    - name: Install hyperfine
-      uses: taiki-e/install-action@d8055f5aa4515e0781b947765fa3d1559d2d3f45 # hyperfine
-
     - name: Install dependencies
       id: setup
       run: uv sync --no-dev --locked
-
-    - name: Run benchmarks
-      run: |
-        hyperfine --warmup 5 --runs 30 --export-json benchmark.json \
-          '.venv/bin/protostar help init' \
-          'PROTOSTAR_BENCHMARK_RECIPE_EDITOR=1 .venv/bin/protostar init'
-
-    - name: Convert hyperfine output for benchmark action
-      run: uv run python scripts/parse_benchmarks.py --input benchmark.json --output benchmark-gh.json
-
-    - name: Evaluate regression threshold
-      uses: benchmark-action/github-action-benchmark@v1
-      with:
-        name: Protostar Initialization Latency
-        tool: 'customSmallerIsBetter'
-        output-file-path: benchmark-gh.json
-        gh-pages-branch: 'gh-pages'
-        benchmark-data-dir-path: 'metrics'
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        fail-on-alert: true
-        alert-threshold: '250%'
-        comment-on-alert: true
-        auto-push: false
 
     - name: Install Protostar
       id: protostar

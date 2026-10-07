@@ -139,7 +139,7 @@ The pytest suite and the smoke matrix are defined once, in `.github/workflows/pl
 - **Nightly** (`nightly.yml`) runs, each day on `main`, the smoke tests pull requests leave out, so the two together scaffold every template on every operating system and Python exactly once. It also runs the suite everywhere again, with retries, which is how a flaky test is found, and the full [rollback fault injection](#rollback-fault-injection) with real commands. It skips a day when `main` hasn't changed since its last pass.
 - **A release** (`release.yml`) publishes only when CI and Nightly have both passed on the tagged commit, or on its parent when the tagged commit only changes `pyproject.toml` and `uv.lock` (the version bump). It also smoke-tests the wheel it is about to publish on each operating system, and publishes that same wheel.
 
-The account runs 20 jobs at a time, five of them on macOS, so a pull request starts at most 20, three on macOS, and every job starts at once. Nightly has no such limit: it runs overnight, when nothing waits on it, and starts as many jobs as its work needs. The quick checks share two runners (`Lint, Docs & Secrets` and `Benchmark & Docker Images`), since each finishes well before the Windows suite that sets how long a run takes. A new push to a pull request cancels the run it replaces.
+The account runs 20 jobs at a time, five of them on macOS, so a pull request starts at most 20, three on macOS, and every job starts at once. Nightly has no such limit: it runs overnight, when nothing waits on it, and starts as many jobs as its work needs. The quick checks share two runners (`Lint, Docs & Secrets` and `Docker Images & Dashboard`), since each finishes well before the Windows suite that sets how long a run takes. A new push to a pull request cancels the run it replaces.
 
 `tests/test_nightly.py` checks that both test every operating system and Python, that together they smoke-test every template on every platform once, that a pull request stays within the runner limits, that Nightly fails every template at every site on every operating system, and that a release can't publish before CI, Nightly, and its smoke test pass.
 
@@ -265,20 +265,33 @@ gh workflow enable mutation.yml
 
 ## Performance & Latency Testing
 
-CI tracks [help-command startup](https://protostar.jacksonferguson.me/metrics/#startup) (`protostar help init`) and the [recipe editor's first frame](https://protostar.jacksonferguson.me/metrics/#editor) to catch large regressions in the CLI experience. These measurements do not include a completed scaffold or dependency installation.
+Performance is checked in two ways. A pull request is checked exactly, by the [cost budgets](#cost-budgets): what each command does, never how long it takes, since a duration on a shared runner varies more from machine to machine than most regressions change it. Durations are measured every night, where two versions can be compared fairly, and locally when a change is meant to be faster.
 
-The recipe editor benchmark sets a hidden environment variable, `PROTOSTAR_BENCHMARK_RECIPE_EDITOR=1`. It treats the session as interactive and makes `protostar init` exit as soon as the recipe editor draws its first frame, without waiting on input. Hyperfine measures the whole process, including Python startup and shutdown, in the checked-out repository.
+### Nightly Benchmarks
 
-The [benchmark dashboard](https://protostar.jacksonferguson.me/metrics/#benchmarks) records main-branch measurements on GitHub Actions Ubuntu runners with Python 3.14. Each recorded point is the mean of 90 executions after 30 warmups. These timings describe the CI environment, not local workstation latency; runner variability and changes to the runner image or project checkout also limit comparisons between commits. Look for sustained trends rather than treating a single increase as a confirmed regression. Older wizard measurements remain in the downloadable history but are excluded from the recipe-editor chart.
+`benchmark.yml` runs an hour after Nightly, apart from it, so a slowdown can never fail the run a release requires. On Linux and macOS it compares the commit with a baseline, running every scenario of the [local harness](#local-benchmarks) in alternating rounds on one runner. `scripts/benchmarks/report.py` then records the result in `metrics/benchmark-history.json` on `gh-pages`: one entry per night and operating system, with each scenario's median timings, and its change in Protostar's own CPU time with a 95% interval. The baseline is the last commit recorded on that operating system, so each night measures what changed since, and a night with nothing new runs nothing.
 
-The CI regression check uses 30 executions after 5 warmups and fails when a measurement exceeds 250% of the preceding recorded result for the same benchmark. Historical tracking alerts above 200% without failing the run. These are relative checks for large regressions, not an absolute latency budget. The dashboard's comparison with up to 100 preceding benchmark runs is a separate descriptive summary, not the baseline used by either check.
+A slowdown is judged on CPU time, the steadiest measure: the commands a run waits on are uv's and git's, and the cost budgets already check which ones run. A scenario is suspect when its whole interval lies at least 10% (`THRESHOLD`) slower. A run with a suspect keeps its baseline, so the next night measures the same change again, with or without new commits, and a slowdown found twice is a regression: the run opens a `performance-regression` issue naming the scenario, the change, and the commits. Close it once the slowdown is fixed, or accepted as the cost of a change. Two measurements make a false alarm unlikely, and measuring both against the same baseline still catches a slowdown that landed in a single commit.
 
-Help and version requests load argument definitions and tool descriptions, but do not load project analysis, reviews, execution, or format engines. Command implementations load only after dispatch. A tool reads its document-backed signals when analysis asks for them, and loads its document generators when planning calls `build()`. `tests/test_cli_startup.py` checks this boundary in fresh interpreters, including JSON help; this catches unnecessary imports without a machine-dependent timing threshold.
+The threshold must stay well clear of the noise. A manual run with `calibrate` compares the commit with itself several times on each operating system, records nothing, and summarizes the widest interval the noise produced:
 
-The dashboard source lives in `metrics/` on `main`. Pages publishing combines that source with the recorded `metrics/data.js` from `gh-pages`; it never publishes dashboard code from the data branch. To test its data handling locally, use Node.js 18 or newer:
+```bash
+gh workflow run benchmark.yml -f calibrate=true -f repeats=3
+```
+
+A pull request labelled `run-benchmark` is compared with its base on one Linux runner, and gets the table as a comment, which each later run replaces. Remove and add the label to run it again. It is never recorded.
+
+The [benchmark section of the metrics dashboard](https://protostar.jacksonferguson.me/metrics/#benchmarks) graphs each scenario's median by operating system and measure, and lists the latest run's changes and verdicts. Shared runners are slower than most computers, so read the trend rather than the number. The startup timings Hyperfine recorded on every push to main from March to October 2026 stay in `metrics/data.js`, shown collapsed as an archive: each was measured on whichever runner its push got, so they can't be compared with the nightly runs.
+
+The `editor` scenario sets a hidden environment variable, `PROTOSTAR_BENCHMARK_RECIPE_EDITOR=1`. It treats the session as interactive and makes `protostar init` exit as soon as the recipe editor draws its first frame, without waiting on input.
+
+Help and version requests load argument definitions and tool descriptions, but do not load project analysis, reviews, execution, or format engines. Command implementations load only after dispatch. A tool reads its document-backed signals when analysis asks for them, and loads its document generators when planning calls `build()`. `tests/test_cli_startup.py` checks this boundary in fresh interpreters, including JSON help, and the cost budgets list the third-party packages each command imports.
+
+The dashboard source lives in `metrics/` on `main`. Pages publishing combines that source with the recorded data files from `gh-pages`; it never publishes dashboard code from the data branch. To test its data handling locally, use Node.js 18 or newer, and to preview a benchmark history before one is published, pass it to the preview server:
 
 ```bash
 node --test tests/metrics_dashboard.test.mjs
+uv run python scripts/serve_metrics.py --benchmark-history .benchmarks/history.json
 ```
 
 ### Local Benchmarks

@@ -24,13 +24,15 @@ METRICS_DIR = _repo_root / "metrics"
 METRICS_ASSETS = (
     "index.html",
     "style.css",
-    "dashboard.js",
     "metrics.mjs",
     "charts.mjs",
     "mutations.mjs",
     "mutation-dashboard.js",
     "rollbacks.mjs",
     "rollback-dashboard.js",
+    "benchmarks.mjs",
+    "benchmark-dashboard.js",
+    "archive-dashboard.js",
 )
 HOUSE_DIR = _repo_root / "docs" / "house"
 HEADER_CSS = _repo_root / "docs" / "stylesheets" / "site-header.css"
@@ -268,6 +270,7 @@ def assemble_pages(source: Path, output: Path, config_path: Path) -> str:
         source / "metrics" / filename
         for filename in (
             "data.js",
+            "benchmark-history.json",
             "mutation-history.json",
             "mutation-latest.json",
             "rollback-history.json",
