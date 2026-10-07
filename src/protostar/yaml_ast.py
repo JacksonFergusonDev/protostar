@@ -169,7 +169,9 @@ def _load(content: str) -> CommentedMap:
                     visit(child, depth + 1)
 
         visit(root, 0)
-        document: CommentedMap = _codec().load(content)
+        # The tree was composed and checked above; build the document from it
+        # instead of parsing the text a second time.
+        document: CommentedMap = codec.constructor.construct_document(root)
         return document
     except (YAMLError, ValueError, TypeError, RecursionError) as error:
         raise _invalid() from error
