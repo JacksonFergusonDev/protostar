@@ -240,6 +240,34 @@ Declarative [migrations](usage/authoring-templates.md#migrations) handle what a 
 
 An agent can write a good setup in a minute, tailored to what you asked for. But it writes it a little differently in every repository, and a year later it can't tell which lines you changed on purpose. Protostar gives the setup a record: projects from the same template start alike, and every later change arrives as a reviewable diff. The two work well together, since an agent can drive Protostar with `--json`, `--dry-run`, and `--resolve`.
 
+## Why Is It Written in Python?
+
+Many of the fastest new Python tools, uv and Ruff among them, are written in Rust, so it's fair to ask why Protostar isn't. The slow part of setting up a project is resolving and installing packages, and Protostar hands that to uv, which is already Rust. What's left is Protostar's own work, and Python is the better fit for it.
+
+### Where the Time Goes
+
+| Command | Total | Protostar's own work | Waiting on uv, Git, and hooks |
+| :--- | ---: | ---: | ---: |
+| `protostar init -t lib`, nothing cached yet | about 5.3 s | about 0.7 s | about 4.6 s |
+| `protostar init -t lib`, packages cached | 1.62 s | 0.67 s | 0.94 s |
+| `protostar init -t ml`, packages cached | 3.30 s | 0.41 s | 2.89 s |
+| `protostar sync`, `status`, or `diff`, nothing to change | 0.54 to 0.58 s | all of it | none |
+| `protostar --version` | 0.16 s | all of it | none |
+
+- **`init` waits on uv.** Even if Protostar's own work took no time at all, a first `init` would still take more than four seconds, nearly all of it downloading and installing packages. A project with heavier packages, like the `ml` template, spends a larger share waiting.
+- **`sync`, `status`, and `diff` are all Protostar.** On a project that's up to date they run no other program, so a Rust tool would likely finish them sooner. About 0.15 s of their half second is starting Python, and most of the rest is reading and rewriting TOML and YAML while keeping every comment and blank line in place.
+
+Speed is still watched. Every pull request checks what each command costs (the processes it runs, the files it parses, the packages it imports), and each night times every command against the previous commit on Linux and macOS, opening an issue when one gets confirmably slower. The [benchmarks](https://protostar.jacksonferguson.me/metrics/#benchmarks) show the results.
+
+??? info "How this was measured"
+    Protostar 0.10.2 on an Apple M3 Mac with macOS 26.6 and Python 3.14, on 2026-10-07. The cached rows are medians of 8 runs of `just bench`, which runs each command in a fresh process on a new project, with packages cached and uv kept offline. Protostar's own work is the time spent outside the programs it runs. The first row is two runs of the same `init` with an empty uv cache, 4.9 and 5.6 seconds. On macOS, about 0.2 s of a cached `init`'s wait is the system checking the newly installed `prek` the first time it runs.
+
+### Why Python Fits
+
+- **Its users already have it.** Everyone who sets up a Python project has Python and uv. Protostar is one pure-Python package, so `uv tool install protostar` works the same on every platform, with nothing built for each one.
+- **Its hardest job has mature libraries.** Protostar edits files people have already written, so it must change one setting without disturbing the comments and layout around it. [tomlkit](https://github.com/python-poetry/tomlkit) and [ruamel.yaml](https://yaml.dev/doc/ruamel.yaml/) do exactly that for TOML and YAML, and Protostar's merging is built on them. [Textual](https://textual.textualize.io/) draws its interactive screens.
+- **The people who'd improve it already write Python.** Each tool Protostar sets up is a short module that knows that tool's configuration, so adding a tool or improving one takes the language its users already know.
+
 ## When Another Tool Is the Better Choice
 
 - **Your project isn't Python, or doesn't use uv.** Protostar builds on uv, so it doesn't fit a project managed by Poetry, PDM, or conda. Copier and Cookiecutter work with any language and any tooling.
