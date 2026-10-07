@@ -241,5 +241,86 @@
         "passed": 664
       }
     ]
+  },
+  {
+    "commit": "9f4c2cf0caa717c5451b44d10e346f70cf47fc57",
+    "date": "2026-10-07T22:11:23Z",
+    "cells": [
+      {
+        "os": "macos",
+        "template": "api",
+        "passed": 1021
+      },
+      {
+        "os": "macos",
+        "template": "astro",
+        "passed": 544
+      },
+      {
+        "os": "macos",
+        "template": "cli",
+        "passed": 1325
+      },
+      {
+        "os": "macos",
+        "template": "lib",
+        "passed": 1334
+      },
+      {
+        "os": "macos",
+        "template": "ml",
+        "passed": 670
+      },
+      {
+        "os": "ubuntu",
+        "template": "api",
+        "passed": 1021
+      },
+      {
+        "os": "ubuntu",
+        "template": "astro",
+        "passed": 544
+      },
+      {
+        "os": "ubuntu",
+        "template": "cli",
+        "passed": 1325
+      },
+      {
+        "os": "ubuntu",
+        "template": "lib",
+        "passed": 1334
+      },
+      {
+        "os": "ubuntu",
+        "template": "ml",
+        "passed": 670
+      },
+      {
+        "os": "windows",
+        "template": "api",
+        "passed": 1018
+      },
+      {
+        "os": "windows",
+        "template": "astro",
+        "passed": 541
+      },
+      {
+        "os": "windows",
+        "template": "cli",
+        "passed": 1321
+      },
+      {
+        "os": "windows",
+        "template": "lib",
+        "passed": 1330
+      },
+      {
+        "os": "windows",
+        "template": "ml",
+        "passed": 667
+      }
+    ]
   }
 ]
