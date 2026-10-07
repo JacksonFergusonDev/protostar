@@ -90,7 +90,7 @@ protostar guide
 
 The guide lists the commands this project supports, each with what it does:
 
-![The guide for a workbench project](assets/terminals/cli_guide_ml.svg)
+![The guide for a workbench project](assets/terminals/cli_guide_astro.svg)
 
 Without `just`, it shows the `uv run ruff …` commands those recipes run instead. The guide reads the project as it is now, so run it again whenever you change the project's tools. See [`protostar guide`](usage/cli-reference.md#protostar-guide).
 

@@ -90,7 +90,7 @@ The executor captures one frozen registry snapshot before execution starts. Plan
 
 ### Dialect
 
-JSONC means `//` and `/* */` comments and trailing commas over one object root with unique string keys. JSON5 (single quotes, unquoted keys, hexadecimal numbers) is unsupported, so the `.json5` Renovate locations stay untouched [competitors](documents.md#document-locations).
+JSONC means `//` and `/* */` comments and trailing commas over one object root with unique string keys. JSON5 (single quotes, unquoted keys, hexadecimal numbers) is unsupported, so the `.json5` Renovate locations are [competitors](documents.md#document-locations), never edited.
 
 Duplicate keys, non-finite numbers, lone surrogates, and non-object roots are domain errors. Input is bounded to 1 MB, 100 nesting levels, and 10,000 nodes. Owned baselines use the strict subset (no comments or trailing commas) with deterministic key order, and they preserve null values.
 

@@ -61,6 +61,6 @@ Added so far:
   | `manifest` | 3h38m | 11m |
   | `reconciliation` (6 shards) | 2h30m wall, 8h40m runner | 36m wall, 1h55m runner |
 
-- Phase 3 (#441): Complete main-branch runs publish raw per-module history and the latest-score endpoint nightly at 02:23 UTC, gated by changed inputs. Pages carries both JSON files.
+- Phase 3 (#441): Complete main-branch runs publish raw per-module history and the latest-score endpoint nightly, gated by changed inputs; it now runs at 05:30 UTC with Nightly. Pages carries both JSON files.
 - Phase 4 (#442): The metrics dashboard graphs the overall score and each module from `mutation-history.json`, marking where the module set changed, and the README carries a shields.io endpoint badge reading `mutation-latest.json`.
 - Phase 5 (#443, JacksonFergusonDev.github.io#7): jacksonferguson.me fetches `mutation-latest.json` at build time through a `json` remote asset type that checks the file's shape, and shows the score on the Protostar card, linked to the dashboard. After a published run's Pages deploy, the mutation workflow's `refresh-site` job sends the site a `remote-assets-updated` dispatch using `PORTFOLIO_DISPATCH_TOKEN`, a fine-grained token limited to the site's repository. The first complete run, started by hand, recorded 99.9% across 14 modules at `da9b757` on 2026-10-04.

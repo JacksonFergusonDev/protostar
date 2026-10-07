@@ -134,7 +134,7 @@ A template's custom variables are supplied with `--var NAME=VALUE`, once per var
 
 #### Missing Tools
 
-Only `uv` and `git` block a run. Without either, `init` and `sync` exit with code `69` before planning, and the `MissingDependencyError` payload names them in `missing_executables`, with `install_commands` when a package manager was found. A binary that only a selected tool runs, such as `direnv` or `just`, never fails a run: the tool's files are still written, the steps that run it are skipped, and the success payload's `result.missing_tools` lists each one with its tool. Top-level `install_commands` holds the commands that install them, when a package manager was found; run them in order.
+Only `uv` and `git` block a run. Without either, `init` and `sync` exit with code `69` while planning, before writing anything, and the `MissingDependencyError` payload names them in `missing_executables`, with `install_commands` when a package manager was found. A binary that only a selected tool runs, such as `direnv` or `just`, never fails a run: the tool's files are still written, the steps that run it are skipped, and the success payload's `result.missing_tools` lists each one with its tool. Top-level `install_commands` holds the commands that install them, when a package manager was found; run them in order.
 
 A template's options are chosen with `--option NAME=VALUE`, on `init` and `sync`. Every option has a default, so none is ever missing. A value the option doesn't offer returns an `InvalidOptionValueError` payload whose `option` and `values` name the option and every value it offers.
 

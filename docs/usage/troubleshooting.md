@@ -29,11 +29,8 @@ Protostar runs [uv](https://docs.astral.sh/uv/) to create every project and inst
     powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
     ```
 
-!!! tip "Verifying `$PATH` Resolution"
-    If you installed tools via `uv tool`, ensure your shell's environment includes `~/.local/bin`:
-    ```bash
-    export PATH="$HOME/.local/bin:$PATH"
-    ```
+!!! tip "Programs installed with `uv tool` aren't found"
+    Run `uv tool update-shell` and open a new terminal. It adds the folder uv installs programs into to your `PATH`.
 
 ### Tool Binaries (`direnv`, `just`)
 
@@ -81,23 +78,24 @@ Workspace Collision: Protostar detected existing configuration files in the work
   - pyproject.toml
 ```
 
-### Interactive Resolution
+### In a Terminal
 
-In interactive terminals, you can choose from three strategies:
+The recipe editor's **Existing files** panel asks what to do with them:
 
-1. **Merge (Default):** Reconciles previously managed TOML/YAML contributions (including GitHub Actions workflows) and line-merged generated files such as the `justfile` while preserving unowned content, local edits, and deletions. It also appends missing rules to `.gitignore`.
-1. **Overwrite:** Overwrites existing configuration keys with Protostar's baseline standards.
-1. **Abort:** Safely cancels the operation without making changes.
+1. **Merge** keeps your values and adds what's missing. Where your content and Protostar's disagree, yours stays and the change review lists the decision; see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have).
+1. **Overwrite** replaces those files with Protostar's version.
 
-### Automated Environments (CI/CD & Agents)
+**Cancel** leaves without changing anything.
 
-In non-interactive environments or when running with `--json`, interactive prompts are disabled. Pass explicit strategy flags to proceed:
+### Without a Terminal (CI and Agents)
+
+Without a terminal, or with `--json`, nothing asks. Choose with a flag:
 
 ```bash
-# Safely reconcile an already managed workspace:
+# Merge into the existing files
 protostar init --template cli --force-merge
 
-# Forcefully overwrite existing configs:
+# Replace the existing files with Protostar's version
 protostar init --template cli --force-replace
 ```
 
@@ -159,7 +157,7 @@ ruff = true
 
 ### JetBrains (PyCharm / IntelliJ)
 
-1. Open **Settings / Preferences** $\to$ **Languages & Frameworks** $\to$ **Schemas and DTDs** $\to$ **JSON Schema Mappings**.
+1. Open **Settings** (**Preferences** on macOS), then **Languages & Frameworks**, **Schemas and DTDs**, and **JSON Schema Mappings**.
 1. Add a new mapping named `Protostar Template`.
 1. Set the schema file to the exported `protostar-template.schema.json`.
 1. Add the file pattern `*protostar*.toml`.

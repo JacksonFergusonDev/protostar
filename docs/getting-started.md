@@ -121,13 +121,15 @@ To guarantee zero impact on your terminal startup latency (0ms overhead), Protos
         ```
 
 === "Bash (Linux / macOS)"
-    Generate the static completion script and source it in your bash profile (`~/.bashrc` on Linux, `~/.bash_profile` on macOS):
+    Generate the static completion script and source it in `~/.bashrc`:
 
     ```bash
     protostar completion bash > ~/.protostar-completion.bash
     echo 'source ~/.protostar-completion.bash' >> ~/.bashrc
     source ~/.bashrc
     ```
+
+    macOS's Terminal starts login shells, which read `~/.bash_profile` instead; append the `source` line there if your `~/.bash_profile` doesn't already read `~/.bashrc`.
 
 === "Fish (macOS / Linux)"
     Save the completion script to Fish's native completions directory for instant autoloading (no config edits required):

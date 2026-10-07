@@ -33,6 +33,7 @@ class ExitCode(IntEnum):
     INTERRUPTED = 130
 
 
+# --8<-- [start:protostar_error]
 class ProtostarError(Exception):
     """Base class for all expected operational errors in Protostar."""
 
@@ -49,6 +50,7 @@ class ProtostarError(Exception):
         self.docs_path = docs_path
         self.docs_anchor = docs_anchor
         self.rollback_context: RollbackContext | None = None
+        # --8<-- [end:protostar_error]
 
     @property
     def docs_url(self) -> str | None:
