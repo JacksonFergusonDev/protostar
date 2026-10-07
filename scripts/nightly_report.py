@@ -24,6 +24,7 @@ from typing import Any, Protocol
 # standard library alone.
 
 GATE_JOB = "Check for new commits"
+PREPARATION_JOBS = frozenset({GATE_JOB, "Select rollback jobs"})
 FAILED_CONCLUSIONS = frozenset({"failure", "timed_out", "cancelled"})
 FLAKY_ARTIFACT_PREFIX = "flaky-tests-"
 FLAKY_LIST = "flaky-tests.txt"
@@ -103,11 +104,11 @@ def summarize(jobs: Sequence[Job], flaky_lists: Mapping[str, str]) -> Outcome:
         The outcome. It did not run when the gate skipped every check; a
         failed gate still counts as a failure.
     """
-    checks = [job for job in jobs if job.name != GATE_JOB]
-    ran = any(job.conclusion != "skipped" for job in checks)
     failed = tuple(
         sorted(job.name for job in jobs if job.conclusion in FAILED_CONCLUSIONS)
     )
+    checks = [job for job in jobs if job.name not in PREPARATION_JOBS]
+    ran = bool(failed) or any(job.conclusion == "success" for job in checks)
     flaky: dict[str, list[str]] = {}
     for artifact, text in sorted(flaky_lists.items()):
         platform = artifact.removeprefix(FLAKY_ARTIFACT_PREFIX)
