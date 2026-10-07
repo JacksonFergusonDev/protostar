@@ -470,8 +470,14 @@ def _records(value: object) -> list[object]:
     return cast(list[object], value)  # pragma: no mutate
 
 
+@lru_cache(maxsize=256)
 def deserialize_state(content: str) -> SyncState:
-    """Parses and validates schema v1; missing state is represented by the caller."""
+    """Parses and validates schema v1; missing state is represented by the caller.
+
+    A run reads the same state text several times, and it is the largest TOML
+    document Protostar parses. The result is deeply immutable, so the one parse
+    is shared. A text that fails to parse is not cached and raises every time.
+    """
     try:
         raw = tomlkit.parse(content).unwrap()
         root = _record(

@@ -3,6 +3,7 @@ from datetime import UTC, date, datetime, time
 from typing import Any
 
 import pytest
+import tomlkit
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -59,6 +60,7 @@ def _fresh_baseline_caches():
     """Decoding and encoding are cached per text; a test must never see another's result."""
     sync_state._decode_toml_baseline.cache_clear()
     sync_state._canonical_baseline.cache_clear()
+    sync_state.deserialize_state.cache_clear()
 
 
 def sample_state():
@@ -133,6 +135,42 @@ def test_complete_state_round_trip_is_canonical_and_byte_stable():
     assert "timestamp" not in content
     assert "fully_synced" not in content
     assert "trust" not in content
+
+
+def test_a_state_text_read_repeatedly_is_parsed_once(mocker):
+    """One run reads the same state several times; the parse is shared."""
+    content = serialize_state(sample_state())
+    sync_state.deserialize_state.cache_clear()
+    parse = mocker.spy(tomlkit, "parse")
+
+    first = deserialize_state(content)
+    second = deserialize_state(content)
+
+    assert parse.call_count == 1
+    assert first is second
+
+
+def test_serializing_an_unchanged_state_does_not_parse_it_again(mocker):
+    """The check that ends serialization finds its own text already parsed."""
+    state = sample_state()
+    content = serialize_state(state)
+    deserialize_state(content)
+    parse = mocker.spy(tomlkit, "parse")
+
+    assert serialize_state(state) == content
+
+    assert parse.call_count == 0
+
+
+def test_a_state_text_that_fails_is_parsed_and_rejected_every_time(mocker):
+    """An invalid text is never cached, so each read raises its own error."""
+    parse = mocker.spy(tomlkit, "parse")
+
+    for _ in range(2):
+        with pytest.raises(ConfigurationError):
+            deserialize_state("schema_version = 99\nproducer_version = 'x'\n")
+
+    assert parse.call_count == 2
 
 
 def test_record_and_baseline_order_do_not_change_serialized_bytes():
