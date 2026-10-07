@@ -41,6 +41,7 @@ jobs:
     timeout-minutes: 2
     permissions:
       actions: read
+      issues: read
     outputs:
       changed: ${{ steps.compare.outputs.changed }}
 
@@ -52,7 +53,9 @@ jobs:
         REPO: ${{ github.repository }}
       run: |
         last=$(gh run list --repo "$REPO" --workflow nightly.yml --branch main --status success --limit 1 --json headSha --jq '.[0].headSha // ""')
-        if [ "$last" = "$GITHUB_SHA" ]; then
+        pending=$(gh issue list --repo "$REPO" --label awaiting-verification --state open --limit 1 --json number --jq length)
+        # Three runs must verify a fix even when no further commits land.
+        if [ "$last" = "$GITHUB_SHA" ] && [ "$pending" = 0 ]; then
           echo "main is still at ${GITHUB_SHA::7}, which already passed."
           echo "changed=false" >> "$GITHUB_OUTPUT"
         else
@@ -136,9 +139,24 @@ jobs:
     - name: Fail init at every site
       uses: ./.github/actions/pytest
       with:
+        # Concurrent scientific environments compete for disk and CPU on
+        # Windows, where uv copies packages and nbdime can exceed its timeout.
+        workers: ${{ matrix.os == 'windows-latest' && '1' || 'auto' }}
         args: >-
           tests/test_rollback.py --rollback-scope full --rollback-real all
           --rollback-templates ${{ matrix.template }} -o faulthandler_timeout=300
           --rollback-shard ${{ matrix.slice }}
+          --rollback-report rollback-report/report.json
         retry: "true"
         flaky-artifact: flaky-tests-rollback-${{ matrix.os }}-${{ matrix.template }}-${{ strategy.job-index }}
+
+    # Rollback Metrics adds the reports up. A failing job reports too, so the
+    # badge can say how many faults failed.
+    - name: Upload the fault report
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ matrix.artifact }}
+        path: rollback-report/report.json
+        if-no-files-found: ignore
+        retention-days: 7

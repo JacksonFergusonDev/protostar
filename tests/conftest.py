@@ -54,6 +54,23 @@ def pytest_addoption(parser: pytest.Parser) -> None:
             "split them across jobs."
         ),
     )
+    group.addoption(
+        "--rollback-report",
+        default="",
+        metavar="PATH",
+        help=(
+            "Write how many faults the run injected and restored, per "
+            "scenario, to this JSON file (nightly publishes it)."
+        ),
+    )
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Reports the faults a rollback run injected, when asked to."""
+    if report := config.getoption("--rollback-report"):
+        from tests.rollback_report import RollbackReport
+
+        config.pluginmanager.register(RollbackReport(Path(report)), "rollback-report")
 
 
 def pytest_collection_modifyitems(

@@ -169,7 +169,10 @@ addopts = "--strict-markers"
 testpaths = ["tests"]
 norecursedirs = ["snapshots", ".*", "build", "dist", "venv"]
 pythonpath = ["."]
-markers = ["integration: runs real subprocesses in an isolated workspace"]
+markers = [
+    "integration: runs real subprocesses in an isolated workspace",
+    "rollback_fault: injects one fault into a run and requires rollback to restore the project",
+]
 
 [tool.coverage.run]
 source = ["src/protostar"]
@@ -210,7 +213,6 @@ pytest_add_cli_args_test_selection = ["tests/"]
 do_not_mutate_patterns = ["# pragma: no mutate"]
 also_copy = [
     ".github/",
-    "benchmarks/",
     "AGENTS.md",
     "CHANGELOG.md",
     "CODE_OF_CONDUCT.md",
@@ -218,9 +220,9 @@ also_copy = [
     "LICENSE",
     "README.md",
     "SECURITY.md",
-    "benchmarks/",
     "docs/",
     "justfile",
+    "metrics/",
     "overrides/",
     "scripts/",
     "src/",

@@ -1,4 +1,4 @@
-/* Shared Protostar header: docs landing page and benchmark dashboard.
+/* Shared Protostar header: docs landing page and metrics dashboard.
    Both pages use this component; page-specific links stay in their markup. */
 :root { --ps-header: 80px; }
 .ps-bar {

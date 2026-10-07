@@ -1,0 +1,138 @@
+name: Rollback Metrics
+
+# Kept apart from Nightly so a publishing hiccup can never fail the run a
+# release requires. When a scheduled Nightly finishes, this adds up the faults
+# its rollback jobs injected and records them on gh-pages beside the
+# mutation score: a history file for the dashboard and a badge endpoint the
+# README and jacksonferguson.me read. Only a run in which every rollback job
+# reported publishes. A manual Nightly that covers the whole matrix records
+# too; one narrowed to an OS or template is incomplete, so it records nothing.
+on:
+  workflow_run:
+    workflows: ["Nightly"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+# Keep records in order without cancelling the work already in progress.
+concurrency:
+  group: rollback-metrics
+  cancel-in-progress: false
+
+jobs:
+  record:
+    name: Record the rollback run
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: >-
+      github.event.workflow_run.head_branch == 'main' &&
+      contains(fromJSON('["schedule", "workflow_dispatch"]'), github.event.workflow_run.event) &&
+      contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion)
+    permissions:
+      actions: read
+      contents: write
+    outputs:
+      published: ${{ steps.record.outputs.published }}
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Download every rollback report
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        pattern: rollback-*
+        path: results
+        run-id: ${{ github.event.workflow_run.id }}
+        github-token: ${{ github.token }}
+
+    - name: Read the published data branch
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        ref: gh-pages
+        path: pages-data
+        fetch-depth: 0
+
+    - name: Append history and the latest count
+      id: record
+      env:
+        COMMIT: ${{ github.event.workflow_run.head_sha }}
+        EVENT: ${{ github.event.workflow_run.event }}
+      run: |
+        # A night with no new commits skips its rollback jobs: nothing to record.
+        if [[ ! -d results ]] || [[ -z "$(ls -A results)" ]]; then
+          echo "No rollback reports in this run."
+          echo "published=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        matrix="$(python3 scripts/nightly_matrix.py)"
+        recorded_at="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
+        git -C pages-data config user.name 'github-actions[bot]'
+        git -C pages-data config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+        for attempt in 1 2 3 4 5; do
+          echo "Publishing rollback results (attempt $attempt/5)."
+          if ! python3 scripts/rollback_report.py record \
+            --results results --matrix "$matrix" --commit "$COMMIT" --date "$recorded_at" \
+            --history pages-data/metrics/rollback-history.json \
+            --latest pages-data/metrics/rollback-latest.json; then
+            # A manual run may be narrowed to one OS or template on purpose.
+            # A scheduled one never is, so an incomplete set there is a failure.
+            if [[ "$EVENT" == workflow_dispatch ]]; then
+              echo "::notice::Not every rollback job reported, so this manual run records nothing."
+              echo "published=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            exit 1
+          fi
+          git -C pages-data add metrics/rollback-history.json metrics/rollback-latest.json
+          if ! git -C pages-data diff --cached --quiet; then
+            git -C pages-data commit -m "Record rollback faults for ${COMMIT:0:7}"
+          fi
+          if git -C pages-data push origin HEAD:gh-pages; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Benchmarks, mutation scores, and releases also write here. Rebase
+          # non-conflicting edits; if history itself changed, regenerate it.
+          if ! git -C pages-data pull --rebase origin gh-pages; then
+            git -C pages-data rebase --abort
+            git -C pages-data reset --hard origin/gh-pages
+          fi
+        done
+        echo 'Could not publish rollback results after five attempts.' >&2
+        exit 1
+
+  publish-pages:
+    name: Publish updated rollback metrics
+    needs: record
+    if: needs.record.outputs.published == 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
+
+  # jacksonferguson.me shows the latest count and fetches it only when it builds.
+  # Wait for the deploy, not the gh-pages push, so the build reads the new file.
+  refresh-site:
+    name: Refresh jacksonferguson.me
+    needs: publish-pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+    - name: Ask the site to rebuild
+      env:
+        # A fine-grained token that can only send this dispatch to the site's repository.
+        GH_TOKEN: ${{ secrets.PORTFOLIO_DISPATCH_TOKEN }}
+      run: |
+        if [[ -z "$GH_TOKEN" ]]; then
+          echo '::error::Add the PORTFOLIO_DISPATCH_TOKEN secret: a fine-grained token with Contents read and write on JacksonFergusonDev/JacksonFergusonDev.github.io only.'
+          exit 1
+        fi
+        gh api repos/JacksonFergusonDev/JacksonFergusonDev.github.io/dispatches \
+          --method POST \
+          --field event_type=remote-assets-updated \
+          --field "client_payload[asset_source]=$GITHUB_REPOSITORY" \
+          --field "client_payload[ref]=refs/heads/main"

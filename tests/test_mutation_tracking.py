@@ -46,8 +46,8 @@ def run_data(tmp_path):
         config=config,
         results=tmp_path / "results",
         matrix=json.dumps({"include": [{"artifact": name} for name in rows]}),
-        history=tmp_path / "pages/benchmarks/mutation-history.json",
-        latest=tmp_path / "pages/benchmarks/mutation-latest.json",
+        history=tmp_path / "pages/metrics/mutation-history.json",
+        latest=tmp_path / "pages/metrics/mutation-latest.json",
         commit="a" * 40,
         date="2026-10-03T02:23:00+00:00",
     )
@@ -236,8 +236,8 @@ def test_publication_retries_concurrent_pages_push_without_losing_data(
     git("-C", "rival", "config", "user.email", "test@example.invalid")
     git("-C", "rival", "config", "user.name", "Test")
     git("-C", "rival", "checkout", "-b", "gh-pages")
-    (tmp_path / "rival/benchmarks").mkdir()
-    (tmp_path / "rival/benchmarks/data.js").write_text("original benchmarks")
+    (tmp_path / "rival/metrics").mkdir()
+    (tmp_path / "rival/metrics/data.js").write_text("original metrics")
     git("-C", "rival", "add", ".")
     git("-C", "rival", "commit", "-m", "Initial")
     git("-C", "rival", "push", "origin", "gh-pages")
@@ -259,9 +259,9 @@ def test_publication_retries_concurrent_pages_push_without_losing_data(
     hook.write_text(
         '#!/bin/sh\nset -eu\nrm "$0"\n'
         f'cd "{tmp_path.as_posix()}/rival"\n'
-        "echo updated > benchmarks/data.js\n"
+        "echo updated > metrics/data.js\n"
         + (
-            "cat > benchmarks/mutation-history.json <<'EOF'\n"
+            "cat > metrics/mutation-history.json <<'EOF'\n"
             + json.dumps(
                 [
                     {
@@ -275,7 +275,7 @@ def test_publication_retries_concurrent_pages_push_without_losing_data(
             if history_conflict
             else ""
         )
-        + "git add benchmarks\ngit commit -m Concurrent\ngit push origin gh-pages\n",
+        + "git add metrics\ngit commit -m Concurrent\ngit push origin gh-pages\n",
         encoding="utf-8",
     )
     hook.chmod(0o755)
@@ -296,14 +296,14 @@ def test_publication_retries_concurrent_pages_push_without_losing_data(
             "--git-dir",
             "remote.git",
             "show",
-            "gh-pages:benchmarks/mutation-history.json",
+            "gh-pages:metrics/mutation-history.json",
         ).stdout
     )
     assert [entry["commit"] for entry in history] == (
         ["b" * 40, "a" * 40] if history_conflict else ["a" * 40]
     )
     assert (
-        git("--git-dir", "remote.git", "show", "gh-pages:benchmarks/data.js").stdout
+        git("--git-dir", "remote.git", "show", "gh-pages:metrics/data.js").stdout
         == "updated\n"
     )
     badge = json.loads(
@@ -311,7 +311,7 @@ def test_publication_retries_concurrent_pages_push_without_losing_data(
             "--git-dir",
             "remote.git",
             "show",
-            "gh-pages:benchmarks/mutation-latest.json",
+            "gh-pages:metrics/mutation-latest.json",
         ).stdout
     )
     assert badge["message"] == "100.0%"

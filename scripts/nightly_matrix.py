@@ -18,7 +18,10 @@ WINDOWS_SLICES = 6
 
 
 def rollback_matrix(os: str = "all", template: str = "all") -> dict[str, Any]:
-    """Returns the rollback jobs, each with its OS, template, and slice.
+    """Returns the rollback jobs, each with its OS, template, slice, and artifact.
+
+    The artifact names the job's fault report, so the publisher can tell which
+    jobs reported.
 
     Args:
         os: One operating system, or ``all``.
@@ -28,7 +31,12 @@ def rollback_matrix(os: str = "all", template: str = "all") -> dict[str, Any]:
         A ``strategy.matrix`` holding one ``include`` entry per job.
     """
     jobs = [
-        {"os": system, "template": name, "slice": f"{part}/{slices}"}
+        {
+            "os": system,
+            "template": name,
+            "slice": f"{part}/{slices}",
+            "artifact": f"rollback-{system}-{name}-{part}of{slices}",
+        }
         for system in OPERATING_SYSTEMS
         if os in ("all", system)
         for name in TEMPLATES

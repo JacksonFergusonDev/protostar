@@ -7,13 +7,13 @@ import pytest
 
 from protostar.errors import ConfigurationError
 from scripts.prepare_pages import (
-    BENCHMARK_ASSETS,
-    BENCHMARK_DIR,
     HEADER_CSS,
     HOUSE_DIR,
+    METRICS_ASSETS,
+    METRICS_DIR,
     assemble_pages,
     read_versions,
-    render_benchmark_index,
+    render_metrics_index,
 )
 
 
@@ -76,9 +76,9 @@ def published_docs(tmp_path: Path) -> tuple[Path, Path, Path]:
     _write(source / "assets" / "outdated.js", "Old theme")
     _write(source / "llms-full.txt", "Old Markdown")
     _write(source / "latest" / "index.html", "Old alias")
-    _write(source / "benchmarks" / "index.html", "Benchmark dashboard")
-    _write(source / "benchmarks" / "data.js", "Historical measurements")
-    _write(source / "benchmarks" / "retired.js", "Obsolete dashboard code")
+    _write(source / "metrics" / "index.html", "Metrics dashboard")
+    _write(source / "metrics" / "data.js", "Historical measurements")
+    _write(source / "metrics" / "retired.js", "Obsolete dashboard code")
     _write(
         config,
         '[project]\nsite_name = "Protostar"\nsite_description = "Python projects"\n'
@@ -96,7 +96,7 @@ def test_latest_content_is_served_at_bare_urls_beside_every_release(
 
     assert assemble_pages(source, output, config) == "0.10.1"
     assert (
-        output / "benchmarks" / "site-header.css"
+        output / "metrics" / "site-header.css"
     ).read_bytes() == HEADER_CSS.read_bytes()
 
     for relative in ("index.html", "why-protostar/index.html"):
@@ -126,22 +126,22 @@ def test_latest_content_is_served_at_bare_urls_beside_every_release(
     assert 'href="https://docs.example/0.9.0/retired/"' in retired
     assert not (output / "retired").exists()
 
-    assert (output / "benchmarks" / "data.js").read_bytes() == (
-        source / "benchmarks" / "data.js"
+    assert (output / "metrics" / "data.js").read_bytes() == (
+        source / "metrics" / "data.js"
     ).read_bytes()
-    for filename in BENCHMARK_ASSETS:
+    for filename in METRICS_ASSETS:
         if filename == "index.html":
-            assert (output / "benchmarks" / filename).read_text(
+            assert (output / "metrics" / filename).read_text(
                 encoding="utf-8"
-            ) == render_benchmark_index()
+            ) == render_metrics_index()
             continue
-        assert (output / "benchmarks" / filename).read_bytes() == (
-            BENCHMARK_DIR / filename
+        assert (output / "metrics" / filename).read_bytes() == (
+            METRICS_DIR / filename
         ).read_bytes()
-    assert not (output / "benchmarks" / "retired.js").exists()
+    assert not (output / "metrics" / "retired.js").exists()
     assert {
-        path.relative_to(output / "benchmarks" / "house"): path.read_bytes()
-        for path in (output / "benchmarks" / "house").rglob("*")
+        path.relative_to(output / "metrics" / "house"): path.read_bytes()
+        for path in (output / "metrics" / "house").rglob("*")
         if path.is_file()
     } == {
         path.relative_to(HOUSE_DIR): path.read_bytes()
@@ -149,7 +149,7 @@ def test_latest_content_is_served_at_bare_urls_beside_every_release(
         if path.is_file()
     }
     for filename in ("favicon.svg", "favicon.png"):
-        assert (output / "benchmarks" / filename).is_file()
+        assert (output / "metrics" / filename).is_file()
     assert not (output / "retired-page").exists()
     assert (
         output / "0.9.0" / "404.html"
@@ -193,7 +193,7 @@ def test_markdown_is_generated_from_latest_html_with_bare_links(
     assert not (output / "0.10.1" / "why-protostar" / "index.md").exists()
 
 
-@pytest.mark.parametrize("name", ["benchmarks", "robots.txt", "0.9.0"])
+@pytest.mark.parametrize("name", ["benchmarks", "metrics", "robots.txt", "0.9.0"])
 def test_latest_content_cannot_shadow_what_the_root_publishes(
     published_docs: tuple[Path, Path, Path], name: str
 ) -> None:
@@ -219,7 +219,7 @@ def test_invalid_latest_registry_fails_before_creating_output(
     assert not output.exists()
 
 
-@pytest.mark.parametrize("name", ["../escape", "benchmarks", "0.9.0"])
+@pytest.mark.parametrize("name", ["../escape", "benchmarks", "metrics", "0.9.0"])
 def test_registry_rejects_unsafe_or_colliding_names(
     published_docs: tuple[Path, Path, Path], name: str
 ) -> None:
@@ -250,30 +250,51 @@ def test_missing_navigation_page_blocks_incomplete_markdown(
         assemble_pages(source, output, config)
 
 
-def test_benchmarks_are_not_published_without_recorded_data(
+def test_metrics_are_not_published_without_recorded_data(
     published_docs: tuple[Path, Path, Path],
 ) -> None:
     source, output, config = published_docs
-    (source / "benchmarks" / "data.js").unlink()
+    (source / "metrics" / "data.js").unlink()
 
     assemble_pages(source, output, config)
 
+    assert not (output / "metrics").exists()
     assert not (output / "benchmarks").exists()
 
 
+def test_the_old_dashboard_address_redirects_to_the_metrics_page(
+    published_docs: tuple[Path, Path, Path],
+) -> None:
+    source, output, config = published_docs
+
+    assemble_pages(source, output, config)
+
+    old = (output / "benchmarks" / "index.html").read_text(encoding="utf-8")
+    assert 'href="https://docs.example/metrics/"' in old
+    assert {path.name for path in (output / "benchmarks").iterdir()} == {"index.html"}
+
+
+RECORDED_JSON = (
+    "mutation-history.json",
+    "mutation-latest.json",
+    "rollback-history.json",
+    "rollback-latest.json",
+)
+
+
 @pytest.mark.parametrize("performance", [False, True])
-def test_mutation_files_survive_pages_assembly_without_obsolete_assets(
+def test_recorded_json_survives_pages_assembly_without_obsolete_assets(
     published_docs, performance
 ):
     source, output, config = published_docs
     if not performance:
-        (source / "benchmarks/data.js").unlink()
-    for filename in ("mutation-history.json", "mutation-latest.json"):
-        _write(source / "benchmarks" / filename, '{"kept": true}\n')
+        (source / "metrics/data.js").unlink()
+    for filename in RECORDED_JSON:
+        _write(source / "metrics" / filename, '{"kept": true}\n')
     assemble_pages(source, output, config)
-    for filename in ("mutation-history.json", "mutation-latest.json"):
-        assert (output / "benchmarks" / filename).read_bytes() == (
-            source / "benchmarks" / filename
+    for filename in RECORDED_JSON:
+        assert (output / "metrics" / filename).read_bytes() == (
+            source / "metrics" / filename
         ).read_bytes()
-    assert (output / "benchmarks/index.html").exists()
-    assert not (output / "benchmarks/retired.js").exists()
+    assert (output / "metrics/index.html").exists()
+    assert not (output / "metrics/retired.js").exists()

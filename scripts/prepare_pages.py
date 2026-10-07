@@ -20,8 +20,8 @@ sys.path.insert(0, str(_repo_root / "src"))
 
 from protostar.errors import ConfigurationError
 
-BENCHMARK_DIR = _repo_root / "benchmarks"
-BENCHMARK_ASSETS = (
+METRICS_DIR = _repo_root / "metrics"
+METRICS_ASSETS = (
     "index.html",
     "style.css",
     "dashboard.js",
@@ -29,6 +29,8 @@ BENCHMARK_ASSETS = (
     "charts.mjs",
     "mutations.mjs",
     "mutation-dashboard.js",
+    "rollbacks.mjs",
+    "rollback-dashboard.js",
 )
 HOUSE_DIR = _repo_root / "docs" / "house"
 HEADER_CSS = _repo_root / "docs" / "stylesheets" / "site-header.css"
@@ -63,10 +65,10 @@ Sitemap: {sitemap}
 """
 
 
-def render_benchmark_index() -> str:
+def render_metrics_index() -> str:
     """Render the dashboard with the docs landing page's shared footer."""
     return (
-        (BENCHMARK_DIR / "index.html")
+        (METRICS_DIR / "index.html")
         .read_text(encoding="utf-8")
         .replace("<!-- site-footer -->", FOOTER_HTML.read_text(encoding="utf-8"))
     )
@@ -93,7 +95,7 @@ def read_versions(source: Path) -> tuple[Version, ...]:
             "The documentation version registry is empty or invalid."
         )
     versions = []
-    names: set[str] = {"benchmarks", "assets"}
+    names: set[str] = {"benchmarks", "metrics", "assets"}
     for entry in entries:
         if (
             not isinstance(entry, dict)
@@ -126,19 +128,19 @@ def latest_version(versions: tuple[Version, ...]) -> str:
     return latest[0]
 
 
-def redirect_html(target: str) -> str:
+def redirect_html(target: str, name: str = "Protostar documentation") -> str:
     """Render a redirect preserving the query and fragment, with a fallback link."""
     escaped = html.escape(target, quote=True)
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Redirecting to Protostar documentation</title>
+  <title>Redirecting to {name}</title>
   <link rel="canonical" href="{escaped}">
   <noscript><meta http-equiv="refresh" content="0; url={escaped}"></noscript>
   <script>window.location.replace({json.dumps(target)} + window.location.search + window.location.hash);</script>
 </head>
-<body>Redirecting to <a href="{escaped}">Protostar documentation</a>.</body>
+<body>Redirecting to <a href="{escaped}">{name}</a>.</body>
 </html>
 """
 
@@ -218,7 +220,7 @@ def _generate_llms(source: Path, config_path: Path, site_url: str) -> None:
 
 
 def assemble_pages(source: Path, output: Path, config_path: Path) -> str:
-    """Build a fresh artifact using only registered releases and benchmark data."""
+    """Build a fresh artifact using only registered releases and metrics data."""
     versions = read_versions(source)
     latest = latest_version(versions)
     if output.exists() or output.resolve().is_relative_to(source.resolve()):
@@ -231,6 +233,7 @@ def assemble_pages(source: Path, output: Path, config_path: Path) -> str:
     reserved = {
         *(name for version in versions for name in (version.name, *version.aliases)),
         "benchmarks",
+        "metrics",
         "versions.json",
         "robots.txt",
         "CNAME",
@@ -261,28 +264,40 @@ def assemble_pages(source: Path, output: Path, config_path: Path) -> str:
         target = site_url if version.name == latest else f"{site_url}{version.name}/"
         for alias in version.aliases:
             _write_redirects(tree, output / alias, target)
-    benchmark_files = [
-        source / "benchmarks" / filename
-        for filename in ("data.js", "mutation-history.json", "mutation-latest.json")
-        if (source / "benchmarks" / filename).is_file()
-    ]
-    if benchmark_files:
-        benchmark_output = output / "benchmarks"
-        benchmark_output.mkdir()
-        for data in benchmark_files:
-            shutil.copyfile(data, benchmark_output / data.name)
-        for filename in BENCHMARK_ASSETS:
-            shutil.copyfile(BENCHMARK_DIR / filename, benchmark_output / filename)
-        (benchmark_output / "index.html").write_text(
-            render_benchmark_index(), encoding="utf-8"
+    metrics_files = [
+        source / "metrics" / filename
+        for filename in (
+            "data.js",
+            "mutation-history.json",
+            "mutation-latest.json",
+            "rollback-history.json",
+            "rollback-latest.json",
         )
-        shutil.copytree(HOUSE_DIR, benchmark_output / "house")
-        shutil.copyfile(HEADER_CSS, benchmark_output / "site-header.css")
-        shutil.copyfile(FOOTER_CSS, benchmark_output / "site-footer.css")
+        if (source / "metrics" / filename).is_file()
+    ]
+    if metrics_files:
+        metrics_output = output / "metrics"
+        metrics_output.mkdir()
+        for data in metrics_files:
+            shutil.copyfile(data, metrics_output / data.name)
+        for filename in METRICS_ASSETS:
+            shutil.copyfile(METRICS_DIR / filename, metrics_output / filename)
+        (metrics_output / "index.html").write_text(
+            render_metrics_index(), encoding="utf-8"
+        )
+        shutil.copytree(HOUSE_DIR, metrics_output / "house")
+        shutil.copyfile(HEADER_CSS, metrics_output / "site-header.css")
+        shutil.copyfile(FOOTER_CSS, metrics_output / "site-footer.css")
+        # The dashboard's old address, which links outside the repository keep.
+        (output / "benchmarks").mkdir()
+        (output / "benchmarks" / "index.html").write_text(
+            redirect_html(f"{site_url}metrics/", "the Protostar metrics"),
+            encoding="utf-8",
+        )
         for filename in ("favicon.svg", "favicon.png"):
             shutil.copyfile(
                 _repo_root / "docs" / "assets" / filename,
-                benchmark_output / filename,
+                metrics_output / filename,
             )
     shutil.copyfile(source / "versions.json", output / "versions.json")
     _generate_llms(output, config_path, site_url)

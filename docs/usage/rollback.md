@@ -38,6 +38,12 @@ Protostar only restores what it recorded, and never guesses what else a command 
 - **The virtual environment and caches.** `.venv`, uv's package cache, and other tools' caches can keep what was installed before the failure. They are rebuilt on the next run, and nothing in the project depends on them.
 - **What a template's commands write without declaring it.** A template's `system_tasks` and `post_install_tasks` restore only the files they list in `owned_files` (see [Commands](authoring-templates.md#commands-system_tasks-and-post_install_tasks)). Anything else one of them writes stays behind.
 
+## How Recovery Is Tested
+
+Nightly tests deliberately fail real `init` and `sync` runs before, during, and after each write, directory change, removal, and command, using both errors and interrupts. They compare the project and home directory with their original state, byte for byte, within the boundary above. The [rollback results](https://protostar.jacksonferguson.me/metrics/#rollback) show faults restored by operating system and built-in template, along with the latest run status.
+
+The count describes the recovery cases exercised and grows when more templates, steps, or platforms are tested. Contributors can read the [fault-injection methodology](../developer/testing.md#rollback-fault-injection) to reproduce a case or extend the suite.
+
 ## When a Restore Fails (`RollbackFailedError`)
 
 Rarely, a path can't be put back, and Protostar raises `RollbackFailedError` listing each one. The usual causes:

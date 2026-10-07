@@ -154,6 +154,7 @@ hide:
     <li><h3>Previews are read-only</h3><p><code>--dry-run</code>, <code>status</code>, and <code>diff</code> never write a file or run a command.</p><a class="ps-text-link" href="usage/lifecycle.md#review-apply-repeat">Preview project changes<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></li>
     <li><h3>Built for automation</h3><p><code>--json</code> puts one payload on stdout and never prompts, so scripts, CI, and coding agents can drive every command.</p><a class="ps-text-link" href="usage/agent-interface.md">The machine interface<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></li>
   </ul>
+  <p class="ps-note">These safeguards are tested: nightly runs deliberately fail projects and check that their files come back byte for byte. The <a href="https://protostar.jacksonferguson.me/metrics/#rollback">rollback results</a> show recovery across platforms, and <a href="https://protostar.jacksonferguson.me/metrics/#mutations">mutation testing results</a> show whether tests catch deliberate bugs in selected engine modules.</p>
 </section>
 
 <section class="ps-section" id="docs" aria-labelledby="ps-docs">

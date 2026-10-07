@@ -89,3 +89,55 @@ def test_card_grids_hold_two_four_or_six(
     problems = check_docs_drift.check_card_grids()
 
     assert (problems == []) is passes
+
+
+@pytest.mark.parametrize(
+    ("target", "problem"),
+    [
+        ("metrics/", None),
+        ("metrics/#benchmarks", None),
+        ("metrics/#rollback", None),
+        ("metrics/#mutations", None),
+        ("metrics/#missing", "has no such heading"),
+        ("metrics/missing/", "has no page"),
+    ],
+)
+def test_metrics_links_validate_dashboard_anchors(
+    docs_repo: Path, target: str, problem: str | None
+) -> None:
+    site_url = "https://protostar.example"
+    with (docs_repo / "zensical.toml").open("a", encoding="utf-8") as config:
+        config.write(f'site_url = "{site_url}/"\n')
+    dashboard = docs_repo / "metrics" / "index.html"
+    dashboard.parent.mkdir()
+    dashboard.write_text(
+        '<section id="benchmarks"></section>\n'
+        '<section id="rollback"></section>\n'
+        '<section id="mutations"></section>\n',
+        encoding="utf-8",
+    )
+    (docs_repo / "README.md").write_text(
+        f"[Results]({site_url}/{target})\n", encoding="utf-8"
+    )
+
+    problems = check_docs_drift.check_site_links()
+
+    if problem is None:
+        assert problems == []
+    else:
+        assert len(problems) == 1
+        assert problem in problems[0]
+
+
+def test_metrics_links_require_dashboard_source(docs_repo: Path) -> None:
+    site_url = "https://protostar.example"
+    with (docs_repo / "zensical.toml").open("a", encoding="utf-8") as config:
+        config.write(f'site_url = "{site_url}/"\n')
+    (docs_repo / "README.md").write_text(
+        f"[Results]({site_url}/metrics/#rollback)\n", encoding="utf-8"
+    )
+
+    problems = check_docs_drift.check_site_links()
+
+    assert len(problems) == 1
+    assert "has no page" in problems[0]

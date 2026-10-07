@@ -288,14 +288,44 @@ def _warnings(outcome: Outcome) -> list[str]:
 
 
 def _unreached(site: str, outcome: Outcome) -> str:
-    """Says the fault never fired, listing the sites passed and any warnings.
+    """Says the fault never fired, listing the sites, warnings, and command error.
 
     A command that fails on its own, where the run only warns about it (sync's
     hook install), finishes the run before the fault after it can fire.
     """
     passed = "\n".join(outcome.sites) or "(none)"
     warned = "\n".join(_warnings(outcome)) or "(none)"
-    return f"the run never reached {site}; it passed:\n{passed}\nit warned:\n{warned}"
+    error = json.dumps(outcome.payload.get("error"), indent=2, ensure_ascii=True)
+    return (
+        f"the run never reached {site}; it passed:\n{passed}\nit warned:\n{warned}"
+        f"\nit failed with:\n{error}"
+    )
+
+
+def test_a_command_timeout_before_the_fault_reports_the_underlying_error(
+    monkeypatch, seed
+):
+    """An unrelated command failure must explain why a fault was never reached."""
+    from protostar.errors import CommandTimeoutError
+    from protostar.system import ProcessRunner
+
+    case = _last_write(REPRESENTATIVE)
+    workspace = seed(REPRESENTATIVE)
+    before = workspace.capture()
+
+    def timed_out(self, cmd, timeout=None, env=None):
+        raise CommandTimeoutError(command=cmd, timeout=30)
+
+    monkeypatch.setattr(ProcessRunner, "run", timed_out)
+    outcome = run(workspace, REPRESENTATIVE, Runner.REAL, monkeypatch, case)
+    assert not outcome.fired
+    assert outcome.code == 1
+    error = _unreached(case.site, outcome)
+    assert '"type": "CommandTimeoutError"' in error
+    assert "Command timed out after 30 seconds: git init" in error
+    assert "it failed with:" in error
+    _assert_unchanged("the project", before[0], workspace.capture()[0])
+    _assert_unchanged("the home directory", before[1], workspace.capture()[1])
 
 
 def _assert_unchanged(name: str, before: Tree, after: Tree) -> None:
@@ -307,7 +337,7 @@ def _assert_clean_run(
     outcome: Outcome, workspace: Workspace, before: tuple[Tree, Tree]
 ) -> None:
     """Checks a run succeeded without a warning, journaled every change, and left home alone."""
-    assert outcome.code == 0, outcome.payload
+    assert outcome.code == 0, json.dumps(outcome.payload, indent=2, ensure_ascii=True)
     warnings = _warnings(outcome)
     assert not warnings, "a clean run warned:\n" + "\n".join(warnings)
     project, home = workspace.capture()
@@ -360,6 +390,7 @@ def test_a_clean_run_passes_the_recorded_sites_and_journals_every_change(
 # ----------------------------------------------------------------- faults -- #
 
 
+@pytest.mark.rollback_fault
 def test_rollback_restores_the_seed(case: Case, monkeypatch, seed):
     workspace = seed(case.scenario)
     before = workspace.capture()
@@ -373,6 +404,7 @@ def test_rollback_restores_the_seed(case: Case, monkeypatch, seed):
     _assert_handled(case, outcome, workspace, before, clean)
 
 
+@pytest.mark.rollback_fault
 def test_a_failed_restore_is_reported_and_everything_else_restored(
     failed_restore: tuple[Case, str], monkeypatch, seed
 ):
@@ -408,6 +440,7 @@ def test_a_failed_restore_is_reported_and_everything_else_restored(
     assert changed <= allowed, sorted(changed)
 
 
+@pytest.mark.rollback_fault
 @pytest.mark.skipif(sys.platform == "win32", reason="Ctrl+C is a POSIX signal here")
 def test_rollback_finishes_through_a_second_interrupt(
     scoped_scenario: Scenario, monkeypatch, seed
@@ -427,6 +460,7 @@ def test_rollback_finishes_through_a_second_interrupt(
     _assert_rolled_back(case, outcome, workspace, before)
 
 
+@pytest.mark.rollback_fault
 def test_a_rolled_back_run_succeeds_when_retried(retried_case: Case, monkeypatch, seed):
     """Rollback leaves a project init can start over in, not just one that looks right."""
     scenario = retried_case.scenario
@@ -497,6 +531,7 @@ def test_real_commands_pass_the_recorded_sites(
     assert outcome.sites == scenario.recorded_sites()
 
 
+@pytest.mark.rollback_fault
 @pytest.mark.integration
 @pytest.mark.usefixtures("real_commands")
 def test_real_commands_roll_back(real_case: Case, monkeypatch, seed):
