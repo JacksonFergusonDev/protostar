@@ -469,13 +469,20 @@ FAILED = [
 ]
 
 
-def test_a_skipped_run_files_nothing():
+@pytest.mark.parametrize("selected", [False, True])
+def test_a_skipped_run_files_nothing(selected):
     github = FakeGitHub(
-        [Job(GATE_JOB, "success"), Job("Platforms", "skipped")],
+        [
+            Job(GATE_JOB, "success"),
+            *([Job("Select rollback jobs", "success")] if selected else []),
+            Job("Platforms", "skipped"),
+            Job("Rollback", "skipped"),
+        ],
         open_issues={FAILING.label: 7},
     )
     assert not report(github, RUN).ran
     assert github.calls == []
+    assert github.tracked == []
 
 
 def test_a_failure_opens_an_issue_with_the_failing_jobs_and_commit_range():
@@ -503,6 +510,15 @@ def test_a_repeated_failure_comments_on_the_open_issue():
 def test_a_failed_gate_counts_as_a_failure():
     github = FakeGitHub([Job(GATE_JOB, "failure"), *PASSED[1:]])
     assert report(github, RUN).failed == (GATE_JOB,)
+
+
+@pytest.mark.parametrize("preparation", [GATE_JOB, "Select rollback jobs"])
+def test_a_failed_preparation_is_reported_even_when_every_check_skips(preparation):
+    github = FakeGitHub([Job(preparation, "failure"), Job("Platforms", "skipped")])
+    outcome = report(github, RUN)
+    assert outcome.ran
+    assert outcome.failed == (preparation,)
+    assert github.calls[0][:2] == ("create", FAILING.label)
 
 
 @pytest.mark.parametrize("open_issues", [{}, {FAILING.label: 7}])
