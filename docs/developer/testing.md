@@ -273,8 +273,6 @@ The [benchmark dashboard](https://protostar.jacksonferguson.me/metrics/#benchmar
 
 The CI regression check uses 30 executions after 5 warmups and fails when a measurement exceeds 250% of the preceding recorded result for the same benchmark. Historical tracking alerts above 200% without failing the run. These are relative checks for large regressions, not an absolute latency budget. The dashboard's comparison with up to 100 preceding benchmark runs is a separate descriptive summary, not the baseline used by either check.
 
-The `justfile` includes predefined recipes using [Hyperfine](https://github.com/sharkdp/hyperfine) to reproduce the measurements locally. Compare changes on the same machine and checkout conditions to check whether dynamic module imports have increased startup time.
-
 Help and version requests load argument definitions and tool descriptions, but do not load project analysis, reviews, execution, or format engines. Command implementations load only after dispatch. A tool reads its document-backed signals when analysis asks for them, and loads its document generators when planning calls `build()`. `tests/test_cli_startup.py` checks this boundary in fresh interpreters, including JSON help; this catches unnecessary imports without a machine-dependent timing threshold.
 
 The dashboard source lives in `metrics/` on `main`. Pages publishing combines that source with the recorded `metrics/data.js` from `gh-pages`; it never publishes dashboard code from the data branch. To test its data handling locally, use Node.js 18 or newer:
@@ -283,19 +281,17 @@ The dashboard source lives in `metrics/` on `main`. Pages publishing combines th
 node --test tests/metrics_dashboard.test.mjs
 ```
 
-=== "Quick Benchmark"
-    Runs a 5-iteration warmup and 30 statistical runs.
+### Local Benchmarks
 
-    ```bash
-    just test-benchmark
-    ```
+`scripts/benchmarks/` times the scenarios the [cost budgets](#cost-budgets) count, for real: real `uv`, `git`, and hook installs. Use it for performance work, not to check a change; the cost budgets do that in every test run. Each sample runs a scenario's command in a fresh interpreter, in an isolated home directory and project, with configuration off and the hook registry offline. A warm-up round fills uv's cache, and the measured rounds run uv offline from it, so the network never enters a timing. A sample records the whole process's duration (`wall`), the CPU time Protostar's own process used (`cpu`), and the time it waited on commands (`commands`). `protostar` is the duration with the commands taken out: the part Protostar's own code decides.
 
-=== "Rigorous Benchmark"
-    Runs a 30-iteration warmup and 90 statistical runs, exporting results to `benchmark.json`.
+```bash
+just bench sync 'init-*'
+just bench-compare main sync
+just bench-profile sync
+```
 
-    ```bash
-    just test-benchmark-slower
-    ```
+Nothing runs until a scenario is named (`--all` times every one, which takes several minutes), and `uv run python -m scripts.benchmarks list` lists them. `bench-compare` checks the other version out into a temporary worktree with its own locked environment, then runs the two in alternating rounds, each going first in turn, so a machine that slows down slows both. It reports each scenario's change as the median ratio across rounds, with a 95% bootstrap interval, and a change reads faster or slower only when that interval excludes zero. The verdict says a change isn't noise, not that it matters: a 1ms change in startup can be real. Comparing the working tree with an identical commit reports no detectable change, within about 2% on a quiet machine. Samples go to `.benchmarks/latest.json`, and `bench-profile` writes a pyinstrument profile to `.benchmarks/`, or prints one with `--text`.
 
 ## TUI Source Presentation
 

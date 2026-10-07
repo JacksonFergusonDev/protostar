@@ -165,6 +165,8 @@ The repository uses **`prek`** hooks (`.pre-commit-config.yaml`) for automated g
 > **Agent Rule:** **Do NOT redundantly run `ruff`, `mypy`, `rumdl`, `just lint`, or `just ci` immediately before committing or pushing.** Let the hooks do the work. If a hook fails or formats a file, inspect the failure, adjust the code, and re-stage. Only run manual commands during active development/debugging (e.g. running a specific test file like `uv run pytest tests/test_foo.py`).
 >
 > **Agent Rule:** **Do NOT regenerate demos (`just demo-init-headless`, `just demo-init-interactive`, `just demo-sync`, `just demo-all`) unless explicitly prompted to do so.** Re-recording demos runs multi-trial live installations and takes several minutes; agents must never run demo generation autonomously.
+>
+> **Agent Rule:** **Do NOT run the benchmarks (`just bench`, `just bench-compare`, `just bench-profile`) unless the task is performance work or the user asks for timings.** They run real installs and take minutes. Never run them to verify a change or before committing or pushing: the cost budgets in the test suite already catch a change in what a command does. To support a claimed speedup, run `just bench-compare <base> <scenario>` once, for only the scenarios the change touches, and quote its table in the pull request. Don't rerun a comparison without changing the code, and never run benchmarks alongside the test suite or another heavy process.
 
 ## CI Runner Budget
 
@@ -194,6 +196,15 @@ Use these commands when targeted verification or debugging is necessary:
   ```bash
   just sandbox                        # Ephemeral macOS sandbox with sandboxed $HOME
   just sandbox-linux                  # Clean Debian container
+  ```
+
+- **Performance (performance work only; see the Agent Rule above):**
+
+  ```bash
+  uv run pytest tests/test_cost_budgets.py --snapshot-update  # Regenerate the cost budgets after an intended change
+  just bench sync                     # Time scenarios under the working tree
+  just bench-compare main sync        # Compare the working tree with another version, in alternating rounds
+  just bench-profile sync             # Profile one scenario with pyinstrument (writes .benchmarks/)
   ```
 
 - **Fixture & Documentation Integrity:**
@@ -291,8 +302,8 @@ Scale or omit these sections based on the scope of the PR.
 - `src/protostar/community/`: Generators for the community health files that depend only on metadata, and the bundled Contributor Covenant.
 - `tests/snapshots/`: Scenario regression snapshots validated during CI.
 - `tests/rollback_sites/`: The sites each rollback scenario passes, from which `tests/test_rollback.py` generates its fault cases.
-- `tests/cost_budgets/`: What each scenario in `scripts/benchmarks/scenarios.py` costs, which `tests/test_cost_budgets.py` checks.
-- `scripts/benchmarks/`: The scenarios whose cost is budgeted and benchmarked, and the probes that count what a command does.
+- `tests/cost_budgets/`: What each budgeted scenario in `scripts/benchmarks/scenarios.py` costs, which `tests/test_cost_budgets.py` checks.
+- `scripts/benchmarks/`: The scenarios whose cost is budgeted and benchmarked, the probes that count and time what a command does, and the benchmark harness (`python -m scripts.benchmarks`: run, compare, profile).
 - `docs/generated/`: Generated capability tables, schemas, diffs, and trees snippeted into docs.
 - `docs/assets/terminals/`: Rendered CLI terminal help SVGs displayed in docs.
 - `docs/house/`: The vendored house-style release (tokens, fonts, components, scripts) the docs share with jacksonferguson.me.

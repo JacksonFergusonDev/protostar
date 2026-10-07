@@ -21,6 +21,7 @@ import importlib.metadata
 import subprocess
 import sys
 import threading
+import time
 from collections import Counter
 from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
@@ -271,6 +272,9 @@ def record(*, commands: bool = True) -> Iterator[Recorder]:
                 lambda parse: _counted(recorder, "parse:yaml", "yaml", parse),
             )
 
+    patches.replace(
+        subprocess.Popen, "__init__", lambda init: _launched(recorder, init)
+    )
     hooks: dict[str, Callable[[ModuleType], None]] = {
         "protostar.system": system,
         "protostar.registry": registry,
@@ -278,9 +282,62 @@ def record(*, commands: bool = True) -> Iterator[Recorder]:
         "tomlkit": toml,
         "ruamel.yaml.main": yaml,
     }
-    patches.replace(
-        subprocess.Popen, "__init__", lambda init: _launched(recorder, init)
-    )
+    with _watching(hooks, patches):
+        yield recorder
+
+
+class CommandClock:
+    """The time the main thread spent waiting on managed commands."""
+
+    def __init__(self) -> None:
+        self.seconds = 0.0
+
+
+@contextlib.contextmanager
+def time_commands() -> Iterator[CommandClock]:
+    """Times every managed command the main thread runs, until exit.
+
+    A command on another thread, such as the editor probe's, overlaps the main
+    thread's own work, so it is left out: what remains of a run's duration is
+    the time Protostar's own code took. Any version of Protostar with a
+    ``ProcessRunner`` can be timed, so a comparison can reach back before the
+    other seams existed.
+
+    Yields:
+        The clock, whose total grows while the block runs.
+    """
+    clock = CommandClock()
+    patches = _Patches()
+
+    def timed(original: Any) -> Any:
+        def run(self: Any, *args: Any, **kwargs: Any) -> Any:
+            if threading.current_thread() is not threading.main_thread():
+                return original(self, *args, **kwargs)
+            started = time.perf_counter()
+            try:
+                return original(self, *args, **kwargs)
+            finally:
+                clock.seconds += time.perf_counter() - started
+
+        return run
+
+    def system(module: ModuleType) -> None:
+        runner = getattr(module, "ProcessRunner", None)
+        if runner is not None:
+            patches.replace(runner, "run", timed)
+
+    with _watching({"protostar.system": system}, patches):
+        yield clock
+
+
+@contextlib.contextmanager
+def _watching(
+    hooks: dict[str, Callable[[ModuleType], None]], patches: _Patches
+) -> Iterator[None]:
+    """Runs each hook on its module now if imported, or as it is imported.
+
+    Every replacement the hooks made is undone on exit.
+    """
     waiting: dict[str, Callable[[ModuleType], None]] = {}
     for name, hook in hooks.items():
         module = sys.modules.get(name)
@@ -291,7 +348,7 @@ def record(*, commands: bool = True) -> Iterator[Recorder]:
     finder = _OnImport(waiting)
     sys.meta_path.insert(0, finder)
     try:
-        yield recorder
+        yield
     finally:
         sys.meta_path.remove(finder)
         patches.undo()
