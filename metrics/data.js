@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791326859814,
+  "lastUpdate": 1791332220305,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -22037,6 +22037,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1327.54,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a66cf3c6a2cbf56747d16f30fc4485c528f1eb00",
+          "message": "perf(dependencies): update the environment once per run, not once per group (#520)\n\n* perf(dependencies): update the environment once per run, not once per group\n\n`init` ran one `uv add` per dependency group, and each one re-resolved the\nlock and re-synced the environment. Every add except the last now passes\n`--no-sync`: each still resolves and locks, so a bad requirement still fails\nat its own command, and the last add installs the whole environment once.\nA lone group keeps its plain `uv add`.\n\nMeasured on a warm uv cache, `init` goes from 1.70s to 1.50s (library) and\nfrom 1.92s to 1.50s (cli), with byte-identical files and the same installed\npackages.\n\n* fix(docs): let the terminal-asset stub ignore uv add's --no-sync\n\nThe stub that records each `uv add` for the generated terminal images read\nevery word after `add` as a package, so a skipped sync was taken for one.",
+          "timestamp": "2026-10-06T17:13:22-07:00",
+          "tree_id": "ef7f2854754cde52b86eaf5983b31425076f43be",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a66cf3c6a2cbf56747d16f30fc4485c528f1eb00"
+        },
+        "date": 1791332219074,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 177.48,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1269.58,
             "unit": "ms"
           }
         ]
