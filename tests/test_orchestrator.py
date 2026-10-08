@@ -465,7 +465,7 @@ def test_execute_raises_interrupted_error_on_keyboard_interrupt(mocker, mock_con
 
 
 def test_execute_does_not_rebuild_manifest(mocker, mock_config):
-    """execute() must not call pre_flight or build — it takes the manifest as-is."""
+    """execute() never builds the modules again: it takes the manifest as-is."""
     dummy_mod = DummyModule()
     mocker.patch("protostar.orchestrator.SystemExecutor")
     mocker.patch.object(Path, "exists", return_value=False)

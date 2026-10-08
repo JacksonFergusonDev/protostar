@@ -30,7 +30,7 @@ During standard CLI usage, operational errors are caught at the top level of the
 
 ## How Errors Propagate
 
-The flow below illustrates how errors propagate from deep pipeline operations (pre-flight checks, AST validation, transactional side-effects) up to the top-level handler in `protostar.cli.main`:
+Errors rise from three stages, loading, planning, and execution, to the top-level handler in `protostar.cli.main`:
 
 ```mermaid
 flowchart TD
@@ -40,19 +40,19 @@ flowchart TD
     classDef success fill:#14532d,stroke:#4ade80,stroke-width:1px,color:#fff;
     classDef rollback fill:#854d0e,stroke:#facc15,stroke-width:1px,color:#fff;
 
-    Start([CLI Invocation]):::core --> P1["1. Pre-Flight Checks"]:::phase
-    P1 -->|Pass| P2["2. Config & Manifest Parsing"]:::phase
-    P2 -->|Pass| P3["3. Side-Effect Execution"]:::phase
-    P3 -->|Success| End([Environment Stabilized]):::success
+    Start([CLI Invocation]):::core --> P1["1. Load configuration and template"]:::phase
+    P1 -->|Pass| P2["2. plan(): check uv and git, build modules"]:::phase
+    P2 -->|Pass| P3["3. execute(): write and run, in one transaction"]:::phase
+    P3 -->|Success| End([ExecutionResult]):::success
 
-    P1 -.->|Missing binaries| E1["MissingDependencyError"]:::error
-    P2 -.->|Invalid TOML / Network / Zip| E2["ConfigurationError<br/>TemplateResolutionError<br/>NetworkFetchError"]:::error
-    P3 -.->|Failure / Interrupt| RB["ProcessRunner Cleanup<br/>& MutationJournal Rollback"]:::rollback
+    P1 -.->|Invalid TOML / Network / Archive| E1["ConfigurationError<br/>TemplateResolutionError<br/>NetworkFetchError"]:::error
+    P2 -.->|Missing uv or git / Invalid plan| E2["MissingDependencyError<br/>ConfigurationError"]:::error
+    P3 -.->|Failure / Interrupt| RB["Stop processes<br/>& MutationJournal Rollback"]:::rollback
 
-    RB -.->|Rollback Succeeded| E3["FileSystemError / CommandExecutionError<br/>ExecutionInterruptedError"]:::error
+    RB -.->|Rollback Succeeded| E3["The original error, such as CommandExecutionError<br/>ExecutionInterruptedError on Ctrl+C<br/>ProcessTerminationError if a process won't stop"]:::error
     RB -.->|Rollback Failed| E4["RollbackFailedError"]:::error
 
-    E1 & E2 & E3 & E4 --> Trap["CLI Top-Level Trap<br/>(Rich Panel / JSON Envelope)"]:::core
+    E1 & E2 & E3 & E4 --> Trap["CLI Top-Level Handler<br/>(terminal report / JSON envelope)"]:::core
     Trap --> Exit([Route POSIX Exit Code]):::core
 ```
 

@@ -1,257 +1,91 @@
-# Contributing To Protostar
+# Contributing to Protostar
 
-## Architecture & Implementation Rules
-
-Protostar has one job: save you time on setup you would have done anyway. When evaluating a new feature, ask:
+Protostar has one job: save you time on setup you would have done anyway. Before proposing a feature, ask two questions:
 
 - Would *most* users want this, or just some?
-- Would you plausibly revert this manually after running the tool?
+- Would you plausibly undo it by hand after running the tool?
 
-If the answer to either of the first two is "maybe not", the feature probably doesn't belong in the tool.
+If the answer to either is "maybe not", the feature probably doesn't belong in Protostar. A team's own conventions belong in a template; see [Authoring Templates](https://protostar.jacksonferguson.me/usage/authoring-templates/).
 
-### 1. Manifest-first, side-effects-last & Transactional Execution
+## The Rules the Code Follows
 
-Modules declare intent into the manifest during `build()`. The orchestrator executes all side effects afterward in a single, ordered phase. Never call `subprocess.run` or write to disk inside a module's `build()` method.
+[`AGENTS.md`](https://github.com/JacksonFergusonDev/protostar/blob/main/AGENTS.md) is the source of truth for Protostar's architectural rules, for people and coding agents alike. Read it before your first change. These are the ones a change most often meets, each with the page that explains it:
 
-The execution phase (`SystemExecutor`) operates under strict transactional guarantees:
+- **Plan first, act last.** A module's `build()` only declares what its tool needs into the `EnvironmentManifest`; it never writes a file or runs a command. Only the executor changes the project, and every write goes through `TransactionAwareFS` and every command through `ProcessRunner`, so a failure rolls everything back. See [Design Principles](https://protostar.jacksonferguson.me/design-principles/#manifest-first) and [Rollback Internals](https://protostar.jacksonferguson.me/mechanics/rollback/).
+- **The engine is headless.** Nothing outside `protostar.cli` imports `rich` or `textual`, prompts, or prints. The engine reports progress only through the `ProgressStep` hook, never through logging, and asks for missing input by raising a domain error the CLI handles. See [The Headless Core](https://protostar.jacksonferguson.me/design-principles/#the-headless-core).
+- **Only `uv` and `git` can stop a run.** `plan()` checks for them. A program only one tool runs, such as `direnv`, is declared in that module's `executables`, and a missing one skips only the step that runs it. See [Extending Protostar](https://protostar.jacksonferguson.me/developer/extending-protostar/#programs-a-tool-runs).
+- **Errors are domain errors.** Raise a subclass of `ProtostarError` from `protostar.errors`, never a bare `RuntimeError` or `ValueError`. Put what broke in the message and how to fix it in `hint`, and chain the cause with `raise ... from e`. Each error class has its own exit code. See [Error Handling](https://protostar.jacksonferguson.me/mechanics/error_handling/).
+- **`--json` keeps `stdout` for the payload.** Everything else goes to `stderr`, and machine mode never prompts. See [Agent & Machine Interface](https://protostar.jacksonferguson.me/usage/agent-interface/).
+- **Never overwrite someone's work.** Structured files merge by key through their format engines, and a disagreement becomes a decision for the user. See [How Protostar Tracks Your Files](https://protostar.jacksonferguson.me/usage/tracking/).
+- **Built-in templates are project shapes, not stacks.** Modules carry a baseline for casual projects; a template states only what defines its shape. Built-ins **declare every quality flag explicitly** (`ruff`, `mypy`, `pytest`, `prek`, `ci`, `rumdl`, `direnv`, `just`). The default answer to a new built-in is "publish it as a `--from` template". See [Built-in Templates](https://protostar.jacksonferguson.me/developer/built-in-templates/).
 
-- **Mutation Journaling:** Every transaction-managed file or directory is recorded by `MutationJournal` before Protostar mutates it.
-- **Transaction-Aware Filesystem:** All direct filesystem writes, text appends, and directory creations route through `TransactionAwareFS`.
-- **Bounded Subprocess Side Effects:** Subprocesses are managed by `ProcessRunner` in isolated process groups. External mutations that Protostar is expected to produce (such as `uv add` modifying `pyproject.toml` and `uv.lock`) are pre-journaled before invoking the tool.
-- **Fatal Dependency Policy:** Package installation failures are fatal rather than soft diagnostics. A failed `uv add` triggers rollback of declared dependency files and workspace mutations.
-- **Automated Rollback:** If an execution fails or is interrupted (`SIGINT`), Protostar terminates and reaps active subprocesses, shields against secondary signals, and rolls back journaled paths in reverse order to their original bytes and modes.
+Code is typed with `mypy --strict`, uses Google-style docstrings on public functions, classes, and methods, and is formatted by Ruff at 88 characters. Use `enum.StrEnum` for a fixed set of choices and a frozen dataclass for related values, rather than strings and loose tuples.
 
-### 2. The Headless Core (CLI vs. Engine Separation)
+## Development Setup
 
-Protostar's core engine (`Orchestrator`, `SystemExecutor`, `BootstrapModule`) is strictly headless and deterministic:
-
-- **Decoupled Lifecycle (`plan` vs. `execute`):** The orchestrator separates state calculation (`plan() -> EnvironmentManifest`) from disk mutation (`execute(manifest) -> ExecutionResult`). `plan()` must remain mathematically pure and side-effect free—never mutating disk state or executing subprocesses.
-- **Strict UI Separation:** Engine modules must **never** import or instantiate terminal UI libraries (`rich.console.Console`, `textual`), invoke interactive prompts, or make terminal-interactive decisions. The recipe editor, the change review (collision strategy and remote template trust), and the progress trail belong exclusively in the CLI layer (`src/protostar/cli/`).
-- **Structured Boundary Communication:** The CLI passes caller intent into the engine via immutable `InitRequest` objects and receives execution outcomes via `ExecutionResult`. Collision states are signaled by raising `WorkspaceCollisionError(paths=...)`, allowing caller interfaces to decide how to handle conflicts (e.g., interactive prompt vs. CI failure).
-- **Headless Logging:** Engine components emit progress updates via `logging.getLogger("protostar").info(...)`. The CLI layer captures these messages via custom handlers (such as `SpinnerHandler`) to render rich terminal spinners.
-
-### 3. Fail loud, fail early
-
-All system dependency checks happen in `pre_flight()`, before the manifest is built and before anything is written. If a preflight check fails, the environment is untouched. This is a guarantee, not a coincidence.
-
-### 4. Non-destructive by default
-
-Protostar never overwrites existing work. `.gitignore` entries are appended and deduplicated. IDE settings are merged. It must be safe to run against a repo that is already partially configured. In addition, the transactional execution engine guarantees that if an execution fails or is interrupted midway, all journaled workspace modifications (direct file writes, AST merges, and declared dependency files) are rolled back to their pre-run bytes and modes. Note that Protostar reliably reverts tracked changes, but does not promise reverting undeclared side effects produced by external commands (such as `.git/` created by `git init`).
-
-### 5. Modules are composable, not coupled
-
-A module only interacts with the manifest interface. It must not inspect what other modules are loaded, assume a particular run order, or conditionally change behaviour based on the presence of sibling modules.
-
-### 6. Built-in templates state a delta, not a stack
-
-A built-in template is a project *shape* (a CLI, a web service, an analysis workbench), never a particular stack of libraries. Stacks belong in a `--from` template or a global alias. Built-ins are trusted implicitly and maintained forever, so the bar is high: the default answer to a new-template proposal is "publish it as a `--from` template".
-
-Modules and templates divide the work:
-
-- **Modules ship a baseline tuned for casual projects.** A default must never make a small script painful, so `MypyModule` has no `strict` and `RuffModule` selects only a gentle rule set.
-- **Templates state only the delta that defines their shape**, such as `strict = true` for the `cli` template. Use a tool's additive keys (`extend-select`) rather than redefining a list, because sequences merge atomically.
-- **Tool configuration follows the tool.** A payload that configures a tool declares `requires = "<tool>"`, and dev packages only a tool needs (such as `pytest-cov`) go in an `[[optional]]` block that requires the tool, so `--no-<tool>` leaves none of it behind. Tool-agnostic payloads (such as `[build-system]`) stay plain strings.
-- **Every built-in declares every quality flag explicitly** (`ruff`, `mypy`, `pytest`, `prek`, `ci`, `rumdl`, `direnv`, `just`) as `true` or `false`.
-- **A fresh scaffold passes the gates its flags enable.** Do not enable `pytest` without shipping a test.
-
-`tests/test_builtin_template_contract.py` and the exhaustive suite enforce this. The full contract, the two tiers, and how to add or retire a built-in are in `docs/developer/built-in-templates.md`.
-
-### 7. Structural Error Handling Paradigm
-
-To guarantee that the workspace remains deterministic, error management follows a strict type verification structure:
-
-- **Never Raise Coarse Exceptions:** Do not raise bare `RuntimeError`, `ValueError`, or `OSError` instances inside pipeline operations. Always throw a specific, domain-modeled subclass of `ProtostarError` defined in `protostar.errors`:
-  - `ConfigurationError`: For invalid/malformed configuration files or invalid CLI configuration options.
-  - `NetworkFetchError`: For remote template downloads, network timeouts, or insecure protocol violations.
-  - `TemplateResolutionError`: For template archive extraction failures, unsupported formats, or missing template variables.
-  - `WorkspaceCollisionError`: When `execute()` meets files the plan writes that already exist, with no collision strategy chosen.
-  - `MissingDependencyError`: When `uv` or `git` is missing during planning; it names every missing one, with one command that installs them all.
-  - `CommandExecutionError`: For non-zero return codes from managed subprocesses.
-  - `CommandTimeoutError`: For subprocesses exceeding allocated runtime limits.
-  - `ProcessTerminationError`: For failures when stopping or reaping an active managed subprocess tree before rollback.
-  - `FileSystemError`: For local disk I/O, file writing, or directory creation failures.
-  - `UnsupportedFilesystemNodeError`: For transaction targets that are unsupported node types such as symbolic links or special files.
-  - `TransactionStateError`: For invalid lifecycle transitions on a mutation journal (e.g. attempting writes after commit or rollback).
-  - `SecurityViolationError`: For unauthorized path traversal attempts (e.g. Zip Slip).
-  - `ExecutionAbortedError`: For explicit cancellations during interactive setup.
-  - `ExecutionInterruptedError`: For interruptions occurring mid-execution when Protostar successfully rolls back tracked workspace changes (stores immutable `frozenset[str]` of touched paths; notes that external commands may have also modified files).
-  - `RollbackFailedError`: For interrupted or failed executions where automated rollback was only partially successful (stores failed paths and chains the root exception).
-- **Respect POSIX Exit Code Mappings:**
-
-<!-- BEGIN_EXIT_CODES -->
-
-| Exit Code | POSIX Name | Exception Class | Trigger Condition |
-| :--- | :--- | :--- | :--- |
-| `0` | `EX_OK` | *None* | Successful execution |
-| `1` | Generic Exit | `CommandExecutionError`<br>`CommandTimeoutError` | Subprocess failure or command timeout |
-| `64` | `os.EX_USAGE` | `InvalidUsageError` | Invalid CLI arguments or command usage syntax |
-| `65` | `os.EX_DATAERR` | `TemplateResolutionError` | Template resolution error (corrupted archive, missing variables) |
-| `69` | `os.EX_UNAVAILABLE` | `MissingDependencyError` | Missing required system binary (`uv` or `git`) |
-| `70` | `os.EX_SOFTWARE` | *(Unhandled exception)* | Unhandled internal Python bug (prompts automated bug report) |
-| `74` | `os.EX_IOERR` | `FileSystemError` | Local filesystem read/write or permission failure |
-| `75` | `os.EX_TEMPFAIL` | `NetworkFetchError` | Transient network failure during remote template download |
-| `77` | `os.EX_NOPERM` | `SecurityViolationError` | Security violation (e.g., path traversal Zip Slip, or a template variable value that looks like a credential) |
-| `78` | `os.EX_CONFIG` | `ConfigurationError` | Invalid TOML syntax or conflicting CLI configuration |
-| `130` | Shell Signal | `ExecutionAbortedError`<br>`ExecutionInterruptedError` | You cancelled interactive setup or interrupted execution (Ctrl+C) |
-
-<!-- END_EXIT_CODES -->
-- **Enforce Exception Chaining:** When catching lower-level subprocess or OS errors and raising domain exceptions, always preserve the original traceback using the `raise NewException(...) from e` syntax.
-- **Isolate Actionable Hints:** Keep description fields focused on *what* broke. Place direct system installation fix guidelines or instructions inside the decoupled `hint` keyword configuration parameter so they can be parsed and formatted cleanly on their own visual tier in the terminal.
-
-### 8. Machine & Agent Interface Invariants (`--json` & `--dry-run`)
-
-Protostar exposes an experimental machine-readable CLI interface for AI agents, automation pipelines, and external developer tools. Any new subcommands, flags, or error paths must preserve the following operational invariants:
-
-- **Strict `stdout` Purity:** `stdout` is strictly reserved for the machine-readable JSON payload. All human-readable logging, diagnostic summaries, progress spinners, and Rich tracebacks must route exclusively to `stderr` (e.g., via `_stderr_console` or logging handlers). An automated consumer must always be able to parse `stdout` directly as valid JSON.
-- **Position-Independent Flag Evaluation:** The `--json` flag is position-independent and must be recognized globally across all commands, subparsers, and bare invocations.
-- **Zero Interactive Trapping in Machine Mode:** When `is_json_mode` is active, the CLI must **never** block on terminal-interactive prompts (such as the recipe editor or the change review's collision and trust decisions). Instead, the CLI must either bypass the prompt deterministically (if explicit override flags like `--force-merge` are present) or raise a domain exception immediately so that a structured JSON error envelope is returned.
-- **Deterministic State Serialization (`.to_dict()`):** All manifest domain slices and execution models exposed to agents must implement deterministic `.to_dict()` methods:
-  - Mathematical sets (such as `directories`, `vcs_ignores`, `workspace_hides`) must serialize to alphabetically sorted lists.
-  - `ExecutionResult` serializes `created_paths`, `mutated_paths`, and the derived union `touched_paths` to alphabetically sorted lists, alongside diagnostic events.
-  - Insertion-ordered lists (such as `dependencies`, `dev_dependencies`, `system_tasks`) must preserve their exact declaration order.
-  - Enums (such as `CollisionStrategy`) must serialize as their string `.value`.
-  - File system paths must be normalized to POSIX string format.
-- **Protocol Envelopes & API Versioning:** All JSON outputs must be wrapped in standard envelopes (`planned`, `success`, or `error`) and include the top-level `"api_version"` key (`CLI_API_VERSION = 0` during experimental phase) to maintain forward-compatible schema evolution.
-
-## Coding Standards
-
-1. **Type Hinting:** All new application functions and methods must include strict Python 3.12 type hints. We use `mypy` to statically enforce this (`strict = true`). The test suite (`tests/*`) is granted an exemption from strict untyped definition checks.
-
-1. **Docstrings:** Use Google-style docstrings for public functions, classes, and methods. Module-level, package-level, and `__init__` docstrings are exempt from linting checks.
-
-1. **Formatting & Linting:** Code is formatted and linted using `ruff`.
-    - Use 4-space indentation and double quotes.
-    - The formatter enforces an 88-character line length.
-    - Do not bypass the prek hooks, as they will automatically apply the required `isort` block ordering and formatting rules.
-
-## Testing Guidelines
-
-Because Protostar is a scaffolding tool, its execution inherently interacts with the host filesystem and shell. To maintain a deterministic and isolated test suite:
-
-1. **Relaxed Linting:** The test suite (`tests/*`) is exempt from docstring requirements and `print` statement linting restrictions (`T201`).
-
-1. **Disk I/O:** Never write to the actual host filesystem during tests. Always use the `pytest` `tmp_path` fixture to sandbox generated artifacts.
-
-1. **Subprocesses:** Use `pytest-mock` to patch `subprocess.run`. Do not allow the test suite to execute unmocked shell commands (e.g., `uv init` or `cargo init`) on the host machine.
-
-1. **Coverage:** Ensure new modules or generators maintain or improve the current test coverage metrics (measured via `pytest-cov`).
-
-## How to Contribute
-
-### Reporting Bugs
-
-1. Check if the issue has already been reported.
-1. Open a new issue with a clear title and description.
-1. Include the command that caused the error and the resulting traceback.
-
-### Development Setup
-
-To contribute to this project, you will need the following system-level dependencies installed:
+You need:
 
 - **Python 3.12+**
-- **[uv](https://docs.astral.sh/uv/getting-started/installation/)**: For dependency and environment management.
-- **[just](https://just.systems/man/en/packages.html)**: Our command runner.
+- **[uv](https://docs.astral.sh/uv/getting-started/installation/)**, for the environment and dependencies
+- **[just](https://just.systems/man/en/packages.html)**, the command runner
 
-*(If you are on macOS with Homebrew: `brew install uv just`)*
-
-1. **Fork & Clone**
-
-    Fork the repo and clone it locally:
-
-    ```bash
-    git clone https://github.com/JacksonFergusonDev/protostar.git
-    cd protostar
-    ```
-
-1. **Environment Setup**
-
-    ```bash
-    uv sync
-    ```
-
-1. **Install Hooks**
-
-    Set up [prek](https://github.com/j178/prek) hooks to handle linting and type checking automatically.
-
-    ```bash
-    uv run prek install
-    ```
-
-### Running Tests & Tooling
-
-We use `just` as our command runner to standardize test execution, linting, and formatting.
-
-To see all available commands and their descriptions, run `just` in the repository root:
+On macOS with Homebrew, `brew install uv just` installs both. Then fork the repository, clone your fork, and install the environment and the commit hooks:
 
 ```bash
-just
+git clone https://github.com/<your-username>/protostar.git
+cd protostar
+uv sync
+uv run prek install
 ```
 
-To execute the standard test matrix:
+Add dependencies with `uv add` (or `uv add --dev`), never by editing `pyproject.toml`, so `uv.lock` stays in step.
+
+## Checks and Tests
+
+The hooks run the checks for you:
+
+- **On commit:** `uv lock --check`, Ruff, mypy, rumdl, actionlint, the Renovate schema check, and gitleaks.
+- **On push:** the full test suite, the strict docs build, and the docs, schema, and snapshot checks.
+
+If a hook fails or reformats a file, look at what it reported, fix it, and stage again. While you work, run what your change touches, such as `uv run pytest tests/test_executor.py`. `just test` runs the whole suite in parallel, and `just` lists every recipe. `just ci` runs everything CI runs, one after another; the hooks already cover it, so reach for it only to debug a difference from CI.
+
+Tests write only under `pytest`'s `tmp_path` and mock commands at the boundary they exercise, usually `ProcessRunner.run`. Only tests marked `integration` run real `uv`, `git`, or hook commands, through the `real_tool_env` fixture. Some changes need checked-in results regenerated, and the pull request should say why they changed:
 
 ```bash
-just test
+just check-snapshots                                                # scaffolds, terminal images, and generated docs
+uv run pytest tests/test_rollback.py -k sites_match --snapshot-update  # the sites each rollback scenario passes
+uv run pytest tests/test_cost_budgets.py --snapshot-update          # what each command costs
 ```
 
-### Documentation Publishing
+[Testing Architecture & Philosophy](https://protostar.jacksonferguson.me/developer/testing/) covers the fixtures, the rollback fault injection, the cost budgets, CI, and flaky tests.
 
-GitHub Pages must use **GitHub Actions** as its source (Settings → Pages → Build and deployment). The `gh-pages` branch stores released documentation and benchmark and mutation data; it is not itself the published site. Releases and benchmark updates invoke `.github/workflows/pages.yml`, which serializes site assembly and deployment together and reads the current branch contents after acquiring its publishing slot.
+## Manual Testing in a Sandbox
+
+To try Protostar without touching your own configuration or projects:
+
+- `just sandbox` builds Protostar from your working tree and opens a shell in an empty project under `/tmp`, with its own `$HOME`. `just sandbox-existing`, `just sandbox-sync`, and `just sandbox-sync-conflict` start from an existing project, a pending template update, and a conflicting one. Pass arguments to run one command instead of a shell: `just sandbox init --template cli`.
+- `just sandbox-linux` does the same in a disposable Debian container (OrbStack or Docker), with `direnv` and `markdownlint-cli2` installed: `just sandbox-linux init --template astro`.
+
+## Documentation
+
+The docs site lives in `docs/` and is built by Zensical; `just serve` previews it. It shares its design rules with jacksonferguson.me through [house-style](https://github.com/JacksonFergusonDev/house-style), whose guidelines are vendored at `docs/house/GUIDELINES.txt`: read them before changing a page. Write each Markdown paragraph on one line, never hard-wrapped. `just check-docs-drift` fails when a page disagrees with the code, such as a command, an error, or a file path that no longer exists.
+
+### Publishing
+
+GitHub Pages must use **GitHub Actions** as its source (Settings → Pages → Build and deployment). The `gh-pages` branch stores released documentation and benchmark, mutation, and rollback data; it is not itself the published site. Releases and metric updates invoke `.github/workflows/pages.yml`, which serializes site assembly and deployment together and reads the current branch contents after acquiring its publishing slot.
 
 The publisher creates a clean artifact with `scripts/prepare_pages.py`. The release carrying `latest` in `versions.json` is served at the bare documentation URLs, and every release, that one included, keeps its versioned copy. Each versioned page the latest release still has names the bare URL as its canonical address, so search engines rank one URL across releases; pages the latest release dropped are marked `noindex`. Version aliases redirect to wherever their release is served, preserving query parameters and anchors, and the sitemap lists the bare URLs. Old root copies are excluded. Markdown and `llms.txt` come from the latest release's HTML and tagged navigation, with links to the bare Markdown files. The metrics dashboard is included in every deployment, and the old `/benchmarks/` address redirects to it. The root also gets `robots.txt`, which welcomes search engines and AI search agents, turns away AI training crawlers, and names the sitemap.
 
 To republish the current documentation and metrics without rebuilding a release or publishing to PyPI, run `gh workflow run pages.yml --ref main`. To rebuild a released documentation version, run `gh workflow run release.yml --ref main -f tag=vX.Y.Z`; this moves `latest` to that version and invokes the same publisher. Keep Pages in Actions mode so branch updates cannot replace the assembled artifact.
 
-### Isolated Manual Testing (Sandboxes)
+## Pull Requests
 
-To manually test Protostar in an isolated workspace without modifying your global `~/.config/protostar` or host git configuration:
+1. Branch from `main`, and keep each pull request to one feature, template, or fix. If you change a built-in template or a tool module's defaults, read [Built-in Templates](https://protostar.jacksonferguson.me/developer/built-in-templates/) first, then run `just check-snapshots` and review every generated file.
+1. Title it as a [Conventional Commit](https://www.conventionalcommits.org/), such as `feat(cli): ...` or `fix(executor): ...`.
+1. Fill in the template: the problem, how you decided what to build and what you rejected, and any rule the change establishes. Scale it to the change; a small fix needs a sentence or two.
 
-- **macOS Sandbox:** Drops into an ephemeral sub-shell in `/tmp` where `protostar` is built fresh from the working tree and `$HOME` is sandboxed:
+Protostar is pre-1.0 with no compatibility promises, so change or delete an API, flag, or format outright rather than adding a deprecation shim.
 
-    ```bash
-    just sandbox
-    # Or run single commands headlessly:
-    just sandbox init --template cli
-    ```
+## Reporting Bugs
 
-- **Linux Sandbox (OrbStack / Docker):** Runs inside a clean, disposable Debian container pre-loaded with required system binaries (`direnv,` `markdownlint-cli2`) and inspection tools (`eza`, `bat`, `ripgrep`):
-
-    ```bash
-    just sandbox-linux
-    # Or run single commands headlessly:
-    just sandbox-linux init --template astro
-    ```
-
-### Pull Requests
-
-1. **Create a Branch**
-
-    ```bash
-    git checkout -b feature/my-amazing-feature
-    ```
-
-1. **Make Changes**
-
-    Write your code. Ensure your changes are tightly scoped to a single feature, template, or bug fix. Avoid monolithic pull requests that mix refactoring with new logic. If you change a built-in template or a tooling module's defaults, read `docs/developer/built-in-templates.md` first, then regenerate snapshots with `just check-snapshots` and review every generated file.
-
-1. **Verify**
-
-    Ensure your code passes the linter, type checker, and test suite locally. We provide a single command that emulates the GitHub Actions CI pipeline. Run this before pushing:
-
-    ```bash
-    just ci
-    ```
-
-    (Prek will also run `ruff` and `mypy` when you commit).
-
-1. **Commit & Push**
-
-    Use clear, descriptive commit messages.
-
-    ```bash
-    git commit -m "feat: added something cool"
-    git push origin feature/my-amazing-feature
-    ```
-
-1. **Open a Pull Request**
-
-    Submit your PR against the `main` branch.
+Search the [issues](https://github.com/JacksonFergusonDev/protostar/issues) first. A new report needs the command you ran, what you expected, and the output with `--verbose`. When Protostar crashes, it prints a link that opens an issue with the details filled in. Report security problems privately, as [SECURITY.md](https://github.com/JacksonFergusonDev/protostar/blob/main/SECURITY.md) describes.

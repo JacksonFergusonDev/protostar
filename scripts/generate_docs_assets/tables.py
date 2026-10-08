@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import importlib.resources
 import json
-import re
 import tomllib
 from dataclasses import fields
 from typing import Any
@@ -19,7 +18,6 @@ from protostar.config import (
     default_config_content,
 )
 from protostar.documents import community, pyproject
-from protostar.fs import atomic_write_text
 from protostar.manifest import EnvironmentManifest
 from protostar.metadata import METADATA_FIELDS
 from protostar.modules import (
@@ -32,7 +30,6 @@ from protostar.modules import (
 from protostar.options import Condition
 from scripts._common import OutputStyle, report
 from scripts.generate_docs_assets.common import (
-    REPO_ROOT,
     ManifestEncoder,
     _format_markdown_table,
     _write_generated_doc,
@@ -463,19 +460,6 @@ def generate_capability_tables() -> None:
         "table_exit_codes.md",
         _format_markdown_table(exit_code_headers, exit_code_rows),
     )
-
-    # Sync table into CONTRIBUTING.md if present
-    contributing_path = REPO_ROOT / "CONTRIBUTING.md"
-    if contributing_path.exists():
-        contrib_content = contributing_path.read_text(encoding="utf-8")
-        markdown_table = _format_markdown_table(exit_code_headers, exit_code_rows)
-        new_content = re.sub(
-            r"<!-- BEGIN_EXIT_CODES -->.*<!-- END_EXIT_CODES -->",
-            f"<!-- BEGIN_EXIT_CODES -->\n\n{markdown_table}\n\n<!-- END_EXIT_CODES -->",
-            contrib_content,
-            flags=re.DOTALL,
-        )
-        atomic_write_text(contributing_path, new_content)
 
 
 def generate_manifest_state() -> None:
