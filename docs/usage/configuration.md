@@ -126,6 +126,6 @@ Use an alias with `protostar init --template <alias>`. It also appears in the re
 
 ## Next Steps
 
-- **[Environment Initialization](./init.md):** Test your configured global defaults with `protostar init`.
-- **[Templates](./templates.md):** Discover how template aliases streamline custom template consumption and bypass remote security prompts.
-- **[CLI Reference](./cli-reference.md):** Review all command-line options and runtime flag overrides.
+- **[Environment Initialization<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./init.md):** Test your configured global defaults with `protostar init`.
+- **[Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./templates.md):** Discover how template aliases streamline custom template consumption and bypass remote security prompts.
+- **[CLI Reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./cli-reference.md):** Review all command-line options and runtime flag overrides.

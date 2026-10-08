@@ -70,6 +70,6 @@ Built-in templates are project shapes: a command-line app, a library, a web serv
 
 ## Related Guides
 
-- __[Environment Initialization](./init.md):__ See complete generated directory trees and configuration footprints for CLI, Library, API, ML, and Astro templates.
-- __[Global Configuration](./configuration.md):__ Configure persistent default tooling selections so your preferred flags apply automatically.
-- __[CLI Reference](./cli-reference.md):__ Every tool flag and command-line option.
+- __[Environment Initialization<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./init.md):__ See complete generated directory trees and configuration footprints for CLI, Library, API, ML, and Astro templates.
+- __[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):__ Configure persistent default tooling selections so your preferred flags apply automatically.
+- __[CLI Reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./cli-reference.md):__ Every tool flag and command-line option.

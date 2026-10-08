@@ -10,7 +10,7 @@ Fixes for the problems people run into most: missing programs, existing files, u
 
 Protostar needs `uv` and `git` for every project, and checks for them before writing files or modifying configurations. If either is missing, execution halts with a `MissingDependencyError` whose hint is one command that installs everything missing. [Installation](../installation.md) covers installing both on each platform.
 
-### `uv` is not installed or not in `$PATH`
+### `uv` Is Not Installed or Not in `$PATH`
 
 Protostar runs [uv](https://docs.astral.sh/uv/) to create every project and install its packages, so it can't run without it.
 
@@ -232,7 +232,7 @@ If you encounter an issue or behavior not covered in this guide:
 
 ## Related Resources
 
-- **[Automatic Rollback](./rollback.md):** What gets restored, what might remain, and how to recover from a partial rollback failure.
-- **[Error Handling Architecture](../mechanics/error_handling.md):** Deep dive into the domain exception hierarchy, POSIX exit codes, and subprocess diagnostics.
-- **[Environment Initialization](./init.md):** Review collision handling, AST injection, and `--force-merge` behavior.
-- **[Global Configuration](./configuration.md):** Learn how to view, modify, or reset your global settings with `protostar config --reset`.
+- **[Automatic Rollback<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./rollback.md):** What gets restored, what might remain, and how to recover from a partial rollback failure.
+- **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/error_handling.md):** Deep dive into the domain exception hierarchy, POSIX exit codes, and subprocess diagnostics.
+- **[Environment Initialization<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./init.md):** Review collision handling, AST injection, and `--force-merge` behavior.
+- **[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):** Learn how to view, modify, or reset your global settings with `protostar config --reset`.

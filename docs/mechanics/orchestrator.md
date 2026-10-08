@@ -8,18 +8,12 @@ The `Orchestrator` (`src/protostar/orchestrator.py`) turns a request into a plan
 
 ```mermaid
 flowchart TD
-    classDef boundary fill:#0f172a,stroke:#38bdf8,stroke-width:1px,color:#e2e8f0;
-    classDef phase fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
-    classDef state fill:#334155,stroke:#7c4dff,stroke-width:2px,color:#fff;
-    classDef cli fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
-    classDef error fill:#7f1d1d,stroke:#f87171,stroke-width:1px,color:#fff;
-
-    Req([InitRequest]):::boundary --> Plan["plan()<br/>read-only"]:::phase
-    Plan -->|missing uv or git, or another template| Err["ProtostarError"]:::error
-    Plan --> Manifest[(EnvironmentManifest)]:::state
-    Manifest --> Review["CLI: change review or --dry-run<br/>(prepare_review)"]:::cli
-    Review -->|decisions settled| Exec["execute(manifest)<br/>one transaction"]:::phase
-    Exec --> Result([ExecutionResult]):::boundary
+    Req([InitRequest]) --> Plan["plan()<br/>read-only"]
+    Plan -->|missing uv or git, or another template| Err["ProtostarError"]
+    Plan --> Manifest[(EnvironmentManifest)]
+    Manifest --> Review["CLI: change review or --dry-run<br/>(prepare_review)"]
+    Review -->|decisions settled| Exec["execute(manifest)<br/>one transaction"]
+    Exec --> Result([ExecutionResult])
 ```
 
 ## Planning
@@ -81,6 +75,6 @@ Non-fatal outcomes, such as a step skipped because its program is missing, are c
 
 ## Related Mechanics & Guides
 
-- **[The Environment Manifest](./manifest.md):** Deep dive into the structured state container generated during the `plan()` phase.
-- **[The System Executor](./executor.md):** How the executor applies a plan as one transaction.
-- **[Error Handling Architecture](./error_handling.md):** How errors reach the CLI, and the exit code each one returns.
+- **[The Environment Manifest<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./manifest.md):** Deep dive into the structured state container generated during the `plan()` phase.
+- **[The System Executor<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./executor.md):** How the executor applies a plan as one transaction.
+- **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./error_handling.md):** How errors reach the CLI, and the exit code each one returns.

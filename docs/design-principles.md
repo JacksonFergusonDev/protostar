@@ -58,15 +58,11 @@ Protostar's engine operates in two strictly ordered phases:
 
 ```mermaid
 flowchart TD
-    classDef phase fill:#1e293b,stroke:#22d3ee,stroke-width:2px,color:#fff;
-    classDef manifest fill:#334155,stroke:#7c4dff,stroke-width:2px,color:#fff;
-    classDef action fill:#0f172a,stroke:#38bdf8,stroke-width:1px,color:#e2e8f0;
-
-    A[CLI Input / Flags] --> B["Phase 1 · plan()"]:::phase
-    B --> C[EnvironmentManifest]:::manifest
-    C -->|uv and git Found| D["Phase 2 · execute()"]:::phase
-    C -.->|Dry Run / Inspect| E[--dry-run / --json]:::action
-    D --> F[Atomic Disk Mutations]:::action
+    A[CLI Input / Flags] --> B["Phase 1 · plan()"]
+    B --> C[EnvironmentManifest]
+    C -->|uv and git Found| D["Phase 2 · execute()"]
+    C -.->|Dry Run / Inspect| E[--dry-run / --json]
+    D --> F[Atomic Disk Mutations]
 ```
 
 **Phase 1 — `plan()`** is read-only. Every module declares what it needs — files to write, TOML payloads to inject, packages to install, subprocesses to run — into the manifest. Nothing touches disk. Planning checks that the binaries Protostar itself runs (`uv` and `git`) are on `$PATH`, and aborts cleanly before the workspace is touched if either is missing. A binary only a selected tool runs (`direnv`, `just`) never aborts a run: planning records it as missing, and execution skips only the steps that run it.
@@ -91,20 +87,17 @@ Progress is the one thing that must cross the boundary *during* execution, and i
 
 ```mermaid
 flowchart LR
-    classDef cli fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
-    classDef engine fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
-
     subgraph CLI ["CLI Layer (protostar.cli)"]
         direction LR
-        TUI["Recipe Editor & Change Review"]:::cli
-        Trail["Progress Trail"]:::cli
-        JSON["--json Envelope Serializer"]:::cli
+        TUI["Recipe Editor & Change Review"]
+        Trail["Progress Trail"]
+        JSON["--json Envelope Serializer"]
     end
 
     subgraph Engine ["Headless Engine (orchestrator.py)"]
         direction LR
-        Plan["<span style='white-space:nowrap'>plan(InitRequest) → Manifest</span>"]:::engine
-        Exec["<span style='white-space:nowrap'>execute(Manifest) → ExecutionResult</span>"]:::engine
+        Plan["<span style='white-space:nowrap'>plan(InitRequest) → Manifest</span>"]
+        Exec["<span style='white-space:nowrap'>execute(Manifest) → ExecutionResult</span>"]
     end
 
     CLI --> Engine
@@ -268,8 +261,8 @@ The same structured information is available programmatically via `--json`, wher
 
 ## Related Pages
 
-- **[Why Protostar?](./why-protostar.md):** How these principles compare against generic templaters like Copier in practice.
-- **[The Environment Manifest](./mechanics/manifest.md):** Deep dive into the state object that enforces manifest-first execution.
-- **[The Orchestrator](./mechanics/orchestrator.md):** How the headless core and two-phase lifecycle are implemented.
-- **[Error Handling Architecture](./mechanics/error_handling.md):** The full exception hierarchy, POSIX routing table, and crash report pipeline.
-- **[Agent & Machine Interface](./usage/agent-interface.md):** Driving Protostar programmatically via `--json` and `--dry-run`.
+- **[Why Protostar?<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./why-protostar.md):** How these principles compare against generic templaters like Copier in practice.
+- **[The Environment Manifest<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./mechanics/manifest.md):** Deep dive into the state object that enforces manifest-first execution.
+- **[The Orchestrator<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./mechanics/orchestrator.md):** How the headless core and two-phase lifecycle are implemented.
+- **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./mechanics/error_handling.md):** The full exception hierarchy, POSIX routing table, and crash report pipeline.
+- **[Agent & Machine Interface<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./usage/agent-interface.md):** Driving Protostar programmatically via `--json` and `--dry-run`.

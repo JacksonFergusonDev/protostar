@@ -136,7 +136,7 @@ The docs site (`docs/`, built by Zensical) shares its look and its rules with ja
 - **Show terminal output, don't paste it.** Use a recording or a generated screenshot in the house terminal window; keep code blocks for what the reader types.
 - **Every standalone link carries a house-style icon** saying where it goes: `arrow-down` within the page, `arrow-right` to a related page, `arrow-up-right` to another site, and brand icons for GitHub and jacksonferguson.me. Draw icons only with house-style's `.hs-icon` classes or its `icons/` files, never a text arrow.
 
-`check_docs_drift.py` enforces the description, navigation-icon, and card-count rules.
+`check_docs_drift.py` enforces the description, navigation-icon, card-count, and list-link icon rules.
 
 #### The Site's Machinery
 

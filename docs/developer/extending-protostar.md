@@ -95,6 +95,6 @@ A module that manages a document builds its path signals from that document's lo
 
 ## Next Steps
 
-- **[The Module Architecture](../mechanics/modules.md):** The module families and the contract every module follows.
-- **[Testing Architecture & Philosophy](./testing.md):** How to test a module without touching the machine.
-- **[API Reference](./api-reference.md):** Complete class documentation for `BootstrapModule` and `EnvironmentManifest`.
+- **[The Module Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/modules.md):** The module families and the contract every module follows.
+- **[Testing Architecture & Philosophy<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./testing.md):** How to test a module without touching the machine.
+- **[API Reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./api-reference.md):** Complete class documentation for `BootstrapModule` and `EnvironmentManifest`.

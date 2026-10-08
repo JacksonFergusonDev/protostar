@@ -14,20 +14,15 @@ The [published rollback results](https://protostar.jacksonferguson.me/metrics/#r
 
 ```mermaid
 flowchart TD
-    classDef coordinator fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
-    classDef transaction fill:#14532d,stroke:#4ade80,stroke-width:2px,color:#fff;
-    classDef process fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
-    classDef store fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
+    E(SystemExecutor\nexecutor.py)
 
-    E(SystemExecutor\nexecutor.py):::coordinator
-
-    E --> J(MutationJournal\njournal.py):::transaction
-    E --> FS(TransactionAwareFS\nfs_transaction.py):::transaction
-    E --> P(ProcessRunner\nsystem.py):::process
+    E --> J(MutationJournal\njournal.py)
+    E --> FS(TransactionAwareFS\nfs_transaction.py)
+    E --> P(ProcessRunner\nsystem.py)
 
     FS --> J
 
-    J --> Store[(OriginalState\nper-path journal)]:::store
+    J --> Store[(OriginalState\nper-path journal)]
 ```
 
 - **`MutationJournal`** is the ledger. Before Protostar writes or modifies any path, it records that path's original state (bytes, mode, or absence). On rollback, it replays the journal in reverse, restoring each entry.
@@ -40,39 +35,33 @@ The batches themselves are listed in [Execution Order](../developer/reconciliati
 
 ```mermaid
 flowchart TD
-    classDef phase fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
-    classDef decision fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
-    classDef success fill:#14532d,stroke:#4ade80,stroke-width:2px,color:#fff;
-    classDef rollback fill:#854d0e,stroke:#facc15,stroke-width:1px,color:#fff;
-    classDef error fill:#7f1d1d,stroke:#f87171,stroke-width:1px,color:#fff;
-
     Start([Execute manifest]) --> Steps
 
     subgraph Steps ["Execution, in batches"]
         direction TB
-        S1["Each write: TransactionAwareFS records,<br/>then writes"]:::phase
-        S2["Each command: declared outputs recorded,<br/>then ProcessRunner runs it"]:::phase
-        S3["protostar.lock written, then journal commit"]:::phase
+        S1["Each write: TransactionAwareFS records,<br/>then writes"]
+        S2["Each command: declared outputs recorded,<br/>then ProcessRunner runs it"]
+        S3["protostar.lock written, then journal commit"]
         S1 --> S2 --> S3
     end
 
-    S3 --> Done([ExecutionResult returned]):::success
+    S3 --> Done([ExecutionResult returned])
 
     Steps -. "BaseException\nor KeyboardInterrupt" .-> RB
 
     subgraph RB ["Rollback Sequence"]
         direction TB
-        R1["_stop_processes() — the command and the editor probe;<br/>one that won't stop is noted, not raised"]:::rollback
-        R2["shield_sigint() — defer further Ctrl+C"]:::rollback
-        R3["journal.rollback() — restore in reverse order"]:::rollback
+        R1["_stop_processes() — the command and the editor probe;<br/>one that won't stop is noted, not raised"]
+        R2["shield_sigint() — defer further Ctrl+C"]
+        R3["journal.rollback() — restore in reverse order"]
         R1 --> R2 --> R3
     end
 
-    R3 --> Check{Rollback\nsucceeded?}:::decision
-    Check -- "Yes" --> Stopped{Every process\nstopped?}:::decision
-    Stopped -- "Yes" --> ReRaise["Re-raise original error\n(ExecutionInterruptedError on Ctrl+C)"]:::error
-    Stopped -- "No" --> PTE["Raise ProcessTerminationError\n(original error chained)"]:::error
-    Check -- "Partial failure" --> RFE["Raise RollbackFailedError\n(failed paths and unstopped processes)"]:::error
+    R3 --> Check{Rollback\nsucceeded?}
+    Check -- "Yes" --> Stopped{Every process\nstopped?}
+    Stopped -- "Yes" --> ReRaise["Re-raise original error\n(ExecutionInterruptedError on Ctrl+C)"]
+    Stopped -- "No" --> PTE["Raise ProcessTerminationError\n(original error chained)"]
+    Check -- "Partial failure" --> RFE["Raise RollbackFailedError\n(failed paths and unstopped processes)"]
 ```
 
 ## `MutationJournal`
@@ -222,6 +211,6 @@ This is a deliberate safety trade-off: risking a non-empty directory being left 
 
 ## Related Pages
 
-- **[Automatic Rollback](../usage/rollback.md):** User-facing guide — what gets restored, what might remain, and how to remediate failures.
-- **[The System Executor](./executor.md):** How `SystemExecutor` sequences the execution phases and invokes the rollback stack.
-- **[Error Handling Architecture](./error_handling.md):** How `RollbackFailedError`, `ExecutionInterruptedError`, and `ProcessTerminationError` propagate and map to POSIX exit codes.
+- **[Automatic Rollback<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/rollback.md):** User-facing guide — what gets restored, what might remain, and how to remediate failures.
+- **[The System Executor<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./executor.md):** How `SystemExecutor` sequences the execution phases and invokes the rollback stack.
+- **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./error_handling.md):** How `RollbackFailedError`, `ExecutionInterruptedError`, and `ProcessTerminationError` propagate and map to POSIX exit codes.

@@ -312,7 +312,7 @@ The flag requires a project with neither a recorded recipe nor a `protostar.lock
 
 ## Next Steps
 
-- __[Templates](./templates.md):__ Learn how to create and share custom TOML blueprints, fetch remote templates, and interpolate variables.
-- __[Tooling & Flags Matrix](./tooling-matrix.md):__ Explore all supported linters, formatters, type checkers, and test runners.
-- __[Global Configuration](./configuration.md):__ Customize your default Python version, licenses, and template aliases.
-- __[Troubleshooting & FAQ](./troubleshooting.md):__ Resolve missing binary dependencies, workspace collisions, and editor configuration issues.
+- __[Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./templates.md):__ Learn how to create and share custom TOML blueprints, fetch remote templates, and interpolate variables.
+- __[Tooling & Flags Matrix<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./tooling-matrix.md):__ Explore all supported linters, formatters, type checkers, and test runners.
+- __[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):__ Customize your default Python version, licenses, and template aliases.
+- __[Troubleshooting & FAQ<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./troubleshooting.md):__ Resolve missing binary dependencies, workspace collisions, and editor configuration issues.

@@ -43,6 +43,7 @@ def _write(repo: Path, name: str, content: str) -> None:
 def test_pages_that_follow_the_rules_pass(docs_repo: Path) -> None:
     assert check_docs_drift.check_page_front_matter() == []
     assert check_docs_drift.check_card_grids() == []
+    assert check_docs_drift.check_link_icons() == []
 
 
 @pytest.mark.parametrize(
@@ -87,6 +88,29 @@ def test_card_grids_hold_two_four_or_six(
     )
 
     problems = check_docs_drift.check_card_grids()
+
+    assert (problems == []) is passes
+
+
+@pytest.mark.parametrize(
+    ("item", "passes"),
+    [
+        ("- **[Next](next.md):** What it covers.", False),
+        ("- __[Next](next.md):__ What it covers.", False),
+        (
+            '- **[Next<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](next.md):** What it covers.',
+            True,
+        ),
+        ("- **[uv](https://docs.astral.sh/uv/)** installs packages.", True),
+        ("- See [Next](next.md) for more.", True),
+    ],
+)
+def test_standalone_list_links_carry_an_icon(
+    docs_repo: Path, item: str, passes: bool
+) -> None:
+    _write(docs_repo, "guide/usage.md", f'---\ndescription: "Usage."\n---\n\n{item}\n')
+
+    problems = check_docs_drift.check_link_icons()
 
     assert (problems == []) is passes
 

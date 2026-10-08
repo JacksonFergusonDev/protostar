@@ -91,5 +91,5 @@ Update the same way you installed:
 
 ## Next Steps
 
-- **[Your First Project](first-project.md):** Create a project, run it, change it, and check it, one step at a time.
-- **[Getting Started](getting-started.md):** A faster tour for people who already know Python tooling.
+- **[Your First Project<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](first-project.md):** Create a project, run it, change it, and check it, one step at a time.
+- **[Getting Started<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](getting-started.md):** A faster tour for people who already know Python tooling.

@@ -2,11 +2,11 @@
 description: "Where each managed document lives in the source, how Protostar finds the file a tool reads, and the per-document merge policies."
 ---
 
-# Managed documents
+# Managed Documents
 
 The [format engines](formats.md) know no file by name. Everything specific to one file lives in its own module under `src/protostar/documents/`, and callers look it up through that package's registries.
 
-## Document catalog
+## Document Catalog
 
 Each format engine reconciles a document under a spec it is handed: `TomlDocumentSpec` or `YamlDocumentSpec`. The YAML engine has one extension point for document policy, the `YamlGuard`. A TOML spec declares its policy as data (see [TOML document specs](#toml-document-specs)).
 
@@ -38,7 +38,7 @@ Every YAML and JSONC document is applied through one path. `Reconciliation._loca
 !!! tip "Adding a document"
     Adding a document means adding a module and a registry entry, not a branch in an engine.
 
-## Document locations
+## Document Locations
 
 Whether two paths hold the same configuration is a fact about the tool that reads them, not about the file format, so there is no rule that `.yml` and `.yaml` are interchangeable. Each document module declares its tool's locations as a `DocumentLocations` (`documents/locations.py`), verified against each tool's source:
 
@@ -56,7 +56,7 @@ Whether two paths hold the same configuration is a fact about the tool that read
 
 Pre-commit ignores `.pre-commit-config.yml`, but a lone copy means the user's hooks are not running. It is therefore a competitor, not something Protostar silently creates a second configuration next to. `exclusive` records whether the tool reads a single configuration; GitHub Actions does not.
 
-### Choosing the file to edit
+### Choosing the File to Edit
 
 `resolve_location` decides which file a run edits:
 
@@ -68,7 +68,7 @@ For an **exclusive** tool, every other configuration present next to the edited 
 
 A **non-exclusive** tool never conflicts. The owned file, else the target, else the single alias is edited, and a second workflow with the other extension is left alone.
 
-### Where the resolver applies
+### Where the Resolver Applies
 
 Protostar never renames a user's file back to the canonical name. Ownership records stay keyed by the real path, so the lock file names the file that is owned.
 
@@ -80,7 +80,7 @@ Protostar never renames a user's file back to the canonical name. Ownership reco
 
 Existence probes during preparation capture each path, so a review goes stale when a competing copy appears or disappears.
 
-## YAML document specs
+## YAML Document Specs
 
 Every YAML document the engine reconciles is described by a `YamlDocumentSpec`. It lives with its document in `src/protostar/documents/` and is registered by path in `documents.YAML_DOCUMENTS`. A spec:
 
@@ -92,7 +92,7 @@ Nothing outside the catalog compares against YAML file names. State validation, 
 
 The structured contribution channel accepts only the targets in `documents.YAML_CONTRIBUTION_TARGETS` (`.github/codecov.yml` and `.readthedocs.yaml`), declared by their canonical path. It does not infer structured intent from free-form file extensions or expose arbitrary YAML template injections. Pre-commit and workflows arrive through their own generators, and TOML remains the default format.
 
-### Keyed sequences
+### Keyed Sequences
 
 A `KeyedSequence` gives a path pattern in the keyed view and an identity field. In the keyed view each record is presented under its identity, so an enclosing keyed record appears in the path as its identity, and the `WILDCARD` sentinel matches exactly one segment. Pre-commit declares `repos` by `repo` and `repos.*.hooks` by `id`. Optional string fields (pre-commit's `rev`) must be non-empty strings whenever present.
 
@@ -113,7 +113,7 @@ The pre-commit pin guard holds `repos.<repo>.rev` instead of rewriting the desir
 
 A guard that depends only on the decoded documents is registered by path in `documents.catalog.YAML_GUARDS` (workflows and Read the Docs). Pre-commit's is planned per run from registry responses, so its caller passes it directly.
 
-## TOML document specs
+## TOML Document Specs
 
 A `TomlDocumentSpec` lives with its document in `src/protostar/documents/` and is looked up with `documents.toml_spec(path)`. Besides the kernel `MergePolicy` and layout, it declares document policy as data.
 
@@ -132,7 +132,7 @@ Some rules apply to every TOML document:
 - `Reconciliation._append_files` checks `root_table` before the merge, under explicit overwrite too, because it protects what the tool reads rather than who owns a value.
 - A document without a layout keeps its own end-of-file newlines. A desired table copied from the middle of a contribution would otherwise bring along the blank line that separated it from its next sibling.
 
-## GitHub Actions workflows
+## GitHub Actions Workflows
 
 `.github/workflows/ci.yml` and `release.yml` share one `github_workflows.SPEC`. There is no per-file behavior, only a different generator producing the desired document. Workflow files Protostar does not generate are never read or written.
 

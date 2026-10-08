@@ -2,7 +2,7 @@
 description: "How the TOML, YAML, JSONC, and text engines apply accepted merge decisions while preserving the user's comments, layout, and bytes."
 ---
 
-# Format engines
+# Format Engines
 
 The [kernel](kernel.md) decides what changes. A format engine applies that decision to the user's own document, patching the local AST or byte spans instead of regenerating the file.
 
@@ -31,7 +31,7 @@ The TOML adapter keeps semantic intent separate from a desired `tomlkit` AST. Th
 
 `yaml_ast.py` isolates `ruamel.yaml` typing and round-trip AST operations. The runtime dependency is `ruamel.yaml>=0.19.1,<0.20`, used through the [instance API](https://yaml.dev/doc/ruamel.yaml/api/) in pure-Python round-trip mode, without C extras or custom constructors.
 
-### Accepted input
+### Accepted Input
 
 YAML 1.2 is the default, and explicit 1.1 directives are rejected instead of silently reinterpreted. A document needs:
 
@@ -41,7 +41,7 @@ YAML 1.2 is the default, and explicit 1.1 directives are rejected instead of sil
 
 Timestamp, binary, set, and custom tags, and multiple documents, fail with a domain error. Input is bounded to 1 MB, 100 nesting levels, and 10,000 expanded nodes. Graph validation precedes construction, so recursive aliases are rejected.
 
-### Ownership and conflicts
+### Ownership and Conflicts
 
 Owned baselines use the `structured-yaml` policy and are serialized canonically from owned values only, never from the local round-trip document.
 
@@ -49,7 +49,7 @@ The three-way kernel controls scalar ownership and mapping recursion. Changed lo
 
 Shared alias nodes and merge-key mappings are protected whenever an edit could change foreign content. Their previous ownership is retained and a `shared-structure` conflict is emitted, even under overwrite. Independent sibling changes can still apply.
 
-### Preserving the file
+### Preserving the File
 
 The adapter patches accepted nodes in the local AST, and comments, quotes, flow and block styles, and anchors are retained where the [round-trip implementation](https://yaml.dev/doc/ruamel.yaml/detail/) supports it.
 
@@ -63,7 +63,7 @@ The adapter patches accepted nodes in the local AST, and comments, quotes, flow 
 
 When the local file does not end with a blank line, an emitted document ends with exactly one newline. Removing a trailing item would otherwise leave its separator blank line behind on the item before it.
 
-### Keyed records
+### Keyed Records
 
 Pre-commit configuration uses exact `repo` identities and `(repo, id)` hook identities, including `repo: local`. The adapter presents keyed semantic values to the kernel and then patches accepted fields on the original sequence records, so repository and hook order, comments, and foreign fields remain in the local AST. Owned snapshots stay ordinary YAML with `repos` and `hooks` sequences and never contain copied foreign hooks.
 
@@ -74,7 +74,7 @@ Pre-commit configuration uses exact `repo` identities and `(repo, id)` hook iden
 
 Generation declares `default_install_hook_types` and `default_stages` on every run, including their defaults. A clean runner or install-type change can then update owned top-level fields instead of leaving stale values through omission. User changes to these atomic sequences still win in merge mode.
 
-### Hook pins
+### Hook Pins
 
 The executor captures one frozen registry snapshot before execution starts. Planning performs no network requests, and reconciliation never refetches pins.
 
@@ -94,7 +94,7 @@ JSONC means `//` and `/* */` comments and trailing commas over one object root w
 
 Duplicate keys, non-finite numbers, lone surrogates, and non-object roots are domain errors. Input is bounded to 1 MB, 100 nesting levels, and 10,000 nodes. Owned baselines use the strict subset (no comments or trailing commas) with deterministic key order, and they preserve null values.
 
-### Editing by span
+### Editing by Span
 
 The parser records source spans instead of rebuilding text, and every edit is a set of replacements over those spans. Every byte outside an accepted edit is identical, including comments, key order, quoting, number spellings, CRLF or LF line endings, and a leading BOM.
 
@@ -108,13 +108,13 @@ The parser records source spans instead of rebuilding text, and every edit is a 
 
 The kernel controls ownership as usual. Existing equal content is not adopted, missing unowned keys may be added and owned, local edits and deletions are preserved with structured conflicts, and explicit overwrite owns declared leaves while retaining foreign siblings. Conflicts are reported at key level. A missing file receives the desired bytes verbatim, so template comments and layout survive.
 
-### Renovate and IDE settings
+### Renovate and IDE Settings
 
 Renovate declarations arrive through the file-injection channel, so a template `[files]` entry for `.github/renovate.json` follows the same path as the built-in module. A Renovate configuration at another location Renovate reads is merged in place when it is JSONC and held as a competitor when it is JSON5. A malformed generated or existing Renovate document fails before any workspace mutation.
 
 IDE settings reconcile the flat `python.*` preference keys as literal top-level keys (not nested paths) and indent new content with four spaces. Existing user values are preserved with a warning. A settings file that is not a valid JSONC object is an editor convenience: it is skipped with a warning and never aborts the run.
 
-## Text merge
+## Text Merge
 
 `text_merge.py` merges free-form text line by line, for managed files that have no structured format to reconcile. It is pure, with no subprocess, filesystem access, or terminal output, so planning and change review call it like the semantic kernel.
 
@@ -129,7 +129,7 @@ IDE settings reconcile the flat `python.*` preference keys as literal top-level 
 - Lines split on `\n` alone and keep their terminators, so a missing final newline is an edit.
 - When the local text uses one newline style throughout, base and remote texts that consistently use the other are converted first. A checkout that rewrites line endings is therefore not an edit, and the merged text keeps the local style.
 
-### Hunks and conflicts
+### Hunks and Conflicts
 
 A hunk changed by one side takes that side, and identical changes on both sides merge. Overlapping and adjacent edits conflict, as in git. Lines both sides added identically at the edges of a conflict leave it (git's `zdiff3` refinement), so a `TextConflict` spans only disagreeing lines.
 
@@ -137,13 +137,13 @@ A `TextConflict` holds its zero-based `start` in the local text and the base, lo
 
 A conflicted merge returns no text. Two hunks of one generator change can depend on each other, so adapters keep the local file whole or accept the merged file whole and never write a partial merge.
 
-### Agreement with git
+### Agreement with Git
 
 Clean merges match `git merge-file` byte for byte. Where the two disagree on whether a merge is clean (a fraction of a percent of randomized cases), the cause is ambiguous placement among repeated lines, where patience and Myers alignments legitimately differ. `scripts/compare_text_merge.py` reruns that comparison.
 
-## Generated files, seeds, and regions
+## Generated Files, Seeds, and Regions
 
-### Generated files
+### Generated Files
 
 The Dockerfile and justfile record the text Protostar last applied and reconcile through `reconcile_text`.
 

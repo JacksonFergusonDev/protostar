@@ -71,6 +71,6 @@ If a path Protostar would change is a symbolic link, a FIFO, a socket, or a devi
 
 ## Related Pages
 
-- **[Rollback Internals](../mechanics/rollback.md):** How the journal, the transactional filesystem, and process termination work, for contributors.
-- **[Error Handling Architecture](../mechanics/error_handling.md):** Every error and its exit code.
-- **[Troubleshooting & FAQ](./troubleshooting.md):** Fixes for the problems people run into most.
+- **[Rollback Internals<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/rollback.md):** How the journal, the transactional filesystem, and process termination work, for contributors.
+- **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/error_handling.md):** Every error and its exit code.
+- **[Troubleshooting & FAQ<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./troubleshooting.md):** Fixes for the problems people run into most.

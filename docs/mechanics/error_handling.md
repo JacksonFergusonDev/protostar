@@ -34,26 +34,20 @@ Errors rise from three stages, loading, planning, and execution, to the top-leve
 
 ```mermaid
 flowchart TD
-    classDef phase fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
-    classDef error fill:#7f1d1d,stroke:#f87171,stroke-width:1px,color:#fff;
-    classDef core fill:#0f172a,stroke:#38bdf8,stroke-width:1px,color:#e2e8f0;
-    classDef success fill:#14532d,stroke:#4ade80,stroke-width:1px,color:#fff;
-    classDef rollback fill:#854d0e,stroke:#facc15,stroke-width:1px,color:#fff;
+    Start([CLI Invocation]) --> P1["1. Load configuration and template"]
+    P1 -->|Pass| P2["2. plan(): check uv and git, build modules"]
+    P2 -->|Pass| P3["3. execute(): write and run, in one transaction"]
+    P3 -->|Success| End([ExecutionResult])
 
-    Start([CLI Invocation]):::core --> P1["1. Load configuration and template"]:::phase
-    P1 -->|Pass| P2["2. plan(): check uv and git, build modules"]:::phase
-    P2 -->|Pass| P3["3. execute(): write and run, in one transaction"]:::phase
-    P3 -->|Success| End([ExecutionResult]):::success
+    P1 -.->|Invalid TOML / Network / Archive| E1["ConfigurationError<br/>TemplateResolutionError<br/>NetworkFetchError"]
+    P2 -.->|Missing uv or git / Invalid plan| E2["MissingDependencyError<br/>ConfigurationError"]
+    P3 -.->|Failure / Interrupt| RB["Stop processes<br/>& MutationJournal Rollback"]
 
-    P1 -.->|Invalid TOML / Network / Archive| E1["ConfigurationError<br/>TemplateResolutionError<br/>NetworkFetchError"]:::error
-    P2 -.->|Missing uv or git / Invalid plan| E2["MissingDependencyError<br/>ConfigurationError"]:::error
-    P3 -.->|Failure / Interrupt| RB["Stop processes<br/>& MutationJournal Rollback"]:::rollback
+    RB -.->|Rollback Succeeded| E3["The original error, such as CommandExecutionError<br/>ExecutionInterruptedError on Ctrl+C<br/>ProcessTerminationError if a process won't stop"]
+    RB -.->|Rollback Failed| E4["RollbackFailedError"]
 
-    RB -.->|Rollback Succeeded| E3["The original error, such as CommandExecutionError<br/>ExecutionInterruptedError on Ctrl+C<br/>ProcessTerminationError if a process won't stop"]:::error
-    RB -.->|Rollback Failed| E4["RollbackFailedError"]:::error
-
-    E1 & E2 & E3 & E4 --> Trap["CLI Top-Level Handler<br/>(terminal report / JSON envelope)"]:::core
-    Trap --> Exit([Route POSIX Exit Code]):::core
+    E1 & E2 & E3 & E4 --> Trap["CLI Top-Level Handler<br/>(terminal report / JSON envelope)"]
+    Trap --> Exit([Route POSIX Exit Code])
 ```
 
 For the complete exit code mapping for each exception type, see the [POSIX Exit Code Matrix](#posix-exit-code-matrix) below.
@@ -248,6 +242,6 @@ For detailed docstrings and class signatures, see the [Error Handling API Refere
 
 ## Related Guides & References
 
-- __[Troubleshooting & FAQ](../usage/troubleshooting.md):__ Remediation steps for missing dependencies, collisions, and editor setups.
-- __[Agent & Machine Interface](../usage/agent-interface.md):__ Learn how AI coding agents and CI runners parse machine error envelopes.
-- __[The Orchestrator](./orchestrator.md):__ Understand the top-level exception trap and diagnostic gathering.
+- __[Troubleshooting & FAQ<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/troubleshooting.md):__ Remediation steps for missing dependencies, collisions, and editor setups.
+- __[Agent & Machine Interface<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/agent-interface.md):__ Learn how AI coding agents and CI runners parse machine error envelopes.
+- __[The Orchestrator<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./orchestrator.md):__ Understand the top-level exception trap and diagnostic gathering.

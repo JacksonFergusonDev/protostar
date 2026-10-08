@@ -2,7 +2,7 @@
 description: "The pure three-way merge kernel: how Protostar decides which values it owns, keeps, applies, or reports as conflicts."
 ---
 
-# Kernel and ownership
+# Kernel and Ownership
 
 `protostar.merge.reconcile()` is the format-neutral heart of every structured merge. It accepts decoded semantic `base`, `local`, and `remote` values plus a `MergeLocation` and a `MergePolicy`.
 
@@ -27,7 +27,7 @@ Format adapters keep the local AST and apply accepted decisions to it, so user d
 
 An aggregate conflict may still contain accepted sibling changes, so adapters must inspect the returned values rather than discard everything on a conflict. No diagnostic strings or prompts belong to this interface.
 
-## Decision rules
+## Decision Rules
 
 - Omitted remote values retain local values and previous ownership, unless the policy is `complete`.
 - Missing unowned values may be added and owned. Existing equal values remain unowned, because equality is insufficient for adoption.
@@ -60,7 +60,7 @@ Sequences are atomic by default, including arrays of tables. An adapter can decl
 
 Existing foreign equal members never become owned. Policy validation examines all inputs before any truth-table shortcut, including lists inside unchanged mappings. Keyed record sequences are declared per YAML document; see [YAML document specs](documents.md#yaml-document-specs).
 
-## Complete documents and retraction
+## Complete Documents and Retraction
 
 A policy with `complete` set treats the remote value as one generator's complete document. An owned mapping key it no longer declares is **retracted** instead of retained:
 
@@ -76,7 +76,7 @@ Retraction happens once, at the highest key that disappeared, so a partly edited
 
 The complete-document adapters are GitHub Actions workflows, `.pre-commit-config.yaml`, `.readthedocs.yaml`, and `pyproject.toml`. A hook configuration retracts each hook by `id` and each repository by `repo`, and a repository's pin leaves `protostar.lock` with it. For `pyproject.toml`, the aggregated contributions of its producers are the complete declaration: `[tool]` is its namespace, and its seed paths and `dependency-groups` (which the include writer owns) are retained. Every other adapter keeps the no-pruning default.
 
-### Documents nothing declares any more
+### Documents Nothing Declares Any More
 
 A document can lose every producer, because its tool or template option is switched off or its template stops contributing to it. It is still visited: `Reconciliation._release_undeclared_documents` reconciles every owned TOML, YAML, and JSONC record that no declared document reads against an empty declaration, under its own spec with `complete` set. "Declared" is `EnvironmentManifest.declared_documents`, expanded through each document's locations.
 

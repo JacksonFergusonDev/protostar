@@ -2,11 +2,11 @@
 description: "How reconciliation runs inside a transaction: state ordering, dependency resolution, shared review preparation, and the acceptance suite."
 ---
 
-# Execution and review
+# Execution and Review
 
 Reconciliation is pure, but it runs inside the [executor's](../../mechanics/executor.md) transaction. This page covers the rules that connect the two: what is read before mutation, in what order things are written, how dependencies are resolved, and how review and apply share one preparation.
 
-## Execution boundary
+## Execution Boundary
 
 - Read and validate state before any mutation.
 - Filesystem node safety and the workspace jail stay the executor's responsibility. A pure string codec cannot inspect symlinks or ancestor workspaces.
@@ -33,7 +33,7 @@ The change review shows what can be known before any command runs: `review_phase
 
 A lifecycle run has no initializer between batches, so `prepare_review()` prepares `COMPLETE`, every batch at once, before anything runs. Execution applies that review's edits, runs only its accepted resolver requests, converges git hooks, and writes `protostar.lock`, then commits. It runs no system task, post-install task, or editor probe.
 
-### Write rules
+### Write Rules
 
 1. Apply accepted changes through format ASTs and `TransactionAwareFS`.
 1. Stage composite baselines in a candidate.
@@ -43,7 +43,7 @@ A lifecycle run has no initializer between batches, so `prepare_review()` prepar
 
 Any exception terminates managed processes and rolls the journal back; see [Rollback Internals](../../mechanics/rollback.md).
 
-## Conflict diagnostics
+## Conflict Diagnostics
 
 Expected merge conflicts preserve the affected values and become structured warnings, while malformed state stays fatal. The executor aggregates module contributions in declared sequence order, then applies template opinions once. Unclassified conflicting producers fail before any mutation.
 
@@ -51,7 +51,7 @@ Conflict diagnostics carry the file, key path, optional identity, and an enum re
 
 A tracked deleted file cannot be recreated by initializer tasks, new dependency requests, include-group wiring, or newly requested tooling. The executor captures a deleted tracked `pyproject.toml` before running `uv init`, including projects tracked only through dependency records. Explicit overwrite can still initialize that file again.
 
-## Dependency selection
+## Dependency Selection
 
 Selection is per group, canonical package name, and normalized marker. Extras, bounds, and direct references remain requirement values.
 
@@ -61,7 +61,7 @@ Selection is per group, canonical package name, and normalized marker. Extras, b
 - Converged previously owned intent advances its record without a resolver call.
 - Only accepted requests invoke `uv add`. A successful request records both the declared intent and the actual materialized requirement, and matching foreign entries remain unowned.
 
-### Requirements in other groups
+### Requirements in Other Groups
 
 Before adding an unowned requirement to an empty destination, selection checks the other dependency groups (including custom groups), project dependencies, and optional dependencies for the same normalized package and marker. An existing entry produces a `different-group` conflict in both review and execution.
 
@@ -86,7 +86,7 @@ Both resolver paths are journaled before invocation. Failures and timeouts are f
 
 There is no AST dependency rewrite, no implicit upgrade, and no redundant lock after an ordinary dependency addition.
 
-## Shared preparation
+## Shared Preparation
 
 `protostar.preparation.prepare_review()` computes, from a manifest and captured workspace inputs:
 
@@ -99,7 +99,7 @@ It uses the TOML, YAML, keyed-hook, region, and text adapters through `Reconcili
 
 Tool selection resolves project overrides, current template opinions, and the captured fallback before effective modules declare their executables or contributions. Producer attribution survives into the review, so opting out of one producer does not suppress another producer contributing to the same target.
 
-### Applying a review
+### Applying a Review
 
 The caller supplies one acquired hook revision snapshot. A `SystemExecutor` constructed with `review=review` consumes that snapshot and the exact accepted bytes without acquiring pins again.
 
@@ -107,7 +107,7 @@ The lifecycle policy skips every declared system and post-install task and the I
 
 `init` keeps its own policy and prepares successive batches around actual initializer and resolver execution. Original transaction presence still distinguishes eligible initializer-created values from pre-existing user values. The recipe refresh stays after post-install tasks and inside the state transaction.
 
-### Stale reviews
+### Stale Reviews
 
 Captured inputs are the exact bytes, existence, POSIX modes, relevant ancestors, `pyproject.toml`, `protostar.lock`, and declared resolver paths. Unsupported nodes fail during preparation.
 
@@ -116,7 +116,7 @@ Immediately before applying a batch, execution checks the desired manifest and a
 !!! note
     This protects the interval between preparation and application. It does not exclude concurrent writers during a transaction.
 
-## Safe reinitialization
+## Safe Reinitialization
 
 `init --force-merge` is safe reinitialization, not an update product. It requires the same selected template identity for a tracked project and reconciles only recorded contributions. It does not:
 
@@ -127,7 +127,7 @@ Immediately before applying a batch, execution checks the desired manifest and a
 
 Omitted contributions are retracted exactly as `sync` retracts them. Updating a tracked project is `sync`'s job; see the [lifecycle guide](../../usage/lifecycle.md).
 
-## Acceptance suite
+## Acceptance Suite
 
 Broad end-to-end evidence is kept apart from focused synthetic-revision cases.
 

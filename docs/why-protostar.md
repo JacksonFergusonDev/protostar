@@ -310,7 +310,7 @@ Until 1.0, a release may still change a command or the template format when that
 
 ## Next Steps
 
-- **[Your First Project](first-project.md):** Scaffold a project step by step, from choosing a template to running its checks.
-- **[Authoring Templates](usage/authoring-templates.md):** Write a template for your team, from a single TOML file to a versioned repository.
-- **[Project Lifecycle](usage/lifecycle.md):** Review, sync, and resolve updates in a project you already have.
-- **[Design Principles](design-principles.md):** The architecture behind the planning, merging, and rollback guarantees.
+- **[Your First Project<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](first-project.md):** Scaffold a project step by step, from choosing a template to running its checks.
+- **[Authoring Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](usage/authoring-templates.md):** Write a template for your team, from a single TOML file to a versioned repository.
+- **[Project Lifecycle<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](usage/lifecycle.md):** Review, sync, and resolve updates in a project you already have.
+- **[Design Principles<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](design-principles.md):** The architecture behind the planning, merging, and rollback guarantees.

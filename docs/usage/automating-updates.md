@@ -2,11 +2,11 @@
 description: "Keep projects current without running sync by hand: scheduled update pull requests, checks in CI, pinned releases, and template upgrades."
 ---
 
-# Automating updates
+# Automating Updates
 
 [Project Lifecycle](lifecycle.md) covers reviewing and syncing one project by hand. This page covers keeping projects current without anyone remembering to: a workflow that opens update pull requests, a check that fails CI when a project falls behind, one Protostar release across a team, and moving projects to a template's new releases.
 
-## Open update pull requests on a schedule
+## Open Update Pull Requests on a Schedule
 
 Protostar doesn't open pull requests on its own, but a scheduled workflow can: it runs `protostar sync` and opens a pull request with whatever changed. Save this as `.github/workflows/protostar-sync.yml`:
 
@@ -70,7 +70,7 @@ jobs:
 - **Git hooks.** `sync` installs the clone's hooks, so the workflow switches them off before the pull request's commit, which would otherwise run every check.
 - **Repository settings.** Allow the workflow to open pull requests under **Settings** → **Actions** → **General** → **Workflow permissions**. A pull request opened with the default `GITHUB_TOKEN` doesn't trigger other workflows, so your CI won't run on it. To have it run, give `create-pull-request` a `token` from a GitHub App or a fine-grained personal access token.
 
-## Use checks in CI
+## Use Checks in CI
 
 ```bash
 protostar sync --check --json > review.json
@@ -87,7 +87,7 @@ protostar sync --check --json > review.json
 
 `--check` never changes anything, and can't be combined with `--dry-run`. With `--json`, every command prints one JSON payload on stdout and never prompts; diagnostics and command output go to stderr. A check's payload includes `check_passed`, a review's has `status: "reviewed"`, and an applied sync's has `"success"` or `"partial"`. See the [machine interface](agent-interface.md) for examples and schemas.
 
-## Keep Protostar versions in step
+## Keep Protostar Versions in Step
 
 Built-in output comes from the installed Protostar, so every contributor needs a release at least as new as the one that last wrote `protostar.lock`. The lock records that release as `producer_version`. When the installed Protostar is older, `init`, `status`, `diff`, and `sync` (including `--check`) refuse to run instead of treating the older output as an update. Upgrade Protostar, for example with `uv tool upgrade protostar`, and run the command again. In `--json` mode, the error carries `recorded_version` and `installed_version`.
 
@@ -97,7 +97,7 @@ In CI, run the release that last wrote the lock, which it records as `producer_v
 uvx "protostar@$(sed -n 's/^producer_version = "\(.*\)"$/\1/p' protostar.lock)" sync --check
 ```
 
-## Upgrade a repository template
+## Upgrade a Repository Template
 
 `status` starts with the template's ref and what its repository offers:
 

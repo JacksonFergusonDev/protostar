@@ -59,6 +59,7 @@ extra_css = [
     "house/css/fonts-extended.css",
     "house/css/tokens.css",
     "house/css/terminal.css",
+    "house/css/icons.css",
     "stylesheets/extra.css",
 ]
 extra_javascript = [{ path = "javascripts/casts.js", type = "module" }]

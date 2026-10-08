@@ -2,7 +2,7 @@
 description: "The schema-v1 ownership state stored in protostar.lock: records, file policies, dependencies, hook pins, and validation."
 ---
 
-# Ownership state
+# Ownership State
 
 `protostar.sync_state.SyncState` is a frozen candidate/committed model, serialized to `protostar.lock`. It holds:
 
@@ -21,7 +21,7 @@ description: "The schema-v1 ownership state stored in protostar.lock: records, f
 - No clock values, trust authorization, interpolation answers, or whole-workspace snapshots are recorded.
 - Template provenance describes the latest successful transaction attempt. File baselines remain authoritative after partial conflicts.
 
-## File policies
+## File Policies
 
 Each file record carries a policy that says what its stored baseline means:
 
@@ -36,7 +36,7 @@ Each file record carries a policy that says what its stored baseline means:
 
 TOML and YAML snapshots are validated by their own codecs, and unknown policies fail rather than accepting opaque documents. YAML snapshots preserve null values. The kernel's null values cannot be persisted through TOML, so its snapshot encoder rejects them explicitly. Native TOML scalars, arrays, and arrays of tables round trip without conversion through JSON or a tagged cross-format value system.
 
-## Dependencies and hook pins
+## Dependencies and Hook Pins
 
 A dependency record keeps its identity (path, group, canonical name, normalized marker) plus the exact declared and materialized requirement strings. The codec validates PEP 508 syntax and that both requirements match the stored identity. Extras, specifiers, and direct references remain values.
 
@@ -55,6 +55,6 @@ Paths must be relative POSIX workspace paths. They reject Windows drives and bac
 
 Missing state is a caller-level absence, not an empty or corrupt state document.
 
-## Template identity
+## Template Identity
 
 `check_template_identity()` allows a changed digest at the same source while rejecting template switching, alias retargeting, and tooling/template transitions. `Orchestrator.plan()` runs it through `check_workspace_identity()`, so every caller rejects a switch before it asks the user anything.

@@ -12,31 +12,26 @@ The executor decides nothing about content itself. What each file should hold, a
 
 ```mermaid
 flowchart TD
-    classDef coordinator fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
-    classDef pure fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
-    classDef transaction fill:#14532d,stroke:#4ade80,stroke-width:2px,color:#fff;
-    classDef stateful fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
-
-    M[(EnvironmentManifest)] --> E(executor.py):::coordinator
+    M[(EnvironmentManifest)] --> E(executor.py)
 
     subgraph Decisions ["Pure decisions"]
-        E --> PR(preparation.py):::pure
-        PR --> RC(reconciliation.py):::pure
-        RC --> F(toml_ast · yaml_ast · jsonc_ast<br/>text_merge · appends):::pure
-        RC --> G(workflows.py):::pure
+        E --> PR(preparation.py)
+        PR --> RC(reconciliation.py)
+        RC --> F(toml_ast · yaml_ast · jsonc_ast<br/>text_merge · appends)
+        RC --> G(workflows.py)
     end
 
     subgraph Transaction ["Transaction"]
-        E --> J(journal.py):::transaction
-        E --> FS(fs_transaction.py):::transaction
-        E --> P(system.py):::transaction
+        E --> J(journal.py)
+        E --> FS(fs_transaction.py)
+        E --> P(system.py)
     end
 
     subgraph Integrations ["Commands and network"]
-        E --> D(dependencies.py):::stateful
-        E --> H(git_hooks.py):::stateful
-        E --> I(ide.py):::stateful
-        E --> R(registry.py):::stateful
+        E --> D(dependencies.py)
+        E --> H(git_hooks.py)
+        E --> I(ide.py)
+        E --> R(registry.py)
     end
 ```
 
@@ -92,8 +87,8 @@ For one-off isolated commands outside the main executor loop, `protostar.system.
 
 ## Related Mechanics & Guides
 
-- **[The Orchestrator](./orchestrator.md):** See how the orchestrator coordinates the planning phase and passes the manifest to the executor.
-- **[The Environment Manifest](./manifest.md):** Review the structured state container evaluated by the executor.
-- **[The Module Architecture](./modules.md):** Explore the polymorphic modules that generate the requirements processed by the executor.
-- **[Rollback Internals](./rollback.md):** Deep dive into `MutationJournal`, `TransactionAwareFS`, and `ProcessRunner` — the three-layer rollback stack.
-- **[Error Handling Architecture](./error_handling.md):** Review how rollback errors and process failures are mapped to domain exceptions.
+- **[The Orchestrator<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./orchestrator.md):** See how the orchestrator coordinates the planning phase and passes the manifest to the executor.
+- **[The Environment Manifest<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./manifest.md):** Review the structured state container evaluated by the executor.
+- **[The Module Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./modules.md):** Explore the polymorphic modules that generate the requirements processed by the executor.
+- **[Rollback Internals<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./rollback.md):** Deep dive into `MutationJournal`, `TransactionAwareFS`, and `ProcessRunner` — the three-layer rollback stack.
+- **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./error_handling.md):** Review how rollback errors and process failures are mapped to domain exceptions.

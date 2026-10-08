@@ -122,7 +122,7 @@ If you are extending Protostar with custom domains or tooling layers, your `Boot
 
 ## Related Mechanics & Guides
 
-- __[The Orchestrator](./orchestrator.md):__ Learn how the engine coordinates the planning and execution phases using the manifest.
-- __[The System Executor](./executor.md):__ Discover how the manifest is transformed into atomic disk mutations and managed subprocesses.
-- __[The Module Architecture](./modules.md):__ Understand how modules declare dependencies, file injections, and AST appends.
-- __[Extending Protostar](../developer/extending-protostar.md):__ Build custom bootstrap modules that interact directly with `EnvironmentManifest`.
+- __[The Orchestrator<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./orchestrator.md):__ Learn how the engine coordinates the planning and execution phases using the manifest.
+- __[The System Executor<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./executor.md):__ Discover how the manifest is transformed into atomic disk mutations and managed subprocesses.
+- __[The Module Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./modules.md):__ Understand how modules declare dependencies, file injections, and AST appends.
+- __[Extending Protostar<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../developer/extending-protostar.md):__ Build custom bootstrap modules that interact directly with `EnvironmentManifest`.

@@ -224,6 +224,6 @@ See [Automating Updates](automating-updates.md#use-checks-in-ci) for check outco
 
 ## Related Pages
 
-- __[The Environment Manifest](../mechanics/manifest.md):__ Every field of the `manifest` a dry run returns.
-- __[Error Handling Architecture](../mechanics/error_handling.md):__ Every error, its JSON fields, and its exit code.
-- __[CLI Reference](./cli-reference.md):__ Every command and option.
+- __[The Environment Manifest<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/manifest.md):__ Every field of the `manifest` a dry run returns.
+- __[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/error_handling.md):__ Every error, its JSON fields, and its exit code.
+- __[CLI Reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./cli-reference.md):__ Every command and option.
