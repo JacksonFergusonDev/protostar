@@ -393,7 +393,8 @@ def test_only_a_complete_comparison_on_main_is_recorded_and_published():
     (download,) = [
         s for s in record["steps"] if "download-artifact" in s.get("uses", "")
     ]
-    assert download["with"]["pattern"] == "benchmarks-*"
+    assert download["with"]["name"] == "benchmarks-ubuntu-latest"
+    assert download["with"]["path"] == "results/benchmarks-ubuntu-latest"
     (issue,) = [s for s in record["steps"] if "report issue" in s.get("run", "")]
     assert issue["if"] == "steps.record.outputs.published == 'true'"
     assert jobs["publish-pages"]["uses"] == "./.github/workflows/pages.yml"
