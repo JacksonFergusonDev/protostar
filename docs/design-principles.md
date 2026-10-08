@@ -143,8 +143,8 @@ When `--mypy` is on, the Mypy module declares its dependency, its commit hook, i
 
 **Why this matters:** Decoupling prevents combinatorial explosion. With `n` tools, a monolithic conditional model can grow to `O(2^n)` interaction cases. A modular architecture keeps complexity linear — each module is an isolated unit, testable without any other module present. Adding a new tool to Protostar means writing one new module and listing it in a few registries, not auditing every existing flag combination; see [Extending Protostar](./developer/extending-protostar.md).
 
-!!! note "Related: tri-state toggling"
-    Because modules are independent, Protostar can offer `--<flag>` / `--no-<flag>` overrides for any module without the template author needing to write any conditional logic. See [Initialization](./usage/init.md) for the full flag matrix.
+!!! note "Related: a flag for every tool"
+    Because modules are independent, Protostar can offer `--<tool>` and `--no-<tool>` for every module without the template author writing any conditional logic. See [Turning Tools On and Off](./usage/init.md#turning-tools-on-and-off).
 
 ## Baseline in Modules, Shape in Templates
 

@@ -63,10 +63,7 @@ A template the user hasn't trusted also needs each command confirmed; see [Trust
 
 ## Merging Into Existing Files
 
-When a project already has a file the plan writes, the run needs a collision strategy, chosen in the recipe editor's Existing files panel or with a flag:
-
-- **Merge** (`--force-merge`, the default in the editor) reconciles the file against `protostar.lock`: Protostar's content takes the update, the user's content stays, and each disagreement becomes a decision. See [How Protostar Tracks Your Files](../usage/tracking.md).
-- **Overwrite** (`--force-replace`) writes Protostar's version over each declared target.
+When a project already has a file the plan writes, the run needs a collision strategy, merge or overwrite, before the executor writes anything; see [Collision Strategies](./manifest.md#collision-strategies).
 
 ## Subprocess Diagnostics & Process Ownership
 
