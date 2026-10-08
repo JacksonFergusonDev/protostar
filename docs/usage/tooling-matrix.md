@@ -4,7 +4,7 @@ description: "Every tool Protostar can set up, the flag that turns it on, and th
 
 # Tooling & Flags Matrix
 
-Protostar provides a modular matrix of tooling modules and built-in templates. Tooling modules inject static analysis, testing frameworks, and continuous integration workflows, safely deep-merging configurations into existing project files like `pyproject.toml`.
+Every tool Protostar can set up has a flag that turns it on or off, and writes its settings, hooks, and CI steps for you, merging them into files you already have, such as `pyproject.toml`. This page lists each tool and its flag, and the built-in templates.
 
 !!! note "Design Decision: Configuration Portability"
     Even when using `--prek`, Protostar generates a `.pre-commit-config.yaml` file instead of `prek.toml`. Because `prek` fully supports the standard YAML configuration, this strategy ensures maximum ecosystem compatibility. The project isn't tied to one hook runner: collaborators who use `pre-commit`, editor integrations, and Renovate's hook updates all read the same file.

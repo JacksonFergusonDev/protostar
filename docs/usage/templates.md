@@ -1,16 +1,16 @@
 ---
-description: "Discover, load, and configure declarative templates in Protostar."
+description: "Use built-in templates, your team's from a file or repository, and aliases, and decide which templates may run commands."
 ---
 
 # Templates
 
-Protostar's template engine allows you to define declarative, reusable environment blueprints. Whether you are using built-in templates, fetching team standards from remote Git repositories, or defining custom local setups, templates eliminate boilerplate and ensure consistent repository architecture.
+A template describes a kind of project: its tools, dependencies, settings, and starter files. Use a built-in one, your team's from a file or a Git repository, or a short alias for either, and every project made from it starts the same way.
 
 <div class="grid cards" markdown>
 
 - :material-cube-outline: __Built-in Templates__
 
-    Turnkey environment matrices for common domains (e.g., `api`, `astro`, `cli`, `lib`, `ml`) shipped natively with Protostar.
+    Project shapes that ship with Protostar: `api`, `astro`, `cli`, `lib`, and `ml`.
 
 - :material-web: __External & Remote (`--from`)__
 

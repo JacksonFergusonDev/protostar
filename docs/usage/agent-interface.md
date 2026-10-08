@@ -1,12 +1,12 @@
 ---
-description: "Experimental machine-readable CLI interface for AI agents, CI/CD pipelines, and automation tools."
+description: "Drive Protostar from scripts, CI, and coding agents: JSON payloads, dry runs, decision ids, and exit codes."
 ---
 
 # Agent & Machine Interface
 
-Protostar features an experimental, machine-readable command-line interface designed specifically for AI coding agents, CI/CD pipelines, and automated developer tooling.
+Every Protostar command can answer in JSON, for coding agents, CI, and scripts. The interface is still experimental: its `api_version` changes when a payload does.
 
-By passing the position-independent `--json` flag and utilizing the `--dry-run` phase, external agents can programmatically inspect Protostar's capabilities, simulate environment scaffolding without side-effects, automatically handle collisions, and safely execute operations.
+Pass `--json` anywhere on the command line, and Protostar prints one JSON payload on `stdout` and never prompts. Add `--dry-run` to see exactly what a run would do without writing a file or running a command, then run it for real with the decisions you chose.
 
 <div class="grid cards" markdown>
 
@@ -41,9 +41,7 @@ Every JSON response emitted to `stdout` follows one of three structured envelope
 === "1. Planned (`status: "planned"`)"
     Emitted when running `protostar init --dry-run --json`. Returns the complete planned `manifest`; the `entries` the run leaves in the workspace, one per path, each with its `change` (`new`, `modified`, `removed`, `conflict`, `existing`, or `after-setup` for files commands and the resolver create), whether it is a `directory`, and the ids of its open `conflicts` and `proposals`; the `review` that computed them, in the same shape `protostar status --json` returns; and, in a directory with no recipe yet, the `analysis` of what the project already has: the tools found with their `sources`, the `facts` read with where each came from, and `notes` about anything left out. `analysis` is `null` once a recipe exists. Analysis never selects a tool for a headless run; pass the flags for the tools you want.
 
-    With `--one-shot`, `manifest.one_shot` is `true`. Execution still resolves
-    dependencies and may write `uv.lock`, but omits `[tool.protostar]` and
-    `protostar.lock`.
+    With `--one-shot`, `manifest.one_shot` is `true`. Execution still resolves dependencies and may write `uv.lock`, but omits `[tool.protostar]` and `protostar.lock`.
 
     ```json
     --8<-- "agent_payload_planned.json"
@@ -114,8 +112,8 @@ The resulting payload exposes all directories, injected file contents, dependenc
 
 If the target workspace already contains files (such as an existing `pyproject.toml` or `README.md`), Protostar will not prompt interactively in JSON mode. Instead, it exits with the `WorkspaceCollisionError` payload shown under [Protocol States](#protocol-states). The agent can parse `error.paths` and choose how to proceed:
 
-- Pass `--force-merge` to reconcile previously managed configuration without adopting existing content, and append missing ignore rules.
-- Pass `--force-replace` to overwrite existing configuration files.
+- Pass `--force-merge` to merge into the existing files. Your content stays, and each change Protostar would make to it is listed in the dry run's `review` as a conflict or proposal.
+- Pass `--force-replace` to replace the existing files with Protostar's version.
 
 #### Settling Conflicts and Proposals
 
@@ -170,15 +168,9 @@ Agents can use standard JSON Schema validators (e.g., `jsonschema` in Python or 
 
 The schema checks structure only. `protostar check-template <file> --json` also checks that `init` would accept the template, without writing files or running commands. It returns `status: "passed"` or `"failed"` (exit `1`) with a `check` object listing each finding's `rule`, `severity`, `message`, `file`, `line` (or `null`), `key`, and `hint`. A template that cannot be retrieved returns the error envelope instead, so `"failed"` always means the template itself was checked.
 
-## Related Architecture & Next Steps
+## Status and Diff Payloads
 
-- __[The Environment Manifest](../mechanics/manifest.md):__ Detailed structure and domain slices of the in-memory state object serialized during `--dry-run --json`.
-- __[Error Handling Architecture](../mechanics/error_handling.md):__ Deep dive into machine error envelopes, collision paths, and POSIX exit code mappings.
-- __[CLI Reference](./cli-reference.md):__ Full list of subcommands, global flags, and exit status codes.
-
-## Project review envelopes
-
-`protostar status --json` and `protostar diff --json` return the same deterministic review envelope with `status: "reviewed"`, `pending`, `template`, `review`, and accepted `diffs`. For a repository template, `template` holds the applied `ref` and `revision` (commit), the ref's `kind` (`tag`, `branch`, or `commit`, or `null` when the repository no longer has it), the `newer` release when one exists, the commit a `moved` tag or branch names now, and whether the repository was `reachable`. It is `null` for built-in, local, and plain-URL templates. A newer release is not pending work: move to it with `sync --to <ref>`. Discover its JSON Schema through `protostar help status --json` in `capabilities.review_schema`. Every property in it carries a `description`, and the tables below are generated from those.
+`protostar status --json` and `protostar diff --json` return the same payload, with `status: "reviewed"`, `pending`, `template`, `review`, and the `diffs` a sync would apply. For a repository template, `template` holds the applied `ref` and `revision` (commit), the ref's `kind` (`tag`, `branch`, or `commit`, or `null` when the repository no longer has it), the `newer` release when one exists, the commit a `moved` tag or branch names now, and whether the repository was `reachable`. It is `null` for built-in, local, and plain-URL templates. A newer release is not pending work: move to it with `sync --to <ref>`. Discover its JSON Schema through `protostar help status --json` in `capabilities.review_schema`. Every property in it carries a `description`, and the tables below are generated from those.
 
 --8<-- "table_schema_review_envelope.md"
 
@@ -190,11 +182,11 @@ The schema checks structure only. `protostar check-template <file> --json` also 
 
 --8<-- "table_schema_review.md"
 
-Both commands exit `0` for a valid review, including conflicts. Domain failures use the existing error envelope and domain exit code. Resolver output is explicitly unknown; review never runs package managers. Diffs contain project content and are not a secret-redaction system.
+Both commands exit `0` whenever the review succeeds, even with conflicts; an error uses the error payload and its exit code. A review never runs uv, so it can't show what uv will change in `pyproject.toml` and `uv.lock`: those changes appear only after `sync`. Diffs show your files' content as it is, secrets included.
 
-## Lifecycle review and check examples
+## Conflicts, Checks, and Sync Payloads
 
-These examples are generated by the shared preparation path. Safe file creation appears in `diffs`; conflicting local content appears separately in `review.conflicts`. Resolver output is never simulated.
+The examples below are generated from the same code `sync` runs. A change that applies cleanly appears in `diffs`; content where yours and the update's disagree appears in `review.conflicts` instead.
 
 Each conflict carries an `id`, the `choices` that can settle it, and its `sides` (`base`, `local`, and `desired`, each `null` when absent). An agent settles it with `sync --resolve <id>=<choice>`, which moves it to `review.resolved` with its `resolution`. An `id` covers the conflict's content, so a resolution for content that changed since the review fails with `UnmatchedResolutionError` instead of applying elsewhere; a choice the conflict does not offer fails with `UnsupportedResolutionError` and lists the ones it does. See [resolve conflicts](lifecycle.md#resolve-conflicts).
 
@@ -220,7 +212,7 @@ Two more kinds of decision share that shape and the same `--resolve`. Entries in
 --8<-- "agent_payload_check.json"
 ```
 
-`sync --json` returns `status: "success"` or `"partial"`, `template`, `review`, and `result`. Partial application exits `1` after committing safe updates; fatal failures use the error envelope with rollback context when available. Discover the application schema through `protostar help sync --json` in `capabilities.application_schema`.
+`sync --json` returns `status: "success"` or `"partial"`, `template`, `review`, and `result`. A partial sync applied the safe changes, left conflicts open, and exits `1`; an error uses the error payload, with the `rollback_context` of what was restored. Discover the application schema through `protostar help sync --json` in `capabilities.application_schema`.
 
 --8<-- "table_schema_application_envelope.md"
 
@@ -228,4 +220,10 @@ Two more kinds of decision share that shape and the same `--resolve`. Entries in
 
 --8<-- "table_schema_result.md"
 
-See [Automating Updates](automating-updates.md#use-checks-in-ci) for check outcomes and exit codes, and the [lifecycle walkthrough](lifecycle.md) for recipe edits, enrollment, and security and rollback boundaries.
+See [Automating Updates](automating-updates.md#use-checks-in-ci) for check outcomes and exit codes, and [Project Lifecycle](lifecycle.md) for recipe edits, trust, and rollback.
+
+## Related Pages
+
+- __[The Environment Manifest](../mechanics/manifest.md):__ Every field of the `manifest` a dry run returns.
+- __[Error Handling Architecture](../mechanics/error_handling.md):__ Every error, its JSON fields, and its exit code.
+- __[CLI Reference](./cli-reference.md):__ Every command and option.

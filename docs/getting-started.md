@@ -101,9 +101,7 @@ To speed up your workflow, you can enable CLI autocompletion and set up a shorte
 
 ### 1. Enable Autocomplete
 
-Protostar provides native dynamic completion script generation for **Zsh**, **Bash**, **Fish**, and **PowerShell** via `protostar completion`. No external packages or separate installations are required.
-
-To guarantee zero impact on your terminal startup latency (0ms overhead), Protostar generates a static completion script that connects directly to the fast dynamic completer.
+`protostar completion` prints a tab-completion script for **Zsh**, **Bash**, **Fish**, or **PowerShell**, with nothing else to install. Save it to a file once, as below, rather than generating it each time your shell starts, so opening a terminal stays fast.
 
 === "Zsh (macOS / Linux)"
     Generate the static completion script and source it in `~/.zshrc`:
