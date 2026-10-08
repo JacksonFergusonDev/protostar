@@ -157,10 +157,11 @@ So each module's defaults are what a casual user would thank it for. The `cli` t
 === "Protostar (Baseline + Delta)"
 
     ```toml
-    # Module baseline (always the same, gentle):
+    # Module baseline (always the same, gentle), in part:
     [tool.mypy]
     check_untyped_defs = true
     warn_return_any = true
+    warn_unused_configs = true
 
     # cli template delta (only what defines a published CLI):
     [tool.mypy]
@@ -256,7 +257,7 @@ POSIX defines a set of exit code semantics beyond the binary success/fail conven
 
 **Why this matters:** A script that calls Protostar and checks only `if $? -ne 0` can tell that *something* failed. A script that checks specific exit codes can tell whether the failure was a transient network issue (retry), a missing dependency (prompt user to install), or a configuration error (fail fast and alert). The distinction is the difference between a tool that composes well in automation and one that requires a human in the loop to diagnose failures.
 
-The same structured information is available programmatically via `--json`, where every error envelope includes the exception class name and a `docs_url` pointing to the relevant remediation guide.
+The same structured information is available programmatically via `--json`, where every error envelope includes the exception class name, and most include a `docs_url` pointing to the relevant remediation guide.
 
 ```json
 --8<-- "agent_payload_error.json"

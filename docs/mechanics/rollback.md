@@ -105,6 +105,8 @@ ACTIVE → (mutations recorded freely)
 
 Calling `commit()` on a successfully completed run discards the journal — there is nothing to restore. Calling `rollback()` on a `COMMITTED` journal raises `TransactionStateError` (the transaction is already done).
 
+The commit is the run's last step, so an interrupt can still arrive after it. The executor checks the journal's state first: once it is `COMMITTED`, the interrupt passes through untouched and the finished run stands. The CLI reports a plain interrupt (exit code `130`) without `ExecutionInterruptedError`, because nothing was rolled back.
+
 ### Rollback Replay
 
 `rollback()` iterates the journal in **reverse insertion order** — last mutation is undone first. For each entry:

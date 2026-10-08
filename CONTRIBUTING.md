@@ -78,6 +78,10 @@ The publisher creates a clean artifact with `scripts/prepare_pages.py`. The rele
 
 To republish the current documentation and metrics without rebuilding a release or publishing to PyPI, run `gh workflow run pages.yml --ref main`. To rebuild a released documentation version, run `gh workflow run release.yml --ref main -f tag=vX.Y.Z`; this moves `latest` to that version and invokes the same publisher. Keep Pages in Actions mode so branch updates cannot replace the assembled artifact.
 
+### Releasing
+
+`just bump <part>` cuts a release, where `<part>` names the version part to raise. It first refreshes the hook registry fallbacks in `_fallbacks.py` and the secret rules generated from the gitleaks tag pinned there, and stops before the version bump if either changed, so you review and commit them first. Then it bumps the version, syncs the lockfile, commits, tags, and pushes. The release workflow checks both files with `--check` and publishes only once CI and Nightly have passed on the tagged commit.
+
 ## Pull Requests
 
 1. Branch from `main`, and keep each pull request to one feature, template, or fix. If you change a built-in template or a tool module's defaults, read [Built-in Templates](https://protostar.jacksonferguson.me/developer/built-in-templates/) first, then run `just check-snapshots` and review every generated file.

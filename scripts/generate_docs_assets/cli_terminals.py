@@ -320,7 +320,7 @@ def generate_guide_svgs() -> None:
 
     original_global_console = protostar.cli.ui.console
     try:
-        for alias in ("cli", "ml"):
+        for alias in ("cli", "astro"):
             record_console = _recording_console(terminal=False)
             with (
                 _demo_project(),

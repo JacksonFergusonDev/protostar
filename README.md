@@ -87,7 +87,7 @@ Or with Homebrew on macOS:
 brew install jacksonfergusondev/tap/protostar
 ```
 
-Protostar needs Python 3.12+, uv, and git. Homebrew installs both for you, and the [installation guide](https://protostar.jacksonferguson.me/installation/) covers every platform.
+Protostar needs Python 3.12+, uv, and git. uv downloads that Python if you don't have it, Homebrew installs uv and git for you, and the [installation guide](https://protostar.jacksonferguson.me/installation/) covers every platform.
 
 Then make a folder for your project and run `protostar init` inside it:
 

@@ -143,7 +143,9 @@ The account runs 20 jobs at a time, five of them on macOS, so a pull request sta
 
 `tests/test_nightly.py` checks that both test every operating system and Python, that together they smoke-test every template on every platform once, that a pull request stays within the runner limits, that Nightly fails every template at every site on every operating system, and that a release can't publish before CI, Nightly, and its smoke test pass.
 
-Nightly retries a failed test or smoke run once. A test that then passes doesn't fail the run; it is filed as flaky instead. Nightly Report (`nightly-report.yml`) opens a `nightly-failure` issue when the run fails, naming the failing jobs and the commits since the last pass, and closes it when a later run passes. Flaky tests go to a separate `flaky-test` issue that stays open until they are fixed.
+Nightly retries a failed test or smoke run once. A test that then passes doesn't fail the run; it is filed as flaky instead. Nightly Report (`nightly-report.yml`) opens a `nightly-failure` issue when the run fails, naming the failing jobs and the commits since the last pass, and closes it when a later run passes. Each flaky test gets an issue of its own, labelled `flaky-test`, which a later flake of the same test comments on rather than duplicating (`scripts/flaky_tracking.py`).
+
+A fix doesn't close that issue. Once it lands on `main`, add the `awaiting-verification` label to the test's issue, link the fix, and name the platforms it flaked on. Nightly Report then counts clean runs from each run's explicit per-test results: a run counts only when the test ran and passed on every affected platform without a retry. After three in a row it closes the issue; a skipped or narrowed run counts for nothing. If the test fails or flakes again, the count resets and the label comes off, and a closed issue reopens. Leave the managed block in the issue body alone: it holds that count.
 
 To run Nightly before merging a risky change, or before a release when it hasn't run on the commit yet, start it from the Actions tab or with `gh workflow run nightly.yml --ref <branch or tag>`. To reproduce one rollback failure without starting every job, narrow it: `gh workflow run nightly.yml --ref <branch> -f rollback-only=true -f os=windows-latest -f template=cli` runs only that template's rollback jobs on that operating system.
 
@@ -212,7 +214,7 @@ Pass Protostar arguments to run one command without entering a shell, such as `j
     just serve
     ```
 
-=== "Benchmark Preview"
+=== "Metrics Dashboard"
     Opens the metrics dashboard at `http://127.0.0.1:8765/metrics/`, independently of the documentation server on port 8000. It fetches the published measurements once; refresh the page to see source edits. Stop it with `Ctrl+C`, or choose another port with `just serve-metrics 8766`.
     ```bash
     just serve-metrics

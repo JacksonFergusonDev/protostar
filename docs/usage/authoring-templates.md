@@ -115,7 +115,7 @@ When a command creates or changes files in the project, write it as a table and 
 - Commands run only during `init`. `sync` never runs them.
 - Each command's program must be one of `uv`, `git`, `npm`, `yarn`, `pnpm`, `pre-commit`, `prek`, `direnv`, or `just`.
 - Unless your template is trusted, the user confirms every command first; see [Trusting a Template](templates.md#trusting-a-template).
-- Protostar doesn't know what files a template's command writes, so they appear in no preview and stay behind if the run fails and rolls back.
+- Files a command writes without listing them in `owned_files` appear in no preview and stay behind if the run fails and rolls back.
 
 Prefer a tool flag, a payload, or a starter file wherever one can do the job: they show up in every preview, work the same on every platform, and need no confirmation.
 
@@ -443,4 +443,4 @@ When building templates for your team or the open-source community, keep the fol
 
 - **[Templates](./templates.md):** Learn about CLI options, repository URLs, template versions, and template consumption.
 - **[Global Configuration](./configuration.md):** Register your custom templates under `[templates]` in your `config.toml`.
-- **[Extending Protostar](../developer/extending-protostar.md):** Implement custom Python bootstrap modules if your project requires engine-level integrations.
+- **[Extending Protostar](../developer/extending-protostar.md):** Add support for a new tool to Protostar itself, when no template setting can do the job.

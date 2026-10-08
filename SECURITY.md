@@ -30,12 +30,12 @@ Protostar scaffolds, manages, and executes project lifecycles, and executes exte
 ### In-Scope
 
 - **Path Traversal / Archive Slip:** Bypassing workspace boundaries (`enforce_path_jail`) or extracting archives that write outside the target workspace.
-- **Remote Trust Violations:** Execution of unauthorized shell commands (`system_tasks`, `post_install_tasks`) from untrusted remote `--from` templates without displaying or requiring user consent.
+- **Trust Violations:** Running any command for an untrusted template (a `--from` path or URL, or an alias without `trusted = true`) on `init` or `sync` without listing it and requiring the user's confirmation. That covers Protostar's own commands, such as `uv add`, which run in files the template wrote, as well as the template's `system_tasks` and `post_install_tasks`.
 - **Binary Safelist Escapes:** Bypassing subprocess execution boundaries (`enforce_binary_safelist`) during template execution.
 - **Secret Scanning Bypasses:** Flaws or bypasses in credential detection that allow committed secret patterns past the variable safety net without `--allow-secret`.
 
 ### Out-of-Scope
 
 - Vulnerabilities in third-party executables that Protostar coordinates (e.g., `uv`, `git`, `ruff`).
-- Commands executed after a user has explicitly approved remote trust prompts or configured a template with `trusted = true`.
+- Commands executed after a user has confirmed them, passed `--trust`, or configured a template alias with `trusted = true`.
 - Attack vectors requiring full local administrative access or arbitrary code execution capabilities already present in the user's local shell.

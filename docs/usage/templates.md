@@ -20,9 +20,9 @@ Protostar's template engine allows you to define declarative, reusable environme
 
     Register custom templates in your global `config.toml` to access them directly by name without retyping long URLs.
 
-- :material-shield-alert-outline: __Interactive Security Prompts__
+- :material-shield-alert-outline: __Trust Before Commands__
 
-    Clear confirmation prompts for external templates containing executable shell commands, preventing unauthorized command execution.
+    A template you haven't trusted runs no command, on `init` or `sync`, until you confirm the list of commands it needs.
 
 </div>
 
