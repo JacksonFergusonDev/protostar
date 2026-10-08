@@ -136,7 +136,7 @@ This guarantees the crash reporter is invoked, allowing you to inspect the URL-e
 The `justfile` holds the commands CI runs, so local runs match it.
 
 !!! tip "Self-Documenting Tooling"
-    For the complete list of available development, formatting, and benchmarking commands, simply run `just` in the root of the repository.
+    For the complete list of available development, formatting, and benchmarking commands, run `just` in the root of the repository.
 
 ### Manual Sandbox Scenarios (macOS)
 

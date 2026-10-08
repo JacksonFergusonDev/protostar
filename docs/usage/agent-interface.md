@@ -56,7 +56,7 @@ Every JSON response emitted to `stdout` follows one of three structured envelope
     ```
 
 === "3. Error (`status: "error"`)"
-    Emitted when a domain validation or runtime error occurs. Standard POSIX exit codes are maintained.
+    Emitted when a domain validation or runtime error occurs. The process exits with the error's [exit code](cli-reference.md#exit-codes).
 
     ```json
     --8<-- "agent_payload_error.json"

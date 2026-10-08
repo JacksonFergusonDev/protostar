@@ -21,7 +21,7 @@ General-purpose templaters like Copier and Cookiecutter work with any language b
 
 - :material-source-merge: **Merges that understand the file**
 
-    `pyproject.toml` merges key by key, dependencies go through uv, and workflows merge by job and step. Changes that collide in a line-based merge simply combine.
+    `pyproject.toml` merges key by key, dependencies go through uv, and workflows merge by job and step. Changes that would collide in a line-based merge combine instead.
 
 - :material-shield-check-outline: **Clear decisions, not conflict markers**
 

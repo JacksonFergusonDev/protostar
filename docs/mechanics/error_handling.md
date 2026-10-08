@@ -6,7 +6,7 @@ description: "How Protostar reports a failed run, which exit code it returns, an
 
 Protostar handles errors predictably so that failed runs never leave your workspace broken or half-configured.
 
-During standard CLI usage, operational errors are caught at the top level of the CLI, printed with a hint that says how to fix them, and routed to standard POSIX exit codes.
+During standard CLI usage, operational errors are caught at the top level of the CLI, printed with a hint that says how to fix them, and mapped to an exit code that names the kind of failure.
 
 <div class="grid cards" markdown>
 
@@ -22,9 +22,9 @@ During standard CLI usage, operational errors are caught at the top level of the
 
     Subprocess calls managed by `ProcessRunner` capture both `stdout` and `stderr`. On non-zero exits or timeouts, detailed output streams are preserved in `CommandExecutionError` or `CommandTimeoutError` without flattening diagnostic context.
 
-- :material-numeric: __POSIX Exit Code Compliance__
+- :material-numeric: __An Exit Code for Each Kind of Failure__
 
-    Protostar maps domain exception types directly to standard POSIX exit codes (e.g., `EX_CONFIG`, `EX_UNAVAILABLE`, `EX_IOERR`), ensuring seamless integration with CI/CD runners and shell scripts.
+    Each domain exception maps to an exit code from BSD's `sysexits.h` (such as `EX_CONFIG`, `EX_UNAVAILABLE`, and `EX_IOERR`), so a CI job or shell script can tell a network failure from a broken configuration.
 
 </div>
 
@@ -47,10 +47,10 @@ flowchart TD
     RB -.->|Rollback Failed| E4["RollbackFailedError"]
 
     E1 & E2 & E3 & E4 --> Trap["CLI Top-Level Handler<br/>(terminal report / JSON envelope)"]
-    Trap --> Exit([Route POSIX Exit Code])
+    Trap --> Exit([Exit with its code])
 ```
 
-For the complete exit code mapping for each exception type, see the [POSIX Exit Code Matrix](#posix-exit-code-matrix) below.
+For the complete exit code mapping for each exception type, see the [exit code matrix](#exit-code-matrix) below.
 
 ## The Exception Hierarchy
 
@@ -212,9 +212,9 @@ The error envelope guarantees:
 
 - __Clean Parsing:__ `stdout` contains only valid JSON. Debug traces and logs are routed exclusively to `stderr`.
 - __Structured Fields:__ Error objects include `type`, `message`, and optional contextual helpers (`hint`, `docs_url`), plus any error-specific fields from the exception's `details()`, such as `paths` for collisions, `findings` for detected secrets, `missing_variables` for template variables without a value, `unrestored` for paths a rollback couldn't put back, and `missing_executables` with `install_commands` for a missing `uv` or `git`.
-- __POSIX Status Codes:__ The process exits with the exact same POSIX exit code defined in the matrix below, allowing scripts to check either exit codes or the parsed JSON payload.
+- __Exit Codes:__ The process exits with the same code as without `--json`, from the matrix below, allowing scripts to check either exit codes or the parsed JSON payload.
 
-## POSIX Exit Code Matrix
+## Exit Code Matrix
 
 Protostar routes operational exceptions to standard UNIX exit codes (defined in `os`), allowing automation tooling and CI pipelines to programmatically identify failure causes:
 

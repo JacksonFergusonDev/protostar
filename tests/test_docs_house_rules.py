@@ -165,3 +165,37 @@ def test_metrics_links_require_dashboard_source(docs_repo: Path) -> None:
 
     assert len(problems) == 1
     assert "has no page" in problems[0]
+
+
+def test_plain_prose_passes_the_voice_check(docs_repo: Path) -> None:
+    _write(
+        docs_repo,
+        "guide/usage.md",
+        '---\ndescription: "Usage."\n---\n\nRun `just lint`.\n\n| Tool | Flag |\n| --- | --- |\n| uv | — |\n\n```text\nx — y, simply\n```\n',
+    )
+
+    assert check_docs_drift.check_writing_voice() == []
+
+
+@pytest.mark.parametrize(
+    ("line", "problem"),
+    [
+        ("It merges — and keeps your edits.", "an em dash"),
+        ("| It merges — fast | yes |", "an em dash"),
+        ("Simply run the command.", "'Simply'"),
+        ("A seamless update.", "'seamless'"),
+        ("It leverages uv.", "'leverages'"),
+        ("Every failure maps to POSIX exit codes.", "'POSIX exit'"),
+        ("It returns POSIX-compliant codes.", "'POSIX-compliant'"),
+    ],
+)
+def test_the_voice_check_names_each_problem(
+    docs_repo: Path, line: str, problem: str
+) -> None:
+    _write(docs_repo, "guide/usage.md", f'---\ndescription: "Usage."\n---\n\n{line}\n')
+
+    problems = check_docs_drift.check_writing_voice()
+
+    assert len(problems) == 1
+    assert problem in problems[0]
+    assert problems[0].startswith("docs/guide/usage.md")

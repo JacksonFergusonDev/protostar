@@ -38,7 +38,7 @@ hide:
   <button type="button" class="ps-motion" data-ps-motion aria-pressed="false" aria-label="Pause background animation" hidden><span data-ps-motion-label>Pause motion</span><span class="hs-icon hs-icon-pause" aria-hidden="true"></span></button>
   <!-- The theme's "Skip to content" link targets #__skip on a page without a table of contents. -->
   <h1 id="__skip" tabindex="-1">Simple Python project scaffolding that understands your tools.</h1>
-  <p class="ps-hero__lede">Pick your tools, and Protostar writes their configuration, hooks, and CI. When your template improves, updates merge into your files by meaning, so your edits stay.</p>
+  <p class="ps-hero__lede">Protostar sets up Python projects and keeps them current. Pick your tools, and it writes their configuration, commit hooks, and CI. When your template improves, the update merges into your files setting by setting, so your own edits stay.</p>
   <div class="hs-install-header">
     <span class="hs-install-label">Install globally</span>
     <div class="hs-install-toggle" role="tablist" aria-label="Installation method">
@@ -91,7 +91,7 @@ hide:
 <section class="ps-section" id="sync" aria-labelledby="ps-sync">
   <div class="hs-section-marker"><span>02 / SYNC</span></div>
   <h2 id="ps-sync">Template updates merge by meaning. Your edits stay.</h2>
-  <p class="ps-section__lede">Protostar knows <code>pyproject.toml</code> key by key, workflows job by job, and dependencies through uv. An update that would collide in a line-based merge simply combines. A real conflict is one setting, with both sides and a command for each choice.</p>
+  <p class="ps-section__lede">Protostar knows <code>pyproject.toml</code> key by key, workflows job by job, and dependencies through uv. Changes that would collide in a line-based merge combine instead. A real conflict is one setting, with both sides and a command for each choice.</p>
   <div class="ps-merge">
     <figure class="ps-merge__pane">
       <figcaption><span>YOUR PROJECT</span><span class="ps-merge__file">pyproject.toml</span></figcaption>

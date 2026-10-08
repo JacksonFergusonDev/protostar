@@ -83,7 +83,7 @@ protostar sync --check --json > review.json
 | `sync` that applied the safe changes and left conflicts open | `1` |
 | `sync --check` with an update to apply or a conflict open | `1` |
 | `sync --check` with nothing pending, or only edits you kept | `0` |
-| An error | That error's [exit code](cli-reference.md#posix-exit-codes); `Ctrl+C` exits `130` |
+| An error | That error's [exit code](cli-reference.md#exit-codes); `Ctrl+C` exits `130` |
 
 `--check` never changes anything, and can't be combined with `--dry-run`. With `--json`, every command prints one JSON payload on stdout and never prompts; diagnostics and command output go to stderr. A check's payload includes `check_passed`, a review's has `status: "reviewed"`, and an applied sync's has `"success"` or `"partial"`. See the [machine interface](agent-interface.md) for examples and schemas.
 

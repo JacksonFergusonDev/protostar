@@ -31,7 +31,7 @@
 
 </div>
 
-Pick your tools, and Protostar writes their configuration, hooks, and CI. When your template improves, updates merge into your files by meaning, so your edits stay.
+Protostar sets up Python projects and keeps them current. Pick your tools, and it writes their configuration, commit hooks, and CI. When your template improves, the update merges into your files setting by setting, so your own edits stay.
 
 <div align="center">
 <picture>
@@ -52,7 +52,7 @@ Plenty of tools can create a Python project. What sets Protostar apart is that i
 
 - **Every tool is a switch.** Want Docker but not direnv? Pass `--docker --no-direnv`. Change your mind a year later, and Protostar adds or removes that tool's setup cleanly.
 
-- **Updates that understand your files.** When a template improves, Protostar merges the change into your project by meaning, not line by line. Your own edits stay, and if you and the update changed the same setting, you get one clear choice instead of a mess to untangle.
+- **Updates that understand your files.** When a template improves, Protostar merges the change into your project by meaning, not line by line. Your own edits stay, and if you and the update changed the same setting, you choose between the two versions of that one setting instead of untangling conflict markers.
 
 - **Preview first, recover on failure.** Protostar shows you every change before making it and restores the files it changed if a step fails. The [published rollback results](https://protostar.jacksonferguson.me/metrics/#rollback) show this recovery tested across Linux, macOS, and Windows; the [rollback guide](https://protostar.jacksonferguson.me/usage/rollback/) explains what is covered.
 
@@ -208,7 +208,7 @@ Protostar edits other people's work, so it's built to be careful:
 - **It plans before it acts.** Every change is worked out in memory and shown to you first. If a step fails or you press Ctrl+C, every file it wrote is restored exactly as it was, and nightly tests exercise that recovery by failing real runs at every step; see the [rollback results](https://protostar.jacksonferguson.me/metrics/#rollback).
 - **The engine is separate from the interface.** The same core runs behind the interactive editor, the command line, and coding agents, which is why every command can also answer in JSON.
 - **It's written in Python, on purpose.** The slow part of setting up a project, resolving and installing packages, belongs to uv, which is already Rust. Protostar's own work takes about half a second, and Python gives it the libraries that edit TOML and YAML without losing a comment; see [why it's written in Python](https://protostar.jacksonferguson.me/why-protostar/#why-is-it-written-in-python) for the measurements.
-- **It's tested thoroughly.** Over 5,000 tests, including runs of the real tools, pass on Linux, macOS, and Windows, with strict type checking and at least 85% coverage.
+- **It's tested on every platform.** Over 5,000 tests, including runs of the real tools, pass on Linux, macOS, and Windows, with strict type checking and at least 85% coverage.
 - **The tests are challenged with deliberate bugs.** Mutation testing changes selected engine modules one small edit at a time to check whether the tests notice. The [mutation testing results](https://protostar.jacksonferguson.me/metrics/#mutations) show the score and the modules it covers.
 - **Its docs are checked against its code.** Before every push, a script confirms that the commands, errors, exit codes, and file paths the docs mention still match the code.
 - **Performance stays visible.** Every pull request checks what each command costs (its processes, parses, and imports), and each night times every command against the previous commit on Linux and macOS, opening an issue for a confirmed slowdown; see the [benchmarks](https://protostar.jacksonferguson.me/metrics/#benchmarks).

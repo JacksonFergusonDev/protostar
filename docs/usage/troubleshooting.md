@@ -233,6 +233,6 @@ If you encounter an issue or behavior not covered in this guide:
 ## Related Resources
 
 - **[Automatic Rollback<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./rollback.md):** What gets restored, what might remain, and how to recover from a partial rollback failure.
-- **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/error_handling.md):** Deep dive into the domain exception hierarchy, POSIX exit codes, and subprocess diagnostics.
+- **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/error_handling.md):** Deep dive into the domain exception hierarchy, exit codes, and subprocess diagnostics.
 - **[Environment Initialization<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./init.md):** Review collision handling, AST injection, and `--force-merge` behavior.
 - **[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):** Learn how to view, modify, or reset your global settings with `protostar config --reset`.

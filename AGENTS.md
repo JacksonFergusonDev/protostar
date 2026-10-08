@@ -126,7 +126,17 @@ Full contract: `docs/developer/built-in-templates.md`. Invariants when touching 
 
 ### 10. Documentation
 
-The docs site (`docs/`, built by Zensical) shares its look and its rules with jacksonferguson.me and the other project sites through [house-style](https://github.com/JacksonFergusonDev/house-style). Its `GUIDELINES.md`, vendored at `docs/house/GUIDELINES.txt` for the pinned tag, is the source of truth for design and documentation rules. Read it before changing any page, and change a rule there rather than here.
+The docs site (`docs/`, built by Zensical) shares its look and its rules with jacksonferguson.me and the other project sites through [house-style](https://github.com/JacksonFergusonDev/house-style). Its `GUIDELINES.md`, vendored at `docs/house/GUIDELINES.txt` for the pinned tag, is the source of truth for design, writing, and documentation rules. Read it before writing or changing any page or Markdown file, and change a rule there rather than here.
+
+#### Voice and Audience
+
+House-style's Writing section sets the voice (calm, clear, precise) and the three audiences. In Protostar:
+
+- **Each page writes for one audience.** `README.md` and the landing page are General: hiring managers, coworkers, and engineers all start there, so they explain plainly and link into the docs. Installation, Your First Project, Getting Started, Why Protostar?, and the User Guide are for Users. Design Principles, Mechanics, the Developer Guide, `CONTRIBUTING.md`, and this file are Technical.
+- **User pages use the product's words.** Recipe, `protostar.lock`, template, tier, option, conflict, proposal, and kept edit are defined in [How Protostar Tracks Your Files](docs/usage/tracking.md). Engine words (ownership, provenance, reconciliation, manifest, baseline, resolver footprint) appear only on Technical pages, defined once where they're owned.
+- **Decisions read the way the CLI says them.** A page that describes a conflict, proposal, or kept edit uses the wording in `cli/decisions.py`, and shows the full `--resolve` command for each choice.
+- **A comparison with another tool is fair and dated.** It names the other tool's version, the date, and how it was run, and says when the other tool is the better choice.
+- **A guarantee links to its evidence.** Rollback claims link to the [rollback boundary](docs/usage/rollback.md) or the published results; the mutation score always names the modules it covers.
 
 #### Writing Pages
 
@@ -136,7 +146,7 @@ The docs site (`docs/`, built by Zensical) shares its look and its rules with ja
 - **Show terminal output, don't paste it.** Use a recording or a generated screenshot in the house terminal window; keep code blocks for what the reader types.
 - **Every standalone link carries a house-style icon** saying where it goes: `arrow-down` within the page, `arrow-right` to a related page, `arrow-up-right` to another site, and brand icons for GitHub and jacksonferguson.me. Draw icons only with house-style's `.hs-icon` classes or its `icons/` files, never a text arrow.
 
-`check_docs_drift.py` enforces the description, navigation-icon, card-count, and list-link icon rules.
+`check_docs_drift.py` enforces the description, navigation-icon, card-count, and list-link icon rules, and fails on an em dash or a hype word (its `_UNWANTED_WORDS`) in prose.
 
 #### The Site's Machinery
 
