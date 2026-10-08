@@ -82,10 +82,6 @@ def generate_cli_help_svgs() -> None:
             (a for a in parser._actions if isinstance(a, argparse._SubParsersAction)),
             None,
         )
-        if subparsers and "init" in subparsers.choices:
-            init_parser = subparsers.choices["init"]
-            _render_svg(init_parser, "help init", "cli_init_help.svg")
-
         if subparsers and "config" in subparsers.choices:
             config_parser = subparsers.choices["config"]
             _render_svg(config_parser, "help config", "cli_config_help.svg")

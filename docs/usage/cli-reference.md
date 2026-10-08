@@ -84,7 +84,7 @@ Print the JSON Schema for template files, for your editor or a validator. See [E
 
 ### `protostar check-template`
 
-Check a template before you publish it: that `protostar init` would accept it, and that it follows the practices built-in templates follow. It writes nothing and runs no commands. With `--json`, it returns the findings as a payload. See [Checking a Template](authoring-templates.md#checking-a-template).
+Check a template before you publish it: that `protostar init` would accept it, and that it follows the practices built-in templates follow. It writes nothing and runs no commands. With `--json`, it returns the findings as a payload. See [Checking a Template](releasing-templates.md#checking-a-template).
 
 --8<-- "cli_check_template.md"
 

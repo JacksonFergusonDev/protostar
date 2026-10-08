@@ -57,7 +57,7 @@ uv run pytest tests/test_rollback.py -k sites_match --snapshot-update  # the sit
 uv run pytest tests/test_cost_budgets.py --snapshot-update          # what each command costs
 ```
 
-[Testing Architecture & Philosophy](https://protostar.jacksonferguson.me/developer/testing/) covers the fixtures, the rollback fault injection, the cost budgets, CI, and flaky tests.
+[Testing Architecture & Philosophy](https://protostar.jacksonferguson.me/developer/testing/) covers the fixtures, the rollback fault injection, and the cost budgets, and [CI, Nightly & Metrics](https://protostar.jacksonferguson.me/developer/ci/) covers CI, flaky tests, mutation testing, and benchmarks.
 
 ## Manual Testing in a Sandbox
 

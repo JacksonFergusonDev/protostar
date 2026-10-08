@@ -20,6 +20,7 @@ nav = [
         { "Automating Updates" = "usage/automating-updates.md" },
         { "Templates" = "usage/templates.md" },
         { "Authoring Templates" = "usage/authoring-templates.md" },
+        { "Checking & Releasing Templates" = "usage/releasing-templates.md" },
         { "Tooling & Flags Matrix" = "usage/tooling-matrix.md" },
         { "Global Configuration" = "usage/configuration.md" },
         { "Project Recipes" = "usage/project-recipes.md" },
@@ -49,6 +50,7 @@ nav = [
             { "Execution & Review" = "developer/reconciliation/execution.md" },
         ] },
         { "Testing & Philosophy" = "developer/testing.md" },
+        { "CI, Nightly & Metrics" = "developer/ci.md" },
         { "API Reference" = "developer/api-reference.md" },
     ] },
 ]

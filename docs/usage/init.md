@@ -196,9 +196,10 @@ Here is what each built-in template writes into an empty folder.
 
 With `just` on, the project gets a `justfile` built from its tools: each recipe runs the linters, type checker, tests, and docs the project has. This is the `cli` template's:
 
-```just
---8<-- "cli/justfile"
-```
+??? abstract "The `cli` template's `justfile`"
+    ```just
+    --8<-- "cli/justfile"
+    ```
 
 Running `just` in your project root provides standard developer workflows immediately:
 
@@ -216,11 +217,13 @@ When running `protostar init` without a `--template` flag in a terminal, Protost
 
 The editor is built for the keyboard; the mouse works too. Moving never changes a value; only `Space` and `Enter` do. The footer shows the keys for whatever has focus, each button shows its own key, and `?` lists them all.
 
---8<-- "keys_recipe_editor.md"
+??? info "Every key in the recipe editor"
+    --8<-- "keys_recipe_editor.md"
 
 __Continue__ opens the change review. Its left panel has three tabs. __Decisions__ appears when something needs you: every conflict and change to a file you already have, each row led by what happens to it, with the count still open beside the tab. __Files__ lists every planned path as new, modified, conflict, existing, or after setup, and __Setup__ lists the commands and packages that follow. The diff beside them shows the highlighted decision or file. Settling a conflict moves on to the next open one. Nothing runs until you choose __Apply__.
 
---8<-- "keys_change_review.md"
+??? info "Every key in the change review"
+    --8<-- "keys_change_review.md"
 
 ![Protostar change review](../assets/terminals/tui_change_review.svg)
 
@@ -292,12 +295,6 @@ The example below starts from a tracked ML project to which someone added their 
 - __Python Version Overrides__: Override the default Python version for a single run using `--python-version` (e.g., `protostar init --template cli --python-version 3.13`).
 - __Verbose Output__: Append `--verbose` (or `-v`) to enable debug logs and full tracebacks.
 
-## The Capabilities Matrix
-
-To view all supported subcommands and flags in your terminal, run `protostar help init`.
-
-![Protostar Help Init](../assets/terminals/cli_init_help.svg)
-
 ## One-Shot Scaffolding
 
 Use `--one-shot` when you want the generated environment without Protostar managing future updates:
@@ -315,4 +312,5 @@ The flag requires a project with neither a recorded recipe nor a `protostar.lock
 - __[Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./templates.md):__ Learn how to create and share custom TOML blueprints, fetch remote templates, and interpolate variables.
 - __[Tooling & Flags Matrix<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./tooling-matrix.md):__ Explore all supported linters, formatters, type checkers, and test runners.
 - __[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):__ Customize your default Python version, licenses, and template aliases.
+- __[CLI Reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./cli-reference.md#protostar-init):__ Every `init` option, also printed by `protostar help init`.
 - __[Troubleshooting & FAQ<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./troubleshooting.md):__ Resolve missing binary dependencies, workspace collisions, and editor configuration issues.

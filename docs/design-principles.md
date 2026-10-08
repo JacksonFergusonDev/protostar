@@ -244,17 +244,11 @@ Diagnostics in Protostar operate at three levels:
 
 **Every failure class maps to a specific, standardized POSIX exit integer — not just `0` (success) or `1` (failure).**
 
-POSIX defines a set of exit code semantics beyond the binary success/fail convention. Protostar maps its exception hierarchy directly to them:
-
---8<-- "table_exit_codes.md"
+POSIX defines a set of exit code semantics beyond the binary success/fail convention, and Protostar maps its exception hierarchy directly to them: `65` for a template it can't read, `69` for a missing `uv` or `git`, `75` for a network failure worth retrying, and so on. The [exit code matrix](./mechanics/error_handling.md#posix-exit-code-matrix) lists every one.
 
 **Why this matters:** A script that calls Protostar and checks only `if $? -ne 0` can tell that *something* failed. A script that checks specific exit codes can tell whether the failure was a transient network issue (retry), a missing dependency (prompt user to install), or a configuration error (fail fast and alert). The distinction is the difference between a tool that composes well in automation and one that requires a human in the loop to diagnose failures.
 
-The same structured information is available programmatically via `--json`, where every error envelope includes the exception class name, and most include a `docs_url` pointing to the relevant remediation guide.
-
-```json
---8<-- "agent_payload_error.json"
-```
+The same structured information is available programmatically via `--json`, where every [error envelope](./usage/agent-interface.md#protocol-states) includes the exception class name, and most include a `docs_url` pointing to the relevant remediation guide.
 
 !!! tip "For CI pipelines and AI agents"
     Exit codes and `--json` envelopes are designed to be consumed together. A CI pipeline can check the exit code to gate a build; an AI agent can parse the JSON envelope to understand the failure semantics and decide the next action without human intervention.

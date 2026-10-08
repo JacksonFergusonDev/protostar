@@ -81,7 +81,7 @@ classDiagram
 
 ## Class Definitions
 
-!!! abstract "Diagnostics & Error Handling: `protostar.errors`"
+??? abstract "Diagnostics & Error Handling: `protostar.errors`"
 
     Strictly typed operational errors that halt the execution pipeline safely and return POSIX-compliant exit codes.
 
@@ -94,7 +94,7 @@ classDiagram
             separate_signature: true
             members_order: source
 
-!!! abstract "Core Interface: `BootstrapModule`"
+??? abstract "Core Interface: `BootstrapModule`"
 
     Each module's `build()` declares what its tool needs into the shared manifest, or raises a `ProtostarError` when the request can't be planned. It never writes a file or runs a command.
 
