@@ -165,7 +165,7 @@ Most of the contract is checked by tests, parametrized over discovered built-ins
 | A fresh default scaffold passes its commit hooks | The `template-hooks-smoke` CI job |
 | The `cli` and `api` images build and run | The `images-and-dashboard` CI job |
 
-Unless another file is named, the tests live in `tests/test_builtin_template_contract.py`. The strict template check is the one [`protostar check-template`](../usage/authoring-templates.md#checking-a-template) runs for any author: it covers the name and description, flags that name real tools, payloads that state only the delta from module baselines, and tool configuration and packages bound to their tool with `requires`. It plans a default `init` in each tier, so a tier that cannot be planned fails the contract.
+Unless another file is named, the tests live in `tests/test_builtin_template_contract.py`. The strict template check is the one [`protostar check-template`](../usage/releasing-templates.md#checking-a-template) runs for any author: it covers the name and description, flags that name real tools, payloads that state only the delta from module baselines, and tool configuration and packages bound to their tool with `requires`. It plans a default `init` in each tier, so a tier that cannot be planned fails the contract.
 
 The CI jobs scaffold each built-in's default tier for real. The other tier is planned by the template check and snapshotted for `astro` (production) and `cli` (workbench), but not scaffolded in CI, which keeps the matrix fast. Check it by hand when you change it.
 

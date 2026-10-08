@@ -43,9 +43,10 @@ Every JSON response emitted to `stdout` follows one of three structured envelope
 
     With `--one-shot`, `manifest.one_shot` is `true`. Execution still resolves dependencies and may write `uv.lock`, but omits `[tool.protostar]` and `protostar.lock`.
 
-    ```json
-    --8<-- "agent_payload_planned.json"
-    ```
+    ??? example "A planned payload"
+        ```json
+        --8<-- "agent_payload_planned.json"
+        ```
 
 === "2. Success (`status: "success"`)"
     Emitted upon successful environment execution via `protostar init --json` or discovery via `protostar --json`.
@@ -198,19 +199,21 @@ A decision's `reason` is one of:
 
 --8<-- "table_schema_reasons.md"
 
-An edit whose `after` is `null` removes the file. `review.migrations` lists what each template [migration](authoring-templates.md#migrations) does to one file: its `version`, `path`, the rename `target` (`null` for a removal), and the `outcome`: `moved`, `target-exists`, `removed`, `retired` (kept with local edits as a `retracted` conflict), `forgotten` (already deleted), or `not-owned`.
+An edit whose `after` is `null` removes the file. `review.migrations` lists what each template [migration](releasing-templates.md#migrations) does to one file: its `version`, `path`, the rename `target` (`null` for a removal), and the `outcome`: `moved`, `target-exists`, `removed`, `retired` (kept with local edits as a `retracted` conflict), `forgotten` (already deleted), or `not-owned`.
 
 Two more kinds of decision share that shape and the same `--resolve`. Entries in `review.proposals` are changes into files Protostar never owned; each applies unless resolved with `local`, and its `resolution` is `null` until one is chosen. Entries in `review.preserved` are your kept edits and deletions, each with an `id`, its sides, and `deleted`; resolving one with `desired` takes Protostar's version there. A file selector names conflicts and proposals, never a preserved edit.
 
-```json
---8<-- "agent_payload_reviewed.json"
-```
+??? example "A reviewed payload"
+    ```json
+    --8<-- "agent_payload_reviewed.json"
+    ```
 
 `sync --check --json` uses the same review and adds `check_passed`. This pending example exits `1` without applying anything:
 
-```json
---8<-- "agent_payload_check.json"
-```
+??? example "A `sync --check` payload"
+    ```json
+    --8<-- "agent_payload_check.json"
+    ```
 
 `sync --json` returns `status: "success"` or `"partial"`, `template`, `review`, and `result`. A partial sync applied the safe changes, left conflicts open, and exits `1`; an error uses the error payload, with the `rollback_context` of what was restored. Discover the application schema through `protostar help sync --json` in `capabilities.application_schema`.
 

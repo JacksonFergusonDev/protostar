@@ -14,11 +14,12 @@ At its simplest, a template is a single TOML file containing the configuration s
 
 ### The Template Schema
 
-Below is the complete annotated schema for a Protostar template. It defines how to declare dependencies, scaffold directories, and override base tooling opinions.
+The complete annotated schema shows every key a template can set in one file. The sections below explain each part.
 
-```toml
---8<-- "template_schema.toml"
-```
+??? abstract "The complete annotated schema"
+    ```toml
+    --8<-- "template_schema.toml"
+    ```
 
 ??? tip "Exporting the JSON Schema (`protostar export-schema`)"
     Protostar can generate the official JSON Schema for template files. You can use this for automated validation in external pipelines or configure IDE plugins like VS Code's *Even Better TOML* to get real-time autocompletion and linting:
@@ -79,7 +80,7 @@ Blocks can't go into TOML files, which merge key by key instead, or into the fil
 '''
 ```
 
-A starter file is written once, when the project doesn't have it, and then belongs to the project: later releases never change it. To move or retire one in a later release, declare a [migration](#migrations). A path can't be both a starter file and a target of payloads or blocks. No file may be written to `protostar.lock`, `uv.lock`, or anywhere inside `.git/`.
+A starter file is written once, when the project doesn't have it, and then belongs to the project: later releases never change it. To move or retire one in a later release, declare a [migration](releasing-templates.md#migrations). A path can't be both a starter file and a target of payloads or blocks. No file may be written to `protostar.lock`, `uv.lock`, or anywhere inside `.git/`.
 
 ### Dependencies
 
@@ -121,7 +122,7 @@ Prefer a tool flag, a payload, or a starter file wherever one can do the job: th
 
 ### Version and Identity
 
-A template may declare a root `version`, such as `"1.2.0"`. It's informational unless the template declares [migrations](#migrations), which require it.
+A template may declare a root `version`, such as `"1.2.0"`. It's informational unless the template declares [migrations](releasing-templates.md#migrations), which require it.
 
 A project records which template it follows: the built-in name, the local file's path, or the repository and the path inside it. The release or commit it applied is recorded separately, so moving to a new release never makes it a different template, and a project can never switch to a different one. A template URL may not contain credentials or a query string.
 
@@ -325,110 +326,6 @@ Protostar backs this up with a safety net, not a guarantee:
 
 Values already recorded in the recipe are not checked again, so a confirmed value never blocks a later `init` or `sync`. The guard misses secrets gitleaks has no rule for, such as a password inside a database URL, so it never replaces keeping secrets out of variables. See [Template Variables That Look Like Credentials](troubleshooting.md#template-variables-that-look-like-credentials).
 
-## Level 4: Testing & Distribution
-
-### Checking a Template
-
-`protostar check-template` checks a template without scaffolding anything. Run it from the template's directory, or name a template directory, a template TOML file, or an HTTPS URL:
-
-```bash
-protostar check-template
-protostar check-template ./templates/backend.toml
-protostar check-template https://github.com/YourOrg/fastapi-template
-```
-
-It renders the template with a placeholder for each custom variable and plans a default `protostar init` of it into an empty scratch directory, using Protostar's built-in configuration rather than yours, so every machine gets the same result. It writes nothing, runs no commands, and ignores whatever the directory you run it from contains.
-
-It reports two kinds of finding:
-
-- **Errors** (`invalid-template`) are anything that stops `protostar init` from using the template: invalid TOML, a field of the wrong type, a forbidden or reserved target, an unknown tooling flag, or a file under `template/` that isn't UTF-8 text.
-- **Warnings** break a practice the built-in templates follow. The template works, but its users get a worse result.
-
-| Rule | What it reports |
-| :--- | :--- |
-| `unknown-key` | A root key Protostar ignores, such as a misspelled field, or a tooling flag whose value isn't `true` or `false` |
-| `missing-metadata` | No `name` or `description`, which `--list-templates` and the template picker show |
-| `undescribed-variable` | A custom variable with no `[variables]` description |
-| `credential-variable` | A custom variable named like a credential |
-| `restated-baseline` | A `[dev.pyproject]` payload that repeats a module's baseline value, or redefines a baseline list instead of using an additive key |
-| `unbound-tool-config` | A payload that configures a tool without `requires` for that tool |
-| `unbound-tool-package` | A tool's package, such as `pytest-cov`, installed unconditionally instead of in an `[[optional]]` block that requires the tool |
-| `inconsistent-migration` | A migration that removes or renames away a file the template still ships, renames a file to one it doesn't ship, or renames a variable the template doesn't use under its new name |
-
-The check exits `1` when the template has errors, and also on warnings with `--strict`. If the template can't be retrieved at all (a wrong path, a network failure, an HTTP error such as 404), nothing is checked: it prints the retrieval error and exits with that error's [exit code](cli-reference.md#posix-exit-codes), such as `65` or `75`, so a failure to download is never mistaken for a broken template. `--json` returns the findings as a JSON payload.
-
-The check covers a default `init`, with every option at its default, once in each tier when the template declares tiers. Content that only applies when a user turns on a tool the template leaves off, or chooses another option value, is not planned, so still try the combinations you expect your users to choose.
-
-Each finding names the file and line it concerns, such as `protostar.toml:12`, including a key inside a `[dev.pyproject]` payload. A finding about something the template doesn't contain, such as a missing `name`, names only the file.
-
-### Checking in GitHub Actions
-
-To check a template in its own repository's CI, add a step such as:
-
-```yaml
-- uses: actions/checkout@v7
-- uses: astral-sh/setup-uv@v10.2.0
-- run: uvx protostar check-template --strict --output-format github
-```
-
-With `--output-format github`, each finding becomes a workflow annotation: it shows on the pull request's changed files at its line, and in the run's summary. Paths are relative to the repository root (`GITHUB_WORKSPACE`), so the step works from any `working-directory`. A template that couldn't be retrieved gets one annotation saying so, and findings in a remote template annotate the run instead of a file. The step still fails the same way: exit `1` for a failed check, or the retrieval error's own exit code. `--output-format github` can't be combined with `--json`.
-
-### Local Testing
-
-When authoring a template, you do not need to commit and push to a remote repository to test its execution. You can point the `--from` flag directly at your local template directory:
-
-```bash
-# From within an empty target directory
-protostar init --from ~/Developer/templates/my-custom-template
-```
-
-### Distribution & Releases
-
-Once your template is ready, push it to a repository on GitHub, GitLab, Bitbucket, Codeberg, or Sourcehut. Protostar accepts the repository's web, raw, and archive URLs, and a path inside the repository, so one repository can hold several templates.
-
-Publish releases as tags that are [PEP 440](https://peps.python.org/pep-0440/) versions, such as `v1.3.0`. A new project starts on your newest release, `protostar status` tells existing projects when a newer one exists, and `protostar sync --to v1.3.0` moves them to it, merging your changes into their configuration while keeping their local edits. Tag pre-releases as such (`v2.0.0rc1`): they are offered only to projects already on a pre-release. Never move a published tag. Projects stay on the commit they applied, and `status` reports the moved tag as an update. [protostar-example-templates](https://github.com/JacksonFergusonDev/protostar-example-templates) is a working example of a template repository: two templates, release tags, and `check-template` in CI. To move projects onto each release without anyone running `sync --to` by hand, point your users to the scheduled workflow in [Automating Updates](automating-updates.md#open-update-pull-requests-on-a-schedule).
-
-You can invoke your template directly:
-
-```bash
-protostar init --from https://github.com/YourOrg/data-science-template
-```
-
-Or, you can register it as a global alias in your `~/.config/protostar/config.toml` to access it natively in the interactive template picker:
-
-```toml
-[templates]
-org-ds-base = "https://github.com/YourOrg/data-science-template"
-```
-
-### Migrations
-
-Most changes between your releases need nothing extra: `sync --to` merges your changes to `[dev.pyproject]` payloads, dependencies, and named append regions into each project, and your users' edits stay. Starter files are different. A file in `[files]` or `template/` is written once and then belongs to the project, so a later release's edits to it don't reach existing projects. A few changes are about files and names rather than their contents, including moving or retiring a starter file. Declare those as migrations:
-
-```toml
-version = "2.0.0"
-
-[[migrations]]
-version = "2.0.0"
-rename = [{ from = "src/<% PACKAGE_NAME %>/settings.py", to = "src/<% PACKAGE_NAME %>/config.py" }]
-remove = ["setup.cfg"]
-rename_variables = [{ from = "ORG", to = "ORGANIZATION" }]
-```
-
-A migration's `version` is the release that introduced the change. A project runs it when it moves from a release before that version to that version or later, and never again; a project that skips releases runs every migration in between, oldest first. A template with migrations must declare a [PEP 440](https://peps.python.org/pep-0440/) root `version`, and no migration may be newer than it. Keep every migration in later releases: the new release is the only one a project reads them from.
-
-- **`rename`** moves a seeded file, including the user's edits to it, and Protostar's ownership with it. Ship the file under its new name. If something already exists at the new path, the file stays where it is and `status` says so. A file the user deleted stays deleted at its new path.
-- **`remove`** retires a seeded file you no longer ship. An unedited copy is deleted. A copy with edits stays and becomes a `retracted` conflict until the user settles it: `local` keeps it as their own file, and `desired` deletes it.
-- **`rename_variables`** moves a recorded variable value to its new name before anything renders, so users aren't asked for a value they already gave.
-
-Migrations only touch what Protostar owns: a path it never seeded is left alone. They are declarative on purpose. `status` and `sync --dry-run` list each one before anything changes, and a failed `sync` rolls them back with everything else. Scripts would make both impossible, so migrations never run commands. A project can't move back to a release before a migration it has run, because the older release can't know how to reverse it.
-
-Renaming or removing a dependency, or a module-generated file, isn't a migration yet.
-
-### Security Considerations
-
-Your users confirm every command a run executes before it runs, unless they have trusted your template: Protostar's own setup commands and dependency installs as well as your `system_tasks` and `post_install_tasks`, because your files decide what those commands do. Without a terminal, an untrusted run stops instead, so users who run your template in CI give it an alias with `trusted = true`, or pass `--trust` for that run. See [Trusting a Template](templates.md#trusting-a-template).
-
 ## Best Practices
 
 When building templates for your team or the open-source community, keep the following guidelines in mind:
@@ -437,10 +334,11 @@ When building templates for your team or the open-source community, keep the fol
 - **Choose the Right Complexity:** A single TOML file covers tools, dependencies, directories, configuration, and small starter files in `[files]`. Move to a directory with a `template/` folder when your starter files are big enough that writing them inside TOML strings gets in the way. CI, hooks, and tool configuration never need one: the tool flags bring them.
 - **Descriptive Variable Names:** Use clear, self-explanatory names for custom placeholders (e.g., `<% AWS_REGION %>` instead of `<% REG %>`). Since Protostar automatically generates interactive terminal prompts for unresolved variables, descriptive names provide a better user experience.
 - **Minimize Shell Scripts:** Be cautious with `system_tasks` and `post_install_tasks`. Heavy reliance on shell commands can compromise cross-platform compatibility (e.g., failing on Windows), and each one is another command users must confirm before an untrusted run.
-- **Check, Then Test Locally:** Run `protostar check-template --strict` on every change, and try the template against an empty target directory (`protostar init --from ./path/to/template`) before publishing it to a remote version control platform.
+- **Check, Then Test Locally:** Run [`protostar check-template --strict`](releasing-templates.md#checking-a-template) on every change, and try the template against an empty target directory (`protostar init --from ./path/to/template`) before publishing it to a remote version control platform.
 
 ## Next Steps
 
+- **[Checking & Releasing Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./releasing-templates.md):** Check a template in CI, publish versioned releases, and migrate the projects that follow it.
 - **[Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./templates.md):** Learn about CLI options, repository URLs, template versions, and template consumption.
 - **[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):** Register your custom templates under `[templates]` in your `config.toml`.
 - **[Extending Protostar<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../developer/extending-protostar.md):** Add support for a new tool to Protostar itself, when no template setting can do the job.

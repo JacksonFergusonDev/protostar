@@ -48,7 +48,7 @@ REGRESSION_TRACKER = Tracker(
 
 # How much slower, at the least, Protostar's CPU time must be before a change
 # counts. Runs of a commit against itself on GitHub's runners (``calibrate``)
-# stay well inside it; see docs/developer/testing.md.
+# stay well inside it; see docs/developer/ci.md.
 THRESHOLD = 0.10
 
 # Where the nightly comparison runs. Windows runners are the slowest and the

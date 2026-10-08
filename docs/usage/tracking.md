@@ -49,7 +49,7 @@ For each piece of Protostar's content, an update compares three versions: what P
 
 Content leaves an update when you turn a tool off, choose a template option that drops it, or move to a template release that no longer ships it. Protostar takes back what it added, and nothing else.
 
-Starter files are the exception. A file a template ships in `[files]` or `template/` is written once and then belongs to the project, so later releases never change it. A template release can move or retire one with a [migration](authoring-templates.md#migrations).
+Starter files are the exception. A file a template ships in `[files]` or `template/` is written once and then belongs to the project, so later releases never change it. A template release can move or retire one with a [migration](releasing-templates.md#migrations).
 
 ## The Three Kinds of Decision
 
