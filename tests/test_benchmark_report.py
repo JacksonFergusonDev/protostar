@@ -87,8 +87,6 @@ def test_a_calibration_compares_the_commit_with_itself_repeatedly() -> None:
     assert [job["artifact"] for job in jobs] == [
         "benchmarks-ubuntu-latest-1",
         "benchmarks-ubuntu-latest-2",
-        "benchmarks-macos-latest-1",
-        "benchmarks-macos-latest-2",
     ]
 
 
@@ -97,7 +95,6 @@ def test_the_first_night_compares_the_commit_with_itself() -> None:
 
     assert [(job["os"], job["baseline"]) for job in jobs] == [
         ("ubuntu-latest", HEAD),
-        ("macos-latest", HEAD),
     ]
 
 
@@ -112,6 +109,7 @@ def test_a_night_compares_with_the_last_recorded_commit_and_skips_one_already_re
     jobs = report.plan("schedule", HEAD, history=history)
 
     assert [(job["os"], job["baseline"]) for job in jobs] == [("ubuntu-latest", BEFORE)]
+    assert report.plan("schedule", BEFORE, history=history) == []
 
 
 def test_a_suspect_keeps_its_baseline_so_the_next_night_measures_the_same_change() -> (
@@ -120,7 +118,7 @@ def test_a_suspect_keeps_its_baseline_so_the_next_night_measures_the_same_change
     """Even with no new commit, a suspect is measured again before it counts."""
     history = [entry("ubuntu-latest", HEAD, BEFORE, Status.SUSPECT)]
 
-    (job, _macos) = report.plan("schedule", HEAD, history=history)
+    (job,) = report.plan("schedule", HEAD, history=history)
 
     assert (job["os"], job["baseline"]) == ("ubuntu-latest", BEFORE)
 
@@ -128,7 +126,7 @@ def test_a_suspect_keeps_its_baseline_so_the_next_night_measures_the_same_change
 def test_a_baseline_no_longer_behind_the_commit_is_dropped() -> None:
     history = [entry("ubuntu-latest", BEFORE, OLDER)]
 
-    (job, _macos) = report.plan(
+    (job,) = report.plan(
         "schedule", HEAD, history=history, is_ancestor=lambda _ancestor, _commit: False
     )
 
@@ -195,13 +193,13 @@ def test_two_nights_confirm_a_slowdown_and_then_move_the_baseline_on(
     assert [(item.os, item.scenario, item.baseline) for item in regressions] == [
         ("ubuntu-latest", "sync", BEFORE)
     ]
-    assert report.plan("schedule", HEAD, history=history)[0]["os"] == "macos-latest"
+    assert report.plan("schedule", HEAD, history=history) == []
 
 
 def test_a_recorded_run_keeps_medians_in_milliseconds_and_its_cpu_change(
     tmp_path: Path,
 ) -> None:
-    write_result(tmp_path, "macos-latest")
+    write_result(tmp_path, "ubuntu-latest")
 
     (run,), _ = report.record(
         tmp_path, [], commit=HEAD, date="2026-10-02T00:00:00+00:00", run_id="7"
@@ -211,7 +209,7 @@ def test_a_recorded_run_keeps_medians_in_milliseconds_and_its_cpu_change(
     assert (sync["wall"], sync["cpu"], sync["commands"]) == (1000.0, 500.0, 400.0)
     assert sync["change"]["ratio"] == 1.0
     assert (run["os"], run["baseline"], run["run_id"], run["python"]) == (
-        "macos-latest",
+        "ubuntu-latest",
         BEFORE,
         "7",
         "3.14.0",
@@ -239,6 +237,7 @@ def test_recording_the_same_workflow_run_again_adds_nothing(tmp_path: Path) -> N
             "another commit",
         ),
         (lambda path: write_result(path, "windows-latest"), "Unexpected"),
+        (lambda path: write_result(path, "macos-latest"), "Unexpected"),
         (lambda path: (path / "benchmarks-ubuntu-latest").mkdir(), "Missing"),
         (lambda path: None, "No benchmark results"),
     ],
@@ -259,7 +258,7 @@ def test_a_run_older_than_the_latest_or_without_a_utc_date_is_refused(
 ) -> None:
     write_result(tmp_path, "ubuntu-latest")
     later = [
-        {**entry("macos-latest", BEFORE, OLDER), "date": "2026-10-05T00:00:00+00:00"}
+        {**entry("ubuntu-latest", BEFORE, OLDER), "date": "2026-10-05T00:00:00+00:00"}
     ]
 
     with pytest.raises(BenchmarkReportError, match="older"):

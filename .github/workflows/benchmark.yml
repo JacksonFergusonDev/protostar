@@ -1,7 +1,7 @@
 name: Benchmarks
 
 # Every night on main, the commit is compared with the last one recorded, on
-# Linux and macOS, in alternating rounds on one runner per OS
+# Linux, in alternating rounds on one runner
 # (python -m scripts.benchmarks compare), and the result is added to
 # metrics/benchmark-history.json on gh-pages. A slowdown in Protostar's own CPU
 # time found twice against the same baseline opens a performance-regression
@@ -22,7 +22,7 @@ on:
         type: boolean
         default: false
       repeats:
-        description: "With calibrate, how many comparisons on each OS."
+        description: "With calibrate, how many comparisons on Linux."
         type: number
         default: 3
   pull_request:

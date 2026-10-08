@@ -51,9 +51,9 @@ REGRESSION_TRACKER = Tracker(
 # stay well inside it; see docs/developer/ci.md.
 THRESHOLD = 0.10
 
-# Where the nightly comparison runs. Windows runners are the slowest and the
-# least steady, and the cost budgets already cover Windows exactly.
-OPERATING_SYSTEMS = ("ubuntu-latest", "macos-latest")
+# Routine comparisons use Linux to conserve macOS runners. Platform-specific
+# performance investigations use the local harness.
+OPERATING_SYSTEMS = ("ubuntu-latest",)
 
 # Each operating system's artifact: ``benchmarks-<os>``, holding RESULT.
 ARTIFACT_PREFIX = "benchmarks-"

@@ -174,6 +174,15 @@ test('benchmark panel renders the latest run, recent runs, and featured chart li
   assert.equal(charts[0].legend.selected.sync, true);
 });
 
+test('Linux-only benchmark history renders without a macOS series or selector option', async () => {
+  const history = benchmarkEntries.filter(entry => entry.os === 'ubuntu-latest');
+  const { element, charts } = await renderBenchmarks({ ok: true, json: async () => history });
+  assert.equal(element('benchmark-results').hidden, false);
+  assert.equal(element('benchmark-latest').textContent, `Linux: ${'d'.repeat(7)}, nothing slower`);
+  assert.deepEqual(element('benchmark-os').children.map(option => option.textContent), ['Linux']);
+  assert.deepEqual(charts[0].series.map(line => line.name), ['sync', 'version']);
+});
+
 test('choosing another system or measure redraws the chart and the latest run', async () => {
   const { element, charts } = await renderBenchmarks({ ok: true, json: async () => benchmarkEntries });
   element('benchmark-os').value = 'ubuntu-latest';
