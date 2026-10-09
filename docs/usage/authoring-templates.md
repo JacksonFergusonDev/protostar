@@ -1,5 +1,5 @@
 ---
-description: "Author custom single-file blueprints and multi-file repository templates for Protostar."
+description: "Write your own template, from a single TOML file to a repository with starter files, options, tiers, and variables."
 ---
 
 # Authoring Custom Templates
@@ -8,9 +8,9 @@ A template describes one kind of project: the tools it turns on, its dependencie
 
 A template starts as a single TOML file, and grows into a directory or repository when its starter files get big.
 
-## Level 1: The Single-File Blueprint
+## Level 1: A Single TOML File
 
-At its simplest, a template is a single TOML file containing the configuration state. You can host this file remotely or keep it on your local machine.
+At its simplest, a template is one TOML file. Keep it on your machine, or host it anywhere `--from` can reach.
 
 ### The Template Schema
 
@@ -22,13 +22,13 @@ The complete annotated schema shows every key a template can set in one file. Th
     ```
 
 ??? tip "Exporting the JSON Schema (`protostar export-schema`)"
-    Protostar can generate the official JSON Schema for template files. You can use this for automated validation in external pipelines or configure IDE plugins like VS Code's *Even Better TOML* to get real-time autocompletion and linting:
+    Protostar prints the JSON Schema for template files. Use it to validate templates in CI, or point your editor at it for completion and checking as you type ([editor setup](troubleshooting.md#editor-schema-setup-for-custom-templates)):
 
     ```bash
-    # Print formatted schema to terminal:
+    # Highlighted, for reading:
     protostar export-schema
 
-    # Export machine-readable JSON schema to a file:
+    # Plain JSON, saved to a file:
     protostar export-schema --json > protostar-template.schema.json
     ```
 
@@ -240,22 +240,22 @@ protostar sync --tier workbench
 
 An explicit tool flag still wins over either tier, so `--tier production --no-ci` is production without CI; see [which choice wins](project-recipes.md#which-choice-wins). The project recipe records the tier as `tier` in `[tool.protostar]` when it was passed with `--tier`, or chosen in the recipe editor away from the template's default, so a project that never chose follows the template's default. A recorded tier is dropped on `sync` once the template stops declaring tiers.
 
-## Level 2: The Multi-File Repository
+## Level 2: A Folder or Repository
 
-While the `[files]` table in a single TOML file is excellent for small injections (like a standard `LICENSE` or a minimal `main.py`), larger scaffolds, such as a full FastAPI service or a PyTorch training pipeline, need real files.
+`[files]` suits small starter files, such as a `main.py`. Larger ones, such as a full FastAPI service or a PyTorch training pipeline, are easier to write as real files. Put them in a folder:
 
-When you point the `--from` flag at a remote repository or a local directory archive, Protostar utilizes the following resolution sequence:
+- **`protostar.toml`** holds everything a single-file template would.
+- **`template/`**, beside it, holds the starter files. Each file is copied to the same path in the project.
 
-1. **Locate the Manifest:** Protostar searches the root of the archive for a `protostar.toml` file to act as the primary configuration blueprint.
-1. **Resolve the `template/` Directory:** If a directory named `template/` exists adjacent to the `protostar.toml` file, Protostar recursively maps its contents into the target workspace.
+Point `--from` at the folder, or at a repository that holds it.
 
 ### Example Repository Structure
 
 ```text
 my-org-fastapi-template/
 ├── README.md
-├── protostar.toml       # The environment manifest
-└── template/            # Files here are mapped to your root workspace
+├── protostar.toml       # The template's settings
+└── template/            # Starter files, copied into the project
     ├── src/
     │   └── <% PACKAGE_NAME %>/
     │       ├── __init__.py
@@ -267,13 +267,13 @@ my-org-fastapi-template/
         └── test_api.py
 ```
 
-*Note: Protostar automatically ignores compilation artifacts (`__pycache__`) and `.DS_Store` files inside the `template/` directory during extraction.*
+Protostar skips `__pycache__` folders and `.DS_Store` files in `template/`.
 
-Every file in `template/` must be UTF-8 text, because Protostar interpolates placeholders in each one. A binary file such as an image stops the template from loading with an error naming the file.
+Every file in `template/` must be UTF-8 text, because Protostar fills in placeholders in each one. A binary file such as an image stops the template from loading with an error naming the file.
 
 Every entry in `template/` must also be a regular file or directory. A symbolic link stops the template from loading: it would copy whatever it points at, such as a credentials file, into the project. No template file may land inside `.git/`, in any spelling, because Git runs what that directory configures. A remote template's archive may be at most 64 MiB and unpack to at most 256 MiB, and a raw `protostar.toml` at most 1 MiB.
 
-## Level 3: Variable Interpolation
+## Level 3: Variables
 
 A placeholder such as `<% VARIABLE_NAME %>` is replaced with its value wherever it appears: in `protostar.toml`, in `[files]` strings, and in the files under `template/`. Placeholders only insert values; there are no conditions or loops.
 
@@ -281,15 +281,15 @@ A placeholder such as `<% VARIABLE_NAME %>` is replaced with its value wherever 
 
 Protostar fills these in itself, from the project folder, your configuration, and Git:
 
-- `<% PROJECT_NAME %>`: The human-readable project name (e.g., `my-cool-app`).
-- `<% PACKAGE_NAME %>`: The PEP 8 sanitized Python module identifier (e.g., `my_cool_app`).
-- `<% PYTHON_VERSION %>`: The resolved target Python version (e.g., `3.13`).
-- `<% CURRENT_YEAR %>`: The current four-digit year (useful for copyright headers).
-- `<% AUTHOR_NAME %>`: The author's name, resolved from the global Protostar config or `git config user.name`.
+- `<% PROJECT_NAME %>`: the project's name, such as `my-cool-app`.
+- `<% PACKAGE_NAME %>`: the name to import it by, made a valid Python identifier, such as `my_cool_app`.
+- `<% PYTHON_VERSION %>`: the project's Python version, such as `3.13`.
+- `<% CURRENT_YEAR %>`: the current year, for copyright lines.
+- `<% AUTHOR_NAME %>`: your name, from your Protostar configuration or `git config user.name`.
 
-### Custom Variables & Interactive Prompts
+### Your Own Variables
 
-You can define custom placeholders tailored to your domain footprint. For example, if your template deploys to a configurable region, you might include:
+Any other placeholder is a variable the user supplies. A template that deploys to a region might write:
 
 ```python
 # template/src/<% PACKAGE_NAME %>/settings.py
@@ -302,7 +302,7 @@ Users supply the value with `--var`:
 protostar init --from https://github.com/Org/template --var DEFAULT_REGION=eu-west-1
 ```
 
-If they omit it, Protostar detects the unresolved `<% DEFAULT_REGION %>` placeholder and asks for it in an interactive terminal before any disk mutations occur; without a terminal, it stops with an error naming the variable. The value is recorded in the project recipe, so later runs of `init` and `sync` reuse it. Variable names are identifiers: a letter or underscore, then letters, digits, or underscores.
+If they leave it out, Protostar asks for it in a terminal before writing anything. Without a terminal, it stops with an error naming the variable. The value is recorded in the project recipe, so later runs of `init` and `sync` reuse it. Variable names are identifiers: a letter or underscore, then letters, digits, or underscores.
 
 ### Describing Variables
 
@@ -317,28 +317,26 @@ The description appears under the field when Protostar asks for the value. Decla
 
 ### Variables Are Not Secrets
 
-A template's custom variables are non-secret by definition: their values are saved in the project recipe in `pyproject.toml` and rendered into the project's files, all of which get committed. If a value must stay out of the repository, it isn't a template variable. Have the generated code read it from the environment at runtime, and ship a `.env.example` in `template/` that names it.
+A template's variables are never secret: their values are saved in the project's recipe in `pyproject.toml` and written into the project's files, all of which get committed. If a value must stay out of the repository, it isn't a template variable. Have the generated code read it from the environment at runtime, and ship a `.env.example` in `template/` that names it.
 
-Protostar backs this up with a safety net, not a guarantee:
+Protostar checks for mistakes, but the check is a safety net, not a guarantee:
 
 - **Names:** a placeholder named like a credential, such as `<% API_KEY %>`, `<% DB_PASSWORD %>`, or `<% GITHUB_TOKEN %>`, draws a warning beside its field and in the terminal. Rename it, or better, read the secret from the environment instead.
-- **Values:** each newly entered value is checked against [gitleaks](https://github.com/gitleaks/gitleaks)' default rules, at the version Protostar pins for the gitleaks pre-commit hook it scaffolds. A value that looks like a credential, such as a GitHub token or a private key, is held back until the user confirms it isn't a secret, for that variable only: a checkbox beside the field, or `--allow-secret NAME` on the command line. The error names the variable and the matching rule, never the value. Values are limited to 1,024 characters.
+- **Values:** each newly entered value is checked against [gitleaks](https://github.com/gitleaks/gitleaks)' default rules, at the version Protostar pins for the gitleaks hook it sets up. A value that looks like a credential, such as a GitHub token or a private key, is held back until the user confirms it isn't a secret, for that variable only: a checkbox beside the field, or `--allow-secret NAME` on the command line. The error names the variable and the matching rule, never the value. Values are limited to 1,024 characters.
 
 Values already recorded in the recipe are not checked again, so a confirmed value never blocks a later `init` or `sync`. The guard misses secrets gitleaks has no rule for, such as a password inside a database URL, so it never replaces keeping secrets out of variables. See [Template Variables That Look Like Credentials](troubleshooting.md#template-variables-that-look-like-credentials).
 
 ## Best Practices
 
-When building templates for your team or the open-source community, keep the following guidelines in mind:
-
-- **State Only the Delta:** Each tool module already ships a sensible baseline configuration. Put only what is specific to your project in `[dev.pyproject]`, and prefer a tool's additive keys (for example Ruff's `extend-select`) over redefining a list. Lists merge atomically, so redefining `select` replaces the baseline instead of adding to it, and it will drift when the baseline changes. Protostar's own built-in templates follow this rule; see [Built-in Templates](../developer/built-in-templates.md#baseline-in-modules-delta-in-templates).
-- **Choose the Right Complexity:** A single TOML file covers tools, dependencies, directories, configuration, and small starter files in `[files]`. Move to a directory with a `template/` folder when your starter files are big enough that writing them inside TOML strings gets in the way. CI, hooks, and tool configuration never need one: the tool flags bring them.
-- **Descriptive Variable Names:** Use clear, self-explanatory names for custom placeholders (e.g., `<% AWS_REGION %>` instead of `<% REG %>`). Since Protostar automatically generates interactive terminal prompts for unresolved variables, descriptive names provide a better user experience.
-- **Minimize Shell Scripts:** Be cautious with `system_tasks` and `post_install_tasks`. Heavy reliance on shell commands can compromise cross-platform compatibility (e.g., failing on Windows), and each one is another command users must confirm before an untrusted run.
-- **Check, Then Test Locally:** Run [`protostar check-template --strict`](releasing-templates.md#checking-a-template) on every change, and try the template against an empty target directory (`protostar init --from ./path/to/template`) before publishing it to a remote version control platform.
+- **State only what differs.** Each tool already comes with sensible settings. Put only what is specific to your project in `[dev.pyproject]`, and prefer a tool's additive keys (for example Ruff's `extend-select`) over redefining a list. A list merges as a whole, so redefining `select` replaces Protostar's list instead of adding to it, and stops following it when it changes. Protostar's own built-in templates follow this rule; see [Built-in Templates](../developer/built-in-templates.md#baseline-in-modules-delta-in-templates).
+- **Start with one file.** A single TOML file covers tools, dependencies, directories, configuration, and small starter files in `[files]`. Move to a directory with a `template/` folder when your starter files are big enough that writing them inside TOML strings gets in the way. CI, hooks, and tool configuration never need one: the tool flags bring them.
+- **Name variables clearly.** Protostar asks for a missing value by the variable's name, so `<% AWS_REGION %>` explains itself where `<% REG %>` doesn't. Add a [description](#describing-variables) for anything a name can't say.
+- **Use few commands.** A command in `system_tasks` or `post_install_tasks` may behave differently on Windows, and users of an untrusted template must confirm each one.
+- **Check, then try it.** Run [`protostar check-template --strict`](releasing-templates.md#checking-a-template) on every change, and try the template in an empty folder (`protostar init --from ./path/to/template`) before you publish it.
 
 ## Next Steps
 
 - **[Checking & Releasing Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./releasing-templates.md):** Check a template in CI, publish versioned releases, and migrate the projects that follow it.
-- **[Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./templates.md):** Learn about CLI options, repository URLs, template versions, and template consumption.
-- **[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):** Register your custom templates under `[templates]` in your `config.toml`.
+- **[Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./templates.md):** How people use your template: repository URLs, versions, and trust.
+- **[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):** Give your templates short names under `[templates]`.
 - **[Extending Protostar<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../developer/extending-protostar.md):** Add support for a new tool to Protostar itself, when no template setting can do the job.

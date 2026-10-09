@@ -35,7 +35,12 @@ Here the recipe turns Docker on and `just` off. Docker's files are new, and `CON
 
 It runs a command only when the update needs one: `uv add` or `uv lock` when dependencies change, and a git hook install when a hook is missing. It never reruns `init`'s setup, such as `git init`, a template's own tasks, or a reinstall of the environment. A repeat with nothing new writes nothing and runs nothing.
 
-Git hooks live in `.git/hooks`, outside the project's files, so each clone has its own. `sync` keeps this clone's in line with the recipe: it installs a hook manager's hooks when one is missing, as after switching to the production tier or in a fresh clone, and removes hooks a hook manager generated that can now only fail, after you switch manager or turn hooks off. A hook you wrote yourself is never removed. A failed hook install is a warning, not a reason to roll back, and hooks never count as pending, so `sync --check` passes in a checkout without them, as in CI.
+Git hooks live in `.git/hooks`, outside the project's files, so each clone has its own. `sync` keeps this clone's hooks in line with the recipe:
+
+- It installs the hook manager's hooks when one is missing, as in a fresh clone or after switching to the production tier.
+- It removes hooks a hook manager generated that can now only fail, after you switch manager or turn hooks off. A hook you wrote yourself is never removed.
+- A failed hook install is a warning, not a reason to roll back.
+- Hooks never count as pending, so `sync --check` passes in a checkout without them, as in CI.
 
 Which template revision an update comes from depends on the template:
 
@@ -62,7 +67,7 @@ Files with no structure of their own, such as the `justfile` and `Dockerfile`, m
 
 Content Protostar no longer produces is taken back: what a tool added when you turn it off, what a [template option](authoring-templates.md#template-options) brought when you change it, and what a new template release drops. Each piece is removed if you never edited it, and kept as a conflict if you did, where keeping yours makes it yours and taking the update removes it.
 
-This works at the same grain as everything else: each `[tool.*]` table in `pyproject.toml`, each workflow step, each hook, each dependency, each managed block. Turning Codecov off removes its upload steps from the CI workflow and leaves your own steps alone; turning Mypy off removes its hook, so no commit runs a tool that's no longer installed. A whole file, such as `zensical.toml` or the Renovate settings, is taken back key by key, and deleted only if nothing of yours is left in it. Project fields such as `[project].name` are never taken back.
+Protostar takes content back piece by piece: each `[tool.*]` table in `pyproject.toml`, each workflow step, each hook, each dependency, each managed block. Turning Codecov off removes its upload steps from the CI workflow and leaves your own steps alone; turning Mypy off removes its hook, so no commit runs a tool that's no longer installed. A whole file, such as `zensical.toml` or the Renovate settings, is taken back key by key, and deleted only if nothing of yours is left in it. Project fields such as `[project].name` are never taken back.
 
 Workflows merge by job and by step name, so your own jobs, steps, triggers, and inputs stay. An action version you or Renovate changed, including a pin to a commit, is yours: a newer version of the same action from Protostar doesn't conflict, and `sync --check` passes.
 
@@ -125,7 +130,7 @@ Later selectors override earlier ones, so an `id` can refine a choice made for i
 
 A change Protostar would make inside a file it has never written to is a proposed change: in a project you run `init` in, or when you turn on a tool whose configuration file you already wrote. That covers a new key or table, members added to a list such as Ruff's `select`, and a new dependency in a project whose requirements Protostar never managed. A proposed change applies unless you keep it out. Keeping it out records Protostar's version without writing it, so it reads as your deletion from then on: it stays out, `sync --check` passes, and you can take it later.
 
-The `init` change review opens on its **Decisions** tab, listing every conflict and proposed change by file, conflicts first. **Keep all mine** keeps your side of every one at once, which leaves the project exactly as it is. When no setup command creates them, as in a project that already has a `pyproject.toml`, the review shows the configuration merges and dependency choices too, so every change to an existing file is decided before anything runs. Headless, `init --force-merge` applies every proposed change unless you keep it out with `--resolve`, using the ids `init --dry-run` prints:
+The `init` change review opens on its **Decisions** tab, listing every conflict and proposed change by file, conflicts first. **Keep all mine** keeps your side of every one at once, which leaves the project exactly as it is. When no setup command creates them, as in a project that already has a `pyproject.toml`, the review shows the configuration merges and dependency choices too, so every change to an existing file is decided before anything runs. Without the review, `init --force-merge` applies every proposed change unless you keep it out with `--resolve`, using the ids `init --dry-run` prints:
 
 ```bash
 protostar init --force-merge --resolve pyproject.toml=local

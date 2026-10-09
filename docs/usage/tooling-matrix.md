@@ -6,13 +6,13 @@ description: "Every tool Protostar can set up, the flag that turns it on, and th
 
 Every tool Protostar can set up has a flag that turns it on or off, and writes its settings, hooks, and CI steps for you, merging them into files you already have, such as `pyproject.toml`. This page lists each tool and its flag, and the built-in templates.
 
-!!! note "Design Decision: Configuration Portability"
-    Even when using `--prek`, Protostar generates a `.pre-commit-config.yaml` file instead of `prek.toml`. Because `prek` fully supports the standard YAML configuration, this strategy ensures maximum ecosystem compatibility. The project isn't tied to one hook runner: collaborators who use `pre-commit`, editor integrations, and Renovate's hook updates all read the same file.
+!!! note "Why prek gets a `.pre-commit-config.yaml`"
+    With `--prek`, Protostar still writes `.pre-commit-config.yaml` rather than `prek.toml`. prek reads that file too, so the project isn't tied to one hook runner: collaborators who use `pre-commit`, editor integrations, and Renovate's hook updates all read the same file.
 
-!!! tip "Design Decision: Markdown Tooling Architecture"
-    Protostar adopts `rumdl` as the default markdown linter and formatter in every built-in template's production tier. Because `rumdl` is a fast Rust binary, it installs cleanly as a dev dependency via `uv` (tracked in `uv.lock`) and keeps all configuration consolidated inside `pyproject.toml` (`[tool.rumdl]`). This avoids external Node.js/npx runtime requirements and prevents configuration file sprawl. For projects requiring legacy MarkdownLint tooling, `--markdownlint` remains available as an optional module.
+!!! tip "Why rumdl is the Markdown linter"
+    Every built-in template's production tier lints and formats Markdown with `rumdl`. It installs as a development dependency through uv, locked in `uv.lock`, and keeps its settings in `pyproject.toml` under `[tool.rumdl]`, so the project needs no Node.js and no extra configuration file. `--markdownlint` sets up MarkdownLint instead.
 
-## Available Tooling Modules
+## Every Tool and Its Flag
 
 --8<-- "table_tooling.md"
 
@@ -20,7 +20,7 @@ Every tool Protostar can set up has a flag that turns it on or off, and writes i
 
 `--agents` (or `agents = true` in your [global configuration](./configuration.md)) writes an `AGENTS.md` guide for coding agents such as Codex, Cursor, and Copilot. It is off by default and no built-in template enables it, because working with agents is a developer preference rather than a project shape.
 
-The guide states only facts Protostar knows about the project it scaffolded: the Python version and uv workflow, the `just` recipes (or the raw commands when `just` is off) for formatting, linting, type checking, and testing, and the hook runner that gates each commit. It holds no general advice, so it has nothing to go stale beyond what Protostar keeps current.
+The guide states only facts Protostar knows about the project: the Python version and uv workflow, the `just` recipes (or the raw commands when `just` is off) for formatting, linting, type checking, and testing, and the hook runner that gates each commit. It holds no general advice, so it has nothing to go stale beyond what Protostar keeps current.
 
 Protostar owns only the block between its region markers. Put project notes above or below the block; they are never touched. When the tooling changes, `protostar sync` updates the block, merging line by line with anything you edited inside it. If your edit and the update touch the same or adjacent lines, sync keeps the block exactly as you left it and reports a conflict with those line numbers instead. Running with `--agents` against an existing `AGENTS.md` appends the block after your content.
 
@@ -37,7 +37,7 @@ content = """
 """
 ```
 
-A template cannot also ship `AGENTS.md` as a whole file under `[files]` while `--agents` is on; the two ownership models conflict and planning stops with an error.
+A template can't also ship `AGENTS.md` as a whole file under `[files]` while `--agents` is on: Protostar can't both keep the block current and leave the file to you, so planning stops with an error.
 
 ## Community Health Files
 
@@ -61,15 +61,15 @@ GitHub reads a contributing guide, code of conduct, security policy, or pull req
 
 ## Built-in Templates
 
-Built-in templates are project shapes: a command-line app, a library, a web service, an analysis workbench. Each brings its directories, starter files, and dependencies, and adds only the tool settings that define its shape on top of each tool's defaults.
+Each built-in template is a kind of project: a command-line app, a library, a web service, an analysis workbench. Each brings its folders, starter files, and dependencies, and adds to each tool's defaults only the settings that kind of project needs.
 
-!!! tip "Dynamic Resolution"
-    Templates do not hardcode package versions. They pass the library requirements directly to the package manager (`uv`), allowing your environment to resolve the latest compatible machine learning, astrophysics, or API packages at runtime.
+!!! tip "No pinned versions"
+    Templates name packages without versions. uv picks the newest compatible release of each when the project is set up, and records it in `uv.lock`.
 
 --8<-- "table_templates.md"
 
 ## Related Guides
 
-- __[Environment Initialization<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./init.md):__ See complete generated directory trees and configuration footprints for CLI, Library, API, ML, and Astro templates.
-- __[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):__ Configure persistent default tooling selections so your preferred flags apply automatically.
-- __[CLI Reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./cli-reference.md):__ Every tool flag and command-line option.
+- **[Environment Initialization<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./init.md):** Every file each built-in template writes.
+- **[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):** Choose the tools every new project starts with.
+- **[CLI Reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./cli-reference.md):** Every tool flag and command-line option.

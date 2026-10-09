@@ -71,7 +71,7 @@ Each decision has an `id`, derived from its location and both sides. `protostar 
 
 A file Protostar never wrote, such as a `justfile` you already had, is yours, and Protostar can't merge into it. It shows as a conflict. Choosing **Keep mine** adopts it: the file stays exactly as it is, and from then on Protostar treats it as its own content with your edits, merging updates into it line by line. Choosing **Take update** replaces it.
 
-Choosing yours is the only way Protostar takes over content you wrote. **Keep all mine**, in the change review, chooses yours for every decision at once: the project stays exactly as it is, and each file Protostar couldn't merge into is adopted.
+Choosing yours is the only way Protostar takes over content you wrote. In the change review, **Keep all mine** chooses yours for every decision at once: the project stays exactly as it is, and each file Protostar couldn't merge into is adopted.
 
 ## Words in JSON
 

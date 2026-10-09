@@ -8,7 +8,7 @@ Once a template does what you want ([Authoring Templates](authoring-templates.md
 
 ## Checking a Template
 
-`protostar check-template` checks a template without scaffolding anything. Run it from the template's directory, or name a template directory, a template TOML file, or an HTTPS URL:
+`protostar check-template` checks a template without setting up a project. Run it from the template's directory, or name a template directory, a template TOML file, or an HTTPS URL:
 
 ```bash
 protostar check-template
@@ -16,11 +16,11 @@ protostar check-template ./templates/backend.toml
 protostar check-template https://github.com/YourOrg/fastapi-template
 ```
 
-It renders the template with a placeholder for each custom variable and plans a default `protostar init` of it into an empty scratch directory, using Protostar's built-in configuration rather than yours, so every machine gets the same result. It writes nothing, runs no commands, and ignores whatever the directory you run it from contains.
+It fills each of the template's own variables with a stand-in value and plans a default `protostar init` into an empty scratch folder. It uses Protostar's built-in configuration rather than yours, so every machine gets the same result. It writes nothing, runs no commands, and ignores what's in the folder you run it from.
 
 It reports two kinds of finding:
 
-- **Errors** (`invalid-template`) are anything that stops `protostar init` from using the template: invalid TOML, a field of the wrong type, a forbidden or reserved target, an unknown tooling flag, or a file under `template/` that isn't UTF-8 text.
+- **Errors** (`invalid-template`) are anything that stops `protostar init` from using the template: invalid TOML, a field of the wrong type, a path the template may not write, an unknown tool flag, or a file under `template/` that isn't UTF-8 text.
 - **Warnings** break a practice the built-in templates follow. The template works, but its users get a worse result.
 
 | Rule | What it reports |
@@ -34,7 +34,7 @@ It reports two kinds of finding:
 | `unbound-tool-package` | A tool's package, such as `pytest-cov`, installed unconditionally instead of in an `[[optional]]` block that requires the tool |
 | `inconsistent-migration` | A migration that removes or renames away a file the template still ships, renames a file to one it doesn't ship, or renames a variable the template doesn't use under its new name |
 
-The check exits `1` when the template has errors, and also on warnings with `--strict`. If the template can't be retrieved at all (a wrong path, a network failure, an HTTP error such as 404), nothing is checked: it prints the retrieval error and exits with that error's [exit code](cli-reference.md#exit-codes), such as `65` or `75`, so a failure to download is never mistaken for a broken template. `--json` returns the findings as a JSON payload.
+The check exits `1` when the template has errors, and also on warnings with `--strict`. If the template can't be downloaded or found at all, through a wrong path, a network failure, or an HTTP error such as 404, nothing is checked. It prints that error and exits with its [exit code](cli-reference.md#exit-codes), such as `65` or `75`, so a failed download is never mistaken for a broken template. `--json` returns the findings as a JSON payload.
 
 The check covers a default `init`, with every option at its default, once in each tier when the template declares tiers. Content that only applies when a user turns on a tool the template leaves off, or chooses another option value, is not planned, so still try the combinations you expect your users to choose.
 
@@ -54,7 +54,7 @@ With `--output-format github`, each finding becomes a workflow annotation: it sh
 
 ## Local Testing
 
-When authoring a template, you do not need to commit and push to a remote repository to test its execution. You can point the `--from` flag directly at your local template directory:
+You don't need to push a template to try it. Point `--from` at its folder:
 
 ```bash
 # From within an empty target directory
@@ -67,13 +67,13 @@ Once your template is ready, push it to a repository on GitHub, GitLab, Bitbucke
 
 Publish releases as tags that are [PEP 440](https://peps.python.org/pep-0440/) versions, such as `v1.3.0`. A new project starts on your newest release, `protostar status` tells existing projects when a newer one exists, and `protostar sync --to v1.3.0` moves them to it, merging your changes into their configuration while keeping their local edits. Tag pre-releases as such (`v2.0.0rc1`): they are offered only to projects already on a pre-release. Never move a published tag. Projects stay on the commit they applied, and `status` reports the moved tag as an update. [protostar-example-templates](https://github.com/JacksonFergusonDev/protostar-example-templates) is a working example of a template repository: two templates, release tags, and `check-template` in CI. To move projects onto each release without anyone running `sync --to` by hand, point your users to the scheduled workflow in [Automating Updates](automating-updates.md#open-update-pull-requests-on-a-schedule).
 
-You can invoke your template directly:
+Users can name the repository directly:
 
 ```bash
 protostar init --from https://github.com/YourOrg/data-science-template
 ```
 
-Or, you can register it as a global alias in your `~/.config/protostar/config.toml` to access it natively in the interactive template picker:
+Or give it an alias in your configuration (`protostar config --edit`), so it appears by name in the recipe editor's template picker:
 
 ```toml
 [templates]
@@ -96,13 +96,13 @@ rename_variables = [{ from = "ORG", to = "ORGANIZATION" }]
 
 A migration's `version` is the release that introduced the change. A project runs it when it moves from a release before that version to that version or later, and never again; a project that skips releases runs every migration in between, oldest first. A template with migrations must declare a [PEP 440](https://peps.python.org/pep-0440/) root `version`, and no migration may be newer than it. Keep every migration in later releases: the new release is the only one a project reads them from.
 
-- **`rename`** moves a seeded file, including the user's edits to it, and Protostar's ownership with it. Ship the file under its new name. If something already exists at the new path, the file stays where it is and `status` says so. A file the user deleted stays deleted at its new path.
-- **`remove`** retires a seeded file you no longer ship. An unedited copy is deleted. A copy with edits stays and becomes a `retracted` conflict until the user settles it: `local` keeps it as their own file, and `desired` deletes it.
+- **`rename`** moves a starter file, with the user's edits to it, and Protostar's record of it. Ship the file under its new name. If something already exists at the new path, the file stays where it is and `status` says so. A file the user deleted stays deleted at its new path.
+- **`remove`** retires a starter file you no longer ship. An unedited copy is deleted. A copy with edits stays and becomes a `retracted` conflict until the user settles it: `local` keeps it as their own file, and `desired` deletes it.
 - **`rename_variables`** moves a recorded variable value to its new name before anything renders, so users aren't asked for a value they already gave.
 
-Migrations only touch what Protostar owns: a path it never seeded is left alone. They are declarative on purpose. `status` and `sync --dry-run` list each one before anything changes, and a failed `sync` rolls them back with everything else. Scripts would make both impossible, so migrations never run commands. A project can't move back to a release before a migration it has run, because the older release can't know how to reverse it.
+Migrations only touch files Protostar wrote: a path it never wrote is left alone. Migrations are declarations rather than scripts on purpose. `status` and `sync --dry-run` list each one before anything changes, and a failed `sync` rolls them back with everything else. Scripts would make both impossible, so migrations never run commands. A project can't move back to a release before a migration it has run, because the older release can't know how to reverse it.
 
-Renaming or removing a dependency, or a module-generated file, isn't a migration yet.
+Renaming or removing a dependency, or a file a tool generates, isn't a migration yet.
 
 ## Security Considerations
 

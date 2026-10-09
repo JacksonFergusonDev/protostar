@@ -1,10 +1,10 @@
 ---
-description: "Configure Protostar's global defaults, including preferred tools, author information, and behaviors."
+description: "Set your defaults once: your name and email, editor, Python version, license, the tools new projects start with, and template aliases."
 ---
 
 # Global Configuration
 
-Your global configuration file acts as the baseline defaults for environment initialization (which can be overridden by templates or CLI flags). Edit its common settings as a form by running:
+Your global configuration holds the defaults every new project starts from. A template's choices and the flags you pass still win over them. Edit the common settings in a form:
 
 ```bash
 protostar config
@@ -16,7 +16,7 @@ Beside the form, the **Changes** panel shows exactly what saving will change in 
 
 --8<-- "keys_config.md"
 
-The file stays the source of truth and is always yours to edit by hand. For everything the form doesn't cover, such as `[templates]` aliases, `license`, and `supported_os`, open it in your system's default `$EDITOR`, either with `e` in the form or directly:
+The file stays the source of truth and is always yours to edit by hand. For everything the form doesn't cover, such as `[templates]` aliases, `license`, and `supported_os`, open it in your `$EDITOR`, with `e` in the form or directly:
 
 ```bash
 protostar config --edit
@@ -26,13 +26,13 @@ The form needs an interactive terminal. Outside one, or with `--json`, bare `pro
 
 ![Protostar Config Help](../assets/terminals/cli_config_help.svg)
 
-To restore your configuration to the factory defaults:
+To put your configuration back to Protostar's defaults:
 
 ```bash
 protostar config --reset
 ```
 
-Outside an interactive terminal, or with `--json`, there is no prompt: `--reset` fails unless you append `--force` (or `-f`), which also skips the prompt in a terminal:
+`--reset` asks first. Outside an interactive terminal, or with `--json`, it can't ask, so it fails unless you add `--force` (or `-f`), which also skips the question in a terminal:
 
 ```bash
 protostar config --reset --force
@@ -50,28 +50,28 @@ protostar init --config ./ci/protostar.toml
 protostar init --no-config
 ```
 
-The `PROTOSTAR_CONFIG` environment variable is the equivalent for scripts and CI, where adding a flag to every invocation is impractical. Setting it to a path selects that file; setting it to an empty value disables configuration exactly like `--no-config`:
+The `PROTOSTAR_CONFIG` environment variable does the same for scripts and CI, where adding a flag to every command is awkward. A path selects that file, and an empty value works like `--no-config`:
 
 ```bash
 PROTOSTAR_CONFIG=./ci/protostar.toml protostar init --template cli
 PROTOSTAR_CONFIG= protostar init --template cli
 ```
 
-A `--config` flag takes precedence over `PROTOSTAR_CONFIG`, which takes precedence over the default location. `protostar config` follows the same selection, so `protostar config --config ./ci/protostar.toml` edits that file. The form saves to it, and `--edit` seeds it with the default template if it does not yet exist.
+`--config` wins over `PROTOSTAR_CONFIG`, which wins over the default location. `protostar config` follows the same selection, so `protostar config --config ./ci/protostar.toml` edits that file. The form saves to it, and `--edit` creates it from the defaults if it doesn't exist yet.
 
 ### Why Select One
 
-An unpinned run inherits whatever configuration happens to exist on the machine, which is exactly what you do not want in three cases:
+Without one, a run uses whatever configuration the machine has. Three cases need something more predictable:
 
-- **CI**: a self-hosted runner, or a developer running the pipeline locally, silently picks up a personal `config.toml`. Selecting a committed file (or `--no-config`) makes the run reproducible wherever it executes.
-- **Reproducing a bug report**: drop the reported configuration in a file and run against it directly, without touching your own.
-- **Testing a template or alias**: check how a scaffold behaves under a clean baseline rather than your accumulated defaults.
+- **CI:** a self-hosted runner, or a developer running the pipeline locally, would pick up a personal `config.toml` without saying so. A committed file, or `--no-config`, makes the run the same wherever it runs.
+- **Reproducing a bug report:** save the reported configuration to a file and run against it, without touching your own.
+- **Testing a template or alias:** see how it behaves with Protostar's defaults rather than yours.
 
-Selection is deliberate, so a `--config` or `PROTOSTAR_CONFIG` path that does not exist is an error rather than a silent fall back to defaults. A missing file at the *default* location is normal, and Protostar uses its built-in defaults.
+A `--config` or `PROTOSTAR_CONFIG` path that doesn't exist is an error, not a quiet fall back to defaults. A missing file at the *default* location is normal, and Protostar uses its built-in defaults.
 
-## The Default Baseline
+## The Defaults
 
-When you first save from `protostar config`, or run `protostar config --edit`, a configuration file is created at `~/.config/protostar/config.toml` from this default:
+The first time you save from `protostar config`, or run `protostar config --edit`, Protostar creates `~/.config/protostar/config.toml` from these defaults:
 
 ```toml
 --8<-- "default_config.toml"
@@ -81,27 +81,27 @@ When you first save from `protostar config`, or run `protostar config --edit`, a
 
 ### Environment Settings (`[env]`)
 
-Controls base environment toggles and global tool preferences applied whenever `protostar init` is executed:
+The settings every `protostar init` starts from:
 
 --8<-- "table_config_env.md"
 
 ### Supported Licenses
 
-When configuring `license` in `[env]`, Protostar injects the full license file and attaches the official PyPI Trove classifier to `pyproject.toml`:
+For the `license` you set in `[env]`, Protostar writes the full license file and adds its PyPI classifier to `pyproject.toml`:
 
 --8<-- "table_licenses.md"
 
 ### Global Template Aliases (`[templates]`)
 
-Map friendly shorthand names to local files or remote URLs using either shorthand strings or rich configuration tables:
+An alias gives a template a short name. Write it as a string, or as a table with more fields:
 
 ```toml
-# Shorthand string aliases:
+# As a string:
 [templates]
 my-org-api = "https://raw.githubusercontent.com/MyOrg/standards/main/api.toml"
 data-science = "~/Developer/templates/ds_base.toml"
 
-# Rich configuration tables with metadata and explicit trust:
+# As a table, with a description and trust:
 [templates.enterprise-api]
 name = "Enterprise API"
 source = "https://github.com/myorg/enterprise-template"
@@ -111,7 +111,7 @@ trusted = true
 
 #### Template Alias Fields
 
-When declaring a template using the `[templates.<alias>]` table format:
+A `[templates.<alias>]` table takes:
 
 - **`source`** *(required)*: A local path (`~` is expanded) or an HTTPS URL, in any form [`--from`](templates.md#repository-urls) accepts.
 - **`name`** *(optional)*: Display name shown in listings and the template picker.
@@ -120,12 +120,12 @@ When declaring a template using the `[templates.<alias>]` table format:
 
 A repository URL that names no ref starts each new project on the template's newest release; one that names a tag or branch starts it there. Either way, each project then stays on the commit it applied until you move it with `protostar sync --to <ref>`, so an alias never changes an existing project. See [Template Versions](templates.md#template-versions).
 
-Alias names are case-insensitive and must be unique: an alias may not reuse a built-in template name (`api`, `astro`, `cli`, `lib`, `ml`), and two aliases may not differ only by letter case. Protostar rejects either collision when it loads your configuration, because the alias would otherwise resolve to a different template depending on how it was looked up.
+Alias names are case-insensitive and must be unique: an alias may not reuse a built-in template name (`api`, `astro`, `cli`, `lib`, `ml`), and two aliases may not differ only by letter case. Protostar rejects either one when it loads your configuration, because the alias could otherwise name a different template depending on how it was typed.
 
 Use an alias with `protostar init --template <alias>`. It also appears in the recipe editor's template picker and in shell completion.
 
 ## Next Steps
 
-- **[Environment Initialization<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./init.md):** Test your configured global defaults with `protostar init`.
-- **[Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./templates.md):** Discover how template aliases streamline custom template consumption and bypass remote security prompts.
-- **[CLI Reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./cli-reference.md):** Review all command-line options and runtime flag overrides.
+- **[Environment Initialization<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./init.md):** Set up a project with your new defaults.
+- **[Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./templates.md):** Use your aliases, and trust the templates you rely on.
+- **[CLI Reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./cli-reference.md):** Every command and option.
