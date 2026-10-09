@@ -22,7 +22,7 @@ The usage line and option table under each command are generated from Protostar'
 
 ### `protostar init`
 
-Set up a project in the current directory: in an empty folder, or in a project you already have. In a terminal with no template given, it opens the recipe editor and then the change review; with `--template` or `--from`, it runs without opening any screens. See [Initialization](init.md).
+Set up a project in the current directory: in an empty folder, or in a project you already have. In a terminal with no template given, it opens the recipe editor and then the change review; with `--template` or `--from`, it runs without opening any screens. See [Setting Up a Project](init.md).
 
 --8<-- "cli_init.md"
 

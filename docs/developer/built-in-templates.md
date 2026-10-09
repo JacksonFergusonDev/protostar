@@ -10,7 +10,7 @@ Protostar ships these built-in templates: `api`, `astro`, `cli`, `lib`, and `ml`
 - What must a built-in template look like?
 - How is that enforced, so the answers don't quietly drift?
 
-If you are writing a template for your own team, see [Authoring Custom Templates](../usage/authoring-templates.md) instead. Built-ins are held to a higher bar because they ship with Protostar, are trusted implicitly, and are the first thing most users try.
+If you are writing a template for your own team, see [Authoring Templates](../usage/authoring-templates.md) instead. Built-ins are held to a higher bar because they ship with Protostar, are trusted implicitly, and are the first thing most users try.
 
 ## What a Built-in Is
 
@@ -173,7 +173,7 @@ Some conventions rely on review rather than tests: which tier a tool belongs in,
 
 ## Related Pages
 
-- **[Authoring Custom Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/authoring-templates.md):** Writing templates for your own team, including the same baseline-and-delta habit.
+- **[Authoring Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/authoring-templates.md):** Writing templates for your own team, including the same baseline-and-delta habit.
 - **[Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/templates.md):** Using built-ins, aliases, and remote templates, and the trust model behind them.
 - **[The Module Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/modules.md):** How modules declare their baseline into the manifest.
 - **[Design Principles<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../design-principles.md):** Why baselines live in modules and shape lives in templates.

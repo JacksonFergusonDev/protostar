@@ -70,6 +70,6 @@ Each built-in template is a kind of project: a command-line app, a library, a we
 
 ## Related Guides
 
-- **[Environment Initialization<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./init.md):** Every file each built-in template writes.
+- **[Setting Up a Project<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./init.md):** Every file each built-in template writes.
 - **[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):** Choose the tools every new project starts with.
 - **[CLI Reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./cli-reference.md):** Every tool flag and command-line option.

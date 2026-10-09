@@ -2,7 +2,7 @@
 description: "Write your own template, from a single TOML file to a repository with starter files, options, tiers, and variables."
 ---
 
-# Authoring Custom Templates
+# Authoring Templates
 
 A template describes one kind of project: the tools it turns on, its dependencies, the settings that differ from each tool's defaults, and its starter files. Protostar writes everything else those tools need, and keeps every project made from the template current as you release new versions.
 
