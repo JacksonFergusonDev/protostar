@@ -104,7 +104,7 @@ repos:
 
   # Commit message validation
   - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.19.0
+    rev: v4.19.2
     hooks:
       - id: commitizen
         stages: [commit-msg]
