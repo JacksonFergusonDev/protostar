@@ -68,7 +68,7 @@ jobs:
 - **Conflicts.** A sync that keeps your version somewhere exits `1` with the safe changes applied, and the workflow still opens the pull request. Its body says how many conflicts were kept. Settle them locally: `protostar status` prints the `sync --resolve` command for each choice, and `sync --check` fails until you do.
 - **Repeat runs.** A run with nothing new changes nothing and opens nothing. A pull request that is still open is updated in place, on the `protostar/sync` branch.
 - **Git hooks.** `sync` installs the clone's hooks, so the workflow switches them off before the pull request's commit, which would otherwise run every check.
-- **Repository settings.** Allow the workflow to open pull requests under Settings › Actions › General › Workflow permissions. A pull request opened with the default `GITHUB_TOKEN` doesn't trigger other workflows, so your CI won't run on it. To have it run, give `create-pull-request` a `token` from a GitHub App or a fine-grained personal access token.
+- **Repository settings.** Allow the workflow to open pull requests under **Settings** › **Actions** › **General** › **Workflow permissions**. A pull request opened with the default `GITHUB_TOKEN` doesn't trigger other workflows, so your CI won't run on it. To have it run, give `create-pull-request` a `token` from a GitHub App or a fine-grained personal access token.
 
 ## Use Checks in CI
 

@@ -130,7 +130,7 @@ Later selectors override earlier ones, so an `id` can refine a choice made for i
 
 A change Protostar would make inside a file it has never written to is a proposed change: in a project you run `init` in, or when you turn on a tool whose configuration file you already wrote. That covers a new key or table, members added to a list such as Ruff's `select`, and a new dependency in a project whose requirements Protostar never managed. A proposed change applies unless you keep it out. Keeping it out records Protostar's version without writing it, so it reads as your deletion from then on: it stays out, `sync --check` passes, and you can take it later.
 
-The `init` change review opens on its Decisions tab, listing every conflict and proposed change by file, conflicts first. Keep all mine keeps your side of every one at once, which leaves the project exactly as it is. When no setup command creates them, as in a project that already has a `pyproject.toml`, the review shows the configuration merges and dependency choices too, so every change to an existing file is decided before anything runs. Without the review, `init --force-merge` applies every proposed change unless you keep it out with `--resolve`, using the ids `init --dry-run` prints:
+The `init` change review opens on its **Decisions** tab, listing every conflict and proposed change by file, conflicts first. **Keep all mine** keeps your side of every one at once, which leaves the project exactly as it is. When no setup command creates them, as in a project that already has a `pyproject.toml`, the review shows the configuration merges and dependency choices too, so every change to an existing file is decided before anything runs. Without the review, `init --force-merge` applies every proposed change unless you keep it out with `--resolve`, using the ids `init --dry-run` prints:
 
 ```bash
 protostar init --force-merge --resolve pyproject.toml=local
@@ -147,7 +147,7 @@ protostar status
 protostar sync --resolve 53c675afdfb0=desired
 ```
 
-A file path never selects a kept edit, since each one was deliberate: name it by its `id`. On the sync screen, choosing Take update on a kept edit's own row does the same. This is how a project kept exactly as it was takes up its template's standards, one at a time.
+A file path never selects a kept edit, since each one was deliberate: name it by its `id`. On the sync screen, choosing **Take update** on a kept edit's own row does the same. This is how a project kept exactly as it was takes up its template's standards, one at a time.
 
 ## Change the Recipe
 

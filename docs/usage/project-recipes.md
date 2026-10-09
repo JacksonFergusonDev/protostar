@@ -4,7 +4,7 @@ description: "What a project's recipe in pyproject.toml records: its template, t
 
 # Project Recipes
 
-`protostar init` records what you asked for in `[tool.protostar]` in `pyproject.toml`. This table is the project's recipe: the template it follows and every choice you made. `protostar.lock` records what Protostar actually wrote; see [How Protostar Tracks Your Files](tracking.md). Commit both.
+`protostar init` records what you asked for in `[tool.protostar]` in `pyproject.toml`. This table is the project's **recipe**: the template it follows and every choice you made. `protostar.lock` records what Protostar actually wrote; see [How Protostar Tracks Your Files](tracking.md). Commit both.
 
 The recipe says what the project should be, so `status` and `sync` compare the project against it. You can edit it by hand, and `sync` applies the change.
 

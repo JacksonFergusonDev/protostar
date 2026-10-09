@@ -80,12 +80,12 @@ Workspace Collision: Protostar detected existing configuration files in the work
 
 ### In a Terminal
 
-The recipe editor's Existing files panel asks what to do with them:
+The recipe editor's **Existing files** panel asks what to do with them:
 
 1. **Merge** keeps your values and adds what's missing. Where your content and Protostar's disagree, yours stays and the change review lists the decision; see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have).
 1. **Overwrite** replaces those files with Protostar's version.
 
-Cancel leaves without changing anything.
+**Cancel** leaves without changing anything.
 
 ### Without a Terminal (CI and Agents)
 
@@ -101,7 +101,7 @@ protostar init --template cli --force-replace
 
 ## Remote Template Security Alerts
 
-A template you haven't trusted (a `--from` path or URL, or an alias without `trusted = true`) runs no command until you confirm it. In a terminal, the change review lists the commands under Untrusted template, and Apply stays off until you tick the box. Without a terminal, the run stops with `SecurityViolationError` (exit code `77`) before writing anything.
+A template you haven't trusted (a `--from` path or URL, or an alias without `trusted = true`) runs no command until you confirm it. In a terminal, the change review lists the commands under **Untrusted template**, and **Apply** stays off until you tick the box. Without a terminal, the run stops with `SecurityViolationError` (exit code `77`) before writing anything.
 
 - **For one run,** pass `--trust`. It still lists the commands.
 - **Every time,** give the template an alias with `trusted = true` in your configuration (`protostar config --edit`):
@@ -127,7 +127,7 @@ The error names the variable and the [gitleaks](https://github.com/gitleaks/gitl
 
 - **You entered a secret:** enter a non-secret value instead, and supply the secret through the environment when the project runs.
 - **The template asks for a secret:** the template needs fixing; see [Variables Are Not Secrets](authoring-templates.md#variables-are-not-secrets).
-- **The value isn't a secret:** keep it. In the editor, tick "Not a secret; keep this value" under the field. On the command line, add `--allow-secret NAME` for that variable. The confirmation covers only that variable, and once the value is recorded, later runs don't ask again. If a rule flags ordinary values often, [file an issue](https://github.com/JacksonFergusonDev/protostar/issues) with the rule id and the value's shape (not the value).
+- **The value isn't a secret:** keep it. In the editor, tick **Not a secret; keep this value** under the field. On the command line, add `--allow-secret NAME` for that variable. The confirmation covers only that variable, and once the value is recorded, later runs don't ask again. If a rule flags ordinary values often, [file an issue](https://github.com/JacksonFergusonDev/protostar/issues) with the rule id and the value's shape (not the value).
 
 ## Editor Schema Setup for Custom Templates
 
@@ -143,7 +143,7 @@ Export it again after upgrading Protostar, so the schema matches the template fo
 
 ### VS Code & Cursor
 
-1. Install the Even Better TOML extension (`tamasfe.even-better-toml`).
+1. Install the **Even Better TOML** extension (`tamasfe.even-better-toml`).
 1. Add the schema modeline at the top of your `protostar.toml`, pointing at the exported file:
 
 ```toml
@@ -157,7 +157,7 @@ ruff = true
 
 ### JetBrains (PyCharm / IntelliJ)
 
-1. Open Settings (Preferences on macOS), then Languages & Frameworks › Schemas and DTDs › JSON Schema Mappings.
+1. Open **Settings** (**Preferences** on macOS), then **Languages & Frameworks** › **Schemas and DTDs** › **JSON Schema Mappings**.
 1. Add a new mapping named `Protostar Template`.
 1. Set the schema file to the exported `protostar-template.schema.json`.
 1. Add the file pattern `*protostar*.toml`.

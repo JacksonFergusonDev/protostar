@@ -223,13 +223,13 @@ The editor fills in these details from your [global configuration](configuration
 
 ### The Change Review
 
-Continue (`Ctrl+S`) opens the change review, where you see everything before anything runs. Its left panel has three tabs:
+**Continue** (`Ctrl+S`) opens the change review, where you see everything before anything runs. Its left panel has three tabs:
 
 - **Decisions** appears when something needs you: every conflict, and every change to a file you already have. Each row starts with what happens to it, and the tab shows how many are still open.
 - **Files** lists every path Protostar plans, marked new, modified, conflict, existing, or after setup.
 - **Setup** lists the commands and packages that follow.
 
-The diff beside them shows the highlighted decision or file. Settling a conflict moves to the next open one. Nothing runs until you choose Apply.
+The diff beside them shows the highlighted decision or file. Settling a conflict moves to the next open one. Nothing runs until you choose **Apply**.
 
 ??? info "Every key in the change review"
     --8<-- "keys_change_review.md"
@@ -262,27 +262,27 @@ A value you pass or type always wins over one it read. Runs without the editor u
 
 The tools the project already uses start switched on in the recipe editor, each marked `found`. Press `i` on a tool to see what showed it, such as `justfile` or `pyproject.toml [tool.ruff]`. A found tool is only ever added: the template's choices and your configured defaults still apply to everything else, except that a found hook runner replaces the configured one. A found tool whose prerequisite is off stays off, still marked, so you can decide. Without the editor, a tool is never switched on because it was found; only flags select tools there.
 
-The editor's headline says when it has filled in an existing project, and a note under Tools names any file it couldn't read. When the project has other GitHub Actions workflows, the CI tool's `i` popup lists them. `protostar init --dry-run --json` reports the same findings for scripts and agents (see the [machine interface](agent-interface.md)).
+The editor's headline says when it has filled in an existing project, and a note under **Tools** names any file it couldn't read. When the project has other GitHub Actions workflows, the CI tool's `i` popup lists them. `protostar init --dry-run --json` reports the same findings for scripts and agents (see the [machine interface](agent-interface.md)).
 
-The change review then lists every change Protostar would make to a file you already have, and you can keep any of them out. Keep all mine (`K`) keeps the project exactly as it is, and `protostar sync` can take any change you kept out later (see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have)).
+The change review then lists every change Protostar would make to a file you already have, and you can keep any of them out. **Keep all mine** (`K`) keeps the project exactly as it is, and `protostar sync` can take any change you kept out later (see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have)).
 
 ## Files You Already Have
 
-When a file Protostar would write already exists, such as `pyproject.toml`, the recipe editor's Existing files panel asks what to do with it:
+When a file Protostar would write already exists, such as `pyproject.toml`, the recipe editor's **Existing files** panel asks what to do with it:
 
 - **Merge** keeps your content and adds what's missing.
 - **Overwrite** replaces the file with Protostar's version.
 
-Either choice prepares the review again with its diffs. Cancel exits without changing anything.
+Either choice prepares the review again with its diffs. **Cancel** exits without changing anything.
 
-Under Merge, a file Protostar can't merge into is kept as it is and marked `conflict`. An existing `justfile` that Protostar has never managed is one example. Highlight it to see your version beside Protostar's, and settle it under Conflicts:
+Under Merge, a file Protostar can't merge into is kept as it is and marked `conflict`. An existing `justfile` that Protostar has never managed is one example. Highlight it to see your version beside Protostar's, and settle it under **Conflicts**:
 
 - **Keep mine** (`k`) leaves the file as it is and adopts it, so later updates merge into it line by line.
 - **Take update** (`u`) replaces it.
 - **Keep both** (`b`), offered when lines overlap, keeps both versions of those lines.
 - **Leave open** (`x`) decides nothing now: your file stays, and `protostar status` keeps listing the conflict.
 
-Everything else Merge would change in a file you already have is listed under Changes to your file: each key, table, list item, or dependency it adds. Each one applies unless you keep it out with `k`. Keeping it out records Protostar's version without writing it, so `protostar sync` can take it later. Keep all mine (`K`) keeps your side of every conflict and change at once, which leaves the project exactly as it is.
+Everything else Merge would change in a file you already have is listed under **Changes to your file**: each key, table, list item, or dependency it adds. Each one applies unless you keep it out with `k`. Keeping it out records Protostar's version without writing it, so `protostar sync` can take it later. **Keep all mine** (`K`) keeps your side of every conflict and change at once, which leaves the project exactly as it is.
 
 The review shows the result before anything runs. It covers the files written before the setup commands. It also covers configuration and dependencies when no command creates their files; anything a command creates is listed after setup, and `protostar sync` settles it the same way (see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have)).
 

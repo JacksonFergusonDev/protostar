@@ -8,19 +8,19 @@ A template describes a kind of project: its tools, dependencies, settings, and s
 
 <div class="grid cards" markdown>
 
-- :material-cube-outline: Built-in Templates
+- :material-cube-outline: **Built-in Templates**
 
     The kinds of project that ship with Protostar: `api`, `astro`, `cli`, `lib`, and `ml`.
 
-- :material-web: External & Remote (`--from`)
+- :material-web: **External & Remote (`--from`)**
 
     Apply templates from a GitHub, GitLab, Bitbucket, Codeberg, or Sourcehut repository at a release you choose, or from local files.
 
-- :material-card-account-details-outline: Global Aliases (`[templates]`)
+- :material-card-account-details-outline: **Global Aliases (`[templates]`)**
 
     Give a template a short name in your configuration, so you never retype its URL.
 
-- :material-shield-alert-outline: Trust Before Commands
+- :material-shield-alert-outline: **Trust Before Commands**
 
     A template you haven't trusted runs no command, on `init` or `sync`, until you confirm the list of commands it needs.
 
@@ -203,7 +203,7 @@ A project's recipe and `protostar.lock` never grant trust, so cloning a project 
 
 | Command | In a terminal | Without a terminal, or with `--json` |
 | :--- | :--- | :--- |
-| `init` | The change review lists the commands under Untrusted template, and Apply stays off until you tick the box confirming them (`t`). | Stops with `SecurityViolationError` (exit code `77`) before writing anything. |
+| `init` | The change review lists the commands under **Untrusted template**, and **Apply** stays off until you tick the box confirming them (`t`). | Stops with `SecurityViolationError` (exit code `77`) before writing anything. |
 | `sync` | After you settle any conflicts, a confirmation screen lists the commands `uv add`, `uv lock`, or a hook install the update needs. | Stops with exit code `77` before writing anything. |
 | `status`, `diff`, `--dry-run`, `sync --check` | Never ask: they never run a command. | The same. |
 
