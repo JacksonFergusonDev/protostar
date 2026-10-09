@@ -78,7 +78,7 @@ Every path that Protostar will touch is passed to `record_mutation()` (or `recor
 | Existing regular file | `REGULAR_FILE` | Full file bytes + POSIX mode |
 | Existing directory | `DIRECTORY` | POSIX mode |
 
-Symbolic links, FIFOs, sockets, and device files are **rejected** at this point with `UnsupportedFilesystemNodeError` — they cannot be safely journaled or restored.
+Symbolic links, FIFOs, sockets, and device files are **rejected** at this point with `UnsupportedFilesystemNodeError`, because they can't be journaled or restored safely.
 
 If a path is submitted for journaling a second time within the same transaction, the call is silently ignored: the original pre-transaction state, captured on the first write, is what matters for restoration.
 
@@ -92,17 +92,17 @@ ACTIVE → (mutations recorded freely)
   └── rollback()  → ROLLED_BACK (journal entries replayed in reverse; cleared)
 ```
 
-Calling `commit()` on a successfully completed run discards the journal — there is nothing to restore. Calling `rollback()` on a `COMMITTED` journal raises `TransactionStateError` (the transaction is already done).
+Calling `commit()` on a successfully completed run discards the journal, since there is nothing to restore. Calling `rollback()` on a `COMMITTED` journal raises `TransactionStateError` (the transaction is already done).
 
 The commit is the run's last step, so an interrupt can still arrive after it. The executor checks the journal's state first: once it is `COMMITTED`, the interrupt passes through untouched and the finished run stands. The CLI reports a plain interrupt (exit code `130`) without `ExecutionInterruptedError`, because nothing was rolled back.
 
 ### Rollback Replay
 
-`rollback()` iterates the journal in **reverse insertion order** — last mutation is undone first. For each entry:
+`rollback()` iterates the journal in **reverse insertion order**, so the last mutation is undone first. For each entry:
 
 - **`ABSENT` (created file):** `path.unlink()` removes it.
 - **`ABSENT` (created tree, e.g., from `record_tree_creation`):** `shutil.rmtree()` removes the entire subtree. This is used for paths declared as atomically-created trees by system tasks.
-- **`ABSENT` (directory created normally):** `path.rmdir()` — only succeeds if the directory is empty. If it contains unrelated files, an `OSError` is caught, a `RollbackFailure` is recorded, and rollback continues with the remaining paths.
+- **`ABSENT` (directory created normally):** `path.rmdir()`, which only succeeds if the directory is empty. If it contains unrelated files, an `OSError` is caught, a `RollbackFailure` is recorded, and rollback continues with the remaining paths.
 - **`REGULAR_FILE`:** `atomic_write_bytes(path, original_bytes, mode=original_mode)` overwrites the current content with the captured snapshot.
 - **`DIRECTORY`:** Restores the original POSIX mode.
 
@@ -114,7 +114,7 @@ Before recording any path, `normalize_path()` resolves it to an absolute path **
 
 ## `TransactionAwareFS`
 
-`TransactionAwareFS` (`src/protostar/fs_transaction.py`) is the gated write interface. The executor never calls `Path.write_text()` or `Path.mkdir()` directly — all filesystem mutations flow through this class, which calls into the `MutationJournal` first.
+`TransactionAwareFS` (`src/protostar/fs_transaction.py`) is the gated write interface. The executor never calls `Path.write_text()` or `Path.mkdir()` directly. Every filesystem mutation goes through this class, which calls into the `MutationJournal` first.
 
 ### Write Operations
 
@@ -127,7 +127,7 @@ Before recording any path, `normalize_path()` resolves it to an absolute path **
 
 ### Implicit Parent Tracking
 
-When writing a file at a path like `src/myproject/__init__.py`, any parent directories that don't yet exist (`src/`, `src/myproject/`) are also recorded in the journal before `mkdir -p` creates them. This ensures that a partially-created directory tree is correctly removed on rollback — in reverse order, deepest first.
+When writing a file at a path like `src/myproject/__init__.py`, any parent directories that don't yet exist (`src/`, `src/myproject/`) are also recorded in the journal before `mkdir -p` creates them. This ensures that a partially-created directory tree is removed on rollback, in reverse order, deepest first.
 
 ## `ProcessRunner` & Subprocess Termination
 
@@ -157,15 +157,15 @@ It also strips git's repository-local variables, the set `git rev-parse --local-
 
 Rollback itself is wrapped in the `shield_sigint()` context manager (`src/protostar/system.py`). This temporarily replaces the `SIGINT` handler with a no-op for the duration of `journal.rollback()`.
 
-**Why this is necessary:** If the user presses `Ctrl+C` a second time while the journal is replaying, an unshielded `KeyboardInterrupt` would interrupt the rollback mid-stream — potentially leaving the workspace in a partially-restored state that is worse than the original failure. Shielding defers the second interrupt until cleanup finishes, then reinstates the original handler.
+**Why this is necessary:** If the user presses `Ctrl+C` a second time while the journal is replaying, an unshielded `KeyboardInterrupt` would stop the rollback part-way, and could leave the workspace partly restored, which is worse than the original failure. Shielding defers the second interrupt until cleanup finishes, then reinstates the original handler.
 
 ## Design Decisions
 
 ### Bytes Over Intent
 
-For regular files, rollback restores the **exact original bytes and POSIX file mode** captured before the first mutation — it does not attempt to semantically undo changes. For example, after an AST merge into `pyproject.toml`, rollback does not attempt to reverse the TOML merge at the AST level; it simply overwrites the file with the raw bytes that were read before the first write.
+For regular files, rollback restores the **exact original bytes and POSIX file mode** captured before the first mutation. It doesn't try to undo changes by meaning. For example, after an AST merge into `pyproject.toml`, rollback does not attempt to reverse the TOML merge at the AST level; it overwrites the file with the raw bytes that were read before the first write.
 
-This is deliberate: byte restoration is deterministic, instantaneous, and auditable. Semantic undo would require understanding the inverse of every possible content transformation Protostar applies — an unbounded and fragile problem.
+This is deliberate: byte restoration is deterministic, instantaneous, and auditable. Undoing by meaning would need the inverse of every content transformation Protostar applies, an open-ended and fragile problem.
 
 ### Empty-Directory-Only Removal
 
@@ -211,6 +211,6 @@ This is a deliberate safety trade-off: risking a non-empty directory being left 
 
 ## Related Pages
 
-- **[Automatic Rollback<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/rollback.md):** User-facing guide — what gets restored, what might remain, and how to remediate failures.
+- **[Automatic Rollback<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/rollback.md):** The user guide: what gets restored, what might remain, and how to remediate failures.
 - **[The System Executor<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./executor.md):** How `SystemExecutor` sequences the execution phases and invokes the rollback stack.
-- **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./error_handling.md):** How `RollbackFailedError`, `ExecutionInterruptedError`, and `ProcessTerminationError` propagate and map to POSIX exit codes.
+- **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./error_handling.md):** How `RollbackFailedError`, `ExecutionInterruptedError`, and `ProcessTerminationError` propagate and map to exit codes.

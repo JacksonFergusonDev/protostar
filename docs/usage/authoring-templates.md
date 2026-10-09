@@ -242,7 +242,7 @@ An explicit tool flag still wins over either tier, so `--tier production --no-ci
 
 ## Level 2: The Multi-File Repository
 
-While the `[files]` table in a single TOML file is excellent for small injections (like a standard `LICENSE` or a minimal `main.py`), complex scaffolds—such as a full FastAPI architecture or a PyTorch training pipeline—require physical files.
+While the `[files]` table in a single TOML file is excellent for small injections (like a standard `LICENSE` or a minimal `main.py`), larger scaffolds, such as a full FastAPI service or a PyTorch training pipeline, need real files.
 
 When you point the `--from` flag at a remote repository or a local directory archive, Protostar utilizes the following resolution sequence:
 

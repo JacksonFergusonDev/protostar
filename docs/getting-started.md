@@ -97,14 +97,12 @@ Two of those files make this a Protostar project rather than a copy of a templat
 
 ## Shell Completion and an Alias
 
-To speed up your workflow, you can enable CLI autocompletion and set up a shorter alias.
+### Tab Completion
 
-### 1. Enable Autocomplete
-
-`protostar completion` prints a tab-completion script for **Zsh**, **Bash**, **Fish**, or **PowerShell**, with nothing else to install. Save it to a file once, as below, rather than generating it each time your shell starts, so opening a terminal stays fast.
+`protostar completion` prints a tab-completion script for Zsh, Bash, Fish, or PowerShell, with nothing else to install. Save it to a file once, as below. Generating it each time your shell starts would slow down every new terminal.
 
 === "Zsh (macOS / Linux)"
-    Generate the static completion script and source it in `~/.zshrc`:
+    Save the script and load it from `~/.zshrc`:
 
     ```bash
     protostar completion zsh > ~/.protostar-completion.zsh
@@ -112,14 +110,14 @@ To speed up your workflow, you can enable CLI autocompletion and set up a shorte
     source ~/.zshrc
     ```
 
-    !!! tip "Using Custom Completion Directories (`$fpath`)"
-        If you manage completions via `~/.zsh/completions` and call `compinit`, you can save the file directly to your completions directory instead:
+    !!! tip "If you keep completions in a directory on `$fpath`"
+        If you keep completions in `~/.zsh/completions` and call `compinit`, save the file there instead:
         ```bash
         protostar completion zsh > ~/.zsh/completions/_protostar
         ```
 
 === "Bash (Linux / macOS)"
-    Generate the static completion script and source it in `~/.bashrc`:
+    Save the script and load it from `~/.bashrc`:
 
     ```bash
     protostar completion bash > ~/.protostar-completion.bash
@@ -130,7 +128,7 @@ To speed up your workflow, you can enable CLI autocompletion and set up a shorte
     macOS's Terminal starts login shells, which read `~/.bash_profile` instead; append the `source` line there if your `~/.bash_profile` doesn't already read `~/.bashrc`.
 
 === "Fish (macOS / Linux)"
-    Save the completion script to Fish's native completions directory for instant autoloading (no config edits required):
+    Save the script to Fish's completions directory. Fish loads it from there, so no configuration file changes:
 
     ```fish
     mkdir -p ~/.config/fish/completions
@@ -138,7 +136,7 @@ To speed up your workflow, you can enable CLI autocompletion and set up a shorte
     ```
 
 === "PowerShell (Windows / Cross-platform)"
-    Save the completion script and source it in your PowerShell `$PROFILE`:
+    Save the script and load it from your PowerShell `$PROFILE`:
 
     ```powershell
     protostar completion powershell > "$HOME\protostar-completion.ps1"
@@ -146,19 +144,19 @@ To speed up your workflow, you can enable CLI autocompletion and set up a shorte
     . $PROFILE
     ```
 
-    !!! tip "PowerShell Profile Setup"
-        If your profile script does not exist yet, create it:
+    !!! tip "If you have no PowerShell profile yet"
+        Create it first:
         ```powershell
         if (!(Test-Path -Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force }
         ```
-        If script execution is restricted on Windows, allow signed local scripts by running:
+        If Windows blocks running scripts, allow local ones for your account:
         ```powershell
         Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
         ```
 
-### 2. Set an Alias (Optional)
+### A Shorter Name
 
-Because `proto` is a common namespace, Protostar does not commandeer it by default. If you want the keystroke savings, map it manually in your `~/.zshrc` or `~/.bashrc`:
+Protostar installs only the `protostar` command, since other tools also use `proto`. To type less, add an alias to `~/.zshrc` or `~/.bashrc`:
 
 ```bash
 alias proto="protostar"
@@ -168,6 +166,6 @@ alias proto="protostar"
 
 - **[Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./usage/configuration.md):** Set your name, editor, Python version, and the tools new projects start with, once.
 - **[Tooling & Flags Matrix<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./usage/tooling-matrix.md):** Every tool, its flag, and the built-in templates.
-- **[CLI Reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./usage/cli-reference.md):** Comprehensive reference for all subcommands, global options, and POSIX exit codes.
-- **[Troubleshooting & FAQ<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./usage/troubleshooting.md):** Solutions for missing dependencies, workspace collisions, and IDE schema integration.
+- **[CLI Reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./usage/cli-reference.md):** Every command, option, and exit code.
+- **[Troubleshooting & FAQ<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./usage/troubleshooting.md):** Fixes for missing programs, existing files, and editor schema setup.
 - **[Project Lifecycle<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./usage/lifecycle.md):** Keep the project current with `status`, `diff`, and `sync`.

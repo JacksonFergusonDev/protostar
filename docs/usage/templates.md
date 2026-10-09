@@ -195,7 +195,7 @@ If a template requires parameters that were not supplied with `--var`, Protostar
 
 ### Automatic Metadata Resolution
 
-Standard project variables—such as the human-readable project name, PEP 8 sanitized package identifier, target Python version, current calendar year, and author details—are resolved automatically by Protostar from your environment and directory context. You do not need to provide these manually.
+Protostar fills in the standard variables itself, from your configuration, git, and the folder name: the project name, the package name, the Python version, the current year, and your name and email. You never supply these.
 
 !!! tip "Defining Template Variables"
     If you are authoring your own template and want to embed `<% VARIABLE_NAME %>` placeholders or inspect all built-in late-binding variables, see the [Authoring Custom Templates: Variable Interpolation](authoring-templates.md#level-3-variable-interpolation) guide.

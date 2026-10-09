@@ -386,74 +386,75 @@ def generate_capability_tables() -> None:
         _format_markdown_table(config_env_headers, config_env_rows),
     )
 
-    # POSIX exit codes table
+    # Exit codes table. The names come from BSD's sysexits.h; Python's os.EX_*
+    # constants are Unix-only, so ExitCode falls back to the numbers on Windows.
     exit_code_headers = [
         "Exit Code",
-        "POSIX Name",
-        "Exception Class",
-        "Trigger Condition",
+        "Name",
+        "Error",
+        "When",
     ]
     exit_code_rows = [
-        ["`0`", "`EX_OK`", "*None*", "Successful execution"],
+        ["`0`", "`EX_OK`", "*None*", "The command succeeded"],
         [
             "`1`",
-            "Generic Exit",
+            "General failure",
             "`CommandExecutionError`<br>`CommandTimeoutError`",
-            "Subprocess failure or command timeout",
+            "A command Protostar ran failed or timed out, or `sync --check` found the project out of step",
         ],
         [
             "`64`",
-            "`os.EX_USAGE`",
+            "`EX_USAGE`",
             "`InvalidUsageError`",
-            "Invalid CLI arguments or command usage syntax",
+            "The command line is invalid",
         ],
         [
             "`65`",
-            "`os.EX_DATAERR`",
+            "`EX_DATAERR`",
             "`TemplateResolutionError`",
-            "Template resolution error (corrupted archive, missing variables)",
+            "The template can't be read, such as a corrupted archive or a missing variable",
         ],
         [
             "`69`",
-            "`os.EX_UNAVAILABLE`",
+            "`EX_UNAVAILABLE`",
             "`MissingDependencyError`",
-            "Missing required system binary (`uv` or `git`)",
+            "`uv` or `git` isn't installed",
         ],
         [
             "`70`",
-            "`os.EX_SOFTWARE`",
+            "`EX_SOFTWARE`",
             "*(Unhandled exception)*",
-            "Unhandled internal Python bug (prompts automated bug report)",
+            "A bug in Protostar; it prints a link to report it",
         ],
         [
             "`74`",
-            "`os.EX_IOERR`",
+            "`EX_IOERR`",
             "`FileSystemError`",
-            "Local filesystem read/write or permission failure",
+            "A file couldn't be read or written, or permission was denied",
         ],
         [
             "`75`",
-            "`os.EX_TEMPFAIL`",
+            "`EX_TEMPFAIL`",
             "`NetworkFetchError`",
-            "Transient network failure during remote template download",
+            "A remote template couldn't be downloaded; retrying may work",
         ],
         [
             "`77`",
-            "`os.EX_NOPERM`",
+            "`EX_NOPERM`",
             "`SecurityViolationError`",
-            "Security violation (e.g., path traversal Zip Slip, or a template variable value that looks like a credential)",
+            "A safety check refused the run, such as a path that escapes the project or a variable value that looks like a credential",
         ],
         [
             "`78`",
-            "`os.EX_CONFIG`",
+            "`EX_CONFIG`",
             "`ConfigurationError`",
-            "Invalid TOML syntax or conflicting CLI configuration",
+            "Invalid TOML, or settings that contradict each other",
         ],
         [
             "`130`",
-            "Shell Signal",
+            "Interrupted (128 + `SIGINT`)",
             "`ExecutionAbortedError`<br>`ExecutionInterruptedError`",
-            "You cancelled interactive setup or interrupted execution (Ctrl+C)",
+            "You cancelled setup or pressed Ctrl+C",
         ],
     ]
     _write_generated_doc(

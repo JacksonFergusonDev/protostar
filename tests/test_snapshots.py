@@ -245,13 +245,13 @@ def test_exit_codes_documentation_matches_cli_behavior():
     content = table_path.read_text(encoding="utf-8")
 
     # Assert accurate exit code mappings
-    assert "| `78` | `os.EX_CONFIG` | `ConfigurationError` |" in content
-    assert "| `65` | `os.EX_DATAERR` | `TemplateResolutionError` |" in content
-    assert "| `69` | `os.EX_UNAVAILABLE` | `MissingDependencyError` |" in content
-    assert "| `74` | `os.EX_IOERR` | `FileSystemError` |" in content
-    assert "| `75` | `os.EX_TEMPFAIL` | `NetworkFetchError` |" in content
-    assert "| `77` | `os.EX_NOPERM` | `SecurityViolationError` |" in content
-    assert "| `70` | `os.EX_SOFTWARE` | *(Unhandled exception)* |" in content
+    assert "| `78` | `EX_CONFIG` | `ConfigurationError` |" in content
+    assert "| `65` | `EX_DATAERR` | `TemplateResolutionError` |" in content
+    assert "| `69` | `EX_UNAVAILABLE` | `MissingDependencyError` |" in content
+    assert "| `74` | `EX_IOERR` | `FileSystemError` |" in content
+    assert "| `75` | `EX_TEMPFAIL` | `NetworkFetchError` |" in content
+    assert "| `77` | `EX_NOPERM` | `SecurityViolationError` |" in content
+    assert "| `70` | `EX_SOFTWARE` | *(Unhandled exception)* |" in content
 
     # Ensure stale / inaccurate errors are absent
     assert "InvalidRollbackStateError" not in content

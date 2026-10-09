@@ -67,7 +67,7 @@ An unpinned run inherits whatever configuration happens to exist on the machine,
 - **Reproducing a bug report**: drop the reported configuration in a file and run against it directly, without touching your own.
 - **Testing a template or alias**: check how a scaffold behaves under a clean baseline rather than your accumulated defaults.
 
-Selection is deliberate, so a `--config` or `PROTOSTAR_CONFIG` path that does not exist is an error rather than a silent fall back to defaults. A missing file at the *default* location stays perfectly normal and simply yields built-in defaults.
+Selection is deliberate, so a `--config` or `PROTOSTAR_CONFIG` path that does not exist is an error rather than a silent fall back to defaults. A missing file at the *default* location is normal, and Protostar uses its built-in defaults.
 
 ## The Default Baseline
 

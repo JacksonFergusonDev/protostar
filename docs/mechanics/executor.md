@@ -90,5 +90,5 @@ For one-off isolated commands outside the main executor loop, `protostar.system.
 - **[The Orchestrator<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./orchestrator.md):** See how the orchestrator coordinates the planning phase and passes the manifest to the executor.
 - **[The Environment Manifest<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./manifest.md):** Review the structured state container evaluated by the executor.
 - **[The Module Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./modules.md):** Explore the polymorphic modules that generate the requirements processed by the executor.
-- **[Rollback Internals<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./rollback.md):** Deep dive into `MutationJournal`, `TransactionAwareFS`, and `ProcessRunner` — the three-layer rollback stack.
+- **[Rollback Internals<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./rollback.md):** Deep dive into `MutationJournal`, `TransactionAwareFS`, and `ProcessRunner`, the three layers rollback is built on.
 - **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./error_handling.md):** Review how rollback errors and process failures are mapped to domain exceptions.

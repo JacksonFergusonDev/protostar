@@ -4,7 +4,7 @@ description: "How the Orchestrator plans a run without touching the disk, and ha
 
 # The Orchestrator
 
-The `Orchestrator` (`src/protostar/orchestrator.py`) turns a request into a plan and a plan into changes, in two phases that never mix: `plan()` reads and decides, and `execute()` writes. It is headless: it takes an `InitRequest`, returns an `EnvironmentManifest` and then an `ExecutionResult`, and never prompts or prints. Everything a person sees (the recipe editor, the change review, the progress trail) lives in the `protostar.cli` package; see [The Headless Core](../design-principles.md#the-headless-core).
+The `Orchestrator` (`src/protostar/orchestrator.py`) turns a request into a plan and a plan into changes, in two phases that never mix: `plan()` reads and decides, and `execute()` writes. It is headless: it takes an `InitRequest`, returns an `EnvironmentManifest` and then an `ExecutionResult`, and never prompts or prints. Everything a person sees (the recipe editor, the change review, the progress trail) lives in the `protostar.cli` package; see [The Headless Core](../design-principles.md#the-engine-never-touches-the-terminal).
 
 ```mermaid
 flowchart TD

@@ -100,7 +100,7 @@ Show every command, or one command's options. `protostar help <command>` is the 
 
 --8<-- "cli_help.md"
 
-## POSIX Exit Codes
+## Exit Codes
 
 Each kind of failure has its own exit code, so a script can tell a network failure from a broken template:
 
