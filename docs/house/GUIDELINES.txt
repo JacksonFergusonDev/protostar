@@ -50,42 +50,27 @@ A site may add its own rules, but it never contradicts these. When a rule here i
 
 ## Writing
 
-Every site speaks in one voice: calm, clear, and precise. What changes from page to page is who the page is for, which sets how much it assumes and how much detail it gives.
+The goal is readability: neither the wording nor the formatting should be something the reader has to work through. Every site uses one calm, clear, precise voice, and each page is written for one audience.
 
-### The voice
-
-- **Name the concrete thing.** Say the file, the command, the place, or the number, rather than the category it belongs to: "restores `pyproject.toml`", not "restores project state"; "granite slabs above the valley", not "stunning scenery".
-- **Lead with what the reader needs.** Open a page, a section, or a paragraph with the answer or the action. Reasons and exceptions follow it.
-- **One claim per sentence.** Length matters less than how much the reader has to hold at once. When a sentence carries three or more parallel outcomes or conditions, make them a list.
-- **Every claim can be checked.** A number says how it was measured, or links to where it was. A word like "fast", "robust", or "reliable" needs the measurement behind it, or it goes.
-- **Plain, not grand.** Prefer the ordinary word: "use", not "leverage"; "set up", not "orchestrate". Write no hype ("seamless", "powerful", "effortless"), no "simply" or "just" softening a step, and no superlative that isn't measured. Turn abstraction into what actually happens: "deterministic, transaction-aware scaffolding" says less than "if a step fails, every file goes back to how it was".
-- **State limits as plainly as strengths.** Say what a thing doesn't do, and when something else fits better.
-- **Headings say something.** A heading tells the reader what its section answers or does, not only its topic.
-- **Punctuation stays quiet.** Reach for a comma, a colon, or a new sentence before an em dash. Bold only labels the start of a list item, as in this list. No exclamation marks.
-- **Person follows the site.** A personal site speaks as "I". Documentation speaks to the reader as "you".
-- **Never hard-wrap Markdown prose.** Each paragraph and list item is one line, however long.
+- **Concrete over abstract.** Name the file, command, place, or number, and say what happens. No hype or unmeasured claims; state limits as plainly as strengths.
+- **The answer first.** Reasons and exceptions follow it.
+- **Don't overload a sentence.** A sentence can carry a supporting clause, but shouldn't ask the reader to hold several new things at once. Three or more parallel items read better as a list.
+- **Formatting the reader doesn't notice.** Bold marks what a reader scans for, such as a label, a control to press, or a term where it's defined, never general emphasis. No em dashes, which agents overuse; a comma, colon, semicolon, parentheses, or a new sentence does the job.
+- **Person follows the site:** "I" on a personal site, "you" in documentation.
+- **Never hard-wrap Markdown prose.**
 
 ### Audiences
 
-Each page has one primary audience:
-
-| Audience | Who reads it | What it assumes | What it gives |
-| --- | --- | --- | --- |
-| General | Hiring managers, coworkers, curious visitors, and technical readers on their first look | No knowledge of the tool, the field, or its vocabulary | What the thing is, why it matters, and what using it is like, with links onward for depth |
-| Users | People using the tool to get something done | The goal, not the tool's concepts | Steps and their outcomes, with each term defined where it first appears |
-| Technical | Contributors, evaluators, and readers who want the mechanics | The user-level pages | Precise detail and internal names, each defined once on the page that owns it |
-
-- **A homepage, a project card, a README, and a documentation landing page are General.** Everyone lands there first, so they explain plainly and hand off to the pages that go further.
-- **A page's opening serves its primary audience.** Deeper material can follow under its own heading, or on a linked page.
-- **Define a term where it first appears**, or link to where it's defined. Never assume the reader came from the page before.
-- **Technical pages may be denser, never harder.** They use more internal names and less explanation, but the voice still holds: one claim per sentence, concrete names, and the answer first.
+- **General:** hiring managers, coworkers, and anyone on a first look. Homepages, project cards, READMEs, and documentation landing pages. Assume nothing, say what it is and why it matters, and link onward for depth.
+- **Users:** people getting something done. Steps and outcomes, with each term defined where it first appears.
+- **Technical:** contributors and readers who want the mechanics. Denser, with internal names, but no harder to read.
 
 ## Documentation sites
 
 Rules for project documentation built on a docs theme (Zensical or Material for MkDocs). The landing page is a house page and follows everything above; the inner pages keep the theme's layout with the house tokens, fonts, and terminal window.
 
-- **Each section of the navigation serves one audience.** Installation, tutorials, and user guides serve Users. Architecture, internals, and contributor guides serve Technical readers. Reference pages serve Users looking something up: complete, terse, one entry per item.
-- **Each rule is stated once.** One page owns it, and every other page links there instead of restating it.
+- **Each navigation section serves one audience:** guides and reference for Users, internals and contributor pages for Technical readers.
+- **Each rule is stated once,** on the page that owns it. Other pages link there.
 - **Only top-level pages carry a navigation icon.** A page that sits directly in the navigation, outside any section, sets `icon:` in its front matter, and it shows beside the page in the left navigation. A page inside a section sets none. Pick icons that say what the page is for, and never repeat one.
 - **Cards at the top of a page are optional.** Add them only when they genuinely help a reader choose where to go, or see a page's main points before the detail. A page that reads well without them has none.
 - **Cards come in twos, fours, or sixes.** Each card has to earn its place: if only five say something worth saying, use four. Never pad a grid to reach an even count, and never repeat in a card what the heading under it already says.

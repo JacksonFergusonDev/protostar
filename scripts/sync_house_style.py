@@ -26,7 +26,7 @@ if str(_repo_root) not in sys.path:
 
 from scripts._common import DOCS_DIR, REPO_ROOT, OutputStyle, fetch_bytes, report
 
-HOUSE_STYLE_TAG = "v1.4.0"
+HOUSE_STYLE_TAG = "v1.4.1"
 REPOSITORY = "https://github.com/JacksonFergusonDev/house-style"
 ARCHIVE_URL = (
     "https://codeload.github.com/JacksonFergusonDev/house-style/tar.gz/refs/tags/{tag}"
