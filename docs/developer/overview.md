@@ -1,5 +1,5 @@
 ---
-description: "Get started contributing to Protostar's core framework, architecture, and documentation."
+description: "How to contribute to Protostar: set up the repository, follow its rules, and open a pull request."
 ---
 
 <!--

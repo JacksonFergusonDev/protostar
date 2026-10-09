@@ -28,7 +28,7 @@ Every module subclasses `BootstrapModule` and has a `name` and a `build()`. A to
 - **`signals`**: what shows that a project Protostar has never touched already uses the tool, such as a `[tool.mypy]` table.
 - **`executables`**: the programs the tool runs, such as `direnv`. Planning records each one missing from `PATH` in `manifest.missing_tools` and never fails for it; the module still writes the tool's files and skips only the step that runs the program. Only `uv` and `git`, which Protostar itself runs, can fail a run.
 
-A tooling module's settings are a **baseline tuned for casual projects**: they should never make a small script painful. Strict settings such as `mypy`'s `strict = true` belong in the templates whose shape calls for them. See [Built-in Templates](../developer/built-in-templates.md#baseline-in-modules-delta-in-templates).
+A tool module's settings suit a casual project: they should never make a small script painful. Strict settings such as `mypy`'s `strict = true` belong in the templates whose shape calls for them. See [Built-in Templates](../developer/built-in-templates.md#baseline-in-modules-delta-in-templates).
 
 The Mypy module, as Protostar ships it:
 
@@ -50,9 +50,9 @@ The Mypy module, as Protostar ships it:
             separate_signature: true
             members_order: source
 
-## Next Steps & Developer Guides
+## Related Pages
 
-- **[<span class="hs-icon hs-icon-brand-github" aria-hidden="true"></span>Built-in Modules](https://github.com/JacksonFergusonDev/protostar/tree/main/src/protostar/modules):** Browse the source code for official implementations.
+- **[<span class="hs-icon hs-icon-brand-github" aria-hidden="true"></span>Built-in Modules](https://github.com/JacksonFergusonDev/protostar/tree/main/src/protostar/modules):** The source of every module.
 - **[Extending Protostar<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../developer/extending-protostar.md):** How to add a tool module.
-- **[The Environment Manifest<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./manifest.md):** Full breakdown of the manifest namespaces and mutation methods used during `build()`.
-- **[Testing Architecture & Philosophy<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../developer/testing.md):** Learn how to test modules in-memory with strict subprocess mocking.
+- **[The Environment Manifest<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./manifest.md):** What a module can declare in `build()`.
+- **[Testing Architecture & Philosophy<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../developer/testing.md):** How to test a module in memory, without running a command.

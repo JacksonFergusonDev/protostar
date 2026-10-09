@@ -15,7 +15,7 @@ No engine knows a file by name. Each reconciles whatever spec it is handed; see 
 | JSONC | `jsonc_ast.py` | Standard library only |
 | Free-form text | `text_merge.py` | Standard library only |
 
-All of them share the same execution guarantees. Accepted content is written through `TransactionAwareFS`, candidate state is committed only at transaction completion, and a failure restores exact bytes and POSIX modes.
+All of them get the same treatment at execution. Accepted content is written through `TransactionAwareFS`, candidate state is committed only at transaction completion, and a failure restores exact bytes and POSIX modes.
 
 ## TOML
 

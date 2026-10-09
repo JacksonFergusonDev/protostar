@@ -26,7 +26,7 @@ To run Nightly before merging a risky change, or before a release when it hasn't
 
 ## Template Hooks Smoke Matrix
 
-End-to-end template validation runs through the `template-smoke` action (`.github/actions/template-smoke`). It scaffolds each built-in template it is given in turn, verifies that `prek` hooks are installed, runs a canary check ensuring non-conventional commit messages are rejected, and asserts that the first commit triggers and cleanly passes all pre-commit hooks. A `template-hooks-smoke` job runs it for a list of templates, and a test job can run it after the suite through its matrix entry's `smoke` list, which is how macOS smoke-tests templates without a runner of its own.
+End-to-end template validation runs through the `template-smoke` action (`.github/actions/template-smoke`). It scaffolds each built-in template it is given in turn, verifies that `prek` hooks are installed, checks that a commit message that isn't conventional is rejected, and asserts that the first commit runs and passes every pre-commit hook. A `template-hooks-smoke` job runs it for a list of templates, and a test job can run it after the suite through its matrix entry's `smoke` list, which is how macOS smoke-tests templates without a runner of its own.
 
 ## Counting Rollback Faults
 

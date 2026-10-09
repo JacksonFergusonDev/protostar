@@ -66,12 +66,12 @@ Every command a run starts goes through `ProcessRunner` (`src/protostar/system.p
 
 `ProcessRunner` provides:
 
-- **Process Group Isolation:** Subprocesses are launched in their own session (`start_new_session=True` on POSIX, `CREATE_NEW_PROCESS_GROUP` on Windows) so child trees can be reliably signaled and reaped.
-- **Two-Stage Graceful Termination:** When execution is interrupted or aborted, `ProcessRunner` sends `SIGTERM` (or `CTRL_BREAK_EVENT`), waits for a configurable grace period, and escalates to `SIGKILL` if the process tree fails to exit. If a process cannot be reaped, it raises `ProcessTerminationError`.
-- **Environment Sanitization:** Strips active virtual environment variables (`VIRTUAL_ENV`, `PYTHONHOME`) to prevent ambient interpreter contamination, and git's repository-local variables (`GIT_DIR`, `GIT_WORK_TREE`, and the rest of `git rev-parse --local-env-vars`) so git always targets the project, while accepting explicit caller overrides.
-- **Structured Diagnostic Capture:** Captures `stdout` and `stderr` silently during execution, attaching raw diagnostic streams to `CommandExecutionError` if a process returns a non-zero exit code.
+- **Its own process group:** each command starts in its own session (`start_new_session=True` on POSIX, `CREATE_NEW_PROCESS_GROUP` on Windows), so one signal reaches every process it started.
+- **Stop, then force:** when a run fails or is interrupted, `ProcessRunner` sends `SIGTERM` (or `CTRL_BREAK_EVENT`), waits a grace period, and sends `SIGKILL` if the processes haven't exited. If one still won't stop, it raises `ProcessTerminationError`.
+- **A clean environment:** it removes the active virtual environment's variables (`VIRTUAL_ENV`, `PYTHONHOME`), so a command never picks up the caller's Python, and git's repository-local variables (`GIT_DIR`, `GIT_WORK_TREE`, and the rest of `git rev-parse --local-env-vars`), so git always works on the project. A caller can still set variables explicitly.
+- **Captured output:** it captures `stdout` and `stderr` while the command runs, and attaches both to `CommandExecutionError` if the command exits non-zero.
 
-For one-off isolated commands outside the main executor loop, `protostar.system.execute_subprocess` provides a convenience wrapper around `ProcessRunner().run(...)`.
+For a single command outside a run, `protostar.system.execute_subprocess` wraps `ProcessRunner().run(...)`.
 
 ## API Reference
 
@@ -85,10 +85,10 @@ For one-off isolated commands outside the main executor loop, `protostar.system.
             separate_signature: true
             members_order: source
 
-## Related Mechanics & Guides
+## Related Pages
 
-- **[The Orchestrator<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./orchestrator.md):** See how the orchestrator coordinates the planning phase and passes the manifest to the executor.
-- **[The Environment Manifest<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./manifest.md):** Review the structured state container evaluated by the executor.
-- **[The Module Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./modules.md):** Explore the polymorphic modules that generate the requirements processed by the executor.
-- **[Rollback Internals<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./rollback.md):** Deep dive into `MutationJournal`, `TransactionAwareFS`, and `ProcessRunner`, the three layers rollback is built on.
-- **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./error_handling.md):** Review how rollback errors and process failures are mapped to domain exceptions.
+- **[The Orchestrator<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./orchestrator.md):** How `plan()` builds the manifest the executor applies.
+- **[The Environment Manifest<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./manifest.md):** What the manifest holds.
+- **[The Module Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./modules.md):** How each tool's module declares what it needs.
+- **[Rollback Internals<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./rollback.md):** `MutationJournal`, `TransactionAwareFS`, and `ProcessRunner`, the three layers rollback is built on.
+- **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./error_handling.md):** The errors a failed rollback or a stuck process raises.

@@ -83,7 +83,7 @@ classDiagram
 
 ??? abstract "Diagnostics & Error Handling: `protostar.errors`"
 
-    Strictly typed operational errors that halt the execution pipeline safely and map to an exit code for each kind of failure.
+    Every expected failure, each with its hint and the exit code for its kind of failure.
 
     ::: protostar.errors
         options:
