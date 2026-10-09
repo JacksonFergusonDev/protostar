@@ -129,7 +129,7 @@ If you are working on the orchestrator's exception handling or the GitHub issue 
 protostar init --crash-test
 ```
 
-This guarantees the crash reporter is invoked, allowing you to inspect the URL-encoded GitHub issue generation.
+This makes sure the crash reporter runs, allowing you to inspect the URL-encoded GitHub issue generation.
 
 ## Running the Suite
 

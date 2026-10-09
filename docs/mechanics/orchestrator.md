@@ -73,8 +73,8 @@ Non-fatal outcomes, such as a step skipped because its program is missing, are c
             separate_signature: true
             members_order: source
 
-## Related Mechanics & Guides
+## Related Pages
 
-- **[The Environment Manifest<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./manifest.md):** Deep dive into the structured state container generated during the `plan()` phase.
+- **[The Environment Manifest<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./manifest.md):** What `plan()` produces.
 - **[The System Executor<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./executor.md):** How the executor applies a plan as one transaction.
 - **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./error_handling.md):** How errors reach the CLI, and the exit code each one returns.

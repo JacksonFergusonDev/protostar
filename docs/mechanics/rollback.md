@@ -1,14 +1,14 @@
 ---
-description: "Deep dive into Protostar's transactional rollback engine: MutationJournal, TransactionAwareFS, and ProcessRunner."
+description: "How rollback is built: the MutationJournal that records each path, the TransactionAwareFS every write goes through, and the ProcessRunner that stops commands first."
 ---
 
 # Rollback Internals
 
-Protostar's automatic rollback is implemented as a three-layer stack that collaborates to guarantee byte-accurate workspace restoration on any failure or interruption. This page documents the architecture, design decisions, and precise mechanics for contributors and maintainers.
+Rollback is built from three layers. A journal records each path before Protostar first changes it, a filesystem wrapper makes every write go through that journal, and a process runner stops any running command before the journal replays. This page covers how each layer works and why, for contributors.
 
-For the user-facing guide covering what rollback restores, what it doesn't, and how to remediate failures, see [Automatic Rollback](../usage/rollback.md).
+[Automatic Rollback](../usage/rollback.md) is the user guide: what rollback restores, what it doesn't, and what to do when a restore fails.
 
-The [published rollback results](https://protostar.jacksonferguson.me/metrics/#rollback) show how many injected faults the nightly suite restored, split by template and operating system. When changing these layers, use the [fault-injection harness](../developer/testing.md#rollback-fault-injection) to exercise the new failure points; the public count complements those checks and changes with their scope.
+The [published rollback results](https://protostar.jacksonferguson.me/metrics/#rollback) show how many injected faults the nightly suite restored, split by template and operating system. When you change these layers, the [fault-injection harness](../developer/testing.md#rollback-fault-injection) fails each new site for you; the published count grows as the suite covers more.
 
 ## The Three-Layer Stack
 
@@ -25,8 +25,8 @@ flowchart TD
     J --> Store[(OriginalState\nper-path journal)]
 ```
 
-- **`MutationJournal`** is the ledger. Before Protostar writes or modifies any path, it records that path's original state (bytes, mode, or absence). On rollback, it replays the journal in reverse, restoring each entry.
-- **`TransactionAwareFS`** is the gated write interface. All filesystem mutations in the execution phase route through this class, which calls into the journal before performing any disk operation.
+- **`MutationJournal`** records. Before Protostar first changes a path, the journal records its original state: its bytes and mode, or that it didn't exist. Rollback replays the journal in reverse.
+- **`TransactionAwareFS`** is the only way execution writes. Every write, directory, and removal goes through it, and it records the path in the journal first.
 - **`ProcessRunner`** owns the active subprocess. When an error or interrupt fires, the executor stops it, and the editor-extension listing that may be running beside it, before touching the journal, so no process is still writing to disk while rollback is in progress.
 
 ## Transactional Execution Flow
@@ -66,11 +66,11 @@ flowchart TD
 
 ## `MutationJournal`
 
-`MutationJournal` (`src/protostar/journal.py`) is the core rollback ledger. It operates on a simple invariant: **record before mutate, restore in reverse**.
+`MutationJournal` (`src/protostar/journal.py`) follows one rule: record before changing, restore in reverse.
 
 ### Recording
 
-Every path that Protostar will touch is passed to `record_mutation()` (or `record_tree_creation()` for `git init`-style subtrees) *before* the disk operation occurs. The journal captures the path's `OriginalState`:
+Each path is passed to `record_mutation()` before Protostar changes it, or to `record_tree_creation()` for a whole tree a command creates, such as `.git/` from `git init`. The journal captures the path's `OriginalState`:
 
 | Original condition | Recorded `NodeKind` | What's captured |
 |---|---|---|
@@ -78,9 +78,9 @@ Every path that Protostar will touch is passed to `record_mutation()` (or `recor
 | Existing regular file | `REGULAR_FILE` | Full file bytes + POSIX mode |
 | Existing directory | `DIRECTORY` | POSIX mode |
 
-Symbolic links, FIFOs, sockets, and device files are **rejected** at this point with `UnsupportedFilesystemNodeError`, because they can't be journaled or restored safely.
+Symbolic links, FIFOs, sockets, and device files are rejected here with `UnsupportedFilesystemNodeError`, because they can't be journaled or restored safely.
 
-If a path is submitted for journaling a second time within the same transaction, the call is silently ignored: the original pre-transaction state, captured on the first write, is what matters for restoration.
+Recording the same path again in one transaction does nothing: rollback restores the state from before the first change.
 
 ### Lifecycle States
 
@@ -98,10 +98,10 @@ The commit is the run's last step, so an interrupt can still arrive after it. Th
 
 ### Rollback Replay
 
-`rollback()` iterates the journal in **reverse insertion order**, so the last mutation is undone first. For each entry:
+`rollback()` walks the journal in reverse, so the last change is undone first. For each entry:
 
 - **`ABSENT` (created file):** `path.unlink()` removes it.
-- **`ABSENT` (created tree, e.g., from `record_tree_creation`):** `shutil.rmtree()` removes the entire subtree. This is used for paths declared as atomically-created trees by system tasks.
+- **`ABSENT` (created tree, e.g., from `record_tree_creation`):** `shutil.rmtree()` removes the entire subtree. Commands declare these, such as `.git/` from `git init`.
 - **`ABSENT` (directory created normally):** `path.rmdir()`, which only succeeds if the directory is empty. If it contains unrelated files, an `OSError` is caught, a `RollbackFailure` is recorded, and rollback continues with the remaining paths.
 - **`REGULAR_FILE`:** `atomic_write_bytes(path, original_bytes, mode=original_mode)` overwrites the current content with the captured snapshot.
 - **`DIRECTORY`:** Restores the original POSIX mode.
@@ -110,11 +110,11 @@ Any path that cannot be restored is collected into a `RollbackFailure` tuple. If
 
 ### Path Normalization & Security
 
-Before recording any path, `normalize_path()` resolves it to an absolute path **without dereferencing its final component** (so symlinks are caught rather than followed). It then asserts the resolved path is within `workspace_root`, preventing any transaction-managed operation from escaping the workspace boundary.
+Before recording a path, `normalize_path()` makes it absolute without following its last component, so a symbolic link is caught rather than followed. It then checks that the path is inside `workspace_root`, so no journaled change can reach outside the project.
 
 ## `TransactionAwareFS`
 
-`TransactionAwareFS` (`src/protostar/fs_transaction.py`) is the gated write interface. The executor never calls `Path.write_text()` or `Path.mkdir()` directly. Every filesystem mutation goes through this class, which calls into the `MutationJournal` first.
+`TransactionAwareFS` (`src/protostar/fs_transaction.py`) is the only way execution writes. The executor never calls `Path.write_text()` or `Path.mkdir()` directly. Every filesystem mutation goes through this class, which calls into the `MutationJournal` first.
 
 ### Write Operations
 
@@ -127,11 +127,11 @@ Before recording any path, `normalize_path()` resolves it to an absolute path **
 
 ### Implicit Parent Tracking
 
-When writing a file at a path like `src/myproject/__init__.py`, any parent directories that don't yet exist (`src/`, `src/myproject/`) are also recorded in the journal before `mkdir -p` creates them. This ensures that a partially-created directory tree is removed on rollback, in reverse order, deepest first.
+When writing a file at a path like `src/myproject/__init__.py`, any parent directories that don't yet exist (`src/`, `src/myproject/`) are also recorded in the journal before `mkdir -p` creates them. So a partly created tree is removed on rollback, deepest folder first.
 
 ## `ProcessRunner` & Subprocess Termination
 
-`ProcessRunner` (`src/protostar/system.py`) owns one active subprocess at a time. The executor's runner runs the run's commands; the editor-extension listing, which overlaps the run, has a runner of its own. It launches subprocesses in **isolated process groups** (`start_new_session=True` on POSIX, `CREATE_NEW_PROCESS_GROUP` on Windows) so the entire child process tree can be signalled atomically.
+`ProcessRunner` (`src/protostar/system.py`) owns one active subprocess at a time. The executor's runner runs the run's commands; the editor-extension listing, which overlaps the run, has a runner of its own. It starts each command in its own process group (`start_new_session=True` on POSIX, `CREATE_NEW_PROCESS_GROUP` on Windows), so one signal reaches the command and every process it started.
 
 ### Two-Stage Termination
 
@@ -145,37 +145,37 @@ When writing a file at a path like `src/myproject/__init__.py`, any parent direc
 5. If still alive: raise ProcessTerminationError
 ```
 
-This sequence ensures no subprocess is still writing to disk while rollback is in progress. A process that survives it never stops the restore: after `SIGKILL` it runs none of its own code, and the editor-extension listing only reads. The executor tries to stop both processes, collects each `ProcessTerminationError`, rolls back, and then raises the first of them, chained to the original error. If rollback also fails, `RollbackFailedError` lists them as `unstopped` beside the paths it couldn't restore.
+So no command is still writing while rollback runs. A process that survives it never stops the restore: after `SIGKILL` it runs none of its own code, and the editor-extension listing only reads. The executor tries to stop both processes, collects each `ProcessTerminationError`, rolls back, and then raises the first of them, chained to the original error. If rollback also fails, `RollbackFailedError` lists them as `unstopped` beside the paths it couldn't restore.
 
 ### Environment Sanitization
 
-`ProcessRunner.run()` strips `VIRTUAL_ENV` and `PYTHONHOME` from the inherited environment before launching any subprocess. This prevents an ambient Python virtual environment from contaminating the subprocess's interpreter resolution (e.g., `uv` resolving the wrong Python).
+`ProcessRunner.run()` strips `VIRTUAL_ENV` and `PYTHONHOME` from the inherited environment before launching any subprocess. Otherwise a virtual environment active in your shell could make a command, such as `uv`, pick the wrong Python.
 
 It also strips git's repository-local variables, the set `git rev-parse --local-env-vars` lists (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_COMMON_DIR`, and the rest). Git exports these to hooks and aliases, and a linked worktree's hooks point `GIT_DIR` into the parent repository. Inherited, they would make `git init` or hook installation act on the caller's repository instead of the project, outside the declared `.git/` tree and therefore outside rollback. Git configuration (`GIT_CONFIG_GLOBAL`) and identity variables are kept.
 
 ## `shield_sigint`
 
-Rollback itself is wrapped in the `shield_sigint()` context manager (`src/protostar/system.py`). This temporarily replaces the `SIGINT` handler with a no-op for the duration of `journal.rollback()`.
+Rollback runs inside the `shield_sigint()` context manager (`src/protostar/system.py`), which ignores `SIGINT` while `journal.rollback()` runs.
 
-**Why this is necessary:** If the user presses `Ctrl+C` a second time while the journal is replaying, an unshielded `KeyboardInterrupt` would stop the rollback part-way, and could leave the workspace partly restored, which is worse than the original failure. Shielding defers the second interrupt until cleanup finishes, then reinstates the original handler.
+Without it, a second `Ctrl+C` while the journal is replaying would raise `KeyboardInterrupt` part-way and could leave the project partly restored, which is worse than the original failure. The shield holds the second interrupt until rollback finishes, then puts the original handler back.
 
 ## Design Decisions
 
 ### Bytes Over Intent
 
-For regular files, rollback restores the **exact original bytes and POSIX file mode** captured before the first mutation. It doesn't try to undo changes by meaning. For example, after an AST merge into `pyproject.toml`, rollback does not attempt to reverse the TOML merge at the AST level; it overwrites the file with the raw bytes that were read before the first write.
+For regular files, rollback restores the exact bytes and POSIX mode recorded before the first change. It doesn't try to undo changes by meaning. After a merge into `pyproject.toml`, for example, rollback doesn't reverse the merge; it writes back the bytes that were there before.
 
-This is deliberate: byte restoration is deterministic, instantaneous, and auditable. Undoing by meaning would need the inverse of every content transformation Protostar applies, an open-ended and fragile problem.
+Writing back bytes always gives the same result, takes no time, and is easy to check. Undoing by meaning would need the inverse of every content transformation Protostar applies, an open-ended and fragile problem.
 
 ### Empty-Directory-Only Removal
 
-Directories created during a transaction are removed on rollback with `path.rmdir()`, which only succeeds if the directory is empty. If an external process has deposited files into a Protostar-generated directory during the run, Protostar refuses to delete it and records a `RollbackFailure` instead.
+Directories created during a transaction are removed on rollback with `path.rmdir()`, which only succeeds if the directory is empty. If another program put files into a directory Protostar created during the run, Protostar leaves the directory and records a `RollbackFailure`.
 
-This is a deliberate safety trade-off: risking a non-empty directory being left behind is far preferable to silently deleting user files with `shutil.rmtree()`.
+Leaving a directory behind is better than deleting someone's files with `shutil.rmtree()`.
 
 ### Fatal Dependency Policy
 
-`uv add` is not treated as a best-effort step. If dependency installation fails or times out, the error (`CommandExecutionError` or `CommandTimeoutError`) propagates immediately to the executor's exception handler, which triggers full rollback of all journaled paths including the pre-journaled `pyproject.toml` and `uv.lock`. Dependency failures are never downgraded to diagnostic warnings.
+A failed `uv add` fails the run. If installing dependencies fails or times out, the error (`CommandExecutionError` or `CommandTimeoutError`) reaches the executor at once, and every journaled path rolls back, including `pyproject.toml` and `uv.lock`, which were recorded before uv ran. A dependency failure is never reduced to a warning.
 
 ## API Reference
 
@@ -211,6 +211,6 @@ This is a deliberate safety trade-off: risking a non-empty directory being left 
 
 ## Related Pages
 
-- **[Automatic Rollback<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/rollback.md):** The user guide: what gets restored, what might remain, and how to remediate failures.
-- **[The System Executor<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./executor.md):** How `SystemExecutor` sequences the execution phases and invokes the rollback stack.
+- **[Automatic Rollback<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/rollback.md):** The user guide: what gets restored, what might remain, and what to do when a restore fails.
+- **[The System Executor<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./executor.md):** How `SystemExecutor` orders its steps and starts rollback.
 - **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./error_handling.md):** How `RollbackFailedError`, `ExecutionInterruptedError`, and `ProcessTerminationError` propagate and map to exit codes.

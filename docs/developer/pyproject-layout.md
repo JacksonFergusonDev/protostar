@@ -56,7 +56,7 @@ The banner and headers that trail a piece are kept apart in `Section.tail`, and 
 
 ### Adding a Table to an Existing File
 
-A merge, or a later run that enables a tool, can add a table to a file the user already owns. The new section goes **after the last existing section that ranks at or below it**, so the file's own order is kept, a new tool lands before `[tool.protostar]`, and a new build backend lands after `[project]`. Then:
+A merge, or a later run that enables a tool, can add a table to a file the user already owns. The new section goes after the last existing section that ranks at or below it, so the file's own order is kept, a new tool lands before `[tool.protostar]`, and a new build backend lands after `[project]`. Then:
 
 - **Only the two seams change.** Each is left with exactly one blank line, in the file's own newline style, and a missing final newline is supplied.
 - **A header announces the section after it,** so headers are re-homed. A new titled tool gets its header, and takes the banner and any sibling's header with it when it now comes first. A tool the user already had is never labelled, and the banner is added only if the file has none.

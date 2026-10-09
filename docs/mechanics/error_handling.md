@@ -4,23 +4,23 @@ description: "How Protostar reports a failed run, which exit code it returns, an
 
 # Error Handling Architecture
 
-Protostar handles errors predictably so that failed runs never leave your workspace broken or half-configured.
+A failed run never leaves a project half-configured: either the failure comes before anything is written, or the run rolls back.
 
-During standard CLI usage, operational errors are caught at the top level of the CLI, printed with a hint that says how to fix them, and mapped to an exit code that names the kind of failure.
+Every expected failure is a `ProtostarError`. The CLI catches it at the top level, prints it with a hint that says how to fix it, and exits with a code that names the kind of failure.
 
 <div class="grid cards" markdown>
 
-- :material-shield-alert-outline: __Fail-Fast Verification__
+- :material-shield-alert-outline: __Checked before anything is written__
 
-    System dependencies and configuration constraints are verified during `plan()` *before* any disk mutations occur. If `uv` or `git` is missing, execution halts immediately with `MissingDependencyError` before creating files or directories. A binary only a selected tool runs never halts it: it is reported as `missing_tools`.
+    `plan()` checks the configuration and the programs Protostar runs before any change. If `uv` or `git` is missing, the run stops with `MissingDependencyError` before it creates a file. A program only a selected tool runs never stops it: it's reported in `missing_tools`.
 
-- :material-console-line: __Rich Terminal Formatting__
+- :material-console-line: __A message and a hint, no traceback__
 
-    All operational failures inherit from `ProtostarError`. The CLI entry point catches them and prints the error, a failed command's captured output, and the hint on its own line, without a traceback.
+    Every expected failure inherits from `ProtostarError`. The CLI entry point catches them and prints the error, a failed command's captured output, and the hint on its own line, without a traceback.
 
-- :material-code-json: __Subprocess Diagnostics__
+- :material-code-json: __A failed command shows its output__
 
-    Subprocess calls managed by `ProcessRunner` capture both `stdout` and `stderr`. On non-zero exits or timeouts, detailed output streams are preserved in `CommandExecutionError` or `CommandTimeoutError` without flattening diagnostic context.
+    `ProcessRunner` captures each command's `stdout` and `stderr`. When a command fails or times out, `CommandExecutionError` or `CommandTimeoutError` carries both, unchanged.
 
 - :material-numeric: __An Exit Code for Each Kind of Failure__
 
@@ -54,7 +54,7 @@ For the complete exit code mapping for each exception type, see the [exit code m
 
 ## The Exception Hierarchy
 
-All domain-modeled operational exceptions inherit from `ProtostarError` in `protostar.errors`.
+Every expected failure inherits from `ProtostarError` in `protostar.errors`.
 
 ```text
 ProtostarError (Exception)
@@ -96,7 +96,7 @@ Base exception for all expected operational failures in Protostar. It takes a `m
 
 ### `ConfigurationError`
 
-Raised when a configuration file (such as `protostar.toml` or `pyproject.toml`) is malformed, invalid, or contains type/syntax mismatches. Also raised for invalid configuration flags or CLI parameter collisions.
+Raised when a configuration file, such as `protostar.toml` or `pyproject.toml`, can't be parsed or holds a value of the wrong type. Also raised for flags that contradict each other.
 
 ### `StaleReviewError`
 
@@ -128,15 +128,15 @@ Raised when the command line is unrecognized or invalid. Its documentation link 
 
 ### `NetworkFetchError`
 
-Raised when remote configuration or template downloads fail due to network disconnection, SSL errors, or attempts to fetch resources across unencrypted `http://` protocols.
+Raised when a template or configuration can't be downloaded: the network is down, TLS fails, or the URL uses unencrypted `http://`.
 
 ### `TemplateResolutionError`
 
-Raised when a template target is found but cannot be parsed, extracted, or resolved. Triggers on corrupt archive structures, unsupported archive formats, missing `protostar.toml` files within archives, or unsatisfied template placeholder variables.
+Raised when a template is found but can't be read: a corrupt or unsupported archive, an archive with no `protostar.toml`, or a placeholder with no value.
 
 ### `TemplateEncodingError`
 
-Raised when a file in a template is not UTF-8 text. Everything Protostar reads from a template is interpolated as text, so an undecodable file, such as an image, is a defect of the template itself rather than a failure to retrieve it. Carries the file's `path` within the template.
+Raised when a file in a template is not UTF-8 text. Protostar fills in placeholders in everything it reads from a template, so an undecodable file, such as an image, is a defect of the template itself rather than a failure to retrieve it. Carries the file's `path` within the template.
 
 ### `TemplateRefNotFoundError`
 
@@ -156,11 +156,11 @@ Raised during planning when a binary Protostar itself runs (`uv` or `git`) is mi
 
 ### `CommandExecutionError`
 
-Raised when a managed shell subprocess returns a non-zero exit code. Captures the command line list, return code, `stdout`, and `stderr`. Provides a display-ready `output_detail` property for terminal rendering.
+Raised when a command exits non-zero. Carries the command, its exit code, `stdout`, and `stderr`, and an `output_detail` property ready to print.
 
 ### `CommandTimeoutError`
 
-Raised when a subprocess exceeds its allotted execution window. Automatically attaches a remediation hint regarding network stalls or unresponsive package registries.
+Raised when a command runs past its timeout. Its hint points at a stalled network or a package index that isn't answering.
 
 ### `ProcessTerminationError`
 
@@ -168,19 +168,19 @@ Raised when a managed process tree is still running after `ProcessRunner` asked 
 
 ### `FileSystemError`
 
-Raised when a local disk operation (read, write, directory creation, or serialization) fails due to an `OSError` or encoding exception. Preserves the operation name, target file path, and original cause.
+Raised when reading, writing, creating a directory, or serializing a file fails with an `OSError` or an encoding error. Carries the operation, the path, and the original error.
 
 ### `UnsupportedFilesystemNodeError`
 
-Raised when a transactional filesystem operation targets an unsupported node kind, such as a symbolic link or special device file.
+Raised when a journaled write targets a symbolic link, FIFO, socket, or device file.
 
 ### `TransactionStateError`
 
-Raised when an invalid transaction lifecycle operation is requested on a `MutationJournal`, such as attempting to record mutations after the journal has already been committed or rolled back.
+Raised when a `MutationJournal` is used out of order, such as recording a change after it was committed or rolled back.
 
 ### `SecurityViolationError`
 
-Raised when a template or archive attempts an unauthorized filesystem operation (such as Zip Slip path traversal) or un-safelisted shell execution.
+Raised when a template or archive would write outside the project (such as a Zip Slip path), or run a program that isn't on the safelist.
 
 ### `SecretDetectedError`
 
@@ -190,43 +190,43 @@ The rules live in `protostar/_secret_rules.py`, generated by `scripts/sync_secre
 
 ### `RollbackFailedError`
 
-Raised when an execution error or interruption occurs and the automated rollback procedure fails to fully restore one or more workspace paths. Preserves the list of failed paths and chains the root operational error. The JSON envelope lists them as `unrestored`, each with its `path` and `detail`, and any process that wouldn't stop as `unstopped`, each with its `process_id` and `detail`.
+Raised when a run fails or is interrupted and rollback can't restore one or more paths. Carries those paths, and chains the original error. The JSON envelope lists them as `unrestored`, each with its `path` and `detail`, and any process that wouldn't stop as `unstopped`, each with its `process_id` and `detail`.
 
 ### `ExecutionAbortedError`
 
-Raised when you explicitly abort execution via an interactive prompt.
+Raised when you cancel at a prompt or screen before anything runs.
 
 ### `ExecutionInterruptedError`
 
-Raised when execution is interrupted by the user (`Ctrl+C`) after disk mutations have begun and Protostar has successfully rolled back all tracked workspace changes. Reports the set of rolled-back paths via its immutable `touched_paths: frozenset[str]` attribute.
+Raised when you press `Ctrl+C` after the run started changing the project, once rollback has restored every change. `touched_paths: frozenset[str]` lists the paths it restored.
 
 ## Machine-Readable Error Envelopes (`--json`)
 
-When running in `--json` mode, Protostar suppresses all terminal UI formatting, progress output, and interactive prompts. Instead, exceptions are intercepted and emitted as structured single-line JSON envelopes to `stdout`:
+With `--json`, Protostar prints no formatting, progress, or prompts. An error becomes a single-line JSON payload on `stdout`:
 
 ```json
 --8<-- "agent_payload_error.json"
 ```
 
-The error envelope guarantees:
+In the error payload:
 
-- __Clean Parsing:__ `stdout` contains only valid JSON. Debug traces and logs are routed exclusively to `stderr`.
-- __Structured Fields:__ Error objects include `type`, `message`, and optional contextual helpers (`hint`, `docs_url`), plus any error-specific fields from the exception's `details()`, such as `paths` for collisions, `findings` for detected secrets, `missing_variables` for template variables without a value, `unrestored` for paths a rollback couldn't put back, and `missing_executables` with `install_commands` for a missing `uv` or `git`.
-- __Exit Codes:__ The process exits with the same code as without `--json`, from the matrix below, allowing scripts to check either exit codes or the parsed JSON payload.
+- __Only JSON on `stdout`:__ debug traces and logs go to `stderr`.
+- __Fields:__ the error has a `type` and `message`, an optional `hint` and `docs_url`, plus any error-specific fields from the exception's `details()`, such as `paths` for collisions, `findings` for detected secrets, `missing_variables` for template variables without a value, `unrestored` for paths a rollback couldn't put back, and `missing_executables` with `install_commands` for a missing `uv` or `git`.
+- __Exit codes:__ the process exits with the same code as without `--json`, from the matrix below, so a script can check either.
 
 ## Exit Code Matrix
 
-Protostar routes operational exceptions to standard UNIX exit codes (defined in `os`), allowing automation tooling and CI pipelines to programmatically identify failure causes:
+Each error maps to an exit code from BSD's `sysexits.h`, so a script or CI job can tell what kind of failure it was. Python's `os` module names these codes only on Unix; `ExitCode` in `protostar.errors` falls back to the same numbers on Windows:
 
 --8<-- "table_exit_codes.md"
 
 ## Crash Diagnostics and Issue Reporting
 
-Protostar cleanly separates expected operational failures from unexpected internal crashes:
+Expected failures and bugs are reported differently:
 
 ### Verbose Logging (`--verbose`)
 
-By default, expected operational failures print the error and its hint without a traceback. Running any command with `--verbose` enables full debug logging and displays the full Python traceback:
+An expected failure prints the error and its hint without a traceback. `--verbose` adds debug logging and the full Python traceback:
 
 ```bash
 protostar init --verbose
@@ -234,14 +234,14 @@ protostar init --verbose
 
 ### Automated Bug Reporting
 
-When Protostar encounters an unhandled internal exception (an unexpected bug or crash), it captures the traceback, gathers basic system details (OS, Python version, command run), generates a pre-filled GitHub issue URL, and exits with `os.EX_SOFTWARE` (`70`). Clicking the link opens a pre-formatted issue so bugs can be reported instantly.
+Any other exception is a bug. Protostar prints its traceback and a link that opens a GitHub issue filled in with your operating system, Python version, the command, and the traceback, then exits with `70` (`EX_SOFTWARE`). Nothing is sent until you submit the issue.
 
 ## API Reference
 
 For detailed docstrings and class signatures, see the [Error Handling API Reference](../developer/api-reference.md#class-definitions).
 
-## Related Guides & References
+## Related Pages
 
-- __[Troubleshooting & FAQ<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/troubleshooting.md):__ Remediation steps for missing dependencies, collisions, and editor setups.
-- __[Agent & Machine Interface<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/agent-interface.md):__ Learn how AI coding agents and CI runners parse machine error envelopes.
-- __[The Orchestrator<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./orchestrator.md):__ Understand the top-level exception trap and diagnostic gathering.
+- __[Troubleshooting & FAQ<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/troubleshooting.md):__ Fixes for missing programs, existing files, and editor setup.
+- __[Agent & Machine Interface<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../usage/agent-interface.md):__ The error payload scripts and agents read.
+- __[The Orchestrator<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./orchestrator.md):__ How planning and execution report what went wrong.

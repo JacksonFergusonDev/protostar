@@ -15,7 +15,7 @@ No engine knows a file by name. Each reconciles whatever spec it is handed; see 
 | JSONC | `jsonc_ast.py` | Standard library only |
 | Free-form text | `text_merge.py` | Standard library only |
 
-All of them share the same execution guarantees. Accepted content is written through `TransactionAwareFS`, candidate state is committed only at transaction completion, and a failure restores exact bytes and POSIX modes.
+All of them get the same treatment at execution. Accepted content is written through `TransactionAwareFS`, candidate state is committed only at transaction completion, and a failure restores exact bytes and POSIX modes.
 
 ## TOML
 
@@ -160,7 +160,9 @@ In a three-way merge, non-overlapping edits combine and the baseline advances to
 
 An unchanged desired contribution does not warn merely because the user edited or deleted it. Explicit overwrite can replace a declared generated target and own its text. A record from before text baselines (digest-only `checksum`) is rejected as an unknown policy, with no migration. Dockerfile preservation does not prevent additive `.dockerignore` updates.
 
-**Releasing a generated file.** A generated file whose tool is switched off (`EnvironmentManifest.generated_files` no longer lists it) and that receives no declared region is released by `Reconciliation._release_undeclared_generated`:
+#### Releasing a Generated File
+
+A generated file whose tool is switched off (`EnvironmentManifest.generated_files` no longer lists it) and that receives no declared region is released by `Reconciliation._release_undeclared_generated`:
 
 - Deleted when its text matches the whole-file baseline.
 - Forgotten when already deleted.
@@ -192,7 +194,9 @@ Named append regions use the same `reconcile_text` gate per stable identity. Del
 
 Duplicate, nested, or malformed boundaries raise domain errors, including boundaries injected by a new payload. A record from before region texts (digest-only) is rejected as an unknown field.
 
-**With a generated target.** A target with declared append regions, such as a template's justfile appends, records the complete desired text and also retains each region's text. If overlapping edits prevent the whole-file merge, clean region updates can still apply independently. A pre-existing unowned target can own a newly appended region without acquiring whole-file ownership. A target where Protostar owns only regions (the `regions` policy) is left to the region step.
+#### Regions in a Generated File
+
+A target with declared append regions, such as a template's justfile appends, records the complete desired text and also retains each region's text. If overlapping edits prevent the whole-file merge, clean region updates can still apply independently. A pre-existing unowned target can own a newly appended region without acquiring whole-file ownership. A target where Protostar owns only regions (the `regions` policy) is left to the region step.
 
 When a previously managed region is omitted, the generated writer retracts it before regenerating, so the file converges in the same run:
 

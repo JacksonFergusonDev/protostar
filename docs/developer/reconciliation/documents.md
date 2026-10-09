@@ -52,7 +52,7 @@ Whether two paths hold the same configuration is a fact about the tool that read
 | `.github/renovate.json` | `renovate.json`, `renovate.jsonc`, `.github/renovate.jsonc`, `.renovaterc`, `.renovaterc.json`, `.renovaterc.jsonc` | the `.json5` spellings | one file; `.gitlab/` is ignored on GitHub |
 | `zensical.toml` | | `mkdocs.yml`, `mkdocs.yaml` | one configuration |
 
-**Aliases** are paths the tool reads as the same document, in a form Protostar edits. **Competitors** are configurations the tool may read instead, in a form Protostar does not edit: TOML where Protostar writes YAML, JSON5, or MkDocs.
+Aliases are paths the tool reads as the same document, in a form Protostar edits. Competitors are configurations the tool may read instead, in a form Protostar does not edit: TOML where Protostar writes YAML, JSON5, or MkDocs.
 
 Pre-commit ignores `.pre-commit-config.yml`, but a lone copy means the user's hooks are not running. It is therefore a competitor, not something Protostar silently creates a second configuration next to. `exclusive` records whether the tool reads a single configuration; GitHub Actions does not.
 
@@ -64,9 +64,9 @@ Pre-commit ignores `.pre-commit-config.yml`, but a lone copy means the user's ho
 1. Otherwise a single existing editable file is adopted, like an existing canonical file, or followed when the ownership record names another path. Renames are followed in both directions, including `.yml` to `.yaml` and back. The record, its baseline, and pre-commit's pin provenance move to the new path, so edits made before the rename still merge three ways.
 1. An owned file that no longer exists, with nothing to follow, keeps its record, and the merge keeps the deletion.
 
-For an **exclusive** tool, every other configuration present next to the edited file is reported as `duplicate-identity` at that path, because either Protostar's file or the other one is being ignored. When several are present and none is owned, nothing is edited and each is reported, because Protostar cannot tell which one the tool reads. A competitor alone holds the document and reports `unowned` at the target.
+For an exclusive tool, every other configuration present next to the edited file is reported as `duplicate-identity` at that path, because either Protostar's file or the other one is being ignored. When several are present and none is owned, nothing is edited and each is reported, because Protostar cannot tell which one the tool reads. A competitor alone holds the document and reports `unowned` at the target.
 
-A **non-exclusive** tool never conflicts. The owned file, else the target, else the single alias is edited, and a second workflow with the other extension is left alone.
+A non-exclusive tool never conflicts. The owned file, else the target, else the single alias is edited, and a second workflow with the other extension is left alone.
 
 ### Where the Resolver Applies
 
@@ -107,7 +107,7 @@ Append regions are rejected for every registered YAML document, because appended
 
 Document policies pass a `YamlGuard` to `reconcile_yaml`. A guard receives the path of the file being reconciled, which may be an alias, so its conflicts name the real file. It returns keyed-view paths to hold, plus the conflicts the policy found, which are reported ahead of the merge's own.
 
-A **hold** replaces the desired value at that path with the owned baseline value, or drops it when nothing there is owned. The kernel then sees unchanged intent, so local content and previous ownership stay, and the hold adds no conflict of its own. Explicit overwrite omits held paths instead of overlaying them.
+A hold replaces the desired value at that path with the owned baseline value, or drops it when nothing there is owned. The kernel then sees unchanged intent, so local content and previous ownership stay, and the hold adds no conflict of its own. Explicit overwrite omits held paths instead of overlaying them.
 
 The pre-commit pin guard holds `repos.<repo>.rev` instead of rewriting the desired document, so other additions keep their desired key order and styling.
 

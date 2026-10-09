@@ -14,7 +14,7 @@ If you are writing a template for your own team, see [Authoring Custom Templates
 
 ## What a Built-in Is
 
-**A built-in template is a project shape, not a stack.**
+A built-in template is a project shape, not a stack.
 
 A shape is a kind of project someone recognizes on sight: a command-line tool, a web service, an analysis workbench for a field. A stack is a particular combination of libraries: FastAPI plus Postgres plus Redis. Shapes belong in Protostar. Stacks belong in a [`--from` template or a global alias](../usage/templates.md).
 
@@ -49,7 +49,7 @@ A template is a shape; how much tooling that shape starts with is a separate swi
 - **Workbench** is lean, for exploring and analyzing. It does not want typing, CI, or commit-hook opinions on day one: an analysis notebook that fails a strict type check is friction, not safety.
 - **Production** is the full quality gate, for building something to publish. A published package or a deployed service should not need a second pass to become production-ready.
 
-**The test for where a tool belongs:** is it part of production infrastructure, or something the user would want in this project no matter what? What they want either way is set at the template's root; production infrastructure is set in the tiers, all off in workbench and all on in production.
+The test for where a tool belongs: is it part of production infrastructure, or something the user would want in this project no matter what? What they want either way is set at the template's root; production infrastructure is set in the tiers, all off in workbench and all on in production.
 
 | Flag | Where | `cli`, `lib` | `api` | `astro`, `ml` |
 | :--- | :--- | :---: | :---: | :---: |
@@ -77,7 +77,7 @@ Docker is a tool like any other, decided by the same order ([which choice wins](
 
 ## Baseline in Modules, Delta in Templates
 
-**Modules ship a baseline tuned for casual projects. Templates state only the delta that defines their shape.**
+Modules ship a baseline tuned for casual projects. Templates state only the delta that defines their shape.
 
 Imagine someone picks `ruff` and `mypy` because they are writing a small script and want it modern and clean. If those modules shipped a production-grade strict configuration, they would land in a project full of docstring and typing errors they never asked for, and they would blame Protostar. So the modules stay gentle:
 
@@ -124,7 +124,7 @@ A payload that configures a tool declares it with `requires`, so `protostar init
 1. **Package shapes are installable packages.** `cli`, `api`, and `lib` are installable in either tier. They use a `src/` layout and a real build backend, so tests import the package the way any consumer would, the console script exists, and the container build can install the project. Use `hatchling` with an explicit `packages` entry, and ship the `README.md` the generated `pyproject.toml` already references. Avoid `uv_build`: uv generates a version bound tied to the exact uv release, which goes stale in a static template.
 1. **No version pins.** Dependencies are passed to `uv` so the environment resolves the latest compatible versions when the project is created.
 1. **Keep tasks to a minimum.** No `system_tasks`. A `post_install_tasks` entry is allowed only when the domain truly needs it (`nbdime` for notebook diffs), and it must be on the allowlist in the contract test, because built-ins run without a trust prompt.
-1. **Generated code formats cleanly for any project name.** Do not interpolate `<% PROJECT_NAME %>` into a line that `ruff format` would wrap for longer names. The `cli` template defines an `APP_NAME` constant for this reason: a version line that embedded the name failed `ruff format --check` for names over about 16 characters.
+1. **Generated code passes the formatter for any project name.** Do not interpolate `<% PROJECT_NAME %>` into a line that `ruff format` would wrap for longer names. The `cli` template defines an `APP_NAME` constant for this reason: a version line that embedded the name failed `ruff format --check` for names over about 16 characters.
 1. **Development tooling goes in the dev group; the docs group is for the documentation toolchain.** Built-ins declare no `docs_dependencies` at all, because the Zensical module supplies `zensical` and `mkdocstrings`. `uv sync` installs the dev group by default but not docs, so a notebook tool placed in the docs group is removed by the first `just sync`.
 1. **A new tool table needs a layout entry.** If a template writes a `[tool.<name>]` that `TOOL_SECTIONS` in `documents/pyproject_layout.py` does not list, it sorts unlabelled after the known tools. See [The pyproject.toml Layout](./pyproject-layout.md).
 1. **Tool configuration and tool packages declare the tool they need,** as [Tool Configuration Follows the Tool](#tool-configuration-follows-the-tool) describes.
@@ -133,7 +133,9 @@ A payload that configures a tool declares it with `requires`, so `protostar init
 
 ## Adding, Changing, and Retiring a Built-in
 
-**Adding one.** Open an issue that answers the three [admission questions](#admission-criteria) and names the tier. Then:
+### Adding a Built-in
+
+Open an issue that answers the three [admission questions](#admission-criteria) and names the tier. Then:
 
 1. Write `src/protostar/templates/<name>.toml`, following the conventions above.
 1. Add it to the smoke lists in `.github/workflows/ci.yml` and `.github/workflows/nightly.yml`: the `templates` lists of the `smoke` matrices and the `smoke` lists of the macOS test entries. `tests/test_nightly.py` fails until pull requests and Nightly together scaffold it once on every operating system and Python, and pull requests at every Python on Linux and once on each operating system.
@@ -141,9 +143,13 @@ A payload that configures a tool declares it with `requires`, so `protostar init
 
 The contract tests, template discovery, the template picker, shell completion, and the generated template table pick it up automatically.
 
-**Changing one.** Treat a flag flip as a behavior change: it alters what every future user of that template gets. Regenerate snapshots and read the diff, including lock files and generated trees. CI scaffolds only each built-in's default tier, so after changing the other tier, scaffold it with `--tier` and run its gates by hand. When a change tightens a module baseline, update the guard in `tests/test_modules.py` deliberately and check that no template now repeats the new value.
+### Changing a Built-in
 
-**Retiring one.** Protostar is pre-1.0, so delete cleanly. Do not leave aliases, deprecation shims, or compatibility layers (see `AGENTS.md`).
+Treat a flag flip as a behavior change: it alters what every future user of that template gets. Regenerate snapshots and read the diff, including lock files and generated trees. CI scaffolds only each built-in's default tier, so after changing the other tier, scaffold it with `--tier` and run its gates by hand. When a change tightens a module baseline, update the guard in `tests/test_modules.py` deliberately and check that no template now repeats the new value.
+
+### Retiring a Built-in
+
+Protostar is pre-1.0, so delete it outright. Leave no aliases, deprecation shims, or compatibility layers (see `AGENTS.md`).
 
 ## How the Contract Is Enforced
 
