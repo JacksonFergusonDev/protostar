@@ -230,7 +230,7 @@ serve: sync
 serve-metrics port="8765":
     uv run python scripts/serve_metrics.py --port {{ port }}
 
-# Refresh release inputs for review, then bump version, sync lockfile, commit, tag, and push
+# Review, commit, and push refreshed release inputs, then bump, sync, commit, tag, and push
 bump part:
     uv run python scripts/prepare_release.py
     uv run --refresh https://raw.githubusercontent.com/JacksonFergusonDev/ci-cd-release-infrastructure/refs/heads/main/scripts/release.py {{ part }}

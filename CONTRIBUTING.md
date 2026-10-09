@@ -80,7 +80,7 @@ To republish the current documentation and metrics without rebuilding a release 
 
 ### Releasing
 
-`just bump <part>` cuts a release, where `<part>` names the version part to raise. It first refreshes the hook registry fallbacks in `_fallbacks.py` and the secret rules generated from the gitleaks tag pinned there, and stops before the version bump if either changed, so you review and commit them first. Then it bumps the version, syncs the lockfile, commits, tags, and pushes. The release workflow checks both files with `--check` and publishes only once CI and Nightly have passed on the tagged commit.
+`just bump <part>` cuts a release, where `<part>` names the version part to raise. It first refreshes the hook registry fallbacks in `_fallbacks.py` and the secret rules generated from the gitleaks tag pinned there, and prints a highlighted diff if either changed. Answering `y` to the review prompt commits only those two generated inputs with a release preparation message, pushes the commit, and continues. Answering `n`, cancelling, or a failed commit or push stops before the version bump. Non-interactive runs stop when inputs need review. Then it bumps the version, syncs the lockfile, commits, tags, and pushes. The release workflow checks both files with `--check` and publishes only once CI and Nightly have passed on the tagged commit.
 
 ## Pull Requests
 
