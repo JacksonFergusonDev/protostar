@@ -494,5 +494,131 @@
         "no_tests": 0
       }
     ]
+  },
+  {
+    "commit": "cccb05c1a215643f717dc772d61cef20ad7af60e",
+    "date": "2026-10-09T12:57:48+00:00",
+    "modules": [
+      {
+        "module": "appends",
+        "killed": 534,
+        "timeout": 0,
+        "survived": 0,
+        "suspicious": 0,
+        "no_tests": 0
+      },
+      {
+        "module": "dependencies",
+        "killed": 637,
+        "timeout": 0,
+        "survived": 1,
+        "suspicious": 0,
+        "no_tests": 0
+      },
+      {
+        "module": "documents.pyproject_layout",
+        "killed": 572,
+        "timeout": 1,
+        "survived": 0,
+        "suspicious": 0,
+        "no_tests": 0
+      },
+      {
+        "module": "fs_transaction",
+        "killed": 89,
+        "timeout": 0,
+        "survived": 0,
+        "suspicious": 0,
+        "no_tests": 0
+      },
+      {
+        "module": "journal",
+        "killed": 206,
+        "timeout": 0,
+        "survived": 0,
+        "suspicious": 0,
+        "no_tests": 0
+      },
+      {
+        "module": "jsonc_ast",
+        "killed": 1375,
+        "timeout": 11,
+        "survived": 2,
+        "suspicious": 0,
+        "no_tests": 0
+      },
+      {
+        "module": "manifest",
+        "killed": 648,
+        "timeout": 0,
+        "survived": 2,
+        "suspicious": 0,
+        "no_tests": 0
+      },
+      {
+        "module": "merge",
+        "killed": 850,
+        "timeout": 0,
+        "survived": 0,
+        "suspicious": 0,
+        "no_tests": 0
+      },
+      {
+        "module": "options",
+        "killed": 227,
+        "timeout": 0,
+        "survived": 0,
+        "suspicious": 0,
+        "no_tests": 0
+      },
+      {
+        "module": "reconciliation",
+        "killed": 2563,
+        "timeout": 2,
+        "survived": 1,
+        "suspicious": 0,
+        "no_tests": 0
+      },
+      {
+        "module": "sync_state",
+        "killed": 512,
+        "timeout": 0,
+        "survived": 2,
+        "suspicious": 0,
+        "no_tests": 0
+      },
+      {
+        "module": "text_merge",
+        "killed": 566,
+        "timeout": 6,
+        "survived": 2,
+        "suspicious": 0,
+        "no_tests": 0
+      },
+      {
+        "module": "toml_ast",
+        "killed": 686,
+        "timeout": 0,
+        "survived": 1,
+        "suspicious": 0,
+        "no_tests": 0
+      },
+      {
+        "module": "toml_lines",
+        "killed": 338,
+        "timeout": 36,
+        "survived": 0,
+        "suspicious": 0,
+        "no_tests": 0
+      },
+      {
+        "module": "yaml_ast",
+        "killed": 879,
+        "timeout": 0,
+        "survived": 0,
+        "suspicious": 0,
+        "no_tests": 0
+      }
+    ]
   }
 ]
