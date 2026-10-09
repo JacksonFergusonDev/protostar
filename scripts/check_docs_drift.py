@@ -265,7 +265,7 @@ def check_quality_flags() -> list[str]:
     problems: list[str] = []
     for page in (CONTRIBUTING, AGENTS):
         text = page.read_text(encoding="utf-8")
-        listed = re.search(r"quality flag explicitly(?:\*\*)? \(([^)]+)\)", text)
+        listed = re.search(r"quality flag explicitly\*\* \(([^)]+)\)", text)
         if listed is None:
             problems.append(f"{_rel(page)}: no 'quality flag explicitly (...)' list")
         elif tuple(re.findall(r"`(\w+)`", listed.group(1))) != flags:

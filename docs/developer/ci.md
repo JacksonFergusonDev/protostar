@@ -40,7 +40,7 @@ Mutation testing checks that the tests would notice a bug: [mutmut](https://gith
 
 The set comes from `[tool.mutmut].source_paths` in `pyproject.toml`; it excludes the CLI, generated code, and modules reached mainly through mocked boundaries. The score describes that selected engine set, not the whole codebase.
 
-The Mutation Testing workflow runs nightly at 05:30 UTC (10:30pm Pacific daylight time), with Nightly. GitHub can start a scheduled run late. After the survivor fixes, the slowest measured module, reconciliation, took about 36 minutes across six parallel shards; nightly runs leave room for that work without running it on every commit. A scheduled run skips mutation testing unless its inputs changed since the last published commit: the selected source modules, `tests/`, `pyproject.toml`, `uv.lock`, or the reporting script and mutation workflow. A missing history or a recorded commit no longer in the current branch's ancestry starts a full run.
+The **Mutation Testing** workflow runs nightly at 05:30 UTC (10:30pm Pacific daylight time), with Nightly. GitHub can start a scheduled run late. After the survivor fixes, the slowest measured module, reconciliation, took about 36 minutes across six parallel shards; nightly runs leave room for that work without running it on every commit. A scheduled run skips mutation testing unless its inputs changed since the last published commit: the selected source modules, `tests/`, `pyproject.toml`, `uv.lock`, or the reporting script and mutation workflow. A missing history or a recorded commit no longer in the current branch's ancestry starts a full run.
 
 Run a module locally, or select modules and individual shards through the workflow's manual trigger:
 

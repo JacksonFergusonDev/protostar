@@ -66,7 +66,7 @@ flowchart TD
 
 ## `MutationJournal`
 
-`MutationJournal` (`src/protostar/journal.py`) follows one rule: record before changing, restore in reverse.
+`MutationJournal` (`src/protostar/journal.py`) follows one rule: **record before changing, restore in reverse**.
 
 ### Recording
 
@@ -163,7 +163,7 @@ Without it, a second `Ctrl+C` while the journal is replaying would raise `Keyboa
 
 ### Bytes Over Intent
 
-For regular files, rollback restores the exact bytes and POSIX mode recorded before the first change. It doesn't try to undo changes by meaning. After a merge into `pyproject.toml`, for example, rollback doesn't reverse the merge; it writes back the bytes that were there before.
+For regular files, rollback restores the **exact bytes and POSIX mode** recorded before the first change. It doesn't try to undo changes by meaning. After a merge into `pyproject.toml`, for example, rollback doesn't reverse the merge; it writes back the bytes that were there before.
 
 Writing back bytes always gives the same result, takes no time, and is easy to check. Undoing by meaning would need the inverse of every content transformation Protostar applies, an open-ended and fragile problem.
 

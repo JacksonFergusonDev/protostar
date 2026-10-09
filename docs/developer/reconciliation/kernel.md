@@ -51,7 +51,7 @@ The following belong to adapters or execution, not to the kernel:
 
 ## Sequences
 
-Sequences are atomic by default, including arrays of tables. An adapter can declare set-like key paths in `MergePolicy`. A set-like sequence:
+Sequences are atomic by default, including arrays of tables. An adapter can declare **set-like** key paths in `MergePolicy`. A set-like sequence:
 
 - Accepts unique scalars only.
 - Retains local order and user deletions.
@@ -62,7 +62,7 @@ Existing foreign equal members never become owned. Policy validation examines al
 
 ## Complete Documents and Retraction
 
-A policy with `complete` set treats the remote value as one generator's complete document. An owned mapping key it no longer declares is retracted instead of retained:
+A policy with `complete` set treats the remote value as one generator's complete document. An owned mapping key it no longer declares is **retracted** instead of retained:
 
 | Local state of the retracted content | Outcome |
 | :--- | :--- |
