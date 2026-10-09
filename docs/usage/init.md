@@ -105,7 +105,7 @@ Here is what each built-in template writes into an empty folder.
 
     - **Type information for users:** a `py.typed` file, so type checkers like mypy and Pyright read the package's annotations (PEP 561).
     - **Packaging:** the `hatchling` build backend and a `src/` layout, for building wheels and source distributions.
-    - **A public API:** `init.py` re-exports the package's names in `all` and reads `version` from the installed package's metadata.
+    - **A public API:** `__init__.py` re-exports the package's names in `__all__` and reads `__version__` from the installed package's metadata.
     - **Stricter checks:** strict mypy, docstring rules (Ruff's `D`), and Ruff's `TC` rules, which keep imports used only for type hints out of the runtime.
 
 === "astro: astronomy data analysis"

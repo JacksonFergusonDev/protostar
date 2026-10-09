@@ -267,7 +267,7 @@ my-org-fastapi-template/
         └── test_api.py
 ```
 
-Protostar skips `pycache` folders and `.DS_Store` files in `template/`.
+Protostar skips `__pycache__` folders and `.DS_Store` files in `template/`.
 
 Every file in `template/` must be UTF-8 text, because Protostar fills in placeholders in each one. A binary file such as an image stops the template from loading with an error naming the file.
 
