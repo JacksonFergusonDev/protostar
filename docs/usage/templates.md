@@ -48,7 +48,7 @@ This lists every built-in template and every alias in your configuration, with i
 
 ### Turning a Template's Tools On and Off
 
-A template's tool choices are defaults. `--<tool>` and `--no-<tool>` override any of them for the project, as [Initialization](init.md#turning-tools-on-and-off) shows, and [which choice wins](project-recipes.md#which-choice-wins) gives the full order.
+A template's tool choices are defaults. `--<tool>` and `--no-<tool>` override any of them for the project, as [Setting Up a Project](init.md#turning-tools-on-and-off) shows, and [which choice wins](project-recipes.md#which-choice-wins) gives the full order.
 
 ## External & Remote Templates (`--from`)
 
@@ -219,7 +219,7 @@ Whether or not a template is trusted, Protostar writes nothing outside the proje
 
 ## Next Steps
 
-- **[Authoring Custom Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./authoring-templates.md):** Write your own template, from one TOML file to a repository with starter files and variables.
+- **[Authoring Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./authoring-templates.md):** Write your own template, from one TOML file to a repository with starter files and variables.
 - **[Tooling & Flags Matrix<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./tooling-matrix.md):** Every tool and built-in template.
 - **[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):** Every field an alias under `[templates]` takes.
 - **[Agent & Machine Interface<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./agent-interface.md):** Export the template schema and drive Protostar from scripts and agents.

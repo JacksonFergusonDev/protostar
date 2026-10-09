@@ -130,13 +130,12 @@ The docs site (`docs/`, built by Zensical) shares its look and its rules with ja
 
 #### Voice and Audience
 
-House-style's Writing section sets the voice (calm, clear, precise) and the three audiences. In Protostar:
+House-style's Writing section sets the voice and audiences. Here:
 
-- **Each page writes for one audience.** `README.md` and the landing page are General: hiring managers, coworkers, and engineers all start there, so they explain plainly and link into the docs. Installation, Your First Project, Getting Started, Why Protostar?, and the User Guide are for Users. Design Principles, Mechanics, the Developer Guide, `CONTRIBUTING.md`, and this file are Technical.
-- **User pages use the product's words.** Recipe, `protostar.lock`, template, tier, option, conflict, proposal, and kept edit are defined in [How Protostar Tracks Your Files](docs/usage/tracking.md). Engine words (ownership, provenance, reconciliation, manifest, baseline, resolver footprint) appear only on Technical pages, defined once where they're owned.
-- **Decisions read the way the CLI says them.** A page that describes a conflict, proposal, or kept edit uses the wording in `cli/decisions.py`, and shows the full `--resolve` command for each choice.
-- **A comparison with another tool is fair and dated.** It names the other tool's version, the date, and how it was run, and says when the other tool is the better choice.
-- **A guarantee links to its evidence.** Rollback claims link to the [rollback boundary](docs/usage/rollback.md) or the published results; the mutation score always names the modules it covers.
+- **Audiences:** `README.md` and the landing page are General; Installation through the User Guide are Users; Design Principles, Mechanics, the Developer Guide, `CONTRIBUTING.md`, and this file are Technical.
+- **User pages use the product's words** (recipe, `protostar.lock`, template, tier, option, conflict, proposal, kept edit; see [How Protostar Tracks Your Files](docs/usage/tracking.md)). Engine words stay on Technical pages.
+- **Decisions read the way the CLI says them** (`cli/decisions.py`), with the full `--resolve` command.
+- **Claims carry their evidence:** a comparison with another tool is dated and names its version; a guarantee links to its tests or published results.
 
 #### Writing Pages
 

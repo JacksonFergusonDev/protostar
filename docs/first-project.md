@@ -136,19 +136,33 @@ The second star is 5.0 magnitudes brighter.
 just lint
 ```
 
-They pass. Now break one on purpose: add `import os` on its own line above `import numpy as np` in `src/brightness.py`, save, and run `just lint` again. It fails, and says where and why:
+They pass. Now break one on purpose. In `src/brightness.py`, add `import os` and an empty line above `import numpy as np`, so the top of the file reads:
+
+```python
+"""Compare the brightness of two stars."""
+
+import os
+
+import numpy as np
+```
+
+The empty line keeps Python's own modules apart from installed packages, which Ruff also checks. Save, and run `just lint` again. It fails, and says where and why:
 
 ```text
 F401 [*] `os` imported but unused
  --> src/brightness.py:3:8
   |
+1 | """Compare the brightness of two stars."""
+2 |
 3 | import os
   |        ^^
+4 |
+5 | import numpy as np
   |
 help: Remove unused import: `os`
 ```
 
-Delete the `import os` line, save, and run `just lint` once more:
+Delete the two lines you added, save, and run `just lint` once more. Ruff reports:
 
 ```text
 All checks passed!
@@ -161,4 +175,4 @@ Many problems Ruff finds, including this one, `just format` fixes for you: it re
 - **More tooling when you need it.** When the project turns into something other people will install, switch it to the production tier: `protostar sync --tier production`. It adds tests, type checking, CI, and a **pre-commit hook**: a check git runs each time you commit, which stops the commit if a check fails, so a mistake never enters the project's history. `sync` installs the hook for you. See [Templates](usage/templates.md#choosing-a-tier) and the [Tooling & Flags Matrix](usage/tooling-matrix.md).
 - **Keep the project current.** `protostar sync` brings in updates to the template and tools without overwriting your edits. [How Protostar Tracks Your Files](usage/tracking.md) explains how it tells your edits from its own content, and [Project Lifecycle](usage/lifecycle.md) shows the commands.
 - **Set your defaults once.** `protostar config` opens a form for your name, email, editor, Python version, and the tools new projects start with. See [Global Configuration](usage/configuration.md).
-- **Everything `init` can do.** See [Environment Initialization](usage/init.md).
+- **Everything `init` can do.** See [Setting Up a Project](usage/init.md).

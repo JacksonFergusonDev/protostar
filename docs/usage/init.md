@@ -2,7 +2,7 @@
 description: "Set up a new or existing project with protostar init: templates, tool flags, the recipe editor, and the change review."
 ---
 
-# Environment Initialization
+# Setting Up a Project
 
 `protostar init` sets up a project in the current directory, either an empty folder or a project you already have. In a terminal with no template given, it opens the recipe editor. With `--template` or `--from`, it runs without any screens. Either way, nothing is written until you have seen the plan, in the change review or with `--dry-run`, and if anything fails part-way, every change is [rolled back](rollback.md).
 

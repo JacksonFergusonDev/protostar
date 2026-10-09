@@ -1,7 +1,9 @@
 """Documentation walkthroughs plan with built-in defaults."""
 
 import json
+import re
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -37,3 +39,57 @@ def test_walkthrough_ignores_explicit_host_configuration(
     assert env["PROTOSTAR_CONFIG"] == ""
     assert "GIT_DIR" not in env
     assert Path(env["HOME"]).is_relative_to(tmp_path)
+
+
+FIRST_PROJECT = Path("docs/first-project.md")
+
+
+def _brightness_blocks(text: str) -> tuple[str, str]:
+    """Returns the page's ``brightness.py`` and the top it tells you to give it."""
+    blocks = [
+        b
+        for b in re.findall(r"```python\n(.*?)```", text, re.DOTALL)
+        if b.startswith('"""Compare the brightness')
+    ]
+    script = next(b for b in blocks if "print(" in b)
+    top = next(b for b in blocks if "print(" not in b)
+    return script, top
+
+
+def _ruff(project: Path) -> list[tuple[str, int, int]]:
+    """Runs Ruff in ``project`` and returns each finding's code and location."""
+    result = subprocess.run(
+        [sys.executable, "-m", "ruff", "check", "--output-format", "json", "."],
+        cwd=project,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return [
+        (f["code"], f["location"]["row"], f["location"]["column"])
+        for f in json.loads(result.stdout)
+    ]
+
+
+@pytest.mark.integration
+def test_the_lint_example_fails_the_way_the_walkthrough_shows(tmp_path: Path) -> None:
+    """Ruff, with the astro template's settings, reports what first-project.md shows."""
+    text = FIRST_PROJECT.read_text(encoding="utf-8")
+    script, top = _brightness_blocks(text)
+    shown = re.search(
+        r"^(\w+) \[\*\].*\n --> src/brightness\.py:(\d+):(\d+)", text, re.M
+    )
+    assert shown is not None
+    (tmp_path / "src").mkdir()
+    snapshot = Path("tests/snapshots/astro/pyproject.toml").read_text(encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(snapshot, encoding="utf-8")
+    brightness = tmp_path / "src" / "brightness.py"
+
+    rest = script.split("import numpy as np\n", 1)[1]
+    brightness.write_text(top + rest, encoding="utf-8")
+    assert _ruff(tmp_path) == [
+        (shown.group(1), int(shown.group(2)), int(shown.group(3)))
+    ]
+
+    brightness.write_text(script, encoding="utf-8")
+    assert _ruff(tmp_path) == []

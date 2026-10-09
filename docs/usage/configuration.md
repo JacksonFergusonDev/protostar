@@ -126,6 +126,6 @@ Use an alias with `protostar init --template <alias>`. It also appears in the re
 
 ## Next Steps
 
-- **[Environment Initialization<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./init.md):** Set up a project with your new defaults.
+- **[Setting Up a Project<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./init.md):** Set up a project with your new defaults.
 - **[Templates<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./templates.md):** Use your aliases, and trust the templates you rely on.
 - **[CLI Reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./cli-reference.md):** Every command and option.

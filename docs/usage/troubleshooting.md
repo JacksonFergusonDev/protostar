@@ -234,5 +234,5 @@ If this page doesn't cover your problem:
 
 - **[Automatic Rollback<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./rollback.md):** What gets restored, what might remain, and how to recover from a partial rollback failure.
 - **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/error_handling.md):** Every error, its exit code, and how failed commands are reported.
-- **[Environment Initialization<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./init.md):** How `init` handles files you already have, and what `--force-merge` does.
+- **[Setting Up a Project<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./init.md):** How `init` handles files you already have, and what `--force-merge` does.
 - **[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):** View, change, or reset your settings.
