@@ -10,19 +10,19 @@ Pass `--json` anywhere on the command line, and Protostar prints one JSON payloa
 
 <div class="grid cards" markdown>
 
-- :material-code-json: Only JSON on `stdout`
+- :material-code-json: __Only JSON on `stdout`__
 
     `stdout` carries the JSON payload and nothing else. Messages, summaries, and tracebacks go to `stderr`, so a script can parse `stdout` and ignore `stderr`.
 
-- :material-shield-sync: Never waits for input
+- :material-shield-sync: __Never waits for input__
 
     With `--json`, no screen opens and nothing asks. An untrusted template returns an error payload, and existing files return their paths in one.
 
-- :material-play-speed: A dry run is the real plan
+- :material-play-speed: __A dry run is the real plan__
 
     `--dry-run` plans the run and prepares its review without writing a file or running a command. It returns the full manifest, what happens to every file, and each conflict and proposal with its id.
 
-- :material-file-code: Check a template first
+- :material-file-code: __Check a template first__
 
     `export-schema` prints the JSON Schema for templates, so an agent that writes a template can validate it before running it.
 
