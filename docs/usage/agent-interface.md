@@ -10,38 +10,43 @@ Pass `--json` anywhere on the command line, and Protostar prints one JSON payloa
 
 <div class="grid cards" markdown>
 
-- :material-code-json: __Operational Strictness__
+- :material-code-json: Only JSON on `stdout`
 
-    `stdout` is strictly reserved for the machine-readable JSON payload. All human-readable logging, diagnostic summaries, and tracebacks are routed exclusively to `stderr`. Agents can safely ignore `stderr` and parse `stdout` directly.
+    `stdout` carries the JSON payload and nothing else. Messages, summaries, and tracebacks go to `stderr`, so a script can parse `stdout` and ignore `stderr`.
 
-- :material-shield-sync: __Zero Interactive Blocking__
+- :material-shield-sync: Never waits for input
 
-    In `--json` mode, interactive TUI prompts (such as collision prompts or security trust dialogs) are bypassed. Untrusted templates raise immediate error payloads, and existing workspace collisions return structured collision paths.
+    With `--json`, no screen opens and nothing asks. An untrusted template returns an error payload, and existing files return their paths in one.
 
-- :material-play-speed: __Deterministic Simulation (`--dry-run`)__
+- :material-play-speed: A dry run is the real plan
 
-    The `--dry-run` flag plans the run and prepares its review without writing files or running shell subprocesses, returning the full `EnvironmentManifest`, what happens to every file, and each conflict and proposal with its id.
+    `--dry-run` plans the run and prepares its review without writing a file or running a command. It returns the full manifest, what happens to every file, and each conflict and proposal with its id.
 
-- :material-file-code: __Template Schema Validation__
+- :material-file-code: Check a template first
 
-    The `export-schema` subcommand exports the official JSON Schema for TOML templates, allowing agents to validate dynamically generated template files ahead of execution.
+    `export-schema` prints the JSON Schema for templates, so an agent that writes a template can validate it before running it.
 
 </div>
 
 ## The Machine Protocol
 
-Protostar marks its machine interface with an explicit `api_version` field in all JSON payloads (`"api_version": 2` during the experimental phase).
+Every JSON payload carries an `api_version` field (`"api_version": 2` while the interface is experimental).
 
-The CLI uses a position-independent `--json` flag that can appear anywhere in the argument list (e.g., `protostar --json`, `protostar init --template cli --json`, or `protostar --json init`).
+`--json` can go anywhere on the command line: `protostar --json`, `protostar init --template cli --json`, and `protostar --json init` all work.
 
 ### Protocol States
 
-Every JSON response emitted to `stdout` follows one of three structured envelopes:
+Every payload on `stdout` has one of three shapes:
 
 === "1. Planned (`status: "planned"`)"
-    Emitted when running `protostar init --dry-run --json`. Returns the complete planned `manifest`; the `entries` the run leaves in the workspace, one per path, each with its `change` (`new`, `modified`, `removed`, `conflict`, `existing`, or `after-setup` for files commands and the resolver create), whether it is a `directory`, and the ids of its open `conflicts` and `proposals`; the `review` that computed them, in the same shape `protostar status --json` returns; and, in a directory with no recipe yet, the `analysis` of what the project already has: the tools found with their `sources`, the `facts` read with where each came from, and `notes` about anything left out. `analysis` is `null` once a recipe exists. Analysis never selects a tool for a headless run; pass the flags for the tools you want.
+    `protostar init --dry-run --json` returns:
 
-    With `--one-shot`, `manifest.one_shot` is `true`. Execution still resolves dependencies and may write `uv.lock`, but omits `[tool.protostar]` and `protostar.lock`.
+    - **`manifest`:** the complete plan.
+    - **`entries`:** one per path the run leaves in the project, each with its `change` (`new`, `modified`, `removed`, `conflict`, `existing`, or `after-setup` for files that commands and uv create), whether it's a `directory`, and the ids of its open `conflicts` and `proposals`.
+    - **`review`:** the review those entries come from, in the same shape `protostar status --json` returns.
+    - **`analysis`:** in a folder with no recipe yet, what the project already has: the tools found with their `sources`, the `facts` read with where each came from, and `notes` about anything left out. It's `null` once a recipe exists. Analysis never switches a tool on in a run without the editor; pass the flags for the tools you want.
+
+    With `--one-shot`, `manifest.one_shot` is `true`. The run still installs dependencies and may write `uv.lock`, but writes no `[tool.protostar]` or `protostar.lock`.
 
     ??? example "A planned payload"
         ```json
@@ -49,83 +54,83 @@ Every JSON response emitted to `stdout` follows one of three structured envelope
         ```
 
 === "2. Success (`status: "success"`)"
-    Emitted upon successful environment execution via `protostar init --json` or discovery via `protostar --json`.
+    Returned when `protostar init --json` succeeds, and by `protostar --json`, which describes the CLI.
 
     ```json
     --8<-- "agent_payload_success.json"
     ```
 
 === "3. Error (`status: "error"`)"
-    Emitted when a domain validation or runtime error occurs. The process exits with the error's [exit code](cli-reference.md#exit-codes).
+    Returned when a command fails. The process exits with the error's [exit code](cli-reference.md#exit-codes).
 
     ```json
     --8<-- "agent_payload_error.json"
     ```
 
-## The Agent Scaffolding Lifecycle
+## Setting Up a Project from an Agent
 
-AI agents can interact with Protostar using a predictable three-phase lifecycle:
+An agent sets up a project in three steps: learn what the CLI offers, plan with a dry run, then run it.
 
 ```mermaid
 %%{init: {'sequence': {'mirrorActors': false, 'diagramMarginY': 30, 'bottomMarginAdj': 50}}}%%
 sequenceDiagram
     autonumber
-    actor Agent as AI Agent
+    actor Agent as Agent
     participant CLI as Protostar CLI
-    participant Disk as Local Workspace
+    participant Disk as Project folder
 
-    Agent->>CLI: Phase 1: Request Capabilities
-    CLI-->>Agent: Return capabilities schema
+    Agent->>CLI: 1. protostar --json
+    CLI-->>Agent: Commands, flags, and templates
 
-    Agent->>CLI: Phase 2: Request Dry-Run Plan
-    CLI-->>Agent: Return planned manifest and decision ids
+    Agent->>CLI: 2. init --dry-run --json
+    CLI-->>Agent: The plan and decision ids
 
-    Agent->>CLI: Phase 3: Execute Scaffold
-    CLI->>Disk: Apply disk mutations & tasks
-    CLI-->>Agent: Return Success
+    Agent->>CLI: 3. init --json
+    CLI->>Disk: Write files and run commands
+    CLI-->>Agent: The result
 ```
 
-### 1. Capabilities Discovery
+### 1. Learn What the CLI Offers
 
-An agent can interrogate the CLI to discover available commands, flags, and built-in templates:
+This lists every command, flag, and built-in template:
 
 ```bash
 protostar --json
 ```
 
-Or inspect a specific command's arguments:
+One command's options:
 
 ```bash
 protostar init --help --json
 ```
 
-### 2. Dry-Run Planning
+### 2. Plan with a Dry Run
 
-Before touching the filesystem, an agent should run with `--dry-run --json` to inspect the planned changes:
+Before changing anything, run with `--dry-run --json` to see the plan:
 
 ```bash
 protostar init --template astro --dry-run --json
 ```
 
-The resulting payload exposes all directories, injected file contents, dependencies, and shell commands that Protostar plans to execute, and what the run does to each file. In a project that already has files, `entries` marks each one `modified` or `conflict`, and `review` lists every conflict (your version is kept) and every proposal (a change into content you already have, which applies) with its id. It is the same review the terminal's change review shows. A draft with a hook manager fetches the latest hook versions first, so the pins shown are the ones a run writes.
+The payload lists every folder, file content, dependency, and command the run would use, and what it does to each file. In a project that already has files, `entries` marks each one `modified` or `conflict`, and `review` lists every conflict (your version is kept) and every proposal (a change into content you already have, which applies) with its id. It's the same review the terminal's change review shows. When the project uses a hook manager, the dry run fetches the latest hook versions first, so the versions shown are the ones a run writes.
 
-#### Collision Handling & Recovery
+#### Files That Already Exist
 
-If the target workspace already contains files (such as an existing `pyproject.toml` or `README.md`), Protostar will not prompt interactively in JSON mode. Instead, it exits with the `WorkspaceCollisionError` payload shown under [Protocol States](#protocol-states). The agent can parse `error.paths` and choose how to proceed:
+If the folder already has files Protostar would write, such as `pyproject.toml` or `README.md`, it returns the `WorkspaceCollisionError` payload shown under [Protocol States](#protocol-states). `error.paths` lists them. Then choose:
 
 - Pass `--force-merge` to merge into the existing files. Your content stays, and each change Protostar would make to it is listed in the dry run's `review` as a conflict or proposal.
 - Pass `--force-replace` to replace the existing files with Protostar's version.
 
 #### Settling Conflicts and Proposals
 
-A headless run keeps your version for every open conflict and applies every proposal. To choose otherwise, take the ids from the dry-run's `review` (or each entry's `conflicts` and `proposals`) and pass one `--resolve SELECTOR=CHOICE` per decision, as `sync --resolve` takes them:
+Without `--resolve`, a run keeps your version of every open conflict and applies every proposal. To choose otherwise, take the ids from the dry-run's `review` (or each entry's `conflicts` and `proposals`) and pass one `--resolve SELECTOR=CHOICE` per decision, as `sync --resolve` takes them:
 
 ```bash
 protostar init --template astro --dry-run --json
 protostar init --template astro --force-merge --resolve 89cd01278762=desired --json
 ```
 
-`desired` takes the update, `local` keeps your version (or keeps a proposal out), and `both` keeps both sides of a text hunk. A file path settles every conflict and proposal in that file. Add `--dry-run` to check the outcome first: the settled conflicts move to `review.resolved`, and a proposal kept out carries its `resolution`. `--resolve` chooses no collision strategy, so a project with existing files still needs `--force-merge`. A selector that names no decision returns an `UnmatchedResolutionError` payload listing it in `unmatched_resolutions`; ids cover content, so plan again after the files change.
+`desired` takes the update, `local` keeps your version (or keeps a proposal out), and `both` keeps both sides of overlapping lines in a text file. A file path settles every conflict and proposal in that file. Add `--dry-run` to check the outcome first: the settled conflicts move to `review.resolved`, and a proposal kept out carries its `resolution`. `--resolve` chooses no collision strategy, so a project with existing files still needs `--force-merge`. A selector that names no decision returns an `UnmatchedResolutionError` payload listing it in `unmatched_resolutions`; ids cover content, so plan again after the files change.
 
 #### Template Variables
 
@@ -133,13 +138,13 @@ A template's custom variables are supplied with `--var NAME=VALUE`, once per var
 
 #### Missing Tools
 
-Only `uv` and `git` block a run. Without either, `init` and `sync` exit with code `69` while planning, before writing anything, and the `MissingDependencyError` payload names them in `missing_executables`, with `install_commands` when a package manager was found. A binary that only a selected tool runs, such as `direnv` or `just`, never fails a run: the tool's files are still written, the steps that run it are skipped, and the success payload's `result.missing_tools` lists each one with its tool. Top-level `install_commands` holds the commands that install them, when a package manager was found; run them in order.
+Only `uv` and `git` block a run. Without either, `init` and `sync` exit with code `69` while planning, before writing anything, and the `MissingDependencyError` payload names them in `missing_executables`, with `install_commands` when a package manager was found. A program that only a selected tool runs, such as `direnv` or `just`, never fails a run: the tool's files are still written, the steps that run it are skipped, and the success payload's `result.missing_tools` lists each one with its tool. Top-level `install_commands` holds the commands that install them, when a package manager was found; run them in order.
 
 A template's options are chosen with `--option NAME=VALUE`, on `init` and `sync`. Every option has a default, so none is ever missing. A value the option doesn't offer returns an `InvalidOptionValueError` payload whose `option` and `values` name the option and every value it offers.
 
-### 3. Headless Execution
+### 3. Run It
 
-Once the plan is verified, the agent executes initialization:
+Once the plan looks right, run it:
 
 ```bash
 protostar init --template astro --force-merge --json
@@ -147,25 +152,23 @@ protostar init --template astro --force-merge --json
 
 Add a `--resolve` for each decision the dry-run showed that the agent settles differently from the default.
 
-Upon completion, the agent receives deterministic `created_paths` and `mutated_paths` lists. The `touched_paths` list is their derived union.
+The result lists `created_paths` and `mutated_paths`, each sorted, and `touched_paths`, which is both together.
 
-If execution is interrupted or fails, Protostar automatically rolls back all tracked workspace changes. See [Automatic Rollback](./rollback.md) for the full guarantee model.
+If the run fails or is interrupted, Protostar rolls back every change it made. See [Automatic Rollback](./rollback.md) for exactly what that covers.
 
 ## Template Schema Export
 
-When agents generate custom Protostar template TOML files dynamically, they can validate their syntax against the official schema.
-
-Run `protostar export-schema` to export the JSON Schema:
+An agent that writes a template can check it against the template schema before using it. `protostar export-schema` prints the schema:
 
 ```bash
-# Pretty-printed, syntax-highlighted for human review:
+# Highlighted, for reading:
 protostar export-schema
 
-# Compact JSON for machine validation:
+# Plain JSON, for a validator:
 protostar export-schema --json > protostar-template.schema.json
 ```
 
-Agents can use standard JSON Schema validators (e.g., `jsonschema` in Python or `ajv` in JavaScript) to verify their generated blueprints before invoking `protostar init --from <file>`.
+Any JSON Schema validator, such as `jsonschema` in Python or `ajv` in JavaScript, can check a template before `protostar init --from <file>` uses it.
 
 The schema checks structure only. `protostar check-template <file> --json` also checks that `init` would accept the template, without writing files or running commands. It returns `status: "passed"` or `"failed"` (exit `1`) with a `check` object listing each finding's `rule`, `severity`, `message`, `file`, `line` (or `null`), `key`, and `hint`. A template that cannot be retrieved returns the error envelope instead, so `"failed"` always means the template itself was checked.
 
@@ -227,6 +230,6 @@ See [Automating Updates](automating-updates.md#use-checks-in-ci) for check outco
 
 ## Related Pages
 
-- __[The Environment Manifest<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/manifest.md):__ Every field of the `manifest` a dry run returns.
-- __[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/error_handling.md):__ Every error, its JSON fields, and its exit code.
-- __[CLI Reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./cli-reference.md):__ Every command and option.
+- **[The Environment Manifest<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/manifest.md):** Every field of the `manifest` a dry run returns.
+- **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/error_handling.md):** Every error, its JSON fields, and its exit code.
+- **[CLI Reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./cli-reference.md):** Every command and option.

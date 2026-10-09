@@ -19,9 +19,9 @@ The recipe says what the project should be; the lock says what Protostar last di
 
 ## Protostar's Content and Yours
 
-The lock is how Protostar tells its own content from yours. A setting, file, or dependency Protostar wrote, and recorded in the lock, is **Protostar's**. Everything else is **yours**: what you added, and what the project had before Protostar arrived, even when it is identical to what Protostar would write.
+The lock is how Protostar tells its own content from yours. A setting, file, or dependency Protostar wrote, and recorded in the lock, is Protostar's. Everything else is yours: what you added, and what the project had before Protostar arrived, even when it is identical to what Protostar would write.
 
-Protostar keeps its own content current. When it would change content of yours, it says so first: the change is a **proposed change**, listed in the review, and you can keep it out.
+Protostar keeps its own content current. When it would change content of yours, it says so first: the change is a proposed change, listed in the review, and you can keep it out.
 
 "Content" means the smallest piece each file has a meaning for:
 
@@ -61,7 +61,7 @@ Every decision `status`, `sync`, and the change review show is one of three kind
 | **Proposed change** | A change into a file Protostar has never written to, such as the keys it adds to your existing `pyproject.toml` the first time you run `init`. | It applies. |
 | **Kept edit** | An edit or deletion of yours to Protostar's content, which the update didn't change. | It stays, and `sync --check` passes. |
 
-Each decision has two sides: **yours** and **the update's**. Choosing yours keeps your content; choosing the update's writes Protostar's. For overlapping lines in a text file, you can also keep both. Either way, the update becomes Protostar's new record for that content, so the same decision never comes back for the same update. If you keep yours, a later update that changes it again shows a new decision.
+Each decision has two sides: yours and the update's. Choosing yours keeps your content; choosing the update's writes Protostar's. For overlapping lines in a text file, you can also keep both. Either way, the update becomes Protostar's new record for that content, so the same decision never comes back for the same update. If you keep yours, a later update that changes it again shows a new decision.
 
 Keeping a proposed change out works the same way: Protostar records its version without writing it, so it reads as your deletion from then on, and you can take it later.
 
@@ -69,9 +69,9 @@ Each decision has an `id`, derived from its location and both sides. `protostar 
 
 ## Adopting a File
 
-A file Protostar never wrote, such as a `justfile` you already had, is yours, and Protostar can't merge into it. It shows as a conflict. Choosing **Keep mine** adopts it: the file stays exactly as it is, and from then on Protostar treats it as its own content with your edits, merging updates into it line by line. Choosing **Take update** replaces it.
+A file Protostar never wrote, such as a `justfile` you already had, is yours, and Protostar can't merge into it. It shows as a conflict. Choosing Keep mine adopts it: the file stays exactly as it is, and from then on Protostar treats it as its own content with your edits, merging updates into it line by line. Choosing Take update replaces it.
 
-Choosing yours is the only way Protostar takes over content you wrote. **Keep all mine**, in the change review, chooses yours for every decision at once: the project stays exactly as it is, and each file Protostar couldn't merge into is adopted.
+Choosing yours is the only way Protostar takes over content you wrote. In the change review, Keep all mine chooses yours for every decision at once: the project stays exactly as it is, and each file Protostar couldn't merge into is adopted.
 
 ## Words in JSON
 

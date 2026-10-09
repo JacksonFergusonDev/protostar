@@ -8,7 +8,7 @@ Fixes for the problems people run into most: missing programs, existing files, u
 
 ## Missing Dependencies & Environment Checks
 
-Protostar needs `uv` and `git` for every project, and checks for them before writing files or modifying configurations. If either is missing, execution halts with a `MissingDependencyError` whose hint is one command that installs everything missing. [Installation](../installation.md) covers installing both on each platform.
+Protostar needs `uv` and `git` for every project, and checks for them before it writes anything. If either is missing, it stops with a `MissingDependencyError`, and its hint is one command that installs everything missing. [Installation](../installation.md) covers installing both on each platform.
 
 ### `uv` Is Not Installed or Not in `$PATH`
 
@@ -34,7 +34,7 @@ Protostar runs [uv](https://docs.astral.sh/uv/) to create every project and inst
 
 ### Tool Binaries (`direnv`, `just`)
 
-A binary that only a selected tool runs never stops a run. The tool's files are still written, since they are correct whether or not the binary is installed. Protostar skips only the steps that need it, and ends its output with one command that installs every missing binary: without `direnv`, run `direnv allow` in the project once it is installed. The recipe editor marks such a tool `not installed`, and its preview and the change review list the step it skips.
+A program that only a selected tool runs, such as `direnv` or `just`, never stops a run. The tool's files are still written, since they're correct whether or not the program is installed. Protostar skips only the steps that need it, and ends its output with one command that installs every missing program. For `direnv`, also run `direnv allow` in the project once it's installed. The recipe editor marks such a tool `not installed`, and its preview and the change review list the step it skips.
 
 ![A run whose direnv and just are missing](../assets/terminals/cli_missing_tools.svg)
 
@@ -71,7 +71,7 @@ Installing packages needs the network: `uv` fetches them from the package index.
 
 ## Workspace Collisions
 
-When Protostar detects pre-existing files (such as an existing `pyproject.toml` or `README.md`) matching planned manifest targets in the target workspace, it raises a `WorkspaceCollisionError` to protect your existing work.
+When a file Protostar would write already exists, such as `pyproject.toml` or `README.md`, it stops with a `WorkspaceCollisionError` rather than touch your work without asking.
 
 ```text
 Workspace Collision: Protostar detected existing configuration files in the workspace.
@@ -80,12 +80,12 @@ Workspace Collision: Protostar detected existing configuration files in the work
 
 ### In a Terminal
 
-The recipe editor's **Existing files** panel asks what to do with them:
+The recipe editor's Existing files panel asks what to do with them:
 
 1. **Merge** keeps your values and adds what's missing. Where your content and Protostar's disagree, yours stays and the change review lists the decision; see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have).
 1. **Overwrite** replaces those files with Protostar's version.
 
-**Cancel** leaves without changing anything.
+Cancel leaves without changing anything.
 
 ### Without a Terminal (CI and Agents)
 
@@ -101,7 +101,7 @@ protostar init --template cli --force-replace
 
 ## Remote Template Security Alerts
 
-A template you haven't trusted (a `--from` path or URL, or an alias without `trusted = true`) runs no command until you confirm it. In a terminal, the change review lists the commands under **Untrusted template**, and **Apply** stays off until you tick the box. Without a terminal, the run stops with `SecurityViolationError` (exit code `77`) before writing anything.
+A template you haven't trusted (a `--from` path or URL, or an alias without `trusted = true`) runs no command until you confirm it. In a terminal, the change review lists the commands under Untrusted template, and Apply stays off until you tick the box. Without a terminal, the run stops with `SecurityViolationError` (exit code `77`) before writing anything.
 
 - **For one run,** pass `--trust`. It still lists the commands.
 - **Every time,** give the template an alias with `trusted = true` in your configuration (`protostar config --edit`):
@@ -127,11 +127,11 @@ The error names the variable and the [gitleaks](https://github.com/gitleaks/gitl
 
 - **You entered a secret:** enter a non-secret value instead, and supply the secret through the environment when the project runs.
 - **The template asks for a secret:** the template needs fixing; see [Variables Are Not Secrets](authoring-templates.md#variables-are-not-secrets).
-- **The value isn't a secret:** keep it. In the editor, tick **Not a secret; keep this value** under the field. On the command line, add `--allow-secret NAME` for that variable. The confirmation covers only that variable, and once the value is recorded, later runs don't ask again. If a rule flags ordinary values often, [file an issue](https://github.com/JacksonFergusonDev/protostar/issues) with the rule id and the value's shape (not the value).
+- **The value isn't a secret:** keep it. In the editor, tick "Not a secret; keep this value" under the field. On the command line, add `--allow-secret NAME` for that variable. The confirmation covers only that variable, and once the value is recorded, later runs don't ask again. If a rule flags ordinary values often, [file an issue](https://github.com/JacksonFergusonDev/protostar/issues) with the rule id and the value's shape (not the value).
 
 ## Editor Schema Setup for Custom Templates
 
-Protostar templates are pure TOML files validated against a JSON Schema. Configuring your editor provides instant autocompletion, hover tooltips, and real-time schema validation.
+A Protostar template is a TOML file with a JSON Schema. Point your editor at the schema, and it completes keys, shows each key's description, and flags mistakes as you type.
 
 Export the schema from the Protostar you use, and keep it beside your template:
 
@@ -143,7 +143,7 @@ Export it again after upgrading Protostar, so the schema matches the template fo
 
 ### VS Code & Cursor
 
-1. Install the **Even Better TOML** extension (`tamasfe.even-better-toml`).
+1. Install the Even Better TOML extension (`tamasfe.even-better-toml`).
 1. Add the schema modeline at the top of your `protostar.toml`, pointing at the exported file:
 
 ```toml
@@ -157,7 +157,7 @@ ruff = true
 
 ### JetBrains (PyCharm / IntelliJ)
 
-1. Open **Settings** (**Preferences** on macOS), then **Languages & Frameworks**, **Schemas and DTDs**, and **JSON Schema Mappings**.
+1. Open Settings (Preferences on macOS), then Languages & Frameworks › Schemas and DTDs › JSON Schema Mappings.
 1. Add a new mapping named `Protostar Template`.
 1. Set the schema file to the exported `protostar-template.schema.json`.
 1. Add the file pattern `*protostar*.toml`.
@@ -200,16 +200,16 @@ To start over with a different template, `protostar eject` the project first; th
 
 ## Execution Interruptions & Rollback
 
-If an error occurs or you press `Ctrl+C` mid-run, Protostar automatically restores your workspace.
+If a run fails or you press `Ctrl+C`, Protostar puts back every file it changed.
 
-!!! info "Dedicated rollback guide"
-    Full documentation on what gets restored, what might remain, `RollbackFailedError` remediation, and `Ctrl+C` behavior is in the [Automatic Rollback](./rollback.md) guide.
+!!! info "What rollback covers"
+    [Automatic Rollback](./rollback.md) covers what gets restored, what might remain, what to do after a `RollbackFailedError`, and what `Ctrl+C` does.
 
 ## Debugging & Bug Reporting
 
 ### Verbose Debugging (`--verbose`)
 
-To view full Python tracebacks and detailed debug logs, append `-v` or `--verbose` to any command:
+For full Python tracebacks and debug logs, add `-v` or `--verbose` to any command:
 
 ```bash
 protostar init --template cli --verbose
@@ -224,15 +224,15 @@ If Protostar itself crashes, which is a bug rather than a problem with your proj
 
 ### Filing Bugs & Asking Questions
 
-If you encounter an issue or behavior not covered in this guide:
+If this page doesn't cover your problem:
 
-- **Search Existing Issues:** Check the [GitHub Issues tracker](https://github.com/jacksonfergusondev/protostar/issues) to see if a workaround or fix already exists.
-- **Open a Bug Report:** If you've found a bug or unexpected behavior, [open a new issue](https://github.com/jacksonfergusondev/protostar/issues/new) with your environment details and `--verbose` output attached.
-- **Ask a Question or Request a Feature:** Open an issue for general questions and configuration help, or use the [feature request form](https://github.com/jacksonfergusondev/protostar/issues/new?template=feature_request.yml) for ideas.
+- **Search the existing issues:** the [issue tracker](https://github.com/jacksonfergusondev/protostar/issues) may already have a fix or a workaround.
+- **Report a bug:** [open an issue](https://github.com/jacksonfergusondev/protostar/issues/new) with your operating system, Protostar version, and the `--verbose` output.
+- **Ask a question or request a feature:** open an issue for questions, or use the [feature request form](https://github.com/jacksonfergusondev/protostar/issues/new?template=feature_request.yml) for ideas.
 
 ## Related Resources
 
 - **[Automatic Rollback<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./rollback.md):** What gets restored, what might remain, and how to recover from a partial rollback failure.
-- **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/error_handling.md):** Deep dive into the domain exception hierarchy, exit codes, and subprocess diagnostics.
-- **[Environment Initialization<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./init.md):** Review collision handling, AST injection, and `--force-merge` behavior.
-- **[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):** Learn how to view, modify, or reset your global settings with `protostar config --reset`.
+- **[Error Handling Architecture<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](../mechanics/error_handling.md):** Every error, its exit code, and how failed commands are reported.
+- **[Environment Initialization<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./init.md):** How `init` handles files you already have, and what `--force-merge` does.
+- **[Global Configuration<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span>](./configuration.md):** View, change, or reset your settings.
