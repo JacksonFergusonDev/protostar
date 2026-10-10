@@ -151,10 +151,13 @@ sync-secret-rules: sync
     @printf "\n{{ blue }}=== Regenerating Secret-Detection Rules ==={{ nc }}\n"
     uv run python scripts/sync_secret_rules.py
 
-# Vendor the house-style release pinned in scripts/sync_house_style.py into docs/house/
-sync-house-style: sync
-    @printf "\n{{ blue }}=== Vendoring house-style ==={{ nc }}\n"
-    uv run python scripts/sync_house_style.py
+# The house-style release vendored into docs/house/
+house_style := "v1.5.0"
+
+# Vendor the house-style release pinned in `house_style` into docs/house/ (--check to compare only)
+sync-house-style *args:
+    @printf "\n{{ blue }}=== Vendoring house-style {{ house_style }} ==={{ nc }}\n"
+    uv run https://raw.githubusercontent.com/JacksonFergusonDev/house-style/{{ house_style }}/scripts/vendor.py --tag {{ house_style }} docs/house {{ args }}
 
 # Pre-warm environment and caches for demo generation
 demo-prewarm: sync

@@ -55,7 +55,7 @@ nav = [
     ] },
 ]
 
-# house-style (docs/house/, vendored by scripts/sync_house_style.py) comes first.
+# house-style (docs/house/, vendored by `just sync-house-style`) comes first.
 extra_css = [
     "house/css/fonts.css",
     "house/css/fonts-extended.css",

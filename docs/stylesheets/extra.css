@@ -1,7 +1,7 @@
 /* ====================================================================
    The documentation theme, fitted to house-style.
 
-   docs/house/ (vendored by scripts/sync_house_style.py) supplies the
+   docs/house/ (vendored by `just sync-house-style`) supplies the
    palette, the fonts, and the terminal window. This file hands those to
    Zensical's theme. The landing page adds stylesheets/home.css.
    ==================================================================== */
