@@ -23,13 +23,13 @@ A site may add its own rules, but it never contradicts these. When a rule here i
 
 - **Every link that stands on its own carries an icon that says where it goes.** That covers buttons, text links outside a sentence, cards, and jump links. The icon comes after the label, in the text's color:
 
-  | Icon | Where the link goes |
-  | --- | --- |
-  | `arrow-down` | Further down the same page |
-  | `arrow-up` | Back up the same page |
-  | `arrow-right` | The next page, or a closely related page on the same site |
-  | `arrow-left` | The previous page, or back to where the reader came from |
-  | `arrow-up-right` | Another site, or a page only loosely related to this one |
+  | Icon             | Where the link goes                                       |
+  | ---------------- | --------------------------------------------------------- |
+  | `arrow-down`     | Further down the same page                                |
+  | `arrow-up`       | Back up the same page                                     |
+  | `arrow-right`    | The next page, or a closely related page on the same site |
+  | `arrow-left`     | The previous page, or back to where the reader came from  |
+  | `arrow-up-right` | Another site, or a page only loosely related to this one  |
 
 - **Brand links carry their brand.** A link to GitHub, LinkedIn, Python, or email shows its `brand-*` icon before the label instead of an arrow. A link to jacksonferguson.me from a project site shows `icons/jacksonferguson.svg`.
 - **A link inside a sentence takes no icon.** It reads as part of the prose.

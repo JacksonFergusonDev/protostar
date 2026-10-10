@@ -85,7 +85,7 @@ jobs:
 
     - name: Check docs/house matches its house-style release
       if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-      run: uv run python scripts/sync_house_style.py --check
+      run: uvx --from rust-just just sync-house-style --check
 
     - name: Build documentation (strict)
       if: ${{ !cancelled() && steps.setup.outcome == 'success' }}

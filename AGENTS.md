@@ -149,7 +149,7 @@ House-style's Writing section sets the voice and audiences. Here:
 
 #### The Site's Machinery
 
-- **`docs/house/` is vendored, never edited.** It is a tagged house-style release: palette, fonts, icons, components, scripts, and guidelines. Change a shared style there and tag a release. Then bump `HOUSE_STYLE_TAG` in `scripts/sync_house_style.py` and run `just sync-house-style`. CI fails when the copy differs from the tag. Never load house-style from another origin at runtime.
+- **`docs/house/` is vendored, never edited.** It is a tagged house-style release: palette, fonts, icons, components, scripts, and guidelines. Change a shared style there and tag a release. Then bump `house_style` in the `justfile` and run `just sync-house-style`, which runs house-style's own vendoring script from that tag. CI fails when the copy differs from the tag. Never load house-style from another origin at runtime.
 - **The docs restyle house-style; they don't redefine it.** `stylesheets/extra.css` hands the house tokens to Zensical's theme. `stylesheets/home.css`, loaded only by `overrides/home.html`, lays out the landing page with house components. A style every project site would want belongs in house-style, not here.
 - **Terminal visuals are one window.** Recordings use house-style's `.hs-terminal` markup and `docs/javascripts/casts.js`, which loads the player only when a recording nears the viewport. Generated SVGs draw the same window in `scripts/generate_docs_assets/svg.py`, and `test_render_and_write_svg_draws_the_house_terminal_window` checks its colors against the vendored `terminal.css`.
 - **Every page carries the share card.** `overrides/main.html` gives each page Open Graph and Twitter tags pointing at `docs/assets/og-card.png`, and the landing page's title and JSON-LD live in `overrides/home.html`. The card draws the name and tagline from `zensical.toml`; re-render it with `just og-card` when they or the mark change.
@@ -230,7 +230,7 @@ Use these commands when targeted verification or debugging is necessary:
   just demo-init-interactive        # Re-record the interactive init demo cast and GIF (explicit prompt only)
   just demo-sync                    # Re-record the sync conflict demo cast and GIF (explicit prompt only)
   just sync-secret-rules              # Regenerate _secret_rules.py after the pinned gitleaks tag changes
-  just sync-house-style               # Vendor the house-style tag pinned in scripts/sync_house_style.py into docs/house/
+  just sync-house-style               # Vendor the house-style tag pinned in the justfile into docs/house/
   ```
 
   `check-snapshots` regenerates the terminal SVGs but not the demo casts and GIFs. **Do NOT regenerate demos (`just demo-init-headless`, `just demo-init-interactive`, `just demo-sync`, `just demo-all`) unless explicitly prompted to.** They perform real installs across multiple trials and take several minutes. When explicitly requested to record demos, don't `git add -A docs` while a recording runs: it leaves `.demo_*.tmp.cast` files there.
