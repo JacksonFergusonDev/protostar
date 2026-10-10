@@ -43,8 +43,8 @@ jobs:
           path: dist/
           if-no-files-found: error
 
-  # CI and Nightly together run every platform. Nightly can't have run on the
-  # version bump, so a bump-only commit counts its parent's runs.
+  # Both checks may precede the version bump. Nightly may also precede one
+  # generated-input refresh, using the same commit rules as local preparation.
   checks-passed:
     if: github.event_name == 'push'
     name: Check CI and Nightly passed
@@ -57,25 +57,20 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          fetch-depth: 2
+          fetch-depth: 3
 
-      - name: Find passing CI and Nightly runs on this commit or the one it bumps
+      - name: Find passing CI and Nightly runs on eligible commits
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: |
-          candidates=("$GITHUB_SHA")
-          parent=$(git rev-parse HEAD^)
-          changed=$(git diff --name-only "$parent" HEAD | sort | tr '\n' ' ')
-          if [ -z "$(git diff --name-only "$parent" HEAD -- . ':!pyproject.toml' ':!uv.lock')" ]; then
-            echo "${GITHUB_SHA::7} only bumps the version ($changed), so its parent's runs count."
-            candidates+=("$parent")
-          fi
+          candidates=$(python scripts/release_commits.py "$GITHUB_SHA" --tagged)
           missing=0
           for workflow in ci.yml nightly.yml; do
+            mapfile -t workflow_candidates < <(jq -r --arg workflow "$workflow" '.[$workflow][]' <<< "$candidates")
             found=""
-            for sha in "${candidates[@]}"; do
+            for sha in "${workflow_candidates[@]}"; do
               passed=$(gh api "repos/$REPO/actions/workflows/$workflow/runs?head_sha=$sha&status=success" --jq '.total_count' || echo 0)
               if [ "$passed" -gt 0 ]; then
                 found=$sha
@@ -85,7 +80,7 @@ jobs:
             if [ -n "$found" ]; then
               echo "$workflow passed on ${found::7}."
             else
-              echo "::error title=$workflow has not passed::No passing $workflow run on ${candidates[*]}."
+              echo "::error title=$workflow has not passed::No passing $workflow run on ${workflow_candidates[*]}."
               missing=1
             fi
           done

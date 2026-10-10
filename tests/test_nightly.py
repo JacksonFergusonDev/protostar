@@ -424,6 +424,8 @@ def test_a_release_publishes_only_after_ci_nightly_and_its_smoke_test_pass():
     }
     gate = job("release.yml", "checks-passed")["steps"][-1]["run"]
     assert "for workflow in ci.yml nightly.yml" in gate
+    assert 'python scripts/release_commits.py "$GITHUB_SHA" --tagged' in gate
+    assert job("release.yml", "checks-passed")["steps"][0]["with"]["fetch-depth"] >= 3
 
 
 class FakeGitHub:

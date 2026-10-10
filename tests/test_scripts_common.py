@@ -191,6 +191,11 @@ elif script.endswith('prepare_release.py'):
     state['run_repo_cmd'] = lambda *args, **kwargs: subprocess.CompletedProcess(
         [], 0, stdout='', stderr=''
     )
+    # This probe checks the stdlib-only output path; workflow and build behavior
+    # is exercised in test_prepare_release.py with GitHub and command fixtures.
+    state['check_checkout'] = lambda: ('example/project', 'a' * 40)
+    state['check_workflows'] = lambda repo, sha: None
+    state['check_local_builds'] = lambda: None
 try:
     main()
 except SystemExit as error:

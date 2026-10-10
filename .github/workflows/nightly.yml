@@ -4,8 +4,8 @@ name: Nightly
 # together scaffold every built-in template on every OS and Python, and the
 # suite again with retries, which is how a flaky test is found. It also fails
 # init at every write and command of every template, with real commands, on
-# every OS. A release requires CI and Nightly to have passed on the commit it
-# bumps. Nightly Report files the outcome as an issue. After its gate, the run
+# every OS. A release requires CI on the source it bumps; Nightly may precede
+# a generated-input refresh. Nightly Report files the outcome as an issue. The run
 # starts 52 jobs, eight of them on macOS: a scheduled run has no runner limit.
 on:
   schedule:
