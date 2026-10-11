@@ -72,6 +72,7 @@ ci = [
 ]
 docs = [
     "llmstxt-standalone>=0.2.0",
+    "mike",
     "mkdocstrings[python]>=1.0.3",
     "zensical>=0.0.26",
 ]
@@ -337,3 +338,8 @@ style = "one"
     "MD041", # first line need not be a top‑level heading
     "MD046", # code block style – Zensical extensions require mixing fenced and indented blocks for admonitions/tabs
 ]
+
+[tool.uv.sources]
+# Zensical's fork of mike has no release on PyPI. Pinning the commit keeps
+# `uv lock --upgrade` from moving the release's docs deploy to a new HEAD.
+mike = { git = "https://github.com/squidfunk/mike.git", rev = "2d4ad799442f4592db8ad53b179bfb33db8c69ac" }
