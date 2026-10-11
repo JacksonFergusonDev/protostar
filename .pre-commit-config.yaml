@@ -120,7 +120,7 @@ repos:
         entry: uv run --locked python scripts/check_schemas.py
         language: system
         pass_filenames: false
-        files: ^(\.pre-commit-config\.yaml|\.github/|docs/generated/|tests/snapshots/|scripts/check_schemas\.py)
+        files: ^(\.pre-commit-config\.yaml|\.github/|src/protostar/|tests/snapshots/|pyproject\.toml|scripts/check_schemas\.py)
         stages: [pre-push]
 
       - id: pytest

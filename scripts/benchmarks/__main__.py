@@ -38,7 +38,13 @@ from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from scripts._common import REPO_ROOT, OutputStyle, fixture_environment, report
+from scripts._common import (
+    REPO_ROOT,
+    OutputStyle,
+    fixture_environment,
+    report,
+    uv_cache_dir,
+)
 from scripts.benchmarks.scenarios import BY_NAME, SCENARIOS, Scenario, Start
 from scripts.benchmarks.stats import Comparison, Summary, compare, summarize
 
@@ -317,14 +323,6 @@ def select(patterns: Sequence[str], *, every: bool) -> list[Scenario]:
     return [scenario for scenario in SCENARIOS if scenario.name in chosen]
 
 
-def host_cache() -> Path:
-    """Returns uv's cache directory as the caller's own environment sets it."""
-    process = subprocess.run(
-        ["uv", "cache", "dir"], capture_output=True, text=True, check=True
-    )
-    return Path(process.stdout.strip())
-
-
 @contextlib.contextmanager
 def checked_out(ref: str, root: Path) -> Iterator[Version]:
     """Checks ``ref`` out into a temporary worktree with its own environment.
@@ -451,7 +449,7 @@ def run(
     rows = [["scenario", "wall", "protostar", "cpu", "commands"]]
     recorded: dict[str, object] = {}
     with tempfile.TemporaryDirectory(prefix="protostar-bench-") as scratch:
-        bench = Bench(version, Path(scratch), host_cache())
+        bench = Bench(version, Path(scratch), uv_cache_dir())
         for scenario in scenarios:
             report(scenario.name, style=OutputStyle.DETAIL, stderr=True, end=" ")
             (samples,) = measure([bench], scenario, runs=runs, warmup=warmup)
@@ -490,7 +488,7 @@ def compare_versions(
     recorded: dict[str, object] = {}
     with tempfile.TemporaryDirectory(prefix="protostar-bench-") as scratch:
         root = Path(scratch)
-        cache = host_cache()
+        cache = uv_cache_dir()
         with checked_out(ref, root / "baseline") as baseline:
             benches = [
                 Bench(baseline, root / "baseline", cache),
@@ -552,7 +550,7 @@ def profile(scenario: Scenario, *, text: bool, output: Path | None) -> None:
     )
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="protostar-bench-") as scratch:
-        bench = Bench(version, Path(scratch), host_cache())
+        bench = Bench(version, Path(scratch), uv_cache_dir())
         # A warm-up fills uv's cache, so the profile shows no download.
         warm = bench.project(scenario)
         take(version, scenario, warm, bench.environment(scenario, offline=False))

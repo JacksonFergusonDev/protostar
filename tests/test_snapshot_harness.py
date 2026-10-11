@@ -28,9 +28,7 @@ def test_snapshot_children_ignore_host_configuration(
     monkeypatch.setenv("PROTOSTAR_CONFIG", str(tmp_path / "host.toml"))
     monkeypatch.setenv("GIT_DIR", str(tmp_path / "host.git"))
     monkeypatch.setattr("scripts.run_snapshots.tempfile.tempdir", str(tmp_path))
-    mocker.patch(
-        "scripts.run_snapshots._get_host_uv_cache_dir", return_value=tmp_path / "cache"
-    )
+    mocker.patch("scripts.run_snapshots.uv_cache_dir", return_value=tmp_path / "cache")
     scenario = RegressionScenario(
         "fixture", (("--template", "cli"),), "An isolated fixture."
     )
@@ -68,9 +66,7 @@ def test_only_a_valid_scaffold_replaces_snapshot_bytes_and_the_documentation_tre
     monkeypatch.setattr("scripts.run_snapshots.SNAPSHOTS_DIR", snapshots)
     monkeypatch.setattr("scripts.run_snapshots.DOCS_GENERATED_DIR", docs)
     monkeypatch.setattr("scripts.run_snapshots.tempfile.tempdir", str(tmp_path))
-    mocker.patch(
-        "scripts.run_snapshots._get_host_uv_cache_dir", return_value=tmp_path / "cache"
-    )
+    mocker.patch("scripts.run_snapshots.uv_cache_dir", return_value=tmp_path / "cache")
     scenario = RegressionScenario("fixture", ((),), "A scaffold awaiting validation.")
     mocker.patch("scripts.run_snapshots.SCENARIOS", {"fixture": scenario})
 
@@ -669,7 +665,7 @@ def test_generated_lifecycle_examples_use_real_decisions_and_are_repeatable(
     """Generated review/check examples separate accepted bytes from conflicts."""
     import json
 
-    from scripts import generate_docs_assets as assets
+    from scripts.generate_docs_assets import payloads as assets
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(

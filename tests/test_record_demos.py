@@ -270,3 +270,38 @@ def test_one_output_file_is_refused_for_every_scenario(
     assert exit_.value.code == 2
     assert "needs a single scenario" in capsys.readouterr().err
     session.assert_not_called()
+
+
+def test_the_shortest_trial_is_kept_and_no_trial_file_is_left_beside_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from scripts import record_demos
+
+    durations = iter([3.0, 1.5, 2.0])
+
+    class FakeSession:
+        def __init__(self, **_: object) -> None:
+            self.events: list[list[float | str]] = []
+
+        def __enter__(self) -> FakeSession:
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            pass
+
+        def save(self, path: Path) -> None:
+            duration = next(durations)
+            self.events = [[0.0, "o", ""], [duration, "o", ""]]
+            path.write_text(f"{duration}\n", encoding="utf-8")
+
+    monkeypatch.setattr(record_demos, "PTYSession", FakeSession)
+    monkeypatch.setitem(
+        record_demos.SCENARIOS, "fake", record_demos.Scenario(lambda _: None)
+    )
+    output = tmp_path / "docs" / "demo_fake.cast"
+    output.parent.mkdir()
+
+    record_demos.record_target("fake", output, 3, cols=80, rows=24)
+
+    assert output.read_text(encoding="utf-8") == "1.5\n"
+    assert [path.name for path in output.parent.iterdir()] == ["demo_fake.cast"]

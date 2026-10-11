@@ -1,8 +1,8 @@
 """Records the nightly benchmark comparisons, and finds slowdowns in them.
 
-Each night on main, a job per operating system compares the commit with a
-baseline (``python -m scripts.benchmarks compare``), in alternating rounds on
-one runner. This module chooses that baseline (``plan``), adds the results to
+Each night on main, one Linux job compares the commit with a baseline
+(``python -m scripts.benchmarks compare``), in alternating rounds on one
+runner. This module chooses that baseline (``plan``), adds the results to
 ``metrics/benchmark-history.json`` on gh-pages (``record``), files a slowdown
 found twice (``issue``), writes a pull request's comparison as a comment
 (``comment``), and summarizes runs of a commit against itself (``calibrate``).

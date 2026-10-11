@@ -11,17 +11,13 @@ from typing import Any
 
 from protostar.fs import atomic_write_text
 from scripts._common import (
-    DOCS_GENERATED_DIR as DOCS_GENERATED_DIR,
+    DOCS_GENERATED_DIR,
+    DOCS_TERMINALS_DIR,
+    REPO_ROOT,
+    SNAPSHOTS_DIR,
 )
-from scripts._common import (
-    DOCS_TERMINALS_DIR as DOCS_TERMINALS_DIR,
-)
-from scripts._common import (
-    REPO_ROOT as REPO_ROOT,
-)
-from scripts._common import (
-    SNAPSHOTS_DIR as SNAPSHOTS_DIR,
-)
+
+__all__ = ["DOCS_GENERATED_DIR", "DOCS_TERMINALS_DIR", "REPO_ROOT", "SNAPSHOTS_DIR"]
 
 
 def _write_generated_doc(filepath: str | Path, content: str) -> None:
