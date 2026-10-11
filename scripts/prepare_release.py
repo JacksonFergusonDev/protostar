@@ -84,22 +84,14 @@ def prepare_inputs() -> bool:
             )
             sys.exit(1)
         try:
-            while True:
-                report(
-                    "Accept these changes, commit and push them, then continue? [y/N] ",
-                    end="",
-                )
-                answer = input().strip().lower()
-                if answer in {"", "n", "no"}:
-                    report("Version bump stopped: release inputs were not accepted.")
-                    sys.exit(1)
-                if answer in {"y", "yes"}:
-                    break
-                report("Please answer y or n.")
-        except (EOFError, KeyboardInterrupt):
+            accepted = confirm(
+                "Accept these changes, commit and push them, then continue?"
+            )
+        except KeyboardInterrupt:
             report()
-            report("Version bump stopped: release input review was cancelled.")
-            sys.exit(1)
+            stop("release input review was cancelled.")
+        if not accepted:
+            stop("release inputs were not accepted.")
 
         for command in (
             ["git", "add", "--", *RELEASE_INPUTS],

@@ -24,7 +24,6 @@ def test_schema_validation_runs_every_validator_without_syncing_dependencies(
         ".github/workflows/check.yml": b"name: Check\n",
         ".github/actions/example/action.yml": b"name: Example\n",
         ".github/renovate.json": b"{}\n",
-        "docs/generated/template_schema.json": b"{}\n",
         "src/protostar/templates/example.toml": b'name = "Example"\n',
     }
     for name, content in files.items():
@@ -34,9 +33,6 @@ def test_schema_validation_runs_every_validator_without_syncing_dependencies(
     monkeypatch.setattr(check_schemas, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(check_schemas, "SRC_DIR", tmp_path / "src")
     monkeypatch.setattr(check_schemas, "SNAPSHOTS_DIR", tmp_path / "snapshots")
-    monkeypatch.setattr(
-        check_schemas, "DOCS_GENERATED_DIR", tmp_path / "docs/generated"
-    )
     monkeypatch.setattr("scripts.check_schemas.tempfile.tempdir", str(tmp_path))
     commands = []
 
@@ -63,8 +59,14 @@ def test_schema_validation_runs_every_validator_without_syncing_dependencies(
         "check-jsonschema",
         "protostar",
     }
+    metaschema = next(cmd for cmd in commands if "--check-metaschema" in cmd)
+    assert sorted(Path(arg).name for arg in metaschema[2:]) == [
+        "application_schema.json",
+        "review_schema.json",
+        "template_schema.json",
+    ]
     assert {name: (tmp_path / name).read_bytes() for name in files} == files
-    assert not list(tmp_path.glob("tmp*.json"))
+    assert not list(tmp_path.glob("tmp*"))
 
 
 def test_schema_callers_require_the_committed_lock():

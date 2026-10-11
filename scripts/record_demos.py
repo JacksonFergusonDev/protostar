@@ -65,7 +65,7 @@ class DemoTrialResult:
     trial: int
     duration_s: float
     events: int
-    status: str
+    error: str | None = None
 
 
 # Single source of truth for demo colors: consumed by asciinema-player (docs) and agg (GIFs)
@@ -192,11 +192,8 @@ class PTYSession:
         os.close(self.slave_fd)
         self.slave_fd = -1
 
-        # Perform silent bootstrap (unset host venv, enforce local venv priority, load direnv & starship hooks)
-        self._silent_write(f'export PATH="{venv_bin}:$PATH"\n')
-        self._drain(0.05)
-        self._silent_write(f"alias protostar='{venv_bin}/protostar'\n")
-        self._drain(0.05)
+        # Perform silent bootstrap (unset host venv, load direnv & starship
+        # hooks, then put the local venv first again after they change PATH)
         self._silent_write("unset VIRTUAL_ENV\n")
         self._drain(0.05)
         self._silent_write('export BAT_THEME="Catppuccin Mocha"\n')
@@ -243,9 +240,10 @@ class PTYSession:
                 "Failed to capture clean prompt redraw for initial demo frame."
             )
 
-        assert "clear" not in initial_content.lower()[:40], (
-            f"Command leak detected in initial demo frame: {initial_content!r}"
-        )
+        if "clear" in initial_content.lower()[:40]:
+            raise RuntimeError(
+                f"Command leak detected in initial demo frame: {initial_content!r}"
+            )
 
         self.events.clear()
         self.decoder.reset()
@@ -627,128 +625,87 @@ def main() -> None:
     for target in targets:
         out_path = args.output or Path(f"docs/assets/demo_{target}.cast")
         out_path.parent.mkdir(parents=True, exist_ok=True)
+        record_target(target, out_path, trials_count, cols=args.cols, rows=args.rows)
 
-        if trials_count == 1:
+
+def record_target(
+    target: str, out_path: Path, trials_count: int, *, cols: int, rows: int
+) -> None:
+    """Records a scenario ``trials_count`` times and keeps the shortest recording."""
+    report(
+        f"Recording demo '{target}' ({trials_count} trial(s)) -> {out_path} ...",
+        style=OutputStyle.TITLE,
+    )
+    trial_results: list[DemoTrialResult] = []
+    # Trials record outside docs/, so an interrupted run leaves nothing there.
+    with tempfile.TemporaryDirectory(prefix="protostar-demo-trials-") as scratch:
+        for trial_idx in range(1, trials_count + 1):
             report(
-                f"Recording demo '{target}' -> {out_path} ...", style=OutputStyle.TITLE
+                f"  -> [Trial {trial_idx}/{trials_count}] Recording ...",
+                style=OutputStyle.DETAIL,
             )
-            with PTYSession(
-                cols=args.cols, rows=args.rows, setup=SCENARIOS[target].setup
-            ) as session:
-                SCENARIOS[target].record(session)
-                session.save(out_path)
+            try:
+                with PTYSession(
+                    cols=cols, rows=rows, setup=SCENARIOS[target].setup
+                ) as session:
+                    SCENARIOS[target].record(session)
+                    session.save(Path(scratch) / f"trial_{trial_idx}.cast")
+            except Exception as exc:
+                trial_results.append(DemoTrialResult(trial_idx, 0.0, 0, str(exc)))
+                report(
+                    f"    FAIL Trial {trial_idx} failed: {exc}",
+                    style=OutputStyle.ERROR,
+                )
+                continue
             duration = float(session.events[-1][0]) if session.events else 0.0
+            trial_results.append(
+                DemoTrialResult(trial_idx, round(duration, 2), len(session.events))
+            )
             report(
-                f"OK Recorded '{target}' successfully in {duration:.2f}s ({len(session.events)} events).",
+                f"    OK Trial {trial_idx} completed in {duration:.2f}s "
+                f"({len(session.events)} events)",
                 style=OutputStyle.SUCCESS,
             )
-            continue
 
-        report(
-            f"Recording demo '{target}' ({trials_count} trials requested) -> {out_path} ...",
-            style=OutputStyle.TITLE,
-        )
-        trial_results: list[DemoTrialResult] = []
-        trial_paths: list[Path] = []
-
-        try:
-            for trial_idx in range(1, trials_count + 1):
-                tmp_cast = out_path.with_name(
-                    f".{out_path.stem}.trial_{trial_idx}.tmp.cast"
-                )
-                trial_paths.append(tmp_cast)
-                report(
-                    f"  -> [Trial {trial_idx}/{trials_count}] Recording ...",
-                    style=OutputStyle.DETAIL,
-                )
-                try:
-                    with PTYSession(
-                        cols=args.cols, rows=args.rows, setup=SCENARIOS[target].setup
-                    ) as session:
-                        SCENARIOS[target].record(session)
-                        session.save(tmp_cast)
-                    duration = float(session.events[-1][0]) if session.events else 0.0
-                    event_count = len(session.events)
-                    trial_results.append(
-                        DemoTrialResult(
-                            trial=trial_idx,
-                            duration_s=round(duration, 2),
-                            events=event_count,
-                            status="success",
-                        )
-                    )
-                    report(
-                        f"    OK Trial {trial_idx} completed in {duration:.2f}s ({event_count} events)",
-                        style=OutputStyle.SUCCESS,
-                    )
-                except Exception as exc:
-                    trial_results.append(
-                        DemoTrialResult(
-                            trial=trial_idx,
-                            duration_s=0.0,
-                            events=0,
-                            status=f"failed: {exc}",
-                        )
-                    )
-                    report(
-                        f"    FAIL Trial {trial_idx} failed: {exc}",
-                        style=OutputStyle.ERROR,
-                    )
-
-            successful_trials = [t for t in trial_results if t.status == "success"]
-            if not successful_trials:
-                raise RuntimeError(
-                    f"All {trials_count} recording trials failed for demo '{target}'."
-                )
-
-            winner = min(successful_trials, key=lambda t: t.duration_s)
-            winning_path = out_path.with_name(
-                f".{out_path.stem}.trial_{winner.trial}.tmp.cast"
+        successful_trials = [t for t in trial_results if t.error is None]
+        if not successful_trials:
+            raise RuntimeError(
+                f"All {trials_count} recording trials failed for demo '{target}'."
             )
-            shutil.move(winning_path, out_path)
+        winner = min(successful_trials, key=lambda t: t.duration_s)
+        shutil.move(Path(scratch) / f"trial_{winner.trial}.cast", out_path)
 
-            durations = [t.duration_s for t in successful_trials]
-            min_duration = min(durations)
-            max_duration = max(durations)
-            mean_duration = round(sum(durations) / len(durations), 2)
-            saved_vs_slowest_s = round(max_duration - min_duration, 2)
-
-            trial_dicts = [
+    if trials_count > 1:
+        durations = [t.duration_s for t in successful_trials]
+        summary = {
+            "scenario": target,
+            "trials_requested": trials_count,
+            "trials_completed": len(successful_trials),
+            "winning_trial": winner.trial,
+            "winning_duration_s": winner.duration_s,
+            "event_count": winner.events,
+            "duration_range_s": [min(durations), max(durations)],
+            "mean_duration_s": round(sum(durations) / len(durations), 2),
+            "saved_vs_slowest_s": round(max(durations) - min(durations), 2),
+            "trials": [
                 {
                     "trial": r.trial,
                     "duration_s": r.duration_s,
                     "events": r.events,
-                    "status": r.status,
+                    "status": "success" if r.error is None else f"failed: {r.error}",
                     **({"winner": True} if r.trial == winner.trial else {}),
                 }
                 for r in trial_results
-            ]
-
-            summary = {
-                "scenario": target,
-                "trials_requested": trials_count,
-                "trials_completed": len(successful_trials),
-                "winning_trial": winner.trial,
-                "winning_duration_s": winner.duration_s,
-                "event_count": winner.events,
-                "duration_range_s": [min_duration, max_duration],
-                "mean_duration_s": mean_duration,
-                "saved_vs_slowest_s": saved_vs_slowest_s,
-                "trials": trial_dicts,
-                "output_file": str(out_path),
-            }
-
-            report(f"\n=== DEMO TRIAL SUMMARY [{target}] ===", style=OutputStyle.TITLE)
-            report_code(json.dumps(summary, indent=2), CodeLanguage.JSON)
-            report("====================================\n", style=OutputStyle.DETAIL)
-            report(
-                f"OK Selected trial {winner.trial} ({winner.duration_s:.2f}s) saved to {out_path}",
-                style=OutputStyle.SUCCESS,
-            )
-        finally:
-            for p in trial_paths:
-                if p.exists():
-                    p.unlink()
+            ],
+            "output_file": str(out_path),
+        }
+        report(f"\n=== DEMO TRIAL SUMMARY [{target}] ===", style=OutputStyle.TITLE)
+        report_code(json.dumps(summary, indent=2), CodeLanguage.JSON)
+        report("====================================\n", style=OutputStyle.DETAIL)
+    report(
+        f"OK Selected trial {winner.trial} ({winner.duration_s:.2f}s) saved to {out_path}",
+        style=OutputStyle.SUCCESS,
+    )
 
 
 if __name__ == "__main__":

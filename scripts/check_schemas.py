@@ -1,13 +1,13 @@
 """Validates repository and snapshot configurations against official schemas.
 
-Checks:
+Checks (``CHECKS``, then the schemas Protostar emits):
 1. Pre-commit & prek configurations against prek's parser (root and snapshots).
 2. GitHub Workflows with actionlint and workflow schema (root and snapshots).
 3. Custom GitHub Actions metadata against vendor.github-actions schema (root and snapshots).
 4. Renovate configuration against vendor.renovate schema (root and snapshots).
-5. Protostar emitted JSON schemas against JSON Schema Draft 2020-12 metaschema.
-6. Internal template definitions against Protostar's exported schema.
-7. Root and snapshot pyproject.toml files against PEP 621 schema.
+5. Root and snapshot pyproject.toml files against PEP 621 schema.
+6. Protostar's emitted JSON schemas against the Draft 2020-12 metaschema.
+7. Internal template definitions against Protostar's exported schema.
 
 Run:
     uv run python scripts/check_schemas.py
@@ -15,8 +15,11 @@ Run:
 
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
 _repo_root = Path(__file__).resolve().parent.parent
@@ -24,7 +27,6 @@ if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
 from scripts._common import (
-    DOCS_GENERATED_DIR,
     REPO_ROOT,
     SNAPSHOTS_DIR,
     SRC_DIR,
@@ -53,198 +55,157 @@ def _run_validator(name: str, cmd: list[str]) -> bool:
     return False
 
 
-def validate_prek_configs() -> bool:
-    """Validates root and snapshot pre-commit / prek configuration files."""
-    prek_files: list[Path] = []
-    root_config = REPO_ROOT / ".pre-commit-config.yaml"
-    if root_config.is_file():
-        prek_files.append(root_config)
+def _find(root: Sequence[str], snapshots: Sequence[str] = ()) -> list[Path]:
+    """Returns the repository files matching ``root`` and the snapshot files matching ``snapshots``.
 
-    snapshots_dir = SNAPSHOTS_DIR
-    if snapshots_dir.is_dir():
-        prek_files.extend(sorted(snapshots_dir.rglob("pre-commit-config.fixture.yaml")))
-        prek_files.extend(sorted(snapshots_dir.rglob(".pre-commit-config.yaml")))
-
-    if not prek_files:
-        report(
-            "No pre-commit/prek configuration files found.", style=OutputStyle.DETAIL
-        )
-        return True
-
-    cmd = [
-        "prek",
-        "validate-config",
-        *[str(p.relative_to(REPO_ROOT)) for p in prek_files],
-    ]
-    return _run_validator("Pre-Commit / Prek Configurations", cmd)
-
-
-def validate_github_workflows() -> bool:
-    """Validates root and snapshot GitHub Workflows with actionlint and workflow schema."""
-    workflow_files: list[Path] = []
-    workflows_dir = REPO_ROOT / ".github" / "workflows"
-    if workflows_dir.is_dir():
-        workflow_files.extend(sorted(workflows_dir.glob("*.yml")))
-        workflow_files.extend(sorted(workflows_dir.glob("*.yaml")))
-
-    snapshots_dir = SNAPSHOTS_DIR
-    if snapshots_dir.is_dir():
-        for path in sorted(snapshots_dir.rglob("*.yml")) + sorted(
-            snapshots_dir.rglob("*.yaml")
-        ):
-            if "workflows" in path.parts:
-                workflow_files.append(path)
-
-    if not workflow_files:
-        return True
-
-    rel_paths = [str(p.relative_to(REPO_ROOT)) for p in workflow_files]
-    schema_ok = _run_validator(
-        "GitHub Workflows Schema",
-        ["check-jsonschema", "--builtin-schema", "vendor.github-workflows", *rel_paths],
-    )
-    actionlint_ok = _run_validator(
-        "GitHub Workflows (actionlint)", ["actionlint", *rel_paths]
-    )
-    return schema_ok and actionlint_ok
-
-
-def validate_github_actions() -> bool:
-    """Validates root and snapshot custom composite action definitions against GitHub Actions schema."""
-    action_files: list[Path] = []
-    actions_dir = REPO_ROOT / ".github" / "actions"
-    if actions_dir.is_dir():
-        action_files.extend(sorted(actions_dir.rglob("action.yml")))
-        action_files.extend(sorted(actions_dir.rglob("action.yaml")))
-
-    snapshots_dir = SNAPSHOTS_DIR
-    if snapshots_dir.is_dir():
-        for path in sorted(snapshots_dir.rglob("action.yml")) + sorted(
-            snapshots_dir.rglob("action.yaml")
-        ):
-            action_files.append(path)
-
-    if not action_files:
-        return True
-
-    cmd = [
-        "check-jsonschema",
-        "--builtin-schema",
-        "vendor.github-actions",
-        *[str(p.relative_to(REPO_ROOT)) for p in action_files],
-    ]
-    return _run_validator("GitHub Actions Metadata", cmd)
-
-
-def validate_renovate() -> bool:
-    """Validates root and snapshot Renovate configuration against Renovate schema."""
-    renovate_files: list[Path] = []
-    root_renovate = REPO_ROOT / ".github" / "renovate.json"
-    if root_renovate.is_file():
-        renovate_files.append(root_renovate)
-
-    snapshots_dir = SNAPSHOTS_DIR
-    if snapshots_dir.is_dir():
-        renovate_files.extend(sorted(snapshots_dir.rglob("renovate.json")))
-
-    if not renovate_files:
-        return True
-
-    cmd = [
-        "check-jsonschema",
-        "--builtin-schema",
-        "vendor.renovate",
-        *[str(p.relative_to(REPO_ROOT)) for p in renovate_files],
-    ]
-    return _run_validator("Renovate Configuration", cmd)
-
-
-def validate_metaschemas() -> bool:
-    """Validates Protostar emitted JSON schemas against Draft 2020-12 metaschema."""
-    docs_generated_dir = DOCS_GENERATED_DIR
-    schema_files: list[Path] = []
-    if docs_generated_dir.is_dir():
-        schema_files.extend(sorted(docs_generated_dir.glob("*_schema.json")))
-
-    if not schema_files:
-        return True
-
-    cmd = [
-        "check-jsonschema",
-        "--check-metaschema",
-        *[str(p.relative_to(REPO_ROOT)) for p in schema_files],
-    ]
-    return _run_validator("Emitted JSON Metaschemas", cmd)
-
-
-def validate_template_blueprints() -> bool:
-    """Validates internal template definitions against Protostar's exported schema."""
-    templates_dir = SRC_DIR / "protostar" / "templates"
-    template_files = sorted(templates_dir.glob("*.toml"))
-    if not template_files:
-        return True
-
-    schema_cmd = ["protostar", "export-schema", "--json"]
-    schema_json = run_repo_cmd(schema_cmd, check=True, capture_output=True).stdout
-    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as tmp:
-        tmp.write(schema_json)
-        tmp_path = tmp.name
-
-    try:
-        cmd = [
-            "check-jsonschema",
-            "--schemafile",
-            tmp_path,
-            "--force-filetype",
-            "toml",
-            *[str(p.relative_to(REPO_ROOT)) for p in template_files],
+    Args:
+        root: Glob patterns relative to the repository root.
+        snapshots: File-name patterns searched for anywhere in the snapshots.
+    """
+    found = [path for pattern in root for path in sorted(REPO_ROOT.glob(pattern))]
+    if SNAPSHOTS_DIR.is_dir():
+        found += [
+            path
+            for pattern in snapshots
+            for path in sorted(SNAPSHOTS_DIR.rglob(pattern))
         ]
-        return _run_validator("Internal Template Blueprints", cmd)
-    finally:
-        Path(tmp_path).unlink(missing_ok=True)
+    return [path for path in found if path.is_file()]
 
 
-def validate_pyproject_files() -> bool:
-    """Validates root and snapshot pyproject.toml files against PEP 621 schema."""
-    pyproject_files: list[Path] = []
-    root_pyproject = REPO_ROOT / "pyproject.toml"
-    if root_pyproject.is_file():
-        pyproject_files.append(root_pyproject)
+@dataclass(frozen=True)
+class SchemaCheck:
+    """Files of one kind, and the validators that check them.
 
-    snapshots_dir = SNAPSHOTS_DIR
-    if snapshots_dir.is_dir():
-        pyproject_files.extend(sorted(snapshots_dir.rglob("pyproject.toml")))
+    Attributes:
+        files: Finds the files, when the check runs.
+        validators: Each validator's name and command; the files follow it.
+    """
 
-    if not pyproject_files:
-        return True
+    files: Callable[[], list[Path]]
+    validators: tuple[tuple[str, tuple[str, ...]], ...]
 
-    cmd = [
-        "check-jsonschema",
-        "--schemafile",
-        "https://json.schemastore.org/pyproject.json",
-        *[str(p.relative_to(REPO_ROOT)) for p in pyproject_files],
+
+def _snapshot_workflows() -> list[Path]:
+    return [
+        path
+        for path in _find([".github/workflows/*.yml", ".github/workflows/*.yaml"])
+        + _find([], ["*.yml", "*.yaml"])
+        if path.is_relative_to(REPO_ROOT / ".github") or "workflows" in path.parts
     ]
-    return _run_validator("PEP 621 pyproject.toml Specifications", cmd)
+
+
+CHECKS: tuple[SchemaCheck, ...] = (
+    SchemaCheck(
+        lambda: _find([".pre-commit-config.yaml"], ["pre-commit-config.fixture.yaml"]),
+        (("Pre-Commit / Prek Configurations", ("prek", "validate-config")),),
+    ),
+    SchemaCheck(
+        _snapshot_workflows,
+        (
+            (
+                "GitHub Workflows Schema",
+                ("check-jsonschema", "--builtin-schema", "vendor.github-workflows"),
+            ),
+            ("GitHub Workflows (actionlint)", ("actionlint",)),
+        ),
+    ),
+    SchemaCheck(
+        lambda: _find(
+            [".github/actions/**/action.yml", ".github/actions/**/action.yaml"],
+            ["action.yml", "action.yaml"],
+        ),
+        (
+            (
+                "GitHub Actions Metadata",
+                ("check-jsonschema", "--builtin-schema", "vendor.github-actions"),
+            ),
+        ),
+    ),
+    SchemaCheck(
+        lambda: _find([".github/renovate.json"], ["renovate.json"]),
+        (
+            (
+                "Renovate Configuration",
+                ("check-jsonschema", "--builtin-schema", "vendor.renovate"),
+            ),
+        ),
+    ),
+    SchemaCheck(
+        lambda: _find(["pyproject.toml"], ["pyproject.toml"]),
+        (
+            (
+                "PEP 621 pyproject.toml Specifications",
+                (
+                    "check-jsonschema",
+                    "--schemafile",
+                    "https://json.schemastore.org/pyproject.json",
+                ),
+            ),
+        ),
+    ),
+)
+
+
+def run_check(check: SchemaCheck) -> bool:
+    """Runs every validator of a check over its files; a check with none passes."""
+    files = [str(path.relative_to(REPO_ROOT)) for path in check.files()]
+    if not files:
+        return True
+    results = [
+        _run_validator(name, [*command, *files]) for name, command in check.validators
+    ]
+    return all(results)
+
+
+def validate_emitted_schemas() -> bool:
+    """Checks the schemas Protostar publishes, then the built-in templates against one.
+
+    The template schema comes from ``protostar export-schema``; the review and
+    application envelopes come from ``protostar.cli.schema``. Each must be a
+    valid Draft 2020-12 schema, and every built-in template must satisfy the
+    template schema.
+    """
+    from protostar.cli.schema import application_schema, review_schema
+
+    template_json = run_repo_cmd(
+        ["protostar", "export-schema", "--json"], check=True, capture_output=True
+    ).stdout
+    with tempfile.TemporaryDirectory() as directory:
+        schemas = {
+            "template_schema.json": template_json,
+            "review_schema.json": json.dumps(review_schema()),
+            "application_schema.json": json.dumps(application_schema()),
+        }
+        for name, text in schemas.items():
+            Path(directory, name).write_text(text, encoding="utf-8")
+        metaschemas_ok = _run_validator(
+            "Emitted JSON Metaschemas",
+            [
+                "check-jsonschema",
+                "--check-metaschema",
+                *(str(Path(directory, name)) for name in schemas),
+            ],
+        )
+        templates = sorted((SRC_DIR / "protostar" / "templates").glob("*.toml"))
+        templates_ok = not templates or _run_validator(
+            "Internal Template Blueprints",
+            [
+                "check-jsonschema",
+                "--schemafile",
+                str(Path(directory, "template_schema.json")),
+                "--force-filetype",
+                "toml",
+                *(str(path.relative_to(REPO_ROOT)) for path in templates),
+            ],
+        )
+    return metaschemas_ok and templates_ok
 
 
 def main() -> None:
     """Runs all schema validation checks and exits with non-zero on failure."""
-    checks = [
-        validate_prek_configs,
-        validate_github_workflows,
-        validate_github_actions,
-        validate_renovate,
-        validate_metaschemas,
-        validate_template_blueprints,
-        validate_pyproject_files,
-    ]
-
-    all_passed = True
-    for check in checks:
-        if not check():
-            all_passed = False
-
-    if not all_passed:
+    results = [run_check(check) for check in CHECKS]
+    results.append(validate_emitted_schemas())
+    if not all(results):
         report("FAIL Schema validation failed.", stderr=True, style=OutputStyle.ERROR)
         sys.exit(1)
 

@@ -18,27 +18,18 @@ if str(_repo_root) not in sys.path:
 
 from protostar.fs import atomic_write_bytes, atomic_write_text
 from scripts._common import (
-    CONSTRAINTS_FILE as CONSTRAINTS_FILE,
-)
-from scripts._common import (
-    DOCS_GENERATED_DIR as DOCS_GENERATED_DIR,
-)
-from scripts._common import (
-    DOCS_TERMINALS_DIR as DOCS_TERMINALS_DIR,
-)
-from scripts._common import (
-    REPO_ROOT as REPO_ROOT,
-)
-from scripts._common import (
-    SNAPSHOTS_DIR as SNAPSHOTS_DIR,
-)
-from scripts._common import (
+    CONSTRAINTS_FILE,
+    DOCS_GENERATED_DIR,
+    DOCS_TERMINALS_DIR,
+    REPO_ROOT,
+    SNAPSHOTS_DIR,
     CodeLanguage,
     OutputStyle,
     fixture_environment,
     report,
     report_code,
     run_repo_cmd,
+    uv_cache_dir,
 )
 from scripts.generate_docs_assets import (
     generate_diff_fixtures,
@@ -130,10 +121,6 @@ SCENARIOS: dict[str, RegressionScenario] = {
         description="CLI template in its non-default workbench tier: the same package with lean tooling.",
         publishes_tree=False,
     ),
-}
-
-FIXTURES: dict[str, list[list[str]]] = {
-    name: [list(c) for c in s.commands] for name, s in SCENARIOS.items()
 }
 
 
@@ -374,23 +361,6 @@ def _extract_and_write_targets(
                 directory.rmdir()
 
 
-def _get_host_uv_cache_dir() -> Path:
-    """Resolves the user's host uv cache directory for sharing with isolated environments."""
-    if env_dir := os.environ.get("UV_CACHE_DIR"):
-        return Path(env_dir).expanduser().resolve()
-    if sys.platform == "darwin":
-        return Path.home() / "Library" / "Caches" / "uv"
-    if sys.platform == "win32":
-        local_app_data = os.environ.get(
-            "LOCALAPPDATA", str(Path.home() / "AppData" / "Local")
-        )
-        return Path(local_app_data) / "uv" / "cache"
-    xdg_cache = os.environ.get("XDG_CACHE_HOME")
-    if xdg_cache:
-        return Path(xdg_cache) / "uv"
-    return Path.home() / ".cache" / "uv"
-
-
 def _build_fixture_scenario(
     scenario: RegressionScenario,
     clean_env: dict[str, str],
@@ -437,7 +407,7 @@ def build_snapshots(scenario_name: str | None = None) -> None:
     """Iterates through predefined scenarios concurrently and extracts snapshot artifacts."""
     clean_env = fixture_environment()
 
-    cache_path = _get_host_uv_cache_dir()
+    cache_path = uv_cache_dir()
     cache_path.mkdir(parents=True, exist_ok=True)
     host_cache_dir = str(cache_path)
 

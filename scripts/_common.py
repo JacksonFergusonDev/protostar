@@ -113,6 +113,17 @@ def fetch_bytes(url: str, *, timeout: float = 10) -> bytes:
         sys.exit(1)
 
 
+def uv_cache_dir() -> Path:
+    """Returns uv's cache directory as the caller's environment configures it.
+
+    Disposable fixtures share it, so packages download once per machine.
+    """
+    result = subprocess.run(
+        ["uv", "cache", "dir"], capture_output=True, text=True, check=True
+    )
+    return Path(result.stdout.strip())
+
+
 def get_repo_env(extra: dict[str, str] | None = None) -> dict[str, str]:
     """Builds an environment dictionary ensuring virtualenv binaries are on PATH.
 
