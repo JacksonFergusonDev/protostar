@@ -25,21 +25,17 @@ from scripts.prepare_pages import (
     HEADER_CSS,
     HOUSE_DIR,
     METRICS_ASSETS,
+    METRICS_DATA,
     METRICS_DIR,
     render_metrics_index,
 )
 
 DEFAULT_PORT = 8765
 DATA_URL = "https://protostar.jacksonferguson.me/metrics/"
-DATA_FILES = (
-    "data.js",
-    "mutation-history.json",
-    "rollback-history.json",
-    "rollback-latest.json",
-)
 # Published once the first nightly comparison is recorded; until then the
 # dashboard says no runs are published, and so does the preview.
 OPTIONAL_DATA_FILES = ("benchmark-history.json",)
+DATA_FILES = tuple(name for name in METRICS_DATA if name not in OPTIONAL_DATA_FILES)
 
 
 class PreviewHandler(SimpleHTTPRequestHandler):

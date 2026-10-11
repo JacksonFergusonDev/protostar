@@ -32,10 +32,10 @@ import statistics
 import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
 
+from scripts import _publish
 from scripts.benchmarks.stats import Comparison, compare
 from scripts.nightly_report import Tracker
 
@@ -77,7 +77,7 @@ class Status(enum.StrEnum):
     REGRESSION = "regression"
 
 
-class BenchmarkReportError(Exception):
+class BenchmarkReportError(_publish.PublicationError):
     """The results are incomplete or inconsistent, so nothing is recorded."""
 
 
@@ -111,12 +111,7 @@ class Regression:
 
 def read_history(path: Path) -> list[dict[str, Any]]:
     """Reads the recorded runs, treating a missing history as the first run."""
-    if not path.exists():
-        return []
-    entries = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(entries, list):
-        raise BenchmarkReportError(f"{path} is not a list of runs.")
-    return entries
+    return _publish.read_history(path)
 
 
 def _latest(history: Sequence[dict[str, Any]], os: str) -> dict[str, Any] | None:
@@ -301,14 +296,8 @@ def record(
         BenchmarkReportError: If a result is missing, measured another commit,
             or is older than the latest recorded run.
     """
-    if not _SHA.fullmatch(commit):
-        raise BenchmarkReportError("The commit must be a full Git commit hash.")
-    when = datetime.fromisoformat(date)
-    offset = when.utcoffset()
-    if offset is None or offset.total_seconds() != 0:
-        raise BenchmarkReportError("The date must be a UTC timestamp.")
-    if history and datetime.fromisoformat(history[-1]["date"]) > when:
-        raise BenchmarkReportError("Refusing to record a run older than the latest.")
+    _publish.check_commit(commit)
+    _publish.check_newest(history, _publish.utc_date(date))
     folders = sorted(path for path in results.iterdir() if path.is_dir())
     if not folders:
         raise BenchmarkReportError(f"No benchmark results in {results}.")
@@ -602,7 +591,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             )
         else:
             print(calibration_body(args.results))
-    except BenchmarkReportError as error:
+    except _publish.PublicationError as error:
         raise SystemExit(str(error)) from error
 
 

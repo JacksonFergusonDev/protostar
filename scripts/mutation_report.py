@@ -6,9 +6,9 @@ catch. Mutants in code no test reaches are reported apart, since no test could
 have caught them.
 
 Run:
-    uv run python scripts/mutation_report.py report [--json PATH] [--survivors PATH]
-    uv run --group mutation python scripts/mutation_report.py diffs [--out PATH]
-    uv run python scripts/mutation_report.py combine RESULT.json [RESULT.json ...]
+    uv run python -m scripts.mutation_report report [--json PATH] [--survivors PATH]
+    uv run --group mutation python -m scripts.mutation_report diffs [--out PATH]
+    python3 -m scripts.mutation_report combine RESULT.json [RESULT.json ...]
 """
 
 from __future__ import annotations
@@ -29,6 +29,8 @@ from typing import TypedDict
 
 # Runs without the project installed (the workflow's combine job), so it
 # depends on the standard library alone.
+from scripts import _publish
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -337,19 +339,16 @@ class HistoryEntry(TypedDict):
     modules: list[dict[str, object]]
 
 
-def read_history(path: Path) -> list[HistoryEntry]:
-    """Read recorded runs, treating a missing history as the first run."""
-    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
-
-
 def changed_since_last_run(history: Path, config: Path) -> bool:
     """Check score inputs against the last published commit; unknown bases run."""
-    entries = read_history(history)
+    entries: list[HistoryEntry] = _publish.read_history(history)
     if not entries:
         return True
     commit = entries[-1]["commit"]
-    if not re.fullmatch(r"[0-9a-f]{40}", commit):
-        raise SystemExit("History contains an invalid commit.")
+    try:
+        _publish.check_commit(commit)
+    except _publish.PublicationError as error:
+        raise SystemExit("History contains an invalid commit.") from error
     known = subprocess.run(
         ["git", "merge-base", "--is-ancestor", commit, "HEAD"], check=False
     )
@@ -370,6 +369,7 @@ def changed_since_last_run(history: Path, config: Path) -> bool:
             "pyproject.toml",
             "uv.lock",
             "scripts/mutation_report.py",
+            "scripts/_publish.py",
             ".github/workflows/mutation.yml",
         ],
         check=False,
@@ -385,6 +385,13 @@ def _check_changes(args: argparse.Namespace) -> None:
 
 def record_run(args: argparse.Namespace) -> None:
     """Validate every planned artifact and append a complete run and badge."""
+    try:
+        _record_run(args)
+    except _publish.PublicationError as error:
+        raise SystemExit(str(error)) from error
+
+
+def _record_run(args: argparse.Namespace) -> None:
     matrix = json.loads(args.matrix)["include"]
     expected = {entry["artifact"] for entry in matrix}
     actual = {path.name for path in args.results.iterdir() if path.is_dir()}
@@ -408,9 +415,8 @@ def record_run(args: argparse.Namespace) -> None:
     for row in results:
         if any(value < 0 for key, value in asdict(row).items() if key != "module"):
             raise SystemExit("Mutation counts cannot be negative.")
-    if not re.fullmatch(r"[0-9a-f]{40}", args.commit):
-        raise SystemExit("--commit must be a full Git commit hash.")
-    entries = read_history(args.history)
+    _publish.check_commit(args.commit)
+    entries: list[HistoryEntry] = _publish.read_history(args.history)
     entry: HistoryEntry = {
         "commit": args.commit,
         "date": args.date,
@@ -419,27 +425,15 @@ def record_run(args: argparse.Namespace) -> None:
     # A workflow retry must not append the same commit twice or replace a newer run.
     if any(item["commit"] == args.commit for item in entries):
         return
-    date = datetime.fromisoformat(args.date)
-    offset = date.utcoffset()
-    if offset is None or offset.total_seconds() != 0:
-        raise SystemExit("--date must be a UTC timestamp.")
-    if entries and datetime.fromisoformat(entries[-1]["date"]) > date:
-        raise SystemExit(
-            "Refusing to publish a run older than the latest recorded run."
-        )
+    _publish.check_newest(entries, _publish.utc_date(args.date))
     entries.append(entry)
     caught = sum(row.caught for row in results)
     decided = sum(row.decided for row in results)
-    badge = {
-        "schemaVersion": 1,
-        "label": "engine mutation score",
-        "message": f"{caught / decided:.1%}" if decided else "n/a",
-        "color": "22d3ee",
-        "labelColor": "0A0A0A",
-    }
-    for path, payload in ((args.history, entries), (args.latest, badge)):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    badge = _publish.badge(
+        "engine mutation score", f"{caught / decided:.1%}" if decided else "n/a"
+    )
+    _publish.write_json(args.history, entries)
+    _publish.write_json(args.latest, badge)
 
 
 def parse_args() -> argparse.Namespace:

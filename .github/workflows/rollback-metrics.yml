@@ -74,7 +74,7 @@ jobs:
         git -C pages-data config user.email '41898282+github-actions[bot]@users.noreply.github.com'
         for attempt in 1 2 3 4 5; do
           echo "Publishing rollback results (attempt $attempt/5)."
-          if ! python3 scripts/rollback_report.py record \
+          if ! python3 -m scripts.rollback_report record \
             --results results --matrix "$matrix" --commit "$COMMIT" --date "$RUN_DATE" \
             --run-id "$RUN_ID" --run-attempt "$RUN_ATTEMPT" \
             --history pages-data/metrics/rollback-history.json \

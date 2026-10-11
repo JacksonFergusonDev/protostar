@@ -49,7 +49,7 @@ jobs:
           if git cat-file -e origin/gh-pages:metrics/mutation-history.json; then
             git show origin/gh-pages:metrics/mutation-history.json > mutation-history.json
           fi
-          changed="$(python3 scripts/mutation_report.py changed --history mutation-history.json)"
+          changed="$(python3 -m scripts.mutation_report changed --history mutation-history.json)"
         else
           changed=true
         fi
@@ -159,7 +159,7 @@ jobs:
         {
           echo "### ${{ matrix.name }} at ${GITHUB_SHA::7}"
           echo
-          uv run --no-sync python scripts/mutation_report.py report \
+          uv run --no-sync python -m scripts.mutation_report report \
             --json mutants/summary.json --survivors mutants/survivors.txt
           echo
           echo "Every survivor's change is in the \`mutation-${{ matrix.artifact }}\` artifact, as survivors.md."
@@ -167,7 +167,7 @@ jobs:
 
     - name: Write survivor diffs
       if: ${{ !cancelled() }}
-      run: uv run --no-sync python scripts/mutation_report.py diffs --out mutants/survivors.md
+      run: uv run --no-sync python -m scripts.mutation_report diffs --out mutants/survivors.md
 
     - name: Upload results
       if: ${{ !cancelled() }}
@@ -203,7 +203,7 @@ jobs:
         {
           echo "### All modules at ${GITHUB_SHA::7}"
           echo
-          python3 scripts/mutation_report.py combine "${summaries[@]}"
+          python3 -m scripts.mutation_report combine "${summaries[@]}"
         } >> "$GITHUB_STEP_SUMMARY"
 
   publish:
@@ -244,7 +244,7 @@ jobs:
         git -C pages-data config user.email '41898282+github-actions[bot]@users.noreply.github.com'
         for attempt in 1 2 3 4 5; do
           echo "Publishing mutation results (attempt $attempt/5)."
-          python3 scripts/mutation_report.py record \
+          python3 -m scripts.mutation_report record \
             --results results --matrix "$MATRIX" --commit "$COMMIT" --date "$recorded_at" \
             --history pages-data/metrics/mutation-history.json \
             --latest pages-data/metrics/mutation-latest.json

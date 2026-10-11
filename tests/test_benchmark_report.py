@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 
+from scripts._publish import PublicationError
 from scripts.benchmarks import report
 from scripts.benchmarks.report import BenchmarkReportError, Status
 
@@ -261,11 +262,11 @@ def test_a_run_older_than_the_latest_or_without_a_utc_date_is_refused(
         {**entry("ubuntu-latest", BEFORE, OLDER), "date": "2026-10-05T00:00:00+00:00"}
     ]
 
-    with pytest.raises(BenchmarkReportError, match="older"):
+    with pytest.raises(PublicationError, match="older"):
         report.record(
             tmp_path, later, commit=HEAD, date="2026-10-02T00:00:00+00:00", run_id="1"
         )
-    with pytest.raises(BenchmarkReportError, match="UTC"):
+    with pytest.raises(PublicationError, match="UTC"):
         report.record(tmp_path, [], commit=HEAD, date="2026-10-02T00:00:00", run_id="1")
 
 
