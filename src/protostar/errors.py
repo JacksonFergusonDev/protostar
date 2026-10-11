@@ -582,8 +582,8 @@ class WorkspaceCollisionError(ProtostarError):
         self.paths = paths
 
     def details(self) -> dict[str, Any]:
-        """Returns the colliding paths as sorted strings."""
-        return {"paths": sorted(str(p) for p in self.paths)}
+        """Returns the colliding paths as sorted POSIX strings."""
+        return {"paths": sorted(p.as_posix() for p in self.paths)}
 
 
 class SecurityViolationError(ProtostarError):

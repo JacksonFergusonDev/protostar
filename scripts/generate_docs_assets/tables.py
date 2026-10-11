@@ -13,26 +13,26 @@ from tomlkit.items import String, StringType, Trivia
 
 from protostar.config import (
     TemplateBlueprint,
-    TemplateSource,
     UserConfig,
     default_config_content,
 )
-from protostar.documents import community, pyproject
-from protostar.manifest import EnvironmentManifest
 from protostar.metadata import METADATA_FIELDS
+from protostar.models import InitRequest
 from protostar.modules import (
     LICENSE_MAP,
     TOOLING_MODULES,
-    BootstrapModule,
     PythonCore,
-    RuffModule,
+    SystemWorkspaceModule,
 )
-from protostar.options import Condition
-from scripts._common import OutputStyle, report
+from protostar.modules.base import ToolModule
+from protostar.orchestrator import Orchestrator
+from protostar.recipe import TOOL_REQUIREMENTS, Tool
 from scripts.generate_docs_assets.common import (
-    ManifestEncoder,
     _format_markdown_table,
     _write_generated_doc,
+    cli_json,
+    demo_project,
+    stable_host,
 )
 
 
@@ -220,34 +220,37 @@ def generate_template_schema_fixture() -> None:
     _write_generated_doc("template_schema.toml", out_str)
 
 
+def _planned(modules: list[ToolModule]) -> set[str]:
+    """Returns every file ``init`` with these tools plans, on a new project."""
+    orchestrator = Orchestrator(
+        [SystemWorkspaceModule(), PythonCore(), *modules],
+        UserConfig(),
+        request=InitRequest(),
+    )
+    return {path.as_posix() for path in orchestrator.plan().planned_files()}
+
+
+def _scaffolded_files(mod: ToolModule) -> list[str]:
+    """Returns the files enabling one tool adds to a new project's plan.
+
+    The tools it requires are on in both plans, so only its own files remain.
+    ``pyproject.toml`` and ``uv.lock`` are shared by every tool, not added by one.
+    """
+    needs = TOOL_REQUIREMENTS.get(Tool(mod.config_key), frozenset())
+    required = [m for m in TOOLING_MODULES if m.config_key in needs]
+    with demo_project(), stable_host():
+        added = _planned([*required, mod]) - _planned(required)
+    return sorted(added - {"pyproject.toml", "uv.lock"})
+
+
 def generate_capability_tables() -> None:
     """Generates Markdown tables detailing modules, templates, and their CLI footprints."""
 
     def _format_flags(flags: tuple[str, ...]) -> str:
         return ", ".join(f"`{f}`" for f in flags) if flags else "*None*"
 
-    def _get_module_scaffolded_files(mod: BootstrapModule) -> str:
-        test_manifest = EnvironmentManifest()
-        mod.build(test_manifest)
-        # pyproject.toml is shared by every tool rather than scaffolded by one.
-        files = sorted(
-            test_manifest.filesystem.file_injections.keys()
-            | (test_manifest.filesystem.structured.keys() - {pyproject.TARGET})
-        )
-        if test_manifest.tooling.wants_hooks:
-            files.append(".pre-commit-config.yaml")
-        if test_manifest.tooling.wants_ci:
-            files.append(".github/workflows/ci.yml")
-        if test_manifest.tooling.wants_release:
-            files.append(".github/workflows/release.yml")
-        if test_manifest.tooling.wants_just:
-            files.append("justfile")
-        if test_manifest.tooling.wants_docker:
-            files.extend(["Dockerfile", ".dockerignore"])
-        if test_manifest.tooling.wants_agents:
-            files.append("AGENTS.md")
-        if test_manifest.tooling.wants_community:
-            files.extend([community.CONTRIBUTING_TARGET, community.PULL_REQUEST_TARGET])
+    def _get_module_scaffolded_files(mod: ToolModule) -> str:
+        files = _scaffolded_files(mod)
         return ", ".join(f"`{f}`" for f in files) if files else "*None*"
 
     # Tooling integration matrix
@@ -275,27 +278,22 @@ def generate_capability_tables() -> None:
     ]
     template_rows = []
 
-    try:
-        templates_dir = importlib.resources.files("protostar.templates")
-        for item in sorted(templates_dir.iterdir(), key=lambda p: p.name):
-            if item.is_file() and item.name.endswith(".toml"):
-                name = item.name[:-5]
-                content = tomllib.loads(item.read_text(encoding="utf-8"))
-                deps = content.get("dependencies", [])
-                deps_formatted = ", ".join(f"`{d}`" for d in deps) if deps else "*None*"
-                template_rows.append(
-                    [
-                        f"`{name}`",
-                        content.get("description", ""),
-                        str(content.get("tier", "*None*")).capitalize(),
-                        f"`protostar init --template {name}`",
-                        deps_formatted,
-                    ]
-                )
-    except Exception as e:
-        report(
-            f"Warning: Failed to load built-in templates: {e}", style=OutputStyle.ERROR
-        )
+    templates_dir = importlib.resources.files("protostar.templates")
+    for item in sorted(templates_dir.iterdir(), key=lambda p: p.name):
+        if item.is_file() and item.name.endswith(".toml"):
+            name = item.name[:-5]
+            content = tomllib.loads(item.read_text(encoding="utf-8"))
+            deps = content.get("dependencies", [])
+            deps_formatted = ", ".join(f"`{d}`" for d in deps) if deps else "*None*"
+            template_rows.append(
+                [
+                    f"`{name}`",
+                    content.get("description", ""),
+                    str(content.get("tier", "*None*")).capitalize(),
+                    f"`protostar init --template {name}`",
+                    deps_formatted,
+                ]
+            )
 
     _write_generated_doc(
         "table_templates.md", _format_markdown_table(template_headers, template_rows)
@@ -464,66 +462,7 @@ def generate_capability_tables() -> None:
 
 
 def generate_manifest_state() -> None:
-    """Simulates an initialization sequence to compute a deterministic JSON manifest."""
-    manifest = EnvironmentManifest()
-
-    # Simulate: `protostar init --template astro --ruff`
-    bootstrap_mods: list[BootstrapModule] = [PythonCore(), RuffModule()]
-    for b_mod in bootstrap_mods:
-        b_mod.build(manifest)
-
-    # Load and apply the built-in astro template
-    target = importlib.resources.files("protostar.templates").joinpath("astro.toml")
-    if target.is_file():
-        blueprint = TemplateSource.load(str(target), built_in="astro").render({})
-        # Gated content applies as a default init would decide: ruff on, the
-        # template's default tier.
-        tier = blueprint.tiers.default.value if blueprint.tiers else None
-        options = {"tier": tier} if tier else {}
-
-        def holds(condition: Condition | None) -> bool:
-            return condition is None or condition.holds({"ruff"}, options)
-
-        def ships(path: str) -> bool:
-            blocks = [block for block in blueprint.optional if block.covers(path)]
-            return not blocks or any(holds(block.requires) for block in blocks)
-
-        for dep in blueprint.dependencies:
-            manifest.dependencies.add(dep)
-        for dep in blueprint.dev_dependencies:
-            manifest.dependencies.add_dev(dep)
-        for dep in blueprint.docs_dependencies:
-            manifest.dependencies.add_docs(dep)
-        for d in blueprint.directories:
-            manifest.filesystem.add_directory(d)
-        for ig in blueprint.vcs_ignores:
-            manifest.filesystem.add_vcs_ignore(ig)
-        for task in blueprint.system_tasks:
-            manifest.tasks.add_system_task(
-                list(task.command), owned_files=list(task.owned_files)
-            )
-        for task in blueprint.post_install_tasks:
-            manifest.tasks.add_post_install_task(
-                list(task.command), owned_files=list(task.owned_files)
-            )
-        for filepath, content in blueprint.files.items():
-            if ships(filepath):
-                manifest.filesystem.add_file_injection(filepath, content)
-        manifest.template_reference = blueprint.reference
-        for identity, payload in blueprint.pyproject_injections.items():
-            if not holds(payload.requires):
-                continue
-            manifest.filesystem.add_structured(
-                "pyproject.toml",
-                payload.content,
-                producer=f"template:{blueprint.reference.identity if blueprint.reference else 'unresolved'}:{identity}",
-            )
-
-    # Override machine-specific IDE paths to guarantee stable JSON diffs in CI
-    manifest.ide_settings = {
-        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
-        "python.terminal.activateEnvironment": True,
-    }
-
-    state_json = json.dumps(manifest, cls=ManifestEncoder, indent=4)
-    _write_generated_doc("manifest_state.json", state_json)
+    """Writes the manifest ``protostar init --template astro --dry-run --json`` prints."""
+    with demo_project(), stable_host():
+        manifest = cli_json("init", "--template", "astro", "--dry-run")["manifest"]
+    _write_generated_doc("manifest_state.json", json.dumps(manifest, indent=2))

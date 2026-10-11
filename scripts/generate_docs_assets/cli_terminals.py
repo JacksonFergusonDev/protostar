@@ -7,9 +7,7 @@ import importlib.resources
 import io
 import os
 import sys
-import tempfile
-from collections.abc import Iterator
-from contextlib import contextmanager, suppress
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 from unittest import mock
@@ -33,6 +31,7 @@ from protostar.modules import (
 )
 from protostar.orchestrator import Orchestrator
 from protostar.system import ProcessRunner
+from scripts.generate_docs_assets.common import demo_project, stub_which
 from scripts.generate_docs_assets.svg import (
     _print_prompt,
     _recording_console,
@@ -89,24 +88,6 @@ def generate_cli_help_svgs() -> None:
         protostar.cli.ui.console = original_global_console
 
 
-@contextmanager
-def _demo_project() -> Iterator[None]:
-    """Runs the body inside a fresh, fixed-name project directory.
-
-    Paths render with the directory's name, so it is fixed for byte-stable output;
-    the regression snapshots use the same name.
-    """
-    with tempfile.TemporaryDirectory() as tmpdir:
-        orig_cwd = os.getcwd()
-        project_dir = Path(tmpdir) / "demo_project"
-        project_dir.mkdir()
-        os.chdir(project_dir)
-        try:
-            yield
-        finally:
-            os.chdir(orig_cwd)
-
-
 def _cli_template_engine(alias: str = "cli") -> tuple[Orchestrator, InitRequest]:
     """Builds the engine `protostar init --template <alias>` would run with defaults."""
     target = importlib.resources.files("protostar.templates").joinpath(f"{alias}.toml")
@@ -132,7 +113,7 @@ def generate_cli_dry_run_svg() -> None:
 
     try:
         protostar.cli.ui.console = record_console
-        with _demo_project():
+        with demo_project():
             engine, request = _cli_template_engine()
             with mock.patch.dict(os.environ, {"PROTOSTAR_OFFLINE_HOOK_REGISTRY": "1"}):
                 manifest = engine.plan()
@@ -158,14 +139,9 @@ def _stub_subprocess(_runner: ProcessRunner, command: list[str], **_: Any) -> No
         Path(".git").mkdir()
 
 
-def _stub_which(name: str) -> str | None:
-    """Reports every required binary present and no IDE CLI to probe."""
-    return None if name in ("code", "cursor") else f"/usr/bin/{name}"
-
-
 def _stub_which_without_tools(name: str) -> str | None:
     """Reports every binary present except the IDE CLIs, direnv, and just."""
-    return None if name in ("direnv", "just") else _stub_which(name)
+    return None if name in ("direnv", "just") else stub_which(name)
 
 
 def generate_cli_missing_tools_svg() -> None:
@@ -180,7 +156,7 @@ def generate_cli_missing_tools_svg() -> None:
     try:
         protostar.cli.ui.console = record_console
         with (
-            _demo_project(),
+            demo_project(),
             mock.patch.dict(os.environ, {"PROTOSTAR_OFFLINE_HOOK_REGISTRY": "1"}),
             mock.patch.object(ProcessRunner, "run", _stub_subprocess),
             mock.patch("shutil.which", _stub_which_without_tools),
@@ -200,7 +176,7 @@ def generate_cli_missing_tools_svg() -> None:
 
 def _stub_which_without_uv(name: str) -> str | None:
     """Reports every binary present except uv and the IDE CLIs."""
-    return None if name == "uv" else _stub_which(name)
+    return None if name == "uv" else stub_which(name)
 
 
 def generate_cli_missing_dependency_svg() -> None:
@@ -215,7 +191,7 @@ def generate_cli_missing_dependency_svg() -> None:
     try:
         protostar.cli.ui.console = record_console
         with (
-            _demo_project(),
+            demo_project(),
             mock.patch("shutil.which", _stub_which_without_uv),
             mock.patch.object(
                 sys, "argv", ["protostar", "init", "--template", "cli", "--no-config"]
@@ -269,10 +245,10 @@ def generate_cli_status_svg() -> None:
 
     try:
         with (
-            _demo_project(),
+            demo_project(),
             mock.patch.dict(os.environ, {"PROTOSTAR_OFFLINE_HOOK_REGISTRY": "1"}),
             mock.patch.object(ProcessRunner, "run", _stub_subprocess_adding),
-            mock.patch("shutil.which", _stub_which),
+            mock.patch("shutil.which", stub_which),
         ):
             engine, request = _cli_template_engine()
             protostar.cli.ui.console = _recording_console(terminal=False)
@@ -319,10 +295,10 @@ def generate_guide_svgs() -> None:
         for alias in ("cli", "astro"):
             record_console = _recording_console(terminal=False)
             with (
-                _demo_project(),
+                demo_project(),
                 mock.patch.dict(os.environ, {"PROTOSTAR_OFFLINE_HOOK_REGISTRY": "1"}),
                 mock.patch.object(ProcessRunner, "run", _stub_subprocess),
-                mock.patch("shutil.which", _stub_which),
+                mock.patch("shutil.which", stub_which),
             ):
                 engine, request = _cli_template_engine(alias)
                 protostar.cli.ui.console = _recording_console(terminal=False)
@@ -354,10 +330,10 @@ def generate_cli_init_svg() -> None:
     try:
         protostar.cli.ui.console = record_console
         with (
-            _demo_project(),
+            demo_project(),
             mock.patch.dict(os.environ, {"PROTOSTAR_OFFLINE_HOOK_REGISTRY": "1"}),
             mock.patch.object(ProcessRunner, "run", _stub_subprocess),
-            mock.patch("shutil.which", _stub_which),
+            mock.patch("shutil.which", stub_which),
         ):
             engine, request = _cli_template_engine()
             protostar.cli.ui._run_engine(engine, request)

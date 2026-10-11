@@ -17,7 +17,7 @@
 | Read the Docs | `--readthedocs` | Publish the documentation website on Read the Docs | `.readthedocs.yaml` |
 | GitHub Actions CI | `--ci` | Run the checks and tests on GitHub for every push and pull request | `.github/workflows/ci.yml` |
 | GitHub Actions Release | `--release` | Publish the package to PyPI when you push a version tag | `.github/workflows/release.yml` |
-| Docker | `--docker` | Package the project as a container image that runs anywhere | `Dockerfile`, `.dockerignore` |
+| Docker | `--docker` | Package the project as a container image that runs anywhere | `.dockerignore`, `Dockerfile` |
 | Just | `--just` | Give the project's common commands short names, like `just test` | `justfile` |
 | Agents | `--agents` | Tell coding assistants how to work on the project | `AGENTS.md` |
-| Community | `--community` | Add the files GitHub shows people who want to contribute | `.github/ISSUE_TEMPLATE/bug_report.yml`, `.github/ISSUE_TEMPLATE/feature_request.yml`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CONTRIBUTING.md`, `.github/pull_request_template.md` |
+| Community | `--community` | Add the files GitHub shows people who want to contribute | `.github/ISSUE_TEMPLATE/bug_report.yml`, `.github/ISSUE_TEMPLATE/feature_request.yml`, `.github/pull_request_template.md`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md` |

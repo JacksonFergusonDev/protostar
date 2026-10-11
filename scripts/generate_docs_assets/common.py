@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
-from collections.abc import Sequence
-from dataclasses import fields, is_dataclass
-from enum import Enum
+import os
+import sys
+import tempfile
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 from protostar.fs import atomic_write_text
 from scripts._common import (
@@ -47,23 +51,73 @@ def _format_markdown_table(
     return "\n".join(table)
 
 
-class ManifestEncoder(json.JSONEncoder):
-    """Custom JSON serialization encoder for the EnvironmentManifest datastructure."""
+@contextlib.contextmanager
+def demo_project() -> Iterator[None]:
+    """Runs the body inside a fresh, fixed-name project directory.
 
-    def default(self, obj: Any) -> Any:
-        if isinstance(obj, (set, frozenset)):
-            return sorted(obj)
-        if isinstance(obj, Path):
-            return obj.as_posix()
-        if isinstance(obj, Enum):
-            return obj.value
-        if is_dataclass(obj) and not isinstance(obj, type):
-            return {
-                f.name: getattr(obj, f.name)
-                for f in fields(obj)
-                if f.name
-                not in {"observe", "producer_contributions", "selections", "recipe"}
-            }
-        if hasattr(obj, "__dict__"):
-            return obj.__dict__
-        return super().default(obj)
+    Paths render with the directory's name, so it is fixed for byte-stable output;
+    the regression snapshots use the same name.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        orig_cwd = os.getcwd()
+        project_dir = Path(tmpdir) / "demo_project"
+        project_dir.mkdir()
+        os.chdir(project_dir)
+        try:
+            yield
+        finally:
+            os.chdir(orig_cwd)
+
+
+def stub_which(name: str) -> str | None:
+    """Reports every required binary present and no IDE CLI to probe."""
+    return None if name in ("code", "cursor") else f"/usr/bin/{name}"
+
+
+@contextlib.contextmanager
+def stable_host(
+    which: Callable[[str], str | None] = stub_which,
+) -> Iterator[None]:
+    """Makes a run read the same on every machine.
+
+    The hook registry is offline (fallback pins), Git reports no identity, and
+    the binaries ``which`` names are the ones installed.
+    """
+    with (
+        mock.patch.dict(os.environ, {"PROTOSTAR_OFFLINE_HOOK_REGISTRY": "1"}),
+        mock.patch("protostar.metadata.get_git_config", return_value=None),
+        mock.patch("shutil.which", which),
+    ):
+        yield
+
+
+def cli_json(*args: str, allow_error: bool = False) -> dict[str, Any]:
+    """Runs ``protostar <args> --json --no-config`` in-process and returns its payload.
+
+    Run inside ``demo_project()`` and ``stable_host()``: the command is the
+    one a reader types, so a fixture can't drift from what it prints.
+
+    Args:
+        *args: The command line after ``protostar``.
+        allow_error: Whether an error payload is the fixture, not a failure.
+    """
+    import protostar.cli.ui as ui
+    from protostar.cli.main import main
+
+    output = io.StringIO()
+    json_mode = ui.is_json_mode
+    try:
+        with (
+            mock.patch.object(
+                sys, "argv", ["protostar", *args, "--json", "--no-config"]
+            ),
+            contextlib.redirect_stdout(output),
+            contextlib.suppress(SystemExit),
+        ):
+            main()
+    finally:
+        ui.is_json_mode = json_mode
+    payload: dict[str, Any] = json.loads(output.getvalue())
+    if payload.get("status") == "error" and not allow_error:
+        raise SystemExit(f"`protostar {' '.join(args)}` failed: {payload['error']}")
+    return payload
