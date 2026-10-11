@@ -4,7 +4,9 @@ name: Retry Timed Out CI
 # change, so it gets up to two fresh attempts. Only GitHub's own timeout
 # annotation counts: a real failure, or a run a newer push cancelled, is left
 # alone however long it ran.
-on:
+# A fork's run can trigger this, but it checks out nothing and only reads the
+# run's jobs before asking GitHub to rerun them.
+on: # zizmor: ignore[dangerous-triggers]
   workflow_run:
     workflows: ["CI"]
     types:

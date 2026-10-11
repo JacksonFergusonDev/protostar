@@ -3,7 +3,8 @@ name: Nightly Report
 # Kept apart from Nightly so that workflow needs only read access when a
 # release calls it. A release's run is the Release workflow's, so it never
 # reaches here.
-on:
+# Nightly runs only on a schedule or a maintainer's dispatch, never for a fork.
+on: # zizmor: ignore[dangerous-triggers]
   workflow_run:
     workflows: ["Nightly"]
     types:
@@ -32,6 +33,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        persist-credentials: false
 
     - name: Open, update, or close the tracking issues
       env:

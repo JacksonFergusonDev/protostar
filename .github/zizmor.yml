@@ -1,0 +1,5 @@
+rules:
+  # Its '$/' paths aren't read by actionlint or tests/test_nightly.py, which
+  # match the './' paths local actions and reusable workflows use.
+  self-repository:
+    disable: true
