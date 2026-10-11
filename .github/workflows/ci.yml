@@ -2,9 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [ "main", "renovate/**" ]
+    branches: [ "main" ]
   pull_request:
     # Stacked PRs need the same checks before their parent merges.
+
+permissions:
+  contents: read
 
 # A new push to a pull request cancels the run it replaces; every push to a
 # branch keeps its own run.
@@ -21,6 +24,10 @@ jobs:
     name: Lint, Docs & Secrets
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    permissions:
+      contents: read
+      # Gitleaks lists a pull request's commits to scan only those.
+      pull-requests: read
 
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -217,3 +224,24 @@ jobs:
         echo "ERROR: api container never answered /health"
         docker logs protostar-smoke-api
         exit 1
+
+  # The one check the main ruleset requires, so a renamed or added matrix entry
+  # can't leave a pull request waiting on a check that never reports. It starts
+  # only after the others finish, so it never adds to the runners in use.
+  ci-passed:
+    name: CI passed
+    needs: [checks, platforms, images-and-dashboard]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+    - name: Require every job to pass
+      env:
+        RESULTS: ${{ toJSON(needs) }}
+      run: |
+        failed=$(jq -r 'to_entries[] | select(.value.result != "success") | "\(.key): \(.value.result)"' <<< "$RESULTS")
+        if [ -n "$failed" ]; then
+          echo "::error title=CI failed::$(paste -sd ';' <<< "$failed")"
+          exit 1
+        fi
