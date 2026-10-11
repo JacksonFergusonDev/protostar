@@ -63,7 +63,9 @@ def git_merge(directory: Path, base: str, local: str, remote: str) -> str | None
         env=GIT_ENV,
         check=False,
     )
-    if result.returncode < 0:
+    # git exits with the number of conflicts, capped at 127; an error exits
+    # above that (255), and a signal leaves a negative code.
+    if not 0 <= result.returncode <= 127:
         raise SystemExit(f"git merge-file failed: {result.stderr}")
     return result.stdout if result.returncode == 0 else None
 

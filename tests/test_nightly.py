@@ -599,6 +599,45 @@ def test_report_lookup_reads_the_issue_body_and_every_comment_page(
     )
 
 
+def test_jobs_reads_every_page_so_a_late_failure_still_counts(monkeypatch):
+    github = GhCli("owner/name")
+    calls = []
+
+    def gh(*args):
+        calls.append(args)
+        return json.dumps(
+            [
+                {
+                    "jobs": [
+                        {"name": f"Job {i}", "conclusion": "success"}
+                        for i in range(100)
+                    ]
+                },
+                {
+                    "jobs": [
+                        {
+                            "name": "Rollback (windows-latest / ml 6/6)",
+                            "conclusion": "failure",
+                        }
+                    ]
+                },
+            ]
+        )
+
+    monkeypatch.setattr(github, "_gh", gh)
+    jobs = github.jobs(Run("owner/name", "7", "a" * 40))
+    assert len(jobs) == 101
+    assert summarize(jobs, {}).failed == ("Rollback (windows-latest / ml 6/6)",)
+    assert calls == [
+        (
+            "api",
+            "repos/owner/name/actions/runs/7/jobs?per_page=100",
+            "--paginate",
+            "--slurp",
+        )
+    ]
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="The gate runs in bash")
 @pytest.mark.parametrize(
     ("last", "pending", "changed"),

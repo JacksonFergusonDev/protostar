@@ -23,6 +23,7 @@ import sys
 import tempfile
 import textwrap
 import tomllib
+import traceback
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
@@ -811,6 +812,10 @@ def check_payload_versions() -> list[str]:
     return problems
 
 
+class WalkthroughRunError(Exception):
+    """The dry run the walkthrough check reads from failed."""
+
+
 def _walkthrough_steps() -> list[str]:
     """Returns the progress steps a run of Astro's workbench tier prints."""
     from protostar.intent import DependencyGroup
@@ -835,6 +840,11 @@ def _walkthrough_steps() -> list[str]:
             text=True,
             timeout=120,
             check=False,
+        )
+    if result.returncode != 0:
+        raise WalkthroughRunError(
+            f"`protostar init --template astro --tier workbench --dry-run --json` "
+            f"exited {result.returncode}:\n{result.stderr.strip()}"
         )
     manifest = json.loads(result.stdout)["manifest"]
 
@@ -1009,7 +1019,11 @@ def main() -> int:
     failed = False
     for check in CHECKS:
         label = (check.__doc__ or check.__name__).splitlines()[0]
-        problems = check()
+        try:
+            problems = check()
+        except Exception:
+            # One broken check must not hide what the others find.
+            problems = [f"the check crashed:\n{traceback.format_exc().rstrip()}"]
         if problems:
             failed = True
             report(f"  FAIL  {label}", style=OutputStyle.ERROR)

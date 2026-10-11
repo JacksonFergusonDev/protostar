@@ -44,6 +44,8 @@ from scripts.benchmarks.stats import Comparison, Summary, compare, summarize
 
 SAMPLE = Path(__file__).with_name("sample.py")
 RESULTS = REPO_ROOT / ".benchmarks"
+# Seconds one sample may run before it counts as hung.
+SAMPLE_TIMEOUT = 900
 
 # Variables that would point a sample's tools at the caller's own caches or
 # configuration instead of the isolated home directory.
@@ -215,17 +217,23 @@ def take(
         str(REPO_ROOT),
     ]
     started = time.perf_counter()
-    process = subprocess.run(
-        command,
-        cwd=project,
-        env=environment,
-        stdin=subprocess.DEVNULL,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        timeout=900,
-    )
+    try:
+        process = subprocess.run(
+            command,
+            cwd=project,
+            env=environment,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=SAMPLE_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise BenchmarkError(
+            f"`protostar {' '.join(scenario.argv)}` ran for more than "
+            f"{SAMPLE_TIMEOUT} seconds under {version.label}, so it can't be timed."
+        ) from error
     wall = time.perf_counter() - started
     if process.returncode != 0 or not output.exists():
         raise BenchmarkError(

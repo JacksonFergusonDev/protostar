@@ -252,3 +252,21 @@ def test_pty_session_close_is_idempotent(tmp_path: Path) -> None:
         assert mock_killpg.call_count == 1
         assert mock_close.call_count == 1
         assert session.master_fd == -1
+
+
+def test_one_output_file_is_refused_for_every_scenario(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from scripts import record_demos
+
+    monkeypatch.setattr(
+        sys, "argv", ["record_demos.py", "all", "--output", "demo.cast"]
+    )
+    with (
+        patch.object(record_demos, "PTYSession") as session,
+        pytest.raises(SystemExit) as exit_,
+    ):
+        record_demos.main()
+    assert exit_.value.code == 2
+    assert "needs a single scenario" in capsys.readouterr().err
+    session.assert_not_called()
