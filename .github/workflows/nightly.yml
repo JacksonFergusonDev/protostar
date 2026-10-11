@@ -77,7 +77,7 @@ jobs:
       env:
         OS: ${{ inputs.os || 'all' }}
         TEMPLATE: ${{ inputs.template || 'all' }}
-      run: echo "rollback=$(python3 scripts/nightly_matrix.py --os "$OS" --template "$TEMPLATE")" >> "$GITHUB_OUTPUT"
+      run: echo "rollback=$(python3 -m scripts.nightly_matrix --os "$OS" --template "$TEMPLATE")" >> "$GITHUB_OUTPUT"
 
   platforms:
     name: Platforms

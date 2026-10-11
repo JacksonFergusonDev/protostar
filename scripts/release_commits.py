@@ -8,11 +8,6 @@ local preparation and the release workflow use these same bounded rules.
 import argparse
 import json
 import sys
-from pathlib import Path
-
-_repo_root = Path(__file__).resolve().parent.parent
-if str(_repo_root) not in sys.path:
-    sys.path.insert(0, str(_repo_root))
 
 from scripts._common import OutputStyle, report, run_repo_cmd
 

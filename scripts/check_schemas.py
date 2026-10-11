@@ -10,7 +10,7 @@ Checks (``CHECKS``, then the schemas Protostar emits):
 7. Internal template definitions against Protostar's exported schema.
 
 Run:
-    uv run python scripts/check_schemas.py
+    uv run python -m scripts.check_schemas
 """
 
 from __future__ import annotations
@@ -21,10 +21,6 @@ import tempfile
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-
-_repo_root = Path(__file__).resolve().parent.parent
-if str(_repo_root) not in sys.path:
-    sys.path.insert(0, str(_repo_root))
 
 from scripts._common import (
     REPO_ROOT,

@@ -101,7 +101,7 @@ The dashboard source lives in `metrics/` on `main`. Pages publishing combines th
 
 ```bash
 node --test tests/metrics_dashboard.test.mjs
-uv run python scripts/serve_metrics.py --benchmark-history .benchmarks/history.json
+uv run python -m scripts.serve_metrics --benchmark-history .benchmarks/history.json
 ```
 
 ### Local Benchmarks

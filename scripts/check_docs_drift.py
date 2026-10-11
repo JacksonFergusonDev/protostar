@@ -7,7 +7,7 @@ would cost more than it saves, so this script derives the fact from the code and
 fails when a page disagrees, naming the fix.
 
 Run:
-    uv run python scripts/check_docs_drift.py
+    uv run python -m scripts.check_docs_drift
 """
 
 from __future__ import annotations
@@ -27,10 +27,6 @@ import traceback
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
-
-_repo_root = Path(__file__).resolve().parent.parent
-if str(_repo_root) not in sys.path:
-    sys.path.insert(0, str(_repo_root))
 
 from scripts._common import (
     DOCS_DIR,

@@ -9,9 +9,9 @@ warning. Anything the translator cannot express stops the script unless the
 rule is listed in EXCLUDE with a reason; no rule is dropped silently.
 
 Usage:
-    python scripts/sync_secret_rules.py          # regenerate the module
-    python scripts/sync_secret_rules.py --check  # exit 1 if it is out of date
-    python scripts/sync_secret_rules.py --dump   # print the rules as JSON
+    python -m scripts.sync_secret_rules          # regenerate the module
+    python -m scripts.sync_secret_rules --check  # exit 1 if it is out of date
+    python -m scripts.sync_secret_rules --dump   # print the rules as JSON
 """
 
 from __future__ import annotations
@@ -27,16 +27,10 @@ import tomllib
 import warnings
 import zlib
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
-# Self-sufficient under a bare interpreter (the release workflow runs one):
-# everything imported below needs only the standard library.
-_repo_root = Path(__file__).resolve().parent.parent
-for _path in (str(_repo_root), str(_repo_root / "src")):
-    if _path not in sys.path:
-        sys.path.insert(0, _path)
-
+# The release workflow runs this under a bare interpreter: everything imported
+# below needs only the standard library.
 from protostar._fallbacks import DEFAULT_REVISIONS
 from protostar.fs import atomic_write_text
 from protostar.secret_guard import (
@@ -462,7 +456,7 @@ def render(
         "",
         "The rules are stored compressed rather than as text, so that secret",
         "scanners do not mistake their patterns, or the publicly known keys some",
-        "allowlists name, for leaked credentials. `python scripts/sync_secret_rules.py",
+        "allowlists name, for leaked credentials. `python -m scripts.sync_secret_rules",
         "--dump` prints them.",
         "",
         "Patterns are translated from Go's regexp syntax to Python's. gitleaks is",

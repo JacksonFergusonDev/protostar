@@ -7,12 +7,7 @@ import time
 from pathlib import Path
 from typing import Any, NoReturn
 
-_repo_root = Path(__file__).resolve().parent.parent
-if str(_repo_root) not in sys.path:
-    sys.path.insert(0, str(_repo_root))
-
 from scripts._common import (
-    SCRIPTS_DIR,
     CodeLanguage,
     OutputStyle,
     report,
@@ -31,9 +26,9 @@ def prepare_inputs() -> bool:
     report()
     report("Preparing release", style=OutputStyle.TITLE)
     report()
-    for script in ("sync_registry_fallbacks.py", "sync_secret_rules.py"):
+    for script in ("sync_registry_fallbacks", "sync_secret_rules"):
         # Separate processes let the rules generator import the refreshed pins.
-        result = run_repo_cmd([sys.executable, str(SCRIPTS_DIR / script)])
+        result = run_repo_cmd([sys.executable, "-m", f"scripts.{script}"])
         report()
         if result.returncode:
             report(

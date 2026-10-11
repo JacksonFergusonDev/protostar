@@ -4,7 +4,7 @@ Every template runs on every OS; Windows, where each run is slowest, splits
 each template into slices so no job runs for hours. A manual run can narrow
 the matrix to reproduce one failure without starting every job.
 
-Usage: ``python scripts/nightly_matrix.py [--os OS] [--template TEMPLATE]``
+Usage: ``python -m scripts.nightly_matrix [--os OS] [--template TEMPLATE]``
 prints the matrix as JSON for ``strategy.matrix``.
 """
 

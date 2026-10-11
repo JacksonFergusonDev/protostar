@@ -15,10 +15,6 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import BinaryIO
 
-_repo_root = Path(__file__).resolve().parent.parent
-if str(_repo_root) not in sys.path:
-    sys.path.insert(0, str(_repo_root))
-
 from scripts._common import DOCS_DIR, OutputStyle, fetch_bytes, report
 from scripts.prepare_pages import (
     FOOTER_CSS,

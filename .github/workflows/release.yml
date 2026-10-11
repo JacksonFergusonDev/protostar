@@ -28,10 +28,10 @@ jobs:
           python-version: "3.14"
 
       - name: Verify registry fallbacks
-        run: python scripts/sync_registry_fallbacks.py --check
+        run: python -m scripts.sync_registry_fallbacks --check
 
       - name: Verify secret-detection rules
-        run: python scripts/sync_secret_rules.py --check
+        run: python -m scripts.sync_secret_rules --check
 
       - name: Build distribution
         run: uv build
@@ -65,7 +65,7 @@ jobs:
           REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: |
-          candidates=$(python scripts/release_commits.py "$GITHUB_SHA" --tagged)
+          candidates=$(python -m scripts.release_commits "$GITHUB_SHA" --tagged)
           missing=0
           for workflow in ci.yml nightly.yml; do
             mapfile -t workflow_candidates < <(jq -r --arg workflow "$workflow" '.[$workflow][]' <<< "$candidates")

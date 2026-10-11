@@ -101,7 +101,7 @@ repos:
 
       - id: check-doc-links
         name: check embedded doc links
-        entry: uv run python scripts/check_doc_links.py
+        entry: uv run python -m scripts.check_doc_links
         language: system
         pass_filenames: false
         files: ^(docs/|src/protostar/docs_registry\.py|src/protostar/modules/|scripts/check_doc_links\.py)
@@ -109,7 +109,7 @@ repos:
 
       - id: check-docs-drift
         name: check docs match the code
-        entry: uv run python scripts/check_docs_drift.py
+        entry: uv run python -m scripts.check_docs_drift
         language: system
         pass_filenames: false
         files: ^(docs/|README\.md|CONTRIBUTING\.md|AGENTS\.md|justfile|zensical\.toml|pyproject\.toml|src/protostar/|tests/|scripts/check_docs_drift\.py|\.github/ISSUE_TEMPLATE/feature_request\.yml)
@@ -117,7 +117,7 @@ repos:
 
       - id: check-schemas
         name: check schema validity
-        entry: uv run --locked python scripts/check_schemas.py
+        entry: uv run --locked python -m scripts.check_schemas
         language: system
         pass_filenames: false
         files: ^(\.pre-commit-config\.yaml|\.github/|src/protostar/|tests/snapshots/|pyproject\.toml|scripts/check_schemas\.py)
@@ -133,7 +133,7 @@ repos:
 
       - id: check-snapshots
         name: check snapshot drift
-        entry: uv run python scripts/run_snapshots.py
+        entry: uv run python -m scripts.run_snapshots
         language: system
         pass_filenames: false
         files: ^(src/|scripts/(run_snapshots\.py|generate_docs_assets/)|tests/snapshots/|docs/generated/|docs/assets/terminals/|pyproject\.toml|uv\.lock)

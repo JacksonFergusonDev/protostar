@@ -24,11 +24,6 @@ CONSTRAINTS_FILE: Path = SNAPSHOTS_DIR / "constraints.txt"
 VENV_DIR: Path = REPO_ROOT / ".venv"
 VENV_BIN: Path = VENV_DIR / ("Scripts" if sys.platform == "win32" else "bin")
 
-# Ensure REPO_ROOT, SCRIPTS_DIR, and SRC_DIR are available on sys.path
-for _path in (str(REPO_ROOT), str(SCRIPTS_DIR), str(SRC_DIR)):
-    if _path not in sys.path:
-        sys.path.insert(0, _path)
-
 
 class OutputStyle(StrEnum):
     """Shared emphasis for human-facing repository script output."""

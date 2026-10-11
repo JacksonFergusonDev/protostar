@@ -79,7 +79,7 @@ def test_schema_callers_require_the_committed_lock():
         for hook in repo["hooks"]
         if hook["id"] == "check-schemas"
     )
-    command = "uv run --locked python scripts/check_schemas.py"
+    command = "uv run --locked python -m scripts.check_schemas"
     assert hook["entry"] == command
     workflow = yaml.load(
         (root / ".github/workflows/ci.yml").read_text(encoding="utf-8")
