@@ -24,8 +24,9 @@ from protostar.models import ExecutionResult
 from protostar.orchestrator import Orchestrator
 from protostar.sync_state import FilePolicy, deserialize_state
 from protostar.system import ProcessRunner
+from protostar.templates import builtin_template_aliases
 
-BUILTIN_TEMPLATES = ("cli", "astro", "ml", "api", "lib")
+BUILTIN_TEMPLATES = sorted(builtin_template_aliases())
 
 
 @pytest.fixture(autouse=True)

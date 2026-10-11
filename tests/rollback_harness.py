@@ -42,10 +42,9 @@ import pytest
 from protostar import fs_transaction, journal, system
 from protostar.errors import CommandExecutionError, ProcessTerminationError
 from scripts.benchmarks.probes import command_label
+from scripts.nightly_matrix import TEMPLATES
 
 SITES_DIR = Path(__file__).parent / "rollback_sites"
-
-TEMPLATES = ("api", "astro", "cli", "lib", "ml")
 
 # The process a command that won't stop reports (RollbackFault.unstoppable).
 UNSTOPPABLE_PID = 4242
