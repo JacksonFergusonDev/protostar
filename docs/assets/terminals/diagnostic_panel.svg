@@ -1,4 +1,4 @@
-<svg class="rich-terminal" viewBox="0 0 958 196.39999999999998" xmlns="http://www.w3.org/2000/svg">
+<svg class="rich-terminal" viewBox="0 0 970 123.19999999999999" xmlns="http://www.w3.org/2000/svg">
     <!-- Generated with Rich https://www.textualize.io -->
     <style>
 
@@ -35,43 +35,29 @@
     .diagnostic_panel-r1 { fill: #22d3ee;font-weight: bold }
 .diagnostic_panel-r2 { fill: #e2e8f0 }
 .diagnostic_panel-r3 { fill: #4b5b64 }
-.diagnostic_panel-r4 { fill: #22d3ee }
-.diagnostic_panel-r5 { fill: #8b8f94 }
-.diagnostic_panel-r6 { fill: #fbbf24 }
+.diagnostic_panel-r4 { fill: #8b8f94 }
     </style>
 
     <defs>
     <clipPath id="diagnostic_panel-clip-terminal">
-      <rect x="0" y="0" width="938.4" height="145.39999999999998" />
+      <rect x="0" y="0" width="950.5999999999999" height="72.19999999999999" />
     </clipPath>
     <clipPath id="diagnostic_panel-line-0">
-    <rect x="0" y="1.5" width="939.4" height="24.65"/>
+    <rect x="0" y="1.5" width="951.6" height="24.65"/>
             </clipPath>
 <clipPath id="diagnostic_panel-line-1">
-    <rect x="0" y="25.9" width="939.4" height="24.65"/>
-            </clipPath>
-<clipPath id="diagnostic_panel-line-2">
-    <rect x="0" y="50.3" width="939.4" height="24.65"/>
-            </clipPath>
-<clipPath id="diagnostic_panel-line-3">
-    <rect x="0" y="74.7" width="939.4" height="24.65"/>
-            </clipPath>
-<clipPath id="diagnostic_panel-line-4">
-    <rect x="0" y="99.1" width="939.4" height="24.65"/>
+    <rect x="0" y="25.9" width="951.6" height="24.65"/>
             </clipPath>
     </defs>
 
-    <rect fill="#090e11" x="0.5" y="0.5" width="957" height="195.4" rx="8"/><path fill="#11171c" d="M0.5 32V8.5a8 8 0 0 1 8 -8H949a8 8 0 0 1 8 8V32Z"/><path stroke="#243138" d="M0.5 32.5H957"/><circle cx="20" cy="16.5" r="5.5" fill="#ff5f56" stroke="#e0443e"/><circle cx="38" cy="16.5" r="5.5" fill="#ffbd2e" stroke="#dea123"/><circle cx="56" cy="16.5" r="5.5" fill="#27c93f" stroke="#1aab29"/><text fill="#7a909c" x="479" y="21" text-anchor="middle" font-family="JetBrains Mono, Fira Code, monospace" font-size="11" letter-spacing="0.6">Diagnostic Summary</text><rect fill="none" stroke="#2d3c43" x="0.5" y="0.5" width="957" height="195.4" rx="8"/>
+    <rect fill="#090e11" x="0.5" y="0.5" width="969" height="122.2" rx="8"/><path fill="#11171c" d="M0.5 32V8.5a8 8 0 0 1 8 -8H961a8 8 0 0 1 8 8V32Z"/><path stroke="#243138" d="M0.5 32.5H969"/><circle cx="20" cy="16.5" r="5.5" fill="#ff5f56" stroke="#e0443e"/><circle cx="38" cy="16.5" r="5.5" fill="#ffbd2e" stroke="#dea123"/><circle cx="56" cy="16.5" r="5.5" fill="#27c93f" stroke="#1aab29"/><text fill="#7a909c" x="485" y="21" text-anchor="middle" font-family="JetBrains Mono, Fira Code, monospace" font-size="11" letter-spacing="0.6">Diagnostic Summary</text><rect fill="none" stroke="#2d3c43" x="0.5" y="0.5" width="969" height="122.2" rx="8"/>
 
     <g transform="translate(9, 41)" clip-path="url(#diagnostic_panel-clip-terminal)">
 
     <g class="diagnostic_panel-matrix">
-    <text class="diagnostic_panel-r1" x="0" y="20" textLength="134.2" clip-path="url(#diagnostic_panel-line-0)">DIAGNOSTICS</text><text class="diagnostic_panel-r3" x="146.4" y="20" textLength="793" clip-path="url(#diagnostic_panel-line-0)">─────────────────────────────────────────────────────────────────</text><text class="diagnostic_panel-r2" x="939.4" y="20" textLength="12.2" clip-path="url(#diagnostic_panel-line-0)">
-</text><text class="diagnostic_panel-r4" x="24.4" y="44.4" textLength="85.4" clip-path="url(#diagnostic_panel-line-1)">•&#160;[Git]</text><text class="diagnostic_panel-r2" x="109.8" y="44.4" textLength="573.4" clip-path="url(#diagnostic_panel-line-1)">&#160;Initialized&#160;fresh&#160;git&#160;repository&#160;in&#160;workspace.</text><text class="diagnostic_panel-r2" x="939.4" y="44.4" textLength="12.2" clip-path="url(#diagnostic_panel-line-1)">
-</text><text class="diagnostic_panel-r5" x="24.4" y="68.8" textLength="829.6" clip-path="url(#diagnostic_panel-line-2)">[i]&#160;[Direnv]&#160;Auto-activation&#160;hook&#160;skipped;&#160;binary&#160;not&#160;found&#160;in&#160;PATH.</text><text class="diagnostic_panel-r2" x="939.4" y="68.8" textLength="12.2" clip-path="url(#diagnostic_panel-line-2)">
-</text><text class="diagnostic_panel-r5" x="24.4" y="93.2" textLength="817.4" clip-path="url(#diagnostic_panel-line-3)">&#160;&#160;Install&#160;direnv&#160;to&#160;enable&#160;seamless&#160;directory&#160;traversal&#160;activation.</text><text class="diagnostic_panel-r2" x="939.4" y="93.2" textLength="12.2" clip-path="url(#diagnostic_panel-line-3)">
-</text><text class="diagnostic_panel-r6" x="24.4" y="117.6" textLength="195.2" clip-path="url(#diagnostic_panel-line-4)">⚠&#160;[MarkdownLint]</text><text class="diagnostic_panel-r2" x="219.6" y="117.6" textLength="719.8" clip-path="url(#diagnostic_panel-line-4)">&#160;Linter&#160;configuration&#160;scaffolded&#160;with&#160;relaxed&#160;schema&#160;rules.</text><text class="diagnostic_panel-r2" x="939.4" y="117.6" textLength="12.2" clip-path="url(#diagnostic_panel-line-4)">
-</text><text class="diagnostic_panel-r5" x="24.4" y="142" textLength="732" clip-path="url(#diagnostic_panel-line-5)">&#160;&#160;Install&#160;markdownlint-cli2&#160;to&#160;enable&#160;git&#160;hook&#160;verification.</text><text class="diagnostic_panel-r2" x="939.4" y="142" textLength="12.2" clip-path="url(#diagnostic_panel-line-5)">
+    <text class="diagnostic_panel-r1" x="0" y="20" textLength="134.2" clip-path="url(#diagnostic_panel-line-0)">DIAGNOSTICS</text><text class="diagnostic_panel-r3" x="146.4" y="20" textLength="805.2" clip-path="url(#diagnostic_panel-line-0)">──────────────────────────────────────────────────────────────────</text><text class="diagnostic_panel-r2" x="951.6" y="20" textLength="12.2" clip-path="url(#diagnostic_panel-line-0)">
+</text><text class="diagnostic_panel-r4" x="24.4" y="44.4" textLength="927.2" clip-path="url(#diagnostic_panel-line-1)">[i]&#160;[Direnv]&#160;Skipping&#160;`direnv&#160;allow`;&#160;direnv&#160;is&#160;not&#160;installed.&#160;Run&#160;it&#160;in&#160;the</text><text class="diagnostic_panel-r2" x="951.6" y="44.4" textLength="12.2" clip-path="url(#diagnostic_panel-line-1)">
+</text><text class="diagnostic_panel-r4" x="24.4" y="68.8" textLength="402.6" clip-path="url(#diagnostic_panel-line-2)">project&#160;once&#160;direnv&#160;is&#160;installed.</text><text class="diagnostic_panel-r2" x="951.6" y="68.8" textLength="12.2" clip-path="url(#diagnostic_panel-line-2)">
 </text>
     </g>
     </g>
