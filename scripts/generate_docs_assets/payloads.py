@@ -6,86 +6,42 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from typing import Any
 
 import protostar.cli.schema
-from protostar.cli.changes import classify, entries_record
 from protostar.config import UserConfig
-from protostar.errors import WorkspaceCollisionError
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
 from protostar.models import ExecutionResult
-from protostar.modules import (
-    BootstrapModule,
-    PythonCore,
-    RuffModule,
-    SystemWorkspaceModule,
+from protostar.preparation import prepare_review
+from scripts.generate_docs_assets.common import (
+    _write_generated_doc,
+    cli_json,
+    demo_project,
+    stable_host,
 )
-from protostar.preparation import ExecutionPolicy, prepare_review, review_phase
-from scripts.generate_docs_assets.common import _write_generated_doc
+
+# An existing project with no recipe yet, so the planned payload shows analysis.
+_EXISTING_PYPROJECT = (
+    '[project]\nname = "demo"\nrequires-python = ">=3.12"\n'
+    'authors = [{ name = "Demo Author" }]\n'
+    'dependencies = []\n\n[dependency-groups]\ndev = ["pytest"]\n\n'
+    "[tool.ruff]\nline-length = 100\n"
+)
 
 
 def generate_agent_payloads() -> None:
     """Generates JSON payloads for the Agent & Machine Interface documentation."""
     orig_cwd = Path.cwd()
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        try:
-            os.chdir(tmp_dir)
-            # 1. Planned payload computed dynamically from an EnvironmentManifest
-            manifest = EnvironmentManifest(
-                metadata={
-                    "description": "High-velocity CLI application.",
-                    "author_name": "Demo Author",
-                    "license": "MIT",
-                }
-            )
-            bootstrap_mods: list[BootstrapModule] = [
-                SystemWorkspaceModule(),
-                PythonCore(user_config=UserConfig()),
-                RuffModule(),
-            ]
-            for b_mod in bootstrap_mods:
-                b_mod.build(manifest)
-
-            # Set mock IDE settings for stable deterministic fixtures
-            manifest.ide_settings = {
-                "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
-                "python.terminal.activateEnvironment": True,
-            }
-
-            # Analysis reads a separate example project, so the manifest above
-            # stays that of a new one.
-            from protostar.analysis import analyze_project
-
-            existing = Path(tmp_dir, "existing")
-            existing.mkdir()
-            (existing / "pyproject.toml").write_text(
-                '[project]\nname = "demo"\nrequires-python = ">=3.12"\n'
-                'authors = [{ name = "Demo Author" }]\n'
-                'dependencies = []\n\n[dependency-groups]\ndev = ["pytest"]\n\n'
-                "[tool.ruff]\nline-length = 100\n"
-            )
-            (existing / "LICENSE").write_text(
-                "MIT License\n\nCopyright (c) 2024 Demo Author\n"
-            )
-            prepared = prepare_review(
-                manifest,
-                UserConfig(),
-                policy=ExecutionPolicy.INITIALIZATION,
-                phase=review_phase(manifest),
-            )
-            planned_payload = {
-                "api_version": protostar.cli.schema.CLI_API_VERSION,
-                "status": "planned",
-                "manifest": manifest.to_dict(),
-                "entries": entries_record(classify(manifest, prepared)),
-                "review": prepared.to_dict(),
-                "analysis": analyze_project(existing).to_dict(),
-            }
-            _write_generated_doc(
-                "agent_payload_planned.json", json.dumps(planned_payload, indent=2)
-            )
-        finally:
-            os.chdir(orig_cwd)
+    # 1. The payloads a reader's own command prints: a dry run in an existing
+    #    project, and the collision an init without a strategy stops at.
+    with demo_project(), stable_host():
+        Path("pyproject.toml").write_text(_EXISTING_PYPROJECT, encoding="utf-8")
+        Path("LICENSE").write_text(
+            "MIT License\n\nCopyright (c) 2024 Demo Author\n", encoding="utf-8"
+        )
+        planned = cli_json("init", "--dry-run", "--force-merge")
+        error = cli_json("init", "--template", "cli", allow_error=True)
+    _write_generated_doc("agent_payload_planned.json", json.dumps(planned, indent=2))
+    _write_generated_doc("agent_payload_error.json", json.dumps(error, indent=2))
 
     # Lifecycle examples use the shipped preparation and presentation path.
     from protostar.cli.reviews import review_payload
@@ -119,7 +75,7 @@ def generate_agent_payloads() -> None:
         finally:
             os.chdir(orig_cwd)
 
-    # 2. Success payload generated dynamically using ExecutionResult
+    # 2. Success payload, through ExecutionResult's own serialization
     paths = frozenset(
         [
             ".gitignore",
@@ -140,26 +96,4 @@ def generate_agent_payloads() -> None:
     }
     _write_generated_doc(
         "agent_payload_success.json", json.dumps(success_payload, indent=2)
-    )
-
-    # 3. Error payload generated dynamically using WorkspaceCollisionError
-    err = WorkspaceCollisionError(paths=frozenset([Path("pyproject.toml")]))
-    error_dict: dict[str, Any] = {
-        "type": type(err).__name__,
-        "message": str(err),
-    }
-    if err.hint:
-        error_dict["hint"] = err.hint
-    if err.docs_url:
-        error_dict["docs_url"] = err.docs_url
-    if isinstance(err, WorkspaceCollisionError):
-        error_dict["paths"] = sorted(str(p) for p in err.paths)
-
-    error_payload = {
-        "api_version": protostar.cli.schema.CLI_API_VERSION,
-        "status": "error",
-        "error": error_dict,
-    }
-    _write_generated_doc(
-        "agent_payload_error.json", json.dumps(error_payload, indent=2)
     )
