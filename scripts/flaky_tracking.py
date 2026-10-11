@@ -2,7 +2,7 @@
 
 Issue bodies hold a small managed block; the awaiting-verification label's
 latest event anchors a fix. No clean result is inferred from silence, a retry,
-or the outcome of an entire job. Issue history survives migration and closure.
+or the outcome of an entire job. Issue history survives closure.
 """
 
 from __future__ import annotations
@@ -24,7 +24,6 @@ START = "<!-- protostar-flake:start -->"
 END = "<!-- protostar-flake:end -->"
 BLOCK = re.compile(re.escape(START) + r".*?" + re.escape(END), re.DOTALL)
 STATE = re.compile(r"<!-- state:([A-Za-z0-9+/=]+) -->")
-LEGACY_TITLE = "Flaky tests in the nightly run"
 
 
 class Result(StrEnum):
@@ -141,7 +140,6 @@ class Store(Protocol):
     """The small issue interface the tracker needs."""
 
     def issues(self) -> list[Issue]: ...
-    def comments(self, number: int) -> list[str]: ...
     def create(self, flake: Flake, body: str) -> Issue: ...
     def update(self, number: int, body: str) -> None: ...
     def comment_once(self, number: int, body: str) -> None: ...
@@ -150,33 +148,13 @@ class Store(Protocol):
     def remove_awaiting(self, number: int) -> None: ...
 
 
-def _legacy_tests(text: str) -> dict[str, set[str]]:
-    found: dict[str, set[str]] = {}
-    for test, platforms in re.findall(
-        r"^- `([^`]+)` \(([^\n]+)\)$", text, re.MULTILINE
-    ):
-        for name in platforms.split(", "):
-            match = re.fullmatch(
-                r"(?:rollback-)?(ubuntu-latest|macos-latest|windows-latest)(?:-py(3\.\d+)|-[a-z]+-\d+)",
-                name,
-            )
-            if match:
-                system = {
-                    "ubuntu-latest": "linux",
-                    "macos-latest": "macos",
-                    "windows-latest": "windows",
-                }[match[1]]
-                found.setdefault(test, set()).add(f"{system}-py{match[2] or '3.14'}")
-    return found
-
-
 def recurrence_body(run: Nightly, failures: set[str]) -> str:
     """Describe an occurrence once, whether it opens an issue or comments."""
     return f"Failed or needed a retry at `{run.sha[:7]}` ([run]({run.url})) on {', '.join(sorted(failures))}. Verification reset; this test needs a fix."
 
 
 def track(store: Store, run: Nightly, evidence: Evidence) -> None:
-    """Migrate aggregate issues, report recurrences, and verify each fixed test."""
+    """Open an issue for each new flake, report recurrences, and verify fixes."""
     issues = store.issues()
     created: set[str] = set()
     tracked = {
@@ -184,45 +162,6 @@ def track(store: Store, run: Nightly, evidence: Evidence) -> None:
         for issue in issues
         if (flake := decode(issue.body)) is not None
     }
-    for aggregate in issues:
-        if (
-            aggregate.closed
-            or aggregate.title != LEGACY_TITLE
-            or decode(aggregate.body)
-        ):
-            continue
-        imported = _legacy_tests(
-            "\n".join([aggregate.body, *store.comments(aggregate.number)])
-        )
-        if not imported:
-            continue
-        numbers = []
-        for test, platforms in sorted(imported.items()):
-            if test not in tracked:
-                flake = Flake(test, tuple(sorted(platforms)))
-                issue = store.create(
-                    flake,
-                    body_for(
-                        flake,
-                        f"Imported from #{aggregate.number}; its reports remain there as history.",
-                    ),
-                )
-                tracked[test] = issue, flake
-            else:
-                issue, flake = tracked[test]
-                flake = replace(
-                    flake, platforms=tuple(sorted(set(flake.platforms) | platforms))
-                )
-                store.update(issue.number, body_for(flake, issue.body))
-                tracked[test] = replace(issue, body=body_for(flake, issue.body)), flake
-            numbers.append(f"#{tracked[test][0].number}")
-        store.comment_once(
-            aggregate.number,
-            "Tracking has moved to individual test issues: "
-            + ", ".join(numbers)
-            + ". This aggregate is closed because tracking moved; the tests are not yet verified fixed.",
-        )
-        store.close(aggregate.number)
 
     for test, observed in sorted(evidence.items()):
         flaky = tuple(
@@ -365,7 +304,7 @@ class IssueStore:
         return result
 
     def comments(self, number: int) -> list[str]:
-        """Read every comment, including historical aggregate reports."""
+        """Read every comment on an issue."""
         return [
             item["body"]
             for item in self._pages(

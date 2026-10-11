@@ -9,7 +9,6 @@ import pytest
 
 from scripts.flaky_tracking import (
     AWAITING,
-    LEGACY_TITLE,
     Flake,
     Issue,
     IssueStore,
@@ -213,42 +212,6 @@ def test_a_reporter_retry_finishes_a_partially_applied_closure(failure):
     assert store.items[1].awaiting_since is None
     assert state(store).clean_runs == (1, 2, 3)
     assert len(store.comments(1)) == 1
-
-
-def test_aggregate_migration_imports_all_comments_and_links_individual_issues():
-    legacy = f"- `{TEST}` (rollback-windows-latest-astro-6)\n"
-    store = FakeStore(Issue(455, LEGACY_TITLE, legacy))
-    store.notes[455] = [
-        "- `tests/t.py::another` (macos-latest-py3.13)\n",
-        f"- `{TEST}` (rollback-ubuntu-latest-astro-2)\n",
-    ]
-    track(store, nightly(1), {})
-    assert store.items[455].closed
-    assert len(store.items) == 3
-    individual = next(
-        i for i in store.items.values() if (f := decode(i.body)) and f.test == TEST
-    )
-    imported = decode(individual.body)
-    assert imported is not None
-    assert imported.platforms == tuple(sorted((WIN, LINUX)))
-    assert "#455" in individual.body
-    assert "not yet verified fixed" in store.comments(455)[-1]
-    notes = list(store.comments(455))
-    track(store, nightly(1), {})
-    assert len(store.items) == 3
-    assert store.comments(455) == notes
-
-
-def test_migration_resumes_after_github_fails_without_duplicate_test_issues():
-    legacy = f"- `{TEST}` (rollback-windows-latest-astro-6)\n"
-    store = FakeStore(Issue(455, LEGACY_TITLE, legacy))
-    store.fail = "close"
-    with pytest.raises(OSError, match="GitHub unavailable"):
-        track(store, nightly(1), {})
-    track(store, nightly(1), {})
-    assert len(store.items) == 2
-    assert len(store.comments(455)) == 1
-    assert store.items[455].closed
 
 
 def test_state_encoding_handles_special_test_ids_and_preserves_body_notes():

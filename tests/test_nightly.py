@@ -429,9 +429,8 @@ def test_a_release_publishes_only_after_ci_nightly_and_its_smoke_test_pass():
 
 
 class FakeGitHub:
-    def __init__(self, jobs, flaky=None, open_issues=None, last_passing="a" * 40):
+    def __init__(self, jobs, open_issues=None, last_passing="a" * 40):
         self._jobs = jobs
-        self._flaky = flaky or {}
         self._open = dict(open_issues or {})
         self._last_passing = last_passing
         self.calls: list[tuple[str, object, str]] = []
@@ -440,9 +439,6 @@ class FakeGitHub:
 
     def jobs(self, run):
         return self._jobs
-
-    def flaky_lists(self, run):
-        return self._flaky
 
     def track_tests(self, run):
         self.tracked.append(run)
@@ -544,15 +540,10 @@ def test_a_pass_closes_the_open_failure_issue(open_issues):
 
 
 def test_flaky_tests_are_handed_to_the_per_test_tracker_even_when_the_run_passes():
-    github = FakeGitHub(PASSED, flaky={"flaky-tests-windows-py3.14": "t::a\n"})
-    assert report(github, RUN).flaky == {"t::a": ("windows-py3.14",)}
+    github = FakeGitHub(PASSED)
+    report(github, RUN)
     assert github.calls == []
     assert github.tracked == [RUN]
-
-
-def test_summarize_ignores_blank_lines_in_flaky_lists():
-    outcome = summarize(PASSED, {"flaky-tests-ubuntu-latest-py3.12": "\n t::a \n\n"})
-    assert outcome.flaky == {"t::a": ("ubuntu-latest-py3.12",)}
 
 
 @pytest.mark.parametrize("existing", [False, True], ids=["new-issue", "open-issue"])
@@ -627,7 +618,7 @@ def test_jobs_reads_every_page_so_a_late_failure_still_counts(monkeypatch):
     monkeypatch.setattr(github, "_gh", gh)
     jobs = github.jobs(Run("owner/name", "7", "a" * 40))
     assert len(jobs) == 101
-    assert summarize(jobs, {}).failed == ("Rollback (windows-latest / ml 6/6)",)
+    assert summarize(jobs).failed == ("Rollback (windows-latest / ml 6/6)",)
     assert calls == [
         (
             "api",
