@@ -2,12 +2,6 @@
 import argparse
 import json
 import sys
-from pathlib import Path
-
-_repo_root = Path(__file__).resolve().parent.parent
-for _path in (str(_repo_root), str(_repo_root / "src")):
-    if _path not in sys.path:
-        sys.path.insert(0, _path)
 
 from protostar._fallbacks import DEFAULT_REVISIONS
 from protostar.fs import atomic_write_text
@@ -105,7 +99,7 @@ def main() -> None:
             stderr=True,
         )
         report(
-            "Run `uv run python scripts/sync_registry_fallbacks.py` to update them.",
+            "Run `uv run python -m scripts.sync_registry_fallbacks` to update them.",
             style=OutputStyle.COMMAND,
             stderr=True,
         )

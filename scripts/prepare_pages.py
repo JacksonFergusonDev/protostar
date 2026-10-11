@@ -7,20 +7,15 @@ import html
 import json
 import re
 import shutil
-import sys
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 
-_repo_root = Path(__file__).resolve().parent.parent
-if str(_repo_root) not in sys.path:
-    sys.path.insert(0, str(_repo_root))
-sys.path.insert(0, str(_repo_root / "src"))
-
 from protostar.errors import ConfigurationError
+from scripts._common import REPO_ROOT
 
-METRICS_DIR = _repo_root / "metrics"
+METRICS_DIR = REPO_ROOT / "metrics"
 METRICS_ASSETS = (
     "index.html",
     "style.css",
@@ -43,10 +38,10 @@ METRICS_DATA = (
     "rollback-history.json",
     "rollback-latest.json",
 )
-HOUSE_DIR = _repo_root / "docs" / "house"
-HEADER_CSS = _repo_root / "docs" / "stylesheets" / "site-header.css"
-FOOTER_CSS = _repo_root / "docs" / "stylesheets" / "site-footer.css"
-FOOTER_HTML = _repo_root / "overrides" / "partials" / "site-footer.html"
+HOUSE_DIR = REPO_ROOT / "docs" / "house"
+HEADER_CSS = REPO_ROOT / "docs" / "stylesheets" / "site-header.css"
+FOOTER_CSS = REPO_ROOT / "docs" / "stylesheets" / "site-footer.css"
+FOOTER_HTML = REPO_ROOT / "overrides" / "partials" / "site-footer.html"
 # jacksonferguson.me's policy: search and AI search agents read the docs,
 # AI training crawlers don't.
 ROBOTS = """\
@@ -301,7 +296,7 @@ def assemble_pages(source: Path, output: Path, config_path: Path) -> str:
         )
         for filename in ("favicon.svg", "favicon.png"):
             shutil.copyfile(
-                _repo_root / "docs" / "assets" / filename,
+                REPO_ROOT / "docs" / "assets" / filename,
                 metrics_output / filename,
             )
     shutil.copyfile(source / "versions.json", output / "versions.json")

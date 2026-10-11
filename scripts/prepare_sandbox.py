@@ -7,14 +7,9 @@ home directory or Protostar configuration.
 
 import argparse
 import subprocess
-import sys
 from pathlib import Path
 
 import tomlkit
-
-_repo_root = Path(__file__).resolve().parent.parent
-if str(_repo_root) not in sys.path:
-    sys.path.insert(0, str(_repo_root))
 
 from scripts._common import OutputStyle, fixture_environment, report
 

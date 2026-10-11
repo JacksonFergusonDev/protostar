@@ -9,7 +9,7 @@ Every tooling module's ``ToolInfo.docs_url`` must answer without an HTTP
 error, so a dead link to a tool's documentation fails the pre-push hook.
 
 Run:
-    uv run python scripts/check_doc_links.py
+    uv run python -m scripts.check_doc_links
 """
 
 import re
@@ -18,10 +18,6 @@ import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-
-_repo_root = Path(__file__).resolve().parent.parent
-if str(_repo_root) not in sys.path:
-    sys.path.insert(0, str(_repo_root))
 
 from scripts._common import DOCS_DIR, REPO_ROOT, OutputStyle, report
 

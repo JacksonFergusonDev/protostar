@@ -119,23 +119,23 @@ clean:
 # Generate and verify scenario regression snapshots and documentation assets
 check-snapshots: sync
     @printf "\n{{ blue }}=== Verifying Regression Snapshots & Documentation Assets ==={{ nc }}\n"
-    uv run python scripts/run_snapshots.py
+    uv run python -m scripts.run_snapshots
 
 # Validate embedded documentation links and every tool's documentation URL
 check-doc-links: sync
     @printf "\n{{ blue }}=== Validating Embedded Documentation Links ==={{ nc }}\n"
-    uv run python scripts/check_doc_links.py
+    uv run python -m scripts.check_doc_links
     @printf "{{ green }}✔ All embedded documentation links are valid{{ nc }}\n"
 
 # Validate that hand-written documentation still agrees with the code
 check-docs-drift: sync
     @printf "\n{{ blue }}=== Checking Documentation Against the Code ==={{ nc }}\n"
-    uv run python scripts/check_docs_drift.py
+    uv run python -m scripts.check_docs_drift
 
 # Validate repository and snapshot configurations against official schemas
 check-schemas: sync
     @printf "\n{{ blue }}=== Validating JSON & YAML Schemas ==={{ nc }}\n"
-    uv run --locked python scripts/check_schemas.py
+    uv run --locked python -m scripts.check_schemas
 
 # Alias for check-schemas
 schema-check: check-schemas
@@ -149,7 +149,7 @@ secrets:
 # Regenerate the secret-detection rules from the gitleaks tag pinned in _fallbacks.py
 sync-secret-rules: sync
     @printf "\n{{ blue }}=== Regenerating Secret-Detection Rules ==={{ nc }}\n"
-    uv run python scripts/sync_secret_rules.py
+    uv run python -m scripts.sync_secret_rules
 
 # The house-style release vendored into docs/house/
 house_style := "v1.5.0"
@@ -175,7 +175,7 @@ _demo-run name target trials="5": demo-prewarm
     @printf "\n{{ blue }}=== Generating {{ name }} Demo (trials: {{ trials }}) ==={{ nc }}\n"
     rm -rf /tmp/demo_project && mkdir -p /tmp/demo_project
     PATH="{{ invocation_directory() }}/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$$PATH" \
-        uv run python scripts/record_demos.py {{ target }} --trials {{ trials }} --output docs/assets/demo_{{ target }}.cast
+        uv run python -m scripts.record_demos {{ target }} --trials {{ trials }} --output docs/assets/demo_{{ target }}.cast
     agg docs/assets/demo_{{ target }}.cast docs/assets/demo_{{ target }}.gif \
         --font-family "JetBrainsMono Nerd Font Mono" \
         --font-size 22 \
@@ -213,7 +213,7 @@ demo-all-draft: demo-init-interactive-draft demo-init-headless-draft demo-sync-d
 og-card:
     @printf "\n{{ blue }}=== Rendering the share card ==={{ nc }}\n"
     uv run --with playwright python -m playwright install chromium
-    uv run --with playwright python scripts/render_og_card.py
+    uv run --with playwright python -m scripts.render_og_card
 
 # Build documentation site in strict mode
 docs: sync
@@ -231,11 +231,11 @@ serve: sync
 
 # Preview the metrics dashboard on port 8765, separately from the docs server
 serve-metrics port="8765":
-    uv run python scripts/serve_metrics.py --port {{ port }}
+    uv run python -m scripts.serve_metrics --port {{ port }}
 
 # Refresh release inputs, offer to wait for CI and Nightly, and verify local builds before bumping
 bump part:
-    uv run python scripts/prepare_release.py
+    uv run python -m scripts.prepare_release
     uv run --refresh https://raw.githubusercontent.com/JacksonFergusonDev/ci-cd-release-infrastructure/refs/heads/main/scripts/release.py {{ part }}
 
 # Drop into an empty isolated macOS sandbox shell
@@ -287,7 +287,7 @@ _sandbox scenario *args: sync
     if [[ "{{ scenario }}" != "empty" ]]; then
         HOME="$MOCK_HOME" XDG_CONFIG_HOME="$MOCK_HOME/.config" \
             UV_CACHE_DIR="$HOST_UV_CACHE" PATH="$SANDBOX_VENV/bin:$PATH" \
-            "$SANDBOX_VENV/bin/python" "$REPO_ROOT/scripts/prepare_sandbox.py" \
+            PYTHONPATH="$REPO_ROOT" "$SANDBOX_VENV/bin/python" -m scripts.prepare_sandbox \
             "{{ scenario }}" "$WORKSPACE" --fixture "$SANDBOX_DIR/fixture"
     fi
     # A lifecycle scenario trusts its template in its own configuration

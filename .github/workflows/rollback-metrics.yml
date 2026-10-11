@@ -69,7 +69,7 @@ jobs:
           echo "published=false" >> "$GITHUB_OUTPUT"
           exit 0
         fi
-        matrix="$(python3 scripts/nightly_matrix.py)"
+        matrix="$(python3 -m scripts.nightly_matrix)"
         git -C pages-data config user.name 'github-actions[bot]'
         git -C pages-data config user.email '41898282+github-actions[bot]@users.noreply.github.com'
         for attempt in 1 2 3 4 5; do

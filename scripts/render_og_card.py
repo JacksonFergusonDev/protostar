@@ -8,21 +8,15 @@ zensical.toml. The PNG is committed: re-render it with `just og-card` after
 changing the name, tagline, or mark.
 
 Usage:
-    uv run --with playwright python scripts/render_og_card.py
+    uv run --with playwright python -m scripts.render_og_card
 """
 
 from __future__ import annotations
 
 import base64
 import random
-import sys
 import tomllib
-from pathlib import Path
 from urllib.parse import urlsplit
-
-_repo_root = Path(__file__).resolve().parent.parent
-if str(_repo_root) not in sys.path:
-    sys.path.insert(0, str(_repo_root))
 
 from scripts._common import DOCS_DIR, REPO_ROOT
 

@@ -13,7 +13,7 @@ from pytest_mock import MockerFixture
 
 from protostar._fallbacks import DEFAULT_REVISIONS
 from scripts import prepare_release, sync_registry_fallbacks
-from scripts._common import SCRIPTS_DIR, CodeLanguage, fixture_environment
+from scripts._common import CodeLanguage, fixture_environment
 from scripts.nightly_matrix import rollback_matrix
 from scripts.release_commits import RELEASE_INPUTS
 
@@ -709,8 +709,8 @@ def test_preparation_refreshes_both_inputs_before_review(
     prepare_release.prepare_inputs()
     assert "current and committed" in capsys.readouterr().out
     assert run.call_args_list == [
-        mocker.call([sys.executable, str(SCRIPTS_DIR / "sync_registry_fallbacks.py")]),
-        mocker.call([sys.executable, str(SCRIPTS_DIR / "sync_secret_rules.py")]),
+        mocker.call([sys.executable, "-m", "scripts.sync_registry_fallbacks"]),
+        mocker.call([sys.executable, "-m", "scripts.sync_secret_rules"]),
         mocker.call(
             ["git", "status", "--porcelain", "--", *RELEASE_INPUTS],
             capture_output=True,

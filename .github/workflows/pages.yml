@@ -46,9 +46,9 @@ jobs:
 
       - name: Assemble documentation, redirects, and metrics
         run: |
-          latest_version="$(uv run --only-group docs python scripts/prepare_pages.py pages-source --print-latest)"
+          latest_version="$(uv run --only-group docs python -m scripts.prepare_pages pages-source --print-latest)"
           git show "refs/tags/v${latest_version}:zensical.toml" > latest-zensical.toml
-          uv run --only-group docs python scripts/prepare_pages.py pages-source \
+          uv run --only-group docs python -m scripts.prepare_pages pages-source \
             --output published --config latest-zensical.toml
 
       - name: Test metrics dashboard data handling

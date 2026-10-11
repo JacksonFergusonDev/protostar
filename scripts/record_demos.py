@@ -19,7 +19,6 @@ import shutil
 import signal
 import struct
 import subprocess
-import sys
 import tempfile
 import termios
 import time
@@ -27,10 +26,6 @@ import types
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-
-_repo_root = Path(__file__).resolve().parent.parent
-if str(_repo_root) not in sys.path:
-    sys.path.insert(0, str(_repo_root))
 
 from protostar.cli.palette import INK
 from scripts._common import (

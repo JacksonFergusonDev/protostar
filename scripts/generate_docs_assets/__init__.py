@@ -2,13 +2,6 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-_repo_root = Path(__file__).resolve().parent.parent.parent
-if str(_repo_root) not in sys.path:
-    sys.path.insert(0, str(_repo_root))
-
 from scripts._common import OutputStyle, report
 from scripts.generate_docs_assets.cli_tables import generate_cli_tables
 from scripts.generate_docs_assets.cli_terminals import (

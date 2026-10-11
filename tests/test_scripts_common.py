@@ -14,7 +14,7 @@ from rich.console import Console
 from rich.text import Text
 
 from scripts._common import (
-    SCRIPTS_DIR,
+    REPO_ROOT,
     CodeLanguage,
     OutputStyle,
     fetch_bytes,
@@ -173,21 +173,22 @@ def test_fetch_failure_reports_to_stderr_and_exits(
 
 
 _CI_PROBE = """
-import json, runpy, subprocess, sys
+import importlib, json, subprocess, sys
 
-script, mode = sys.argv[1:]
-namespace = runpy.run_path(script)
-main = namespace['main']
+root, script, mode = sys.argv[1:]
+# The release workflow runs `python -m scripts.<name>` from the repository root.
+sys.path.insert(0, root)
+main = importlib.import_module(f'scripts.{script}').main
 state = main.__globals__
 sys.argv = [script, mode] if mode else [script]
-if script.endswith('sync_registry_fallbacks.py'):
+if script == 'sync_registry_fallbacks':
     state['fetch_bytes'] = lambda *args, **kwargs: json.dumps({
         'schema_version': 1, 'hooks': state['DEFAULT_REVISIONS']
     }).encode()
-elif script.endswith('sync_secret_rules.py') and mode == '--check':
+elif script == 'sync_secret_rules' and mode == '--check':
     state['fetch_bytes'] = lambda *args, **kwargs: b'source'
     state['generate'] = lambda tag, source, license, current: current
-elif script.endswith('prepare_release.py'):
+elif script == 'prepare_release':
     state['run_repo_cmd'] = lambda *args, **kwargs: subprocess.CompletedProcess(
         [], 0, stdout='', stderr=''
     )
@@ -209,17 +210,17 @@ assert 'textual' not in sys.modules
 @pytest.mark.parametrize(
     ("script", "mode"),
     [
-        ("sync_registry_fallbacks.py", "--check"),
-        ("sync_secret_rules.py", "--check"),
-        ("sync_secret_rules.py", "--dump"),
-        ("prepare_release.py", ""),
+        ("sync_registry_fallbacks", "--check"),
+        ("sync_secret_rules", "--check"),
+        ("sync_secret_rules", "--dump"),
+        ("prepare_release", ""),
     ],
 )
 def test_release_scripts_run_in_ci_without_site_packages(
     script: str, mode: str, tmp_path: Path
 ) -> None:
     result = subprocess.run(
-        [sys.executable, "-S", "-c", _CI_PROBE, str(SCRIPTS_DIR / script), mode],
+        [sys.executable, "-S", "-c", _CI_PROBE, str(REPO_ROOT), script, mode],
         cwd=tmp_path,
         env={
             **{key: value for key, value in os.environ.items() if key != "NO_COLOR"},

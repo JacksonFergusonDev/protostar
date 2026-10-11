@@ -8,7 +8,7 @@ SHA-256: e163e53b9e7e8a8511e77271e2b323ed057759542a6d988258afe3a1fa329caf
 
 The rules are stored compressed rather than as text, so that secret
 scanners do not mistake their patterns, or the publicly known keys some
-allowlists name, for leaked credentials. `python scripts/sync_secret_rules.py
+allowlists name, for leaked credentials. `python -m scripts.sync_secret_rules
 --dump` prints them.
 
 Patterns are translated from Go's regexp syntax to Python's. gitleaks is

@@ -6,28 +6,20 @@ and a fraction of a percent of clean/conflict verdicts to differ where edits sit
 among repeated lines, which patience and Myers alignments place differently.
 
 Run:
-    uv run python scripts/compare_text_merge.py [--cases N] [--seed S]
+    uv run python -m scripts.compare_text_merge [--cases N] [--seed S]
 """
 
 import argparse
 import os
 import random
 import subprocess
-import sys
 import tempfile
 from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 
-_repo_root = Path(__file__).resolve().parent.parent
-if str(_repo_root) not in sys.path:
-    sys.path.insert(0, str(_repo_root))
-
-from scripts._common import SNAPSHOTS_DIR, OutputStyle, report
-
-# _common adds src/ to sys.path before importing the project.
-# isort: split
 from protostar.text_merge import merge_text
+from scripts._common import SNAPSHOTS_DIR, OutputStyle, report
 
 REPETITIVE = [f"line {c}\n" for c in "abcdefghij"] + ["\n", "}\n", "    pass\n"]
 JUSTFILE = (SNAPSHOTS_DIR / "cli" / "justfile").read_text().splitlines(keepends=True)

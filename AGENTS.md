@@ -318,4 +318,4 @@ Scale or omit these sections based on the scope of the PR.
 - `docs/assets/terminals/`: Rendered CLI terminal help SVGs displayed in docs.
 - `docs/house/`: The vendored house-style release (tokens, fonts, components, scripts) the docs share with jacksonferguson.me.
 - `overrides/`: Zensical theme overrides; `home.html` loads the landing page's own stylesheets.
-- `scripts/`: Snapshot regression runner, doc assets generator, and verification scripts.
+- `scripts/`: Snapshot regression runner, doc assets generator, and verification scripts. Run each as `python -m scripts.<name>` from the repository root; the package makes `src/` importable, so no script sets up its own path.

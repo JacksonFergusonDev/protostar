@@ -73,15 +73,15 @@ jobs:
 
     - name: Verify snapshots and documentation assets are up-to-date
       if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-      run: uv run python scripts/run_snapshots.py
+      run: uv run python -m scripts.run_snapshots
 
     - name: Validate embedded documentation links
       if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-      run: uv run python scripts/check_doc_links.py
+      run: uv run python -m scripts.check_doc_links
 
     - name: Check documentation against the code
       if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-      run: uv run python scripts/check_docs_drift.py
+      run: uv run python -m scripts.check_docs_drift
 
     - name: Check docs/house matches its house-style release
       if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
@@ -93,7 +93,7 @@ jobs:
 
     - name: Validate schemas
       if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-      run: uv run --locked python scripts/check_schemas.py
+      run: uv run --locked python -m scripts.check_schemas
 
   # Every OS and Python runs the suite; macOS smoke-tests templates after it,
   # so it takes no runner of its own. Linux smoke-tests every template at every
