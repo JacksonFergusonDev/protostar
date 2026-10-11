@@ -9,7 +9,6 @@ import os
 import tempfile
 from pathlib import Path
 from typing import Any
-from unittest import mock
 
 from protostar.config import TemplateSource, UserConfig
 from protostar.fs import atomic_write_text
@@ -17,7 +16,7 @@ from protostar.manifest import CollisionStrategy, EnvironmentManifest
 from scripts.generate_docs_assets.common import (
     DOCS_TERMINALS_DIR,
     demo_project,
-    stub_which,
+    stable_host,
 )
 from scripts.generate_docs_assets.svg import frame_terminal_svg
 
@@ -121,13 +120,8 @@ async def _capture_conflict_screen() -> None:
 
 def generate_tui_svgs() -> None:
     """Captures the recipe editor, change review, and conflict screen."""
-    with (
-        demo_project(),
-        mock.patch.dict(os.environ, {"PROTOSTAR_OFFLINE_HOOK_REGISTRY": "1"}),
-        mock.patch("protostar.metadata.get_git_config", return_value=None),
-        # Every tool installed, so the host's PATH never marks a row.
-        mock.patch("shutil.which", stub_which),
-    ):
+    # Every tool installed, so the host's PATH never marks a row.
+    with demo_project(), stable_host():
         asyncio.run(_capture_tui_screens())
     orig_cwd = Path.cwd()
     with tempfile.TemporaryDirectory() as tmp_dir:

@@ -121,3 +121,29 @@ def cli_json(*args: str, allow_error: bool = False) -> dict[str, Any]:
     if payload.get("status") == "error" and not allow_error:
         raise SystemExit(f"`protostar {' '.join(args)}` failed: {payload['error']}")
     return payload
+
+
+def run_cli(*args: str, failing: bool = False) -> None:
+    """Runs ``protostar <args> --no-config`` in-process, as a headless terminal would.
+
+    Output goes wherever ``protostar.cli.ui.console`` points. Standard input is
+    not a terminal, so no screen opens.
+
+    Args:
+        *args: The command line after ``protostar``.
+        failing: Whether the command is expected to fail; otherwise a failure
+            stops generation instead of being recorded.
+    """
+    from protostar.cli.main import main
+
+    code: object = 0
+    with (
+        mock.patch.object(sys, "argv", ["protostar", *args, "--no-config"]),
+        mock.patch.object(sys, "stdin", io.StringIO()),
+    ):
+        try:
+            main()
+        except SystemExit as exit_:
+            code = exit_.code
+    if bool(code) != failing:
+        raise SystemExit(f"`protostar {' '.join(args)}` exited {code}")

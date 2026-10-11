@@ -166,7 +166,7 @@ def test_existing_svg_documentation_fixtures():
     expected_fixtures = {
         "cli_config_help.svg": 909,  # 73 cols
         "cli_dry_run.svg": 1129,  # 91 cols (the dev dependency list wraps)
-        "diagnostic_panel.svg": 958,  # 77 cols
+        "diagnostic_panel.svg": 970,  # 78 cols (a real run's diagnostics at width 80)
         "cli_help.svg": 1202,  # 97 cols (widened by the --config <path> flag)
     }
 
