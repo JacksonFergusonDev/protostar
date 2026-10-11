@@ -269,6 +269,13 @@ def test_nightly_fails_every_template_at_every_site_on_every_os():
     }
 
 
+def test_the_rollback_matrix_covers_every_template_that_ships():
+    from protostar.templates import builtin_template_aliases
+    from scripts.nightly_matrix import TEMPLATES
+
+    assert tuple(sorted(builtin_template_aliases())) == TEMPLATES
+
+
 def test_a_manual_nightly_can_narrow_the_rollback_jobs():
     from scripts.nightly_matrix import rollback_matrix
 

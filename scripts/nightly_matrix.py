@@ -13,6 +13,9 @@ import json
 from typing import Any
 
 OPERATING_SYSTEMS = ("ubuntu-latest", "macos-latest", "windows-latest")
+# Every built-in template. This module runs under a bare interpreter, so it
+# can't ask Protostar; tests/test_nightly.py checks the list against what ships,
+# and the benchmarks and rollback harness read it from here.
 TEMPLATES = ("api", "astro", "cli", "lib", "ml")
 WINDOWS_SLICES = 6
 

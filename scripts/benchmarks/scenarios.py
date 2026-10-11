@@ -10,6 +10,9 @@ from __future__ import annotations
 import enum
 from dataclasses import dataclass
 
+# The built-in templates, each initialized once: each writes different documents.
+from scripts.nightly_matrix import TEMPLATES
+
 
 class Start(enum.StrEnum):
     """The project a scenario's command runs in."""
@@ -40,9 +43,6 @@ class Scenario:
     environment: tuple[tuple[str, str], ...] = ()
     budgeted: bool = True
 
-
-# The built-in templates, each initialized once: each writes different documents.
-TEMPLATES = ("api", "astro", "cli", "lib", "ml")
 
 SCENARIOS: tuple[Scenario, ...] = (
     Scenario("version", ("--version",)),
