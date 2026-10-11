@@ -620,6 +620,8 @@ def main() -> None:
 
     args = parser.parse_args()
     targets = list(SCENARIOS) if args.scenario == "all" else [args.scenario]
+    if args.output is not None and len(targets) > 1:
+        parser.error("--output names one file, so it needs a single scenario")
     trials_count = max(1, args.trials)
 
     for target in targets:

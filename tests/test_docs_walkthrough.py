@@ -9,7 +9,8 @@ from pathlib import Path
 import pytest
 from pytest_mock import MockerFixture
 
-from scripts.check_docs_drift import _walkthrough_steps
+from scripts import check_docs_drift
+from scripts.check_docs_drift import WalkthroughRunError, _walkthrough_steps
 
 
 def test_walkthrough_ignores_explicit_host_configuration(
@@ -39,6 +40,41 @@ def test_walkthrough_ignores_explicit_host_configuration(
     assert env["PROTOSTAR_CONFIG"] == ""
     assert "GIT_DIR" not in env
     assert Path(env["HOME"]).is_relative_to(tmp_path)
+
+
+def test_a_failed_walkthrough_run_names_its_error(mocker: MockerFixture) -> None:
+    mocker.patch(
+        "scripts.check_docs_drift.subprocess.run",
+        return_value=subprocess.CompletedProcess(
+            [], 1, stdout="", stderr="Error: no such template\n"
+        ),
+    )
+
+    with pytest.raises(WalkthroughRunError, match="exited 1:\nError: no such template"):
+        _walkthrough_steps()
+
+
+def test_a_crashing_check_is_reported_and_the_rest_still_run(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ran = []
+
+    def crashes() -> list[str]:
+        """A check that raises."""
+        raise KeyError("nav")
+
+    def passes() -> list[str]:
+        """A check that runs after it."""
+        ran.append(True)
+        return []
+
+    monkeypatch.setattr(check_docs_drift, "CHECKS", (crashes, passes))
+
+    assert check_docs_drift.main() == 1
+    assert ran == [True]
+    output = capsys.readouterr().out
+    assert "FAIL  A check that raises." in output
+    assert "KeyError: 'nav'" in output
 
 
 FIRST_PROJECT = Path("docs/first-project.md")

@@ -192,14 +192,20 @@ class GhCli:
         ).stdout
 
     def jobs(self, run: Run) -> list[Job]:
-        """Every job of the run's latest attempt."""
-        data = json.loads(
+        """Every job of the run's latest attempt, across every page."""
+        pages = json.loads(
             self._gh(
                 "api",
                 f"repos/{self.repo}/actions/runs/{run.run_id}/jobs?per_page=100",
+                "--paginate",
+                "--slurp",
             )
         )
-        return [Job(job["name"], job["conclusion"]) for job in data["jobs"]]
+        return [
+            Job(job["name"], job["conclusion"])
+            for page in pages
+            for job in page["jobs"]
+        ]
 
     def flaky_lists(self, run: Run) -> dict[str, str]:
         """Each flaky-test artifact the run uploaded, by name."""

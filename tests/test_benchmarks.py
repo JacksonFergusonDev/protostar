@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 import sys
 import threading
 from pathlib import Path
@@ -190,6 +191,20 @@ def test_a_command_that_fails_is_not_timed(tmp_path: Path) -> None:
         benchmarks.take(
             bench.version, scenario, project, bench.environment(scenario, offline=True)
         )
+
+
+def test_a_command_that_hangs_is_not_timed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def hang(command: list[str], **kwargs: object) -> None:
+        raise subprocess.TimeoutExpired(command, benchmarks.SAMPLE_TIMEOUT)
+
+    monkeypatch.setattr(subprocess, "run", hang)
+    version = benchmarks.Version("working tree", Path(sys.executable))
+    scenario = BY_NAME["version"]
+
+    with pytest.raises(benchmarks.BenchmarkError, match="more than 900 seconds"):
+        benchmarks.take(version, scenario, tmp_path, {})
 
 
 def test_naming_no_scenario_explains_and_fails(
