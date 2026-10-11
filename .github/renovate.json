@@ -16,7 +16,6 @@
     ],
     "internalChecksFilter": "strict",
     "internalChecksAsSuccess": true,
-    "prCreation": "status-success",
     "rebaseWhen": "conflicted",
     "labels": [
         "dependencies",
