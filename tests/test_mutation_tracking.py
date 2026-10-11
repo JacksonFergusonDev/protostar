@@ -164,6 +164,7 @@ def test_nested_module_identity_and_unselected_shard_mutants(tmp_path):
         "pyproject.toml",
         "uv.lock",
         "scripts/mutation_report.py",
+        "scripts/_publish.py",
         ".github/workflows/mutation.yml",
         "src/protostar/unselected.py",
     ],
@@ -243,9 +244,8 @@ def test_publication_retries_concurrent_pages_push_without_losing_data(
     git("-C", "rival", "push", "origin", "gh-pages")
     git("clone", "--branch", "gh-pages", "remote.git", "pages-data")
     (tmp_path / "scripts").mkdir()
-    shutil.copyfile(
-        repo / "scripts/mutation_report.py", tmp_path / "scripts/mutation_report.py"
-    )
+    for name in ("__init__.py", "_publish.py", "mutation_report.py"):
+        shutil.copyfile(repo / "scripts" / name, tmp_path / "scripts" / name)
     (tmp_path / "pyproject.toml").write_text(
         '[tool.mutmut]\nsource_paths = ["src/protostar/merge.py"]\n'
     )

@@ -81,8 +81,8 @@ bench-profile scenario *args: sync
 mutate module workers="2":
     @printf "\n{{ blue }}=== Mutation Testing: {{ module }} ==={{ nc }}\n"
     uv run --group mutation mutmut run --max-children {{ workers }} "protostar.{{ module }}.*"
-    uv run python scripts/mutation_report.py report --json mutants/summary.json --survivors mutants/survivors.txt
-    uv run --group mutation python scripts/mutation_report.py diffs --out mutants/survivors.md
+    uv run python -m scripts.mutation_report report --json mutants/summary.json --survivors mutants/survivors.txt
+    uv run --group mutation python -m scripts.mutation_report diffs --out mutants/survivors.md
     @printf "{{ green }}✔ Mutation run complete (what to fix: mutants/survivors.md){{ nc }}\n"
 
 # Run the fast local CI pipeline executed before pushing

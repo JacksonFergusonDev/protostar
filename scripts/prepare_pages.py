@@ -34,6 +34,15 @@ METRICS_ASSETS = (
     "benchmark-dashboard.js",
     "archive-dashboard.js",
 )
+# The measurements each workflow publishes under metrics/ on gh-pages.
+METRICS_DATA = (
+    "data.js",
+    "benchmark-history.json",
+    "mutation-history.json",
+    "mutation-latest.json",
+    "rollback-history.json",
+    "rollback-latest.json",
+)
 HOUSE_DIR = _repo_root / "docs" / "house"
 HEADER_CSS = _repo_root / "docs" / "stylesheets" / "site-header.css"
 FOOTER_CSS = _repo_root / "docs" / "stylesheets" / "site-footer.css"
@@ -268,14 +277,7 @@ def assemble_pages(source: Path, output: Path, config_path: Path) -> str:
             _write_redirects(tree, output / alias, target)
     metrics_files = [
         source / "metrics" / filename
-        for filename in (
-            "data.js",
-            "benchmark-history.json",
-            "mutation-history.json",
-            "mutation-latest.json",
-            "rollback-history.json",
-            "rollback-latest.json",
-        )
+        for filename in METRICS_DATA
         if (source / "metrics" / filename).is_file()
     ]
     if metrics_files:

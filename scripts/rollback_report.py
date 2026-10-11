@@ -6,7 +6,7 @@ adds them up. Zero unrestored faults add a point to the history; any failure
 only changes the badge, so the history stays a record of green runs.
 
 Run:
-    python3 scripts/rollback_report.py record --results DIR --matrix JSON \\
+    python3 -m scripts.rollback_report record --results DIR --matrix JSON \\
         --history PATH --latest PATH --state PATH --commit SHA \\
         --date UTC --run-id ID --run-attempt ATTEMPT
 """
@@ -15,13 +15,14 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 from datetime import datetime
 from pathlib import Path
 from typing import TypedDict
 
 # Runs without the project installed (the workflow's publish job), so it
 # depends on the standard library alone.
+from scripts import _publish
+
 LABEL = "rollback faults restored"
 
 
@@ -53,11 +54,6 @@ def publication_key(publication: Publication) -> tuple[datetime, int, int]:
 
 class RollbackReportError(Exception):
     """The results are incomplete or inconsistent, so nothing is published."""
-
-
-def read_history(path: Path) -> list[HistoryEntry]:
-    """Read recorded runs, treating a missing history as the first run."""
-    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
 
 
 def combine(
@@ -108,23 +104,20 @@ def combine(
 
 def badge(passed: int, failed: int) -> dict[str, object]:
     """Returns the shields.io endpoint payload: the count, or how many failed."""
-    return {
-        "schemaVersion": 1,
-        "label": LABEL,
-        "message": f"{failed:,} failing" if failed else f"{passed:,}",
-        "color": "22d3ee",
-        "labelColor": "0A0A0A",
-    }
+    return _publish.badge(LABEL, f"{failed:,} failing" if failed else f"{passed:,}")
 
 
 def record(args: argparse.Namespace) -> None:
     """Writes the badge for a complete run, and its history point if none failed."""
-    if not re.fullmatch(r"[0-9a-f]{40}", args.commit):
-        raise SystemExit("--commit must be a full Git commit hash.")
-    date = datetime.fromisoformat(args.date)
-    offset = date.utcoffset()
-    if offset is None or offset.total_seconds() != 0:
-        raise SystemExit("--date must be a UTC timestamp.")
+    try:
+        _record(args)
+    except (_publish.PublicationError, RollbackReportError) as error:
+        raise SystemExit(str(error)) from error
+
+
+def _record(args: argparse.Namespace) -> None:
+    _publish.check_commit(args.commit)
+    date = _publish.utc_date(args.date)
     if args.run_id < 1 or args.run_attempt < 1:
         raise SystemExit("--run-id and --run-attempt must be positive integers.")
     publication: Publication = {
@@ -141,26 +134,16 @@ def record(args: argparse.Namespace) -> None:
             )
         if publication_key(publication) == publication_key(previous):
             return
-    entries = read_history(args.history)
-    if entries and datetime.fromisoformat(entries[-1]["date"]) > date:
-        raise SystemExit(
-            "Refusing to publish a run older than the latest recorded run."
-        )
-    try:
-        rows, failed = combine(args.results, json.loads(args.matrix)["include"])
-    except RollbackReportError as error:
-        raise SystemExit(str(error)) from error
+    entries: list[HistoryEntry] = _publish.read_history(args.history)
+    _publish.check_newest(entries, date)
+    rows, failed = combine(args.results, json.loads(args.matrix)["include"])
     passed = sum(row["passed"] for row in rows)  # type: ignore[misc]
     # Several attempts or runs of one commit add only one green history point.
     if not failed and not any(item["commit"] == args.commit for item in entries):
         entries.append({"commit": args.commit, "date": args.date, "cells": rows})
-    for path, payload in (
-        (args.history, entries),
-        (args.latest, badge(passed, failed)),
-        (args.state, publication),
-    ):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    _publish.write_json(args.history, entries)
+    _publish.write_json(args.latest, badge(passed, failed))
+    _publish.write_json(args.state, publication)
     print(f"{passed:,} faults restored, {failed:,} failing.")
 
 

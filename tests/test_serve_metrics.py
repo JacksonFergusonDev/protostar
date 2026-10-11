@@ -88,6 +88,7 @@ def test_preview_fetches_every_dashboard_dataset(
         expected = {
             "data.js",
             "mutation-history.json",
+            "mutation-latest.json",
             "rollback-history.json",
             "rollback-latest.json",
         }
@@ -134,3 +135,11 @@ def test_a_data_file_not_published_yet_is_skipped(
     )
 
     assert not destination.exists()
+
+
+def test_the_preview_fetches_every_file_pages_publishes():
+    from scripts.prepare_pages import METRICS_DATA
+
+    assert {*serve_metrics.DATA_FILES, *serve_metrics.OPTIONAL_DATA_FILES} == set(
+        METRICS_DATA
+    )
