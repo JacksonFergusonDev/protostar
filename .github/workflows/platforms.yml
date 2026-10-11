@@ -77,7 +77,7 @@ jobs:
       with:
         args: -o faulthandler_timeout=90 ${{ matrix.rollback && format('--rollback-scope full --rollback-shard {0}', matrix.rollback) || '--rollback-scope pr' }}
         retry: ${{ inputs.retry }}
-        flaky-artifact: flaky-tests-${{ matrix.os }}-py${{ matrix.python }}
+        artifact: ${{ matrix.os }}-py${{ matrix.python }}
 
     - name: Upload coverage to Codecov
       if: matrix.coverage

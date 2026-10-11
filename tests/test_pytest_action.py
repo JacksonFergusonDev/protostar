@@ -22,8 +22,8 @@ def test_retry_reports_only_tests_that_passed_and_preserves_failure(
 ):
     action = YAML(typ="safe").load(ACTION.read_text())
     step = action["runs"]["steps"][0]
-    assert action["runs"]["steps"][1]["if"] == (
-        "${{ !cancelled() && steps.run.outputs.flaky == 'true' }}"
+    assert action["runs"]["steps"][1]["with"]["name"] == (
+        "test-results-${{ inputs.artifact }}"
     )
     tools = tmp_path / "bin"
     tools.mkdir()
@@ -45,9 +45,7 @@ def test_retry_reports_only_tests_that_passed_and_preserves_failure(
         "sys.exit(1 if tests else 0)\n"
     )
     uv.chmod(0o755)
-    output = tmp_path / "output"
     summary = tmp_path / "summary"
-    output.touch()
     summary.touch()
     env = {
         **os.environ,
@@ -56,7 +54,6 @@ def test_retry_reports_only_tests_that_passed_and_preserves_failure(
         "RETRY": "true",
         "WORKERS": "1",
         "FLAKY_LIST": "flaky-tests.txt",
-        "GITHUB_OUTPUT": str(output),
         "GITHUB_STEP_SUMMARY": str(summary),
         "REMAINING": json.dumps(remaining),
     }
@@ -72,7 +69,6 @@ def test_retry_reports_only_tests_that_passed_and_preserves_failure(
     assert result.returncode == (1 if remaining else 0), result.stderr
     expected = sorted({"test::flaky", "test::broken"} - set(remaining))
     assert (tmp_path / "flaky-tests.txt").read_text().splitlines() == expected
-    assert ("flaky=true" in output.read_text()) == bool(expected)
     for test in remaining:
         assert f"- `{test}`" not in summary.read_text()
     for test in expected:

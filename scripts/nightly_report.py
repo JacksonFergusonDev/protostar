@@ -2,7 +2,8 @@
 
 A failed run opens one tracking issue, or comments on the open one, naming the
 failing jobs and the commits since the last passing run. A passing run closes
-it. Each flaky test gets its own issue. Once its fix is marked awaiting
+it. Each flaky test gets its own issue, from the per-test results each job
+uploads. Once its fix is marked awaiting
 verification, three clean nightly runs close it; a recurrence reopens it.
 
 Run (from the Nightly Report workflow, with GH_TOKEN set):
@@ -15,8 +16,8 @@ import argparse
 import json
 import subprocess
 import tempfile
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -26,8 +27,6 @@ from typing import Any, Protocol
 GATE_JOB = "Check for new commits"
 PREPARATION_JOBS = frozenset({GATE_JOB, "Select rollback jobs"})
 FAILED_CONCLUSIONS = frozenset({"failure", "timed_out", "cancelled"})
-FLAKY_ARTIFACT_PREFIX = "flaky-tests-"
-FLAKY_LIST = "flaky-tests.txt"
 
 
 @dataclass(frozen=True)
@@ -72,18 +71,16 @@ class Run:
 
 @dataclass(frozen=True)
 class Outcome:
-    """What a run found: whether its checks ran, what failed, and what flaked."""
+    """What a run found: whether its checks ran, and what failed."""
 
     ran: bool
     failed: tuple[str, ...]
-    flaky: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
 
 
 class GitHub(Protocol):
     """The GitHub operations the report needs."""
 
     def jobs(self, run: Run) -> list[Job]: ...
-    def flaky_lists(self, run: Run) -> dict[str, str]: ...
     def track_tests(self, run: Run) -> None: ...
     def last_passing_sha(self, run: Run) -> str | None: ...
     def open_issue(self, tracker: Tracker) -> int | None: ...
@@ -93,12 +90,11 @@ class GitHub(Protocol):
     def close(self, number: int, body: str) -> None: ...
 
 
-def summarize(jobs: Sequence[Job], flaky_lists: Mapping[str, str]) -> Outcome:
-    """Reads a run's jobs and its flaky-test artifacts into an outcome.
+def summarize(jobs: Sequence[Job]) -> Outcome:
+    """Reads a run's jobs into an outcome.
 
     Args:
         jobs: Every job of the run.
-        flaky_lists: Each flaky-test artifact's name and its list of test ids.
 
     Returns:
         The outcome. It did not run when the gate skipped every check; a
@@ -109,17 +105,7 @@ def summarize(jobs: Sequence[Job], flaky_lists: Mapping[str, str]) -> Outcome:
     )
     checks = [job for job in jobs if job.name not in PREPARATION_JOBS]
     ran = bool(failed) or any(job.conclusion == "success" for job in checks)
-    flaky: dict[str, list[str]] = {}
-    for artifact, text in sorted(flaky_lists.items()):
-        platform = artifact.removeprefix(FLAKY_ARTIFACT_PREFIX)
-        for test in text.splitlines():
-            if test.strip():
-                flaky.setdefault(test.strip(), []).append(platform)
-    return Outcome(
-        ran=ran,
-        failed=failed,
-        flaky={test: tuple(platforms) for test, platforms in sorted(flaky.items())},
-    )
+    return Outcome(ran=ran, failed=failed)
 
 
 def failure_body(run: Run, outcome: Outcome, last_passing: str | None) -> str:
@@ -157,7 +143,7 @@ def report(github: GitHub, run: Run) -> Outcome:
     Returns:
         What the run found.
     """
-    outcome = summarize(github.jobs(run), github.flaky_lists(run))
+    outcome = summarize(github.jobs(run))
     if not outcome.ran:
         return outcome
 
@@ -206,33 +192,6 @@ class GhCli:
             for page in pages
             for job in page["jobs"]
         ]
-
-    def flaky_lists(self, run: Run) -> dict[str, str]:
-        """Each flaky-test artifact the run uploaded, by name."""
-        names = [
-            artifact["name"]
-            for artifact in self.artifacts(run)
-            if artifact["name"].startswith(FLAKY_ARTIFACT_PREFIX)
-        ]
-        if not names:
-            return {}
-        with tempfile.TemporaryDirectory() as directory:
-            for name in names:
-                self._gh(
-                    "run",
-                    "download",
-                    run.run_id,
-                    "--repo",
-                    self.repo,
-                    "--name",
-                    name,
-                    "--dir",
-                    str(Path(directory) / name),
-                )
-            return {
-                name: (Path(directory) / name / FLAKY_LIST).read_text(encoding="utf-8")
-                for name in names
-            }
 
     def artifacts(self, run: Run) -> list[dict[str, Any]]:
         """Read all artifact pages, since sliced runs can upload more than 100."""
@@ -401,7 +360,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     if not outcome.ran:
         print(f"The run skipped its checks: {run.sha[:7]} already passed.")
     else:
-        print(f"Failed jobs: {len(outcome.failed)}; flaky tests: {len(outcome.flaky)}")
+        print(f"Failed jobs: {len(outcome.failed)}")
 
 
 if __name__ == "__main__":

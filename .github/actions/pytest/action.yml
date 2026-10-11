@@ -1,5 +1,5 @@
 name: "Run pytest"
-description: "Runs pytest in parallel; with retry, a test that fails and then passes alone is recorded as flaky for the nightly report instead of failing the job"
+description: "Runs pytest in parallel and uploads each attempt's per-test results for the nightly report; with retry, a test that fails and then passes alone is flaky and doesn't fail the job"
 inputs:
   workers:
     description: "Number of pytest workers (auto uses every available CPU)"
@@ -13,14 +13,13 @@ inputs:
     description: "Retry failed tests once, passing the job when the retry passes"
     required: false
     default: "false"
-  flaky-artifact:
-    description: "Name of the artifact listing flaky tests (the nightly report reads every flaky-tests-* artifact)"
+  artifact:
+    description: "Names this job's evidence artifact, test-results-<artifact>, which the nightly report reads"
     required: true
 runs:
   using: "composite"
   steps:
     - name: Run tests
-      id: run
       shell: bash
       env:
         ARGS: ${{ inputs.args }}
@@ -39,8 +38,8 @@ runs:
           exit 1
         fi
 
-        # A test that fails and then passes alone is flaky, not broken: record
-        # it for the nightly report instead of failing the run.
+        # A test that fails and then passes alone is flaky, not broken: list it
+        # in the job summary instead of failing the run.
         uv run --no-sync python -c 'import json; print("\n".join(sorted(json.load(open(".pytest_cache/v/cache/lastfailed")))))' > "$FLAKY_LIST"
         echo "Retrying $(wc -l < "$FLAKY_LIST") failed test(s) once"
         retry_status=0
@@ -52,7 +51,6 @@ runs:
         if [ ! -s "$FLAKY_LIST" ]; then
           exit "$retry_status"
         fi
-        echo "flaky=true" >> "$GITHUB_OUTPUT"
         {
           echo "### Flaky tests"
           echo
@@ -64,19 +62,11 @@ runs:
         echo "::warning title=Flaky tests::$(wc -l < "$FLAKY_LIST") test(s) passed only when retried; see the job summary"
         exit "$retry_status"
 
-    - name: Upload flaky tests
-      if: ${{ !cancelled() && steps.run.outputs.flaky == 'true' }}
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-      with:
-        name: ${{ inputs.flaky-artifact }}
-        path: flaky-tests.txt
-        retention-days: 30
-
     - name: Upload test evidence
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: test-results-${{ inputs.flaky-artifact }}
+        name: test-results-${{ inputs.artifact }}
         path: test-results/*.json
         if-no-files-found: ignore
         overwrite: true
