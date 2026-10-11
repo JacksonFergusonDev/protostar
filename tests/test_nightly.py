@@ -95,9 +95,15 @@ def smoke_runs(matrices: dict[str, list[Entry]]) -> list[tuple[str, str, str]]:
 
 
 def job_count(workflow: str) -> int:
-    """How many jobs a run of the workflow starts at once."""
+    """How many jobs a run of the workflow starts at once.
+
+    A job that needs others starts only after they finish, so it never runs
+    beside them.
+    """
     count = 0
     for name, spec in jobs(workflow).items():
+        if "needs" in spec:
+            continue
         if spec.get("uses") == "./.github/workflows/platforms.yml":
             count += sum(map(len, platforms(workflow, name).values()))
         elif "strategy" in spec:
@@ -247,7 +253,15 @@ def test_ci_checks_stacked_pull_requests_without_filtering_their_base_branch():
     trigger = yaml_workflow("ci.yml")["on"]
     assert "pull_request" in trigger
     assert trigger["pull_request"] is None
-    assert trigger["push"]["branches"] == ["main", "renovate/**"]
+    assert trigger["push"]["branches"] == ["main"]
+
+
+def test_ci_passed_requires_every_other_job():
+    """The main ruleset requires only this check, so it must cover the run."""
+    ci = jobs("ci.yml")
+    gate = ci["ci-passed"]
+    assert set(gate["needs"]) == set(ci) - {"ci-passed"}
+    assert gate["if"] == "always()"
 
 
 def test_nightly_fails_every_template_at_every_site_on_every_os():
