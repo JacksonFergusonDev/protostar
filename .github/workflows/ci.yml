@@ -30,6 +30,7 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
       with:
+        version: "0.12.24"
         enable-cache: true
         python-version: "3.14"
 
@@ -85,7 +86,7 @@ jobs:
 
     - name: Check docs/house matches its house-style release
       if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-      run: uvx --from rust-just just sync-house-style --check
+      run: uv run just sync-house-style --check
 
     - name: Build documentation (strict)
       if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
@@ -155,6 +156,7 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
       with:
+        version: "0.12.24"
         enable-cache: true
         python-version: "3.14"
 
