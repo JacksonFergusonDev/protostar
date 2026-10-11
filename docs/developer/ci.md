@@ -73,6 +73,17 @@ GitHub disables scheduled workflows in public repositories after 60 days without
 gh workflow enable mutation.yml
 ```
 
+### Adding a Module
+
+Add engine modules one or a few at a time: add the module to `source_paths`, run it through the manual workflow, kill the survivors worth killing, and run it again on the finished tests. Strengthen a test rather than excuse a survivor; mark only a mutant that cannot change behavior, with `# pragma: no mutate` and a reason on the line above. A module's first run takes far longer than its run on finished tests, because a surviving mutant runs every test that reaches its function while a killed one stops at its first failure.
+
+Before the survivor pass, check for two things that hide mutants:
+
+- **State built before a test runs.** mutmut forks each mutant from a process that has already imported the tests and run the module once, so an `lru_cache` in the module or an object built at import in a test file means the mutated code never runs. Clear caches in an autouse fixture and build test objects in fixtures.
+- **Local runs on macOS.** Forked workers there crash on mutants in widely reached functions, which then count as suspicious instead of surviving. Trust the workflow's counts.
+
+A module too large for one runner is split by function through `[tool.mutmut-shards]` in `pyproject.toml`, as `reconciliation` is.
+
 ## Performance & Latency Testing
 
 Performance is checked in two ways. A pull request is checked exactly, by the [cost budgets](testing.md#cost-budgets): what each command does, never how long it takes, since a duration on a shared runner varies more from machine to machine than most regressions change it. Durations are measured every night, where two versions can be compared fairly, and locally when a change is meant to be faster.
