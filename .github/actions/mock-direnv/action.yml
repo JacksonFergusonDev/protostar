@@ -5,7 +5,8 @@ runs:
   steps:
     - name: Mock direnv
       shell: bash
-      run: |
+      # GITHUB_PATH gets a fixed directory under the runner's temp directory.
+      run: | # zizmor: ignore[github-env]
         mkdir -p "$RUNNER_TEMP/bin"
         cat > "$RUNNER_TEMP/bin/direnv" <<'EOF'
         #!/bin/sh

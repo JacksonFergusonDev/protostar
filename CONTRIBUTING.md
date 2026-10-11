@@ -44,7 +44,7 @@ Add dependencies with `uv add` (or `uv add --dev`), never by editing `pyproject.
 
 The hooks run the checks for you:
 
-- **On commit:** `uv lock --check`, Ruff, mypy, rumdl, actionlint, the Renovate schema check, and gitleaks.
+- **On commit:** `uv lock --check`, Ruff, mypy, rumdl, actionlint, zizmor, the Renovate schema check, and gitleaks.
 - **On push:** the full test suite, the strict docs build, and the docs, schema, and snapshot checks.
 
 If a hook fails or reformats a file, look at what it reported, fix it, and stage again. While you work, run what your change touches, such as `uv run pytest tests/test_executor.py`. `just test` runs the whole suite in parallel, and `just` lists every recipe. `just ci` runs everything CI runs, one after another; the hooks already cover it, so reach for it only to debug a difference from CI.
