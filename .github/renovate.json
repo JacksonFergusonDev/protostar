@@ -28,7 +28,7 @@
     },
     "packageRules": [
         {
-            "description": "Require a package to be 2 weeks old before updating, but exclude vulnerability remediation from this wait.",
+            "description": "Require a package to be a week old before updating, matching exclude-newer in pyproject.toml, but exclude vulnerability remediation from this wait.",
             "matchUpdateTypes": [
                 "major",
                 "minor",
@@ -36,7 +36,7 @@
                 "pin",
                 "digest"
             ],
-            "minimumReleaseAge": "2 weeks"
+            "minimumReleaseAge": "1 week"
         },
         {
             "description": "Group all python dev-dependencies (ruff, mypy, pytest) into one PR and automerge them.",
