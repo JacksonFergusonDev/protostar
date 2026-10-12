@@ -9,7 +9,7 @@ dependencies = [
     "argcomplete>=3.6.3",
     "packaging>=26.3",
     "pygments>=2.21.0",
-    "rich>=14.2.0",
+    "rich>=15.0.0",
     "rich-argparse>=1.7.2",
     "ruamel-yaml>=0.19.1,<0.20",
     "textual>=8.2.8",
@@ -76,7 +76,7 @@ docs = [
     "llmstxt-standalone>=0.2.0",
     "mike",
     "mkdocstrings[python]>=1.0.3",
-    "zensical>=0.0.26",
+    "zensical>=0.0.67",
 ]
 dev = [
     { include-group = "ci" },

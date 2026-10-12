@@ -4,9 +4,11 @@ name: Nightly
 # together scaffold every built-in template on every OS and Python, and the
 # suite again with retries, which is how a flaky test is found. It also fails
 # init at every write and command of every template, with real commands, on
-# every OS. A release requires CI on the source it bumps; Nightly may precede
-# a generated-input refresh. Nightly Report files the outcome as an issue. The run
-# starts 52 jobs, eight of them on macOS: a scheduled run has no runner limit.
+# every OS, and runs the suite under the newest and the oldest dependency
+# versions a user can install. A release requires CI on the source it bumps;
+# Nightly may precede a generated-input refresh. Nightly Report files the
+# outcome as an issue. The run starts 56 jobs, eight of them on macOS: a
+# scheduled run has no runner limit.
 on:
   schedule:
     # 10:30pm Pacific daylight time (9:30pm in winter), when nothing waits on
@@ -105,6 +107,56 @@ jobs:
           "python": ["3.13"],
           "templates": [["cli", "astro", "ml"], ["api", "lib"]]
         }
+
+  # The suite under the versions users can install rather than uv.lock's: pip,
+  # pipx, and uv tool resolve Protostar's requirement ranges fresh. Latest is
+  # what a fresh install gets today, past the week exclude-newer holds locks
+  # to, so an upstream release that breaks Protostar shows up here first; it
+  # runs even when main hasn't changed, since the releases have. Lowest holds
+  # each direct dependency at its declared minimum, so a minimum can't promise
+  # more than the code needs.
+  dependency-bounds:
+    name: Dependencies (${{ matrix.resolution }} / Python ${{ matrix.python }})
+    if: ${{ !inputs.rollback-only }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        resolution: [latest, lowest]
+        python: ["3.12", "3.14"]
+
+    env:
+      PYTHONIOENCODING: "utf-8"
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        persist-credentials: false
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      with:
+        python-version: ${{ matrix.python }}
+
+    - name: Resolve the ${{ matrix.resolution }} versions
+      env:
+        RESOLUTION: ${{ matrix.resolution }}
+      run: |
+        if [ "$RESOLUTION" = latest ]; then
+          UV_EXCLUDE_NEWER="$(date -u +%Y-%m-%dT%H:%M:%SZ)" uv sync --upgrade
+        else
+          uv sync --resolution lowest-direct
+        fi
+        uv tree --depth 1 --no-dedupe --frozen
+
+    - name: Mock direnv
+      uses: ./.github/actions/mock-direnv
+
+    # The tests run once, without the retry that files flaky tests: a failure
+    # here is a version Protostar doesn't work with.
+    - name: Run tests
+      run: uv run --no-sync pytest -n auto --dist worksteal --durations=25 -o faulthandler_timeout=90 --rollback-scope pr
 
   # Every fault at every site of a real init (tests/test_rollback.py), one
   # template per job, and on Windows, where each run is slowest, six slices of
