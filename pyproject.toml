@@ -344,6 +344,14 @@ style = "one"
     "MD046", # code block style – Zensical extensions require mixing fenced and indented blocks for admonitions/tabs
 ]
 
+[tool.uv]
+# Lock nothing published in the last week, matching Renovate's
+# minimumReleaseAge, so a compromised release is usually pulled before any
+# lock (Renovate's lock file maintenance included) can pick it up. To take an
+# urgent fix sooner, exempt that one package until the week passes:
+# exclude-newer-package = { <package> = false }
+exclude-newer = "1 week"
+
 [tool.uv.sources]
 # Zensical's fork of mike has no release on PyPI. Pinning the commit keeps
 # `uv lock --upgrade` from moving the release's docs deploy to a new HEAD.

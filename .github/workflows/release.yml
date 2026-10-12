@@ -138,7 +138,7 @@ jobs:
   sync-homebrew:
     name: Delegate Homebrew Update
     needs: publish
-    uses: JacksonFergusonDev/ci-cd-release-infrastructure/.github/workflows/update-homebrew.yml@13d5049ccbe6d72405ea86c93892f06ef2942d8f # main
+    uses: JacksonFergusonDev/ci-cd-release-infrastructure/.github/workflows/update-homebrew.yml@7281f92f055b77539caa67347726475d64107c2d # main
     with:
       tag: ${{ github.ref_name }}
       package_name: "protostar"
