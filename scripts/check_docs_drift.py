@@ -26,7 +26,7 @@ import tomllib
 import traceback
 from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from scripts._common import (
     DOCS_DIR,
@@ -36,6 +36,9 @@ from scripts._common import (
     report,
 )
 from scripts.check_doc_links import docs_path_to_file, extract_anchors
+
+if TYPE_CHECKING:
+    from protostar.errors import ProtostarError
 
 FIRST_PROJECT = DOCS_DIR / "first-project.md"
 CLI_REFERENCE = DOCS_DIR / "usage" / "cli-reference.md"
@@ -74,13 +77,13 @@ def _rel(path: Path) -> str:
     return path.relative_to(REPO_ROOT).as_posix()
 
 
-def _error_classes() -> list[type]:
+def _error_classes() -> list[type[ProtostarError]]:
     """Returns ProtostarError and its subclasses, in definition order."""
     from protostar.errors import ProtostarError
 
-    found: list[type] = [ProtostarError]
+    found: list[type[ProtostarError]] = [ProtostarError]
 
-    def walk(cls: type) -> None:
+    def walk(cls: type[ProtostarError]) -> None:
         for sub in cls.__subclasses__():
             if sub not in found:
                 found.append(sub)
@@ -107,7 +110,7 @@ def _render_error_tree() -> str:
 
     lines = ["ProtostarError (Exception)"]
 
-    def walk(cls: type, prefix: str) -> None:
+    def walk(cls: type[ProtostarError], prefix: str) -> None:
         children = cls.__subclasses__()
         for index, child in enumerate(children):
             last = index == len(children) - 1
@@ -184,7 +187,7 @@ def check_api_reference_errors() -> list[str]:
 
 def check_exit_code_table() -> list[str]:
     """The exit-code table matches ``exit_code_for`` for every error."""
-    from protostar.errors import ExitCode, ProtostarError, exit_code_for
+    from protostar.errors import ExitCode, exit_code_for
 
     by_name = {cls.__name__: cls for cls in _error_classes()}
     problems: list[str] = []
