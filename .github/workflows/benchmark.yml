@@ -12,11 +12,12 @@ name: Benchmarks
 # way, on one runner, and gets the table as a comment. A manual run with
 # calibrate compares the commit with itself to measure the noise.
 on:
-  # cron-job.org dispatches it at 11:30pm Pacific, an hour after Nightly, so the
+  # cron-job.org dispatches it at 4am Pacific, an hour after Nightly, so the
   # two don't compete for the account's runners. The schedule is the fallback;
   # a night already measured plans no jobs.
   schedule:
-    - cron: "17 10 * * *"
+    # 7:17am Pacific (6:17am in winter): it must fall after the 4am dispatch.
+    - cron: "17 14 * * *"
   workflow_dispatch:
     inputs:
       calibrate:
