@@ -17,16 +17,21 @@ if TYPE_CHECKING:
     import pytest
 
 
-def platform_name() -> str:
-    """Names the platform a run's evidence counts for: its OS and Python.
+def system_name() -> str:
+    """Names the operating system, as the nightly reports key their results.
 
-    Nightly runs Linux on two architectures, so ARM Linux is its own platform;
+    Nightly runs Linux on two architectures, so ARM Linux is its own system;
     every other OS runs on one.
     """
     system = {"win32": "windows", "darwin": "macos"}.get(sys.platform, sys.platform)
     if system == "linux" and platform.machine() == "aarch64":
-        system = "linux-arm64"
-    return f"{system}-py{sys.version_info.major}.{sys.version_info.minor}"
+        return "linux-arm64"
+    return system
+
+
+def platform_name() -> str:
+    """Names the platform a run's evidence counts for: its OS and Python."""
+    return f"{system_name()}-py{sys.version_info.major}.{sys.version_info.minor}"
 
 
 class Results:

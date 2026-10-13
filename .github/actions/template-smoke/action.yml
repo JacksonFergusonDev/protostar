@@ -15,6 +15,9 @@ inputs:
     description: Install Protostar from dist/*.whl instead of the checkout
     required: false
     default: "false"
+  artifact:
+    description: Names this job's artifact, source-builds-<artifact>, listing the packages each scaffold built from source, which the nightly report reads
+    required: true
 runs:
   using: "composite"
   steps:
@@ -49,6 +52,13 @@ runs:
         PYTHON: ${{ inputs.python }}
         RETRY: ${{ inputs.retry }}
       run: |
+        source_builds="$RUNNER_TEMP/source-builds"
+        if command -v cygpath >/dev/null 2>&1; then
+          source_builds=$(cygpath -u "$source_builds")
+        fi
+        rm -rf "$source_builds"
+        mkdir -p "$source_builds"
+        export SOURCE_BUILDS="$source_builds/builds.jsonl"
         # Every template runs even after one fails, so a run names all that broke.
         failed=()
         for template in $TEMPLATES; do
@@ -72,3 +82,14 @@ runs:
           echo "::error title=Smoke test failed::${failed[*]} on Python $PYTHON"
           exit 1
         fi
+
+    # After a failed smoke test too: what it built still slows init down.
+    - name: Upload source builds
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: source-builds-${{ inputs.artifact }}
+        path: ${{ runner.temp }}/source-builds/builds.jsonl
+        if-no-files-found: ignore
+        overwrite: true
+        retention-days: 30

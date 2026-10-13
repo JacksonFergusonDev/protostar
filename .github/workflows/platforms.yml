@@ -112,6 +112,7 @@ jobs:
         templates: ${{ join(matrix.smoke, ' ') }}
         python: ${{ matrix.python }}
         retry: ${{ inputs.retry }}
+        artifact: test-${{ strategy.job-index }}
 
   template-hooks-smoke:
     name: Template Hooks Smoke (${{ matrix.os }} / Python ${{ matrix.python }} / ${{ join(matrix.templates, ', ') }})
@@ -150,3 +151,4 @@ jobs:
         python: ${{ matrix.python }}
         retry: ${{ inputs.retry }}
         wheel: ${{ inputs.wheel-artifact != '' }}
+        artifact: smoke-${{ strategy.job-index }}

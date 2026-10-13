@@ -14,11 +14,14 @@ from ruamel.yaml import YAML
 from scripts.nightly_report import (
     FAILING,
     GATE_JOB,
+    SOURCE_BUILDS,
     GhCli,
     Job,
     Run,
+    SourceBuild,
     Tracker,
     report,
+    source_builds_from,
     summarize,
 )
 
@@ -484,8 +487,9 @@ def test_a_release_publishes_only_after_ci_nightly_and_its_smoke_test_pass():
 
 
 class FakeGitHub:
-    def __init__(self, jobs, open_issues=None, last_passing="a" * 40):
+    def __init__(self, jobs, open_issues=None, last_passing="a" * 40, builds=()):
         self._jobs = jobs
+        self._builds = set(builds)
         self._open = dict(open_issues or {})
         self._last_passing = last_passing
         self.calls: list[tuple[str, object, str]] = []
@@ -497,6 +501,9 @@ class FakeGitHub:
 
     def track_tests(self, run):
         self.tracked.append(run)
+
+    def source_builds(self, run):
+        return self._builds
 
     def last_passing_sha(self, run):
         return self._last_passing
@@ -755,3 +762,69 @@ def test_the_fallback_schedule_runs_nothing_after_a_scheduled_run_tonight(tmp_pa
     bounds = job("nightly.yml", "dependency-bounds")
     assert bounds["needs"] == "gate"
     assert "needs.gate.outputs.ran-tonight != 'true'" in bounds["if"]
+
+
+SMOKED = [
+    Job(GATE_JOB, "success"),
+    Job("Platforms / Template Hooks Smoke (windows-latest / api)", "success"),
+]
+BUILT = SourceBuild("ml", "linux-arm64-py3.12", "numpy==3.0.0")
+
+
+def test_a_source_build_opens_an_issue_naming_the_template_platform_and_package():
+    github = FakeGitHub(SMOKED, builds=[BUILT])
+    report(github, RUN)
+    [(action, label, body)] = github.calls
+    assert (action, label) == ("create", SOURCE_BUILDS.label)
+    assert "| ml | linux-arm64-py3.12 | `numpy==3.0.0` |" in body
+
+
+def test_the_same_source_builds_comment_once_and_a_change_comments_again():
+    github = FakeGitHub(SMOKED, open_issues={SOURCE_BUILDS.label: 9}, builds=[BUILT])
+    report(github, RUN)
+    report(github, Run(repo=RUN.repo, run_id="43", sha="c" * 40))
+    assert [call[:2] for call in github.calls] == [("comment", 9)]
+    other = SourceBuild("cli", "macos-py3.14", "watchdog==6.0.0")
+    github._builds.add(other)
+    report(github, RUN)
+    assert [call[:2] for call in github.calls] == [("comment", 9), ("comment", 9)]
+
+
+@pytest.mark.parametrize(
+    ("jobs", "closes"),
+    [
+        (SMOKED, True),
+        (
+            [*SMOKED, Job("Platforms / Test on macos-latest + smoke (ml)", "failure")],
+            False,
+        ),
+        (
+            [
+                Job(GATE_JOB, "success"),
+                Job("Rollback (ubuntu-latest / api)", "success"),
+            ],
+            False,
+        ),
+    ],
+    ids=["every-smoke-passed", "a-smoke-failed", "no-smoke-ran"],
+)
+def test_only_a_run_whose_every_smoke_test_passed_closes_the_source_build_issue(
+    jobs, closes
+):
+    github = FakeGitHub(jobs, open_issues={SOURCE_BUILDS.label: 9})
+    report(github, RUN)
+    assert (("close", 9) in [call[:2] for call in github.calls]) is closes
+
+
+def test_source_builds_are_read_once_from_every_attempt_and_job():
+    record = {
+        "template": "ml",
+        "platform": "linux-arm64-py3.12",
+        "packages": ["numpy==3.0.0"],
+    }
+    line = json.dumps(record) + "\n"
+    artifacts = {
+        "source-builds-smoke-0": {"builds.jsonl": line + line},
+        "source-builds-test-3": {"builds.jsonl": line},
+    }
+    assert source_builds_from(artifacts) == {BUILT}

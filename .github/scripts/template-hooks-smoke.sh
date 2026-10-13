@@ -7,6 +7,7 @@ set -euo pipefail
 
 template="$1"
 python_version="$2"
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 
 temp_base="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
 if command -v cygpath >/dev/null 2>&1; then
@@ -18,6 +19,12 @@ mkdir -p "$smoke_dir"
 cd "$smoke_dir"
 
 protostar init --template "$template" --prek --python-version "$python_version"
+
+# Record any package init built from source, for Nightly Report to file. A
+# build only slows init down, so it never fails the smoke test.
+if [ -n "${SOURCE_BUILDS:-}" ] && [ -f uv.lock ]; then
+  uv run --no-project --directory "$repo_root" python -m scripts.source_builds "$smoke_dir" --template "$template" | tee -a "$SOURCE_BUILDS"
+fi
 
 # 1. Verify pre-commit hook script was installed by Protostar
 test -f .git/hooks/pre-commit || { echo "ERROR: .git/hooks/pre-commit missing"; exit 1; }
