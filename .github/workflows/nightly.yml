@@ -9,13 +9,21 @@ name: Nightly
 # Nightly may precede a generated-input refresh. Nightly Report files the
 # outcome as an issue. The run starts 56 jobs, eight of them on macOS: a
 # scheduled run has no runner limit.
+#
+# cron-job.org dispatches it at 10:30pm Pacific with scheduled=true, because
+# GitHub starts scheduled runs hours late. The schedule below is the fallback
+# when that call never arrives: the gate skips it after a dispatched run passed.
+# The gate finds tonight's scheduled run by this name.
+run-name: ${{ (github.event_name == 'schedule' || inputs.scheduled) && 'Nightly (scheduled)' || 'Nightly' }}
 on:
   schedule:
-    # 10:30pm Pacific daylight time (9:30pm in winter), when nothing waits on
-    # the runners. GitHub can start a scheduled run late.
-    - cron: "30 5 * * *"
+    - cron: "17 9 * * *"
   workflow_dispatch:
     inputs:
+      scheduled:
+        description: "Run as the nightly schedule does: skip a commit that already passed."
+        type: boolean
+        default: false
       rollback-only:
         description: "Run only the rollback jobs, to reproduce a rollback failure."
         type: boolean
@@ -38,7 +46,7 @@ jobs:
   gate:
     name: Check for new commits
     # Only the schedule skips: a manual run always runs.
-    if: github.event_name == 'schedule'
+    if: github.event_name == 'schedule' || inputs.scheduled
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:
@@ -46,6 +54,7 @@ jobs:
       issues: read
     outputs:
       changed: ${{ steps.compare.outputs.changed }}
+      ran-tonight: ${{ steps.compare.outputs.ran-tonight }}
 
     steps:
     - name: Compare with the last passing run
@@ -53,7 +62,21 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
         REPO: ${{ github.repository }}
+        EVENT: ${{ github.event_name }}
       run: |
+        # The schedule is the fallback for cron-job.org's dispatch: once a
+        # scheduled run has started tonight, it runs nothing, not even the
+        # dependency runs, so no night counts twice.
+        if [ "$EVENT" = schedule ]; then
+          tonight=$(gh run list --repo "$REPO" --workflow nightly.yml --branch main --limit 20 --json databaseId,displayTitle,createdAt \
+            --jq "[.[] | select(.databaseId != $GITHUB_RUN_ID and .displayTitle == \"Nightly (scheduled)\" and now - (.createdAt | fromdateiso8601) < 20 * 3600)] | length")
+          if [ "$tonight" != 0 ]; then
+            echo "A scheduled run already started tonight."
+            echo "ran-tonight=true" >> "$GITHUB_OUTPUT"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+        fi
         last=$(gh run list --repo "$REPO" --workflow nightly.yml --branch main --status success --limit 1 --json headSha --jq '.[0].headSha // ""')
         pending=$(gh issue list --repo "$REPO" --label awaiting-verification --state open --limit 1 --json number --jq length)
         # Three runs must verify a fix even when no further commits land.
@@ -117,7 +140,8 @@ jobs:
   # more than the code needs.
   dependency-bounds:
     name: Dependencies (${{ matrix.resolution }} / Python ${{ matrix.python }})
-    if: ${{ !inputs.rollback-only }}
+    needs: gate
+    if: ${{ !cancelled() && needs.gate.outputs.ran-tonight != 'true' && !inputs.rollback-only }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
