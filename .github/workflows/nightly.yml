@@ -10,14 +10,15 @@ name: Nightly
 # outcome as an issue. The run starts 56 jobs, eight of them on macOS: a
 # scheduled run has no runner limit.
 #
-# cron-job.org dispatches it at 10:30pm Pacific with scheduled=true, because
+# cron-job.org dispatches it at 3am Pacific with scheduled=true, because
 # GitHub starts scheduled runs hours late. The schedule below is the fallback
 # when that call never arrives: the gate skips it after a dispatched run passed.
 # The gate finds tonight's scheduled run by this name.
 run-name: ${{ (github.event_name == 'schedule' || inputs.scheduled) && 'Nightly (scheduled)' || 'Nightly' }}
 on:
   schedule:
-    - cron: "17 9 * * *"
+    # 6:17am Pacific (5:17am in winter): it must fall after the 3am dispatch.
+    - cron: "17 13 * * *"
   workflow_dispatch:
     inputs:
       scheduled:

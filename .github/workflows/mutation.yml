@@ -3,11 +3,12 @@ name: Mutation Testing
 # Nightly runs skip unchanged inputs; manual runs remain available for development.
 # Each module gets its own runner, in parallel; a module listed
 # under [tool.mutmut-shards] in pyproject.toml gets one runner per shard.
-# cron-job.org dispatches it at 10:30pm Pacific with scheduled=true, beside
+# cron-job.org dispatches it at 3am Pacific with scheduled=true, beside
 # Nightly; the schedule is the fallback, and skips inputs already recorded.
 on:
   schedule:
-    - cron: "17 9 * * *"
+    # 6:17am Pacific (5:17am in winter): it must fall after the 3am dispatch.
+    - cron: "17 13 * * *"
   workflow_dispatch:
     inputs:
       scheduled:
