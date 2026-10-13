@@ -650,25 +650,12 @@ def test_jobs_reads_every_page_so_a_late_failure_still_counts(monkeypatch):
     ]
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="The gate runs in bash")
-@pytest.mark.parametrize(
-    ("last", "hours_ago", "pending", "changed"),
-    [
-        ("same", 30, "0", False),
-        ("same", 30, "1", True),
-        ("same", 5, "1", False),
-        ("older", 5, "0", True),
-    ],
-)
-def test_scheduled_nightly_keeps_running_while_a_fix_awaits_verification(
-    tmp_path, last, hours_ago, pending, changed
-):
-    """A fix awaiting verification runs once a night, never twice."""
+def run_gate(tmp_path, *, event, last, pending, tonight="0"):
+    """Runs Nightly's gate against a fake gh, returning what it outputs."""
     import os
     import shutil
     import subprocess
     import sys
-    import time
 
     gate = job("nightly.yml", "gate")
     assert gate["permissions"]["issues"] == "read"
@@ -678,7 +665,7 @@ def test_scheduled_nightly_keeps_running_while_a_fix_awaits_verification(
         f"#!{sys.executable}\n"
         "import os, sys\n"
         "if sys.argv[1:3] == ['run', 'list']:\n"
-        "    print(os.environ['LAST'])\n"
+        "    print(os.environ['LAST' if '--status' in sys.argv else 'TONIGHT'])\n"
         "else:\n"
         "    assert sys.argv[1:3] == ['issue', 'list'], sys.argv\n"
         "    assert sys.argv[sys.argv.index('--label') + 1] == 'awaiting-verification'\n"
@@ -695,13 +682,42 @@ def test_scheduled_nightly_keeps_running_while_a_fix_awaits_verification(
             **os.environ,
             "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}",
             "REPO": "owner/repo",
+            "EVENT": event,
             "GITHUB_SHA": "same",
+            "GITHUB_RUN_ID": "7",
             "GITHUB_OUTPUT": str(output),
-            "LAST": f"{last} {int(time.time()) - hours_ago * 3600}",
+            "LAST": last,
             "PENDING": pending,
+            "TONIGHT": tonight,
         },
         capture_output=True,
         text=True,
     )
     assert result.returncode == 0, result.stderr
-    assert output.read_text() == f"changed={str(changed).lower()}\n"
+    return output.read_text()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="The gate runs in bash")
+@pytest.mark.parametrize("event", ["schedule", "workflow_dispatch"])
+@pytest.mark.parametrize(
+    ("last", "pending", "changed"),
+    [("same", "0", False), ("same", "1", True), ("older", "0", True)],
+)
+def test_scheduled_nightly_keeps_running_while_a_fix_awaits_verification(
+    tmp_path, event, last, pending, changed
+):
+    assert run_gate(tmp_path, event=event, last=last, pending=pending) == (
+        f"changed={str(changed).lower()}\n"
+    )
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="The gate runs in bash")
+def test_the_fallback_schedule_runs_nothing_after_a_scheduled_run_tonight(tmp_path):
+    """cron-job.org's run already counted tonight, so the schedule adds none."""
+    output = run_gate(
+        tmp_path, event="schedule", last="older", pending="1", tonight="1"
+    )
+    assert output == "ran-tonight=true\nchanged=false\n"
+    bounds = job("nightly.yml", "dependency-bounds")
+    assert bounds["needs"] == "gate"
+    assert "needs.gate.outputs.ran-tonight != 'true'" in bounds["if"]
