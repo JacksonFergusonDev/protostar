@@ -8,12 +8,25 @@ from __future__ import annotations
 
 import json
 import os
+import platform
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import pytest
+
+
+def platform_name() -> str:
+    """Names the platform a run's evidence counts for: its OS and Python.
+
+    Nightly runs Linux on two architectures, so ARM Linux is its own platform;
+    every other OS runs on one.
+    """
+    system = {"win32": "windows", "darwin": "macos"}.get(sys.platform, sys.platform)
+    if system == "linux" and platform.machine() == "aarch64":
+        system = "linux-arm64"
+    return f"{system}-py{sys.version_info.major}.{sys.version_info.minor}"
 
 
 class Results:
@@ -37,12 +50,10 @@ class Results:
         """Only the controller of a normally finished session publishes evidence."""
         if hasattr(session.config, "workerinput") or exitstatus not in (0, 1):
             return
-        system = {"win32": "windows", "darwin": "macos"}.get(sys.platform, sys.platform)
-        platform = f"{system}-py{sys.version_info.major}.{sys.version_info.minor}"
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(
             json.dumps(
-                {"platform": platform, "tests": dict(sorted(self.tests.items()))}
+                {"platform": platform_name(), "tests": dict(sorted(self.tests.items()))}
             )
             + "\n",
             encoding="utf-8",

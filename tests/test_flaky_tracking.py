@@ -1,6 +1,7 @@
 """A fixed flake stays pending until explicit, later nightly passes verify it."""
 
 import json
+import sys
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -19,7 +20,7 @@ from scripts.flaky_tracking import (
     evidence_from,
     track,
 )
-from scripts.pytest_results import Results
+from scripts.pytest_results import Results, platform_name
 
 TEST = "tests/test_rollback.py::test_real_commands_roll_back[astro-empty:write:a#1:after:error]"
 WIN = "windows-py3.14"
@@ -317,6 +318,24 @@ def test_pytest_evidence_requires_a_passed_call_and_preserves_teardown_failures(
 
 
 @pytest.mark.parametrize(
+    ("system", "machine", "name"),
+    [
+        ("linux", "x86_64", "linux"),
+        ("linux", "aarch64", "linux-arm64"),
+        ("darwin", "arm64", "macos"),
+        ("win32", "AMD64", "windows"),
+    ],
+)
+def test_arm_linux_evidence_counts_apart_from_x86_linux(
+    monkeypatch, system, machine, name
+):
+    monkeypatch.setattr("sys.platform", system)
+    monkeypatch.setattr("platform.machine", lambda: machine)
+    python = f"{sys.version_info.major}.{sys.version_info.minor}"
+    assert platform_name() == f"{name}-py{python}"
+
+
+@pytest.mark.parametrize(
     ("status", "worker"), [(2, False), (3, False), (4, False), (5, False), (0, True)]
 )
 def test_interrupted_incomplete_and_worker_results_are_not_verification(
@@ -409,7 +428,6 @@ def test_real_pytest_and_xdist_publish_separate_attempts_with_all_phase_failures
 ):
     import os
     import subprocess
-    import sys
 
     config = tmp_path / "pytest.ini"
     config.write_text("[pytest]\n")

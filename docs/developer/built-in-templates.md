@@ -136,7 +136,7 @@ A payload that configures a tool declares it with `requires`, so `protostar init
 **Adding one.** Open an issue that answers the three [admission questions](#admission-criteria) and names the tier. Then:
 
 1. Write `src/protostar/templates/<name>.toml`, following the conventions above.
-1. Add it to the smoke lists in `.github/workflows/ci.yml` and `.github/workflows/nightly.yml`: the `templates` lists of the `smoke` matrices and the `smoke` lists of the macOS test entries. `tests/test_nightly.py` fails until pull requests and Nightly together scaffold it once on every operating system and Python, and pull requests at every Python on Linux and once on each operating system.
+1. Add it to the smoke lists in `.github/workflows/ci.yml` and `.github/workflows/nightly.yml`: the `templates` lists of the `smoke` matrices and the `smoke` lists of the macOS and ARM Linux test entries. `tests/test_nightly.py` fails until pull requests and Nightly together scaffold it once on every operating system and Python, pull requests at every Python on Linux and once on each operating system, and Nightly on ARM Linux at the oldest and newest Python.
 1. Add a `RegressionScenario` to `scripts/run_snapshots.py` and its name to `SCENARIO_FIXTURES` in `tests/test_snapshots.py`, then run `just check-snapshots` and review every generated file by hand.
 
 The contract tests, template discovery, the template picker, shell completion, and the generated template table pick it up automatically.
