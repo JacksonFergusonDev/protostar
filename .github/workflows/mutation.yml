@@ -3,12 +3,17 @@ name: Mutation Testing
 # Nightly runs skip unchanged inputs; manual runs remain available for development.
 # Each module gets its own runner, in parallel; a module listed
 # under [tool.mutmut-shards] in pyproject.toml gets one runner per shard.
+# cron-job.org dispatches it at 10:30pm Pacific with scheduled=true, beside
+# Nightly; the schedule is the fallback, and skips inputs already recorded.
 on:
   schedule:
-    # 10:30pm Pacific daylight time (9:30pm in winter), with Nightly.
-    - cron: "30 5 * * *"
+    - cron: "17 9 * * *"
   workflow_dispatch:
     inputs:
+      scheduled:
+        description: "Run as the nightly schedule does: every module, skipped when nothing changed."
+        type: boolean
+        default: false
       modules:
         description: "Comma-separated modules to mutate (journal, merge, text_merge, ...), or 'all'. A sharded module takes module:shard to run one shard."
         required: true
@@ -31,7 +36,7 @@ jobs:
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
       run: ${{ steps.changed.outputs.run }}
-      publish: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || inputs.modules == 'all') }}
+      publish: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || inputs.scheduled || inputs.modules == 'all') }}
 
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -43,9 +48,9 @@ jobs:
     - name: Check changed mutation inputs
       id: changed
       env:
-        EVENT: ${{ github.event_name }}
+        SCHEDULED: ${{ github.event_name == 'schedule' || inputs.scheduled }}
       run: |
-        if [[ "$EVENT" == "schedule" ]]; then
+        if [[ "$SCHEDULED" == "true" ]]; then
           git fetch origin gh-pages
           if git cat-file -e origin/gh-pages:metrics/mutation-history.json; then
             git show origin/gh-pages:metrics/mutation-history.json > mutation-history.json
@@ -60,7 +65,7 @@ jobs:
       id: matrix
       if: steps.changed.outputs.run == 'true'
       env:
-        REQUESTED: ${{ github.event_name == 'schedule' && 'all' || inputs.modules }}
+        REQUESTED: ${{ (github.event_name == 'schedule' || inputs.scheduled) && 'all' || inputs.modules }}
       run: |
         python3 - <<'EOF'
         import json, os, sys, tomllib

@@ -9,13 +9,19 @@ name: Nightly
 # Nightly may precede a generated-input refresh. Nightly Report files the
 # outcome as an issue. The run starts 56 jobs, eight of them on macOS: a
 # scheduled run has no runner limit.
+#
+# cron-job.org dispatches it at 10:30pm Pacific with scheduled=true, because
+# GitHub starts scheduled runs hours late. The schedule below is the fallback
+# when that call never arrives: the gate skips it after a dispatched run passed.
 on:
   schedule:
-    # 10:30pm Pacific daylight time (9:30pm in winter), when nothing waits on
-    # the runners. GitHub can start a scheduled run late.
-    - cron: "30 5 * * *"
+    - cron: "17 9 * * *"
   workflow_dispatch:
     inputs:
+      scheduled:
+        description: "Run as the nightly schedule does: skip a commit that already passed."
+        type: boolean
+        default: false
       rollback-only:
         description: "Run only the rollback jobs, to reproduce a rollback failure."
         type: boolean
@@ -38,7 +44,7 @@ jobs:
   gate:
     name: Check for new commits
     # Only the schedule skips: a manual run always runs.
-    if: github.event_name == 'schedule'
+    if: github.event_name == 'schedule' || inputs.scheduled
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:
@@ -54,10 +60,12 @@ jobs:
         GH_TOKEN: ${{ github.token }}
         REPO: ${{ github.repository }}
       run: |
-        last=$(gh run list --repo "$REPO" --workflow nightly.yml --branch main --status success --limit 1 --json headSha --jq '.[0].headSha // ""')
+        read -r last started < <(gh run list --repo "$REPO" --workflow nightly.yml --branch main --status success --limit 1 --json headSha,createdAt --jq '.[0] | "\(.headSha // "") \(.createdAt // "1970-01-01T00:00:00Z" | fromdateiso8601)"')
         pending=$(gh issue list --repo "$REPO" --label awaiting-verification --state open --limit 1 --json number --jq length)
-        # Three runs must verify a fix even when no further commits land.
-        if [ "$last" = "$GITHUB_SHA" ] && [ "$pending" = 0 ]; then
+        # Three nights must verify a fix even when no further commits land, but
+        # the fallback schedule mustn't count a night twice.
+        tonight=$(( $(date +%s) - started < 20 * 3600 ))
+        if [ "$last" = "$GITHUB_SHA" ] && { [ "$pending" = 0 ] || [ "$tonight" = 1 ]; }; then
           echo "main is still at ${GITHUB_SHA::7}, which already passed."
           echo "changed=false" >> "$GITHUB_OUTPUT"
         else

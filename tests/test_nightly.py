@@ -652,16 +652,23 @@ def test_jobs_reads_every_page_so_a_late_failure_still_counts(monkeypatch):
 
 @pytest.mark.skipif(sys.platform == "win32", reason="The gate runs in bash")
 @pytest.mark.parametrize(
-    ("last", "pending", "changed"),
-    [("same", "0", False), ("same", "1", True), ("older", "0", True)],
+    ("last", "hours_ago", "pending", "changed"),
+    [
+        ("same", 30, "0", False),
+        ("same", 30, "1", True),
+        ("same", 5, "1", False),
+        ("older", 5, "0", True),
+    ],
 )
 def test_scheduled_nightly_keeps_running_while_a_fix_awaits_verification(
-    tmp_path, last, pending, changed
+    tmp_path, last, hours_ago, pending, changed
 ):
+    """A fix awaiting verification runs once a night, never twice."""
     import os
     import shutil
     import subprocess
     import sys
+    import time
 
     gate = job("nightly.yml", "gate")
     assert gate["permissions"]["issues"] == "read"
@@ -690,7 +697,7 @@ def test_scheduled_nightly_keeps_running_while_a_fix_awaits_verification(
             "REPO": "owner/repo",
             "GITHUB_SHA": "same",
             "GITHUB_OUTPUT": str(output),
-            "LAST": last,
+            "LAST": f"{last} {int(time.time()) - hours_ago * 3600}",
             "PENDING": pending,
         },
         capture_output=True,
