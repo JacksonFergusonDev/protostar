@@ -7,7 +7,7 @@ name: Nightly
 # every OS, and runs the suite under the newest and the oldest dependency
 # versions a user can install. A release requires CI on the source it bumps;
 # Nightly may precede a generated-input refresh. Nightly Report files the
-# outcome as an issue. The run starts 56 jobs, eight of them on macOS: a
+# outcome as an issue. The run starts 58 jobs, eight of them on macOS: a
 # scheduled run has no runner limit.
 #
 # cron-job.org dispatches it at 3am Pacific with scheduled=true, because
@@ -107,6 +107,10 @@ jobs:
         TEMPLATE: ${{ inputs.template || 'all' }}
       run: echo "rollback=$(python3 -m scripts.nightly_matrix --os "$OS" --template "$TEMPLATE")" >> "$GITHUB_OUTPUT"
 
+  # ARM Linux, which pull requests leave out, runs the suite once and scaffolds
+  # every template at the oldest and newest Python. Protostar is pure Python and
+  # macOS already runs on ARM, so what only this platform tests is the wheels a
+  # scaffold installs: a package with no aarch64 Linux wheel builds from source.
   platforms:
     name: Platforms
     needs: gate
@@ -122,14 +126,18 @@ jobs:
           "include": [
             {"os": "macos-latest", "python": "3.12", "smoke": ["api", "astro", "cli", "lib"]},
             {"os": "macos-latest", "python": "3.13", "smoke": ["cli", "lib", "ml"]},
-            {"os": "macos-latest", "python": "3.14", "smoke": ["api", "astro", "ml"]}
+            {"os": "macos-latest", "python": "3.14", "smoke": ["api", "astro", "ml"]},
+            {"os": "ubuntu-24.04-arm", "python": "3.14", "smoke": ["api", "astro", "cli", "lib", "ml"]}
           ]
         }
       smoke: >-
         {
           "os": ["windows-latest"],
           "python": ["3.13"],
-          "templates": [["cli", "astro", "ml"], ["api", "lib"]]
+          "templates": [["cli", "astro", "ml"], ["api", "lib"]],
+          "include": [
+            {"os": "ubuntu-24.04-arm", "python": "3.12", "templates": ["api", "astro", "cli", "lib", "ml"]}
+          ]
         }
 
   # The suite under the versions users can install rather than uv.lock's: pip,

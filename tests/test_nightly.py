@@ -25,6 +25,8 @@ from scripts.nightly_report import (
 REPO_ROOT = Path(__file__).resolve().parent.parent
 WORKFLOWS = REPO_ROOT / ".github/workflows"
 OPERATING_SYSTEMS = {"ubuntu-latest", "macos-latest", "windows-latest"}
+# Only Nightly runs ARM Linux; the other operating systems run everywhere.
+ARM_LINUX = "ubuntu-24.04-arm"
 
 Entry = dict[str, Any]
 
@@ -83,7 +85,7 @@ def platform(entry: Entry) -> tuple[tuple[str, Any], ...]:
 
 def smoke_runs(matrices: dict[str, list[Entry]]) -> list[tuple[str, str, str]]:
     """Each template a run scaffolds, by OS and Python, in smoke and test jobs."""
-    return [
+    every = [
         (entry["os"], entry["python"], template)
         for entry in matrices["smoke"]
         for template in entry["templates"]
@@ -92,6 +94,15 @@ def smoke_runs(matrices: dict[str, list[Entry]]) -> list[tuple[str, str, str]]:
         for entry in matrices["tests"]
         for template in entry.get("smoke", [])
     ]
+    return [run for run in every if run[0] != ARM_LINUX]
+
+
+def arm_linux(matrices: dict[str, list[Entry]]) -> dict[str, list[Entry]]:
+    """The entries of each matrix that run on ARM Linux."""
+    return {
+        kind: [entry for entry in entries if entry["os"] == ARM_LINUX]
+        for kind, entries in matrices.items()
+    }
 
 
 def job_count(workflow: str) -> int:
@@ -163,7 +174,30 @@ def test_expand_follows_github_include_rules():
 
 @pytest.mark.parametrize("matrices", [PULL_REQUEST, NIGHTLY], ids=["pr", "nightly"])
 def test_pull_requests_and_nightly_each_test_every_os_and_python(matrices):
-    assert sorted(map(platform, matrices["tests"])) == EVERY_PLATFORM
+    tests = [entry for entry in matrices["tests"] if entry["os"] != ARM_LINUX]
+    assert sorted(map(platform, tests)) == EVERY_PLATFORM
+
+
+def test_only_nightly_runs_arm_linux():
+    assert arm_linux(PULL_REQUEST) == {"tests": [], "smoke": []}
+    assert arm_linux(RELEASE) == {"tests": [], "smoke": []}
+
+
+def test_arm_linux_scaffolds_every_template_at_the_oldest_and_newest_python():
+    arm = arm_linux(NIGHTLY)
+    pythons = supported_pythons()
+    assert [entry["python"] for entry in arm["tests"]] == [pythons[-1]]
+    scaffolds = {
+        (entry["python"], template)
+        for kind, key in (("tests", "smoke"), ("smoke", "templates"))
+        for entry in arm[kind]
+        for template in entry.get(key, [])
+    }
+    assert scaffolds == {
+        (python, template)
+        for python in (pythons[0], pythons[-1])
+        for template in built_in_templates()
+    }
 
 
 def test_pull_requests_and_nightly_together_smoke_test_every_template_once():
