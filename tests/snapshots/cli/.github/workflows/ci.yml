@@ -40,7 +40,7 @@ jobs:
         run: uv run mypy .
 
       - name: Run actionlint
-        run: uv run actionlint
+        uses: raven-actions/actionlint@v2
 
   test:
     name: Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}

@@ -32,7 +32,11 @@ lint: sync
     uv run rumdl fmt --check .
     uv run ruff check .
     uv run ruff format --check .
-    uv run actionlint
+    if command -v actionlint >/dev/null 2>&1; then \
+        actionlint; \
+    else \
+        printf "⚠ actionlint not found. Skipping workflow linting.\n"; \
+    fi
     @printf "{{ green }}✔ Linting passed{{ nc }}\n"
 
 # Run static type checking

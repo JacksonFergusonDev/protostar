@@ -75,7 +75,7 @@ Here is what each built-in template writes into an empty folder.
 
     - **Dependencies:** `typer` and `rich`, installed and locked by uv.
     - **Tool settings:** `[tool.ruff]`, `[tool.mypy]`, `[tool.pytest.ini_options]`, and `[tool.rumdl]` in `pyproject.toml`, and the tools themselves in the development dependency group.
-    - **Commit hooks:** `.pre-commit-config.yaml` runs `ruff-check`, `ruff-format`, `mypy`, `rumdl-check`, and `rumdl-fmt` through `uv run`, so each hook uses the version locked in `uv.lock`. `mypy` checks the whole project, as CI does, because checking only the staged files misses errors they cause elsewhere. `actionlint` checks the workflows, and `check-jsonschema` validates the Renovate and Read the Docs configuration wherever those files live.
+    - **Commit hooks:** `.pre-commit-config.yaml` runs `ruff-check`, `ruff-format`, `mypy`, `rumdl-check`, and `rumdl-fmt` through `uv run`, so each hook uses the version locked in `uv.lock`. `mypy` checks the whole project, as CI does, because checking only the staged files misses errors they cause elsewhere. `actionlint` checks the workflows from a hook of its own, which prek builds the first time you commit, so `init` never waits for it. CI runs it as well, and `just lint` runs it when it's installed. `check-jsonschema` validates the Renovate and Read the Docs configuration wherever those files live.
     - **When hooks run:** most hooks run on each commit. Commitizen checks the commit message. Pytest runs before a push that changes `src/`, `tests/`, `pyproject.toml`, or `uv.lock`, rather than on every commit.
 
 === "lib: a library"

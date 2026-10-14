@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from protostar.metadata import MetadataKey
+from protostar.registry import RemoteHook
 
 from .base import PathSignal, Signal, ToolInfo, ToolModule
 
@@ -14,26 +15,35 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("protostar")
 
-_ACTIONLINT_HOOK = """      - id: actionlint
-        name: actionlint
-        entry: uv run actionlint
-        language: system
-        files: ^\\.github/workflows/.*\\.ya?ml$"""
+_ACTIONLINT_HOOK = f"""  # GitHub Actions workflow linting
+  - repo: {RemoteHook.ACTIONLINT.value}
+    rev: {RemoteHook.ACTIONLINT.placeholder}
+    hooks:
+      - id: actionlint"""
+
+# actionlint ships no wheel, so a dev dependency would be built during init.
+# The hook builds it with prek's Go toolchain on the first commit instead.
+_ACTIONLINT_LINT = (
+    "if command -v actionlint >/dev/null 2>&1; then \\\n"
+    "        actionlint; \\\n"
+    "    else \\\n"
+    '        printf "⚠ actionlint not found. Skipping workflow linting.\\n"; \\\n'
+    "    fi"
+)
 
 
 def _declare_actionlint(manifest: EnvironmentManifest) -> None:
-    """Lints the generated workflows with the locked actionlint binary.
+    """Lints the generated workflows with actionlint, which Protostar never installs.
 
     Args:
         manifest: The centralized state object.
     """
-    manifest.dependencies.add_dev("actionlint-py")
-    manifest.tooling.add_pre_commit_local_hook(_ACTIONLINT_HOOK)
+    manifest.tooling.add_pre_commit_hook(_ACTIONLINT_HOOK)
     manifest.tooling.add_ci_step(
-        "      - name: Run actionlint\n        run: uv run actionlint"
+        "      - name: Run actionlint\n        uses: raven-actions/actionlint@v2"
     )
-    if "uv run actionlint" not in manifest.tooling.just_lint_commands:
-        manifest.tooling.just_lint_commands.append("uv run actionlint")
+    if _ACTIONLINT_LINT not in manifest.tooling.just_lint_commands:
+        manifest.tooling.just_lint_commands.append(_ACTIONLINT_LINT)
 
 
 class CIModule(ToolModule):
