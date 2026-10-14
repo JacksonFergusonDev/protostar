@@ -12,4 +12,5 @@ DEFAULT_REVISIONS: dict[str, str] = {
     "https://github.com/commitizen-tools/commitizen": "v4.19.2",
     "https://github.com/gitleaks/gitleaks": "v8.30.1",
     "https://github.com/pre-commit/pre-commit-hooks": "v6.0.0",
+    "https://github.com/rhysd/actionlint": "v1.7.12",
 }

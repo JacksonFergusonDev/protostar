@@ -59,6 +59,7 @@ class RemoteHook(enum.StrEnum):
     GITLEAKS = "https://github.com/gitleaks/gitleaks"
     MARKDOWNLINT = "https://github.com/DavidAnson/markdownlint-cli2"
     COMMITIZEN = "https://github.com/commitizen-tools/commitizen"
+    ACTIONLINT = "https://github.com/rhysd/actionlint"
 
     @property
     def placeholder(self) -> str:
