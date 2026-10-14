@@ -4,7 +4,10 @@ A package whose release has no wheel for the platform builds from its source
 distribution, which can make ``protostar init`` take minutes. The template
 smoke test runs this after each scaffold. A wheel built locally carries tags
 that no wheel ``uv.lock`` records for the package does, so comparing the two
-finds every build, whether or not uv's cache already held it.
+finds every build, whether or not uv's cache already held it. A wheel's own
+tags can disagree with its filename (NVIDIA's ``aarch64`` wheels call
+themselves ``sbsa``), so a package with no source distribution to build from
+is never reported.
 
 Usage: ``python -m scripts.source_builds PROJECT --template NAME`` prints one
 JSON line naming the template, the platform, and the packages built, and
@@ -53,7 +56,8 @@ def published_tags(lock: Path) -> dict[tuple[str, str], set[str]]:
 
     Returns:
         Each package's published tags, keyed by normalized name and version.
-        Packages from a local source are left out.
+        Packages from a local source, and registry packages with no source
+        distribution, which can't have been built, are left out.
     """
     packages = tomllib.loads(lock.read_text(encoding="utf-8")).get("package", [])
     return {
@@ -64,6 +68,7 @@ def published_tags(lock: Path) -> dict[tuple[str, str], set[str]]:
         }
         for package in packages
         if not LOCAL_SOURCES & set(package.get("source", {}))
+        and ("sdist" in package or "registry" not in package.get("source", {}))
     }
 
 
