@@ -81,6 +81,7 @@ def test_a_package_init_built_from_source_is_recorded_without_failing(
         "Path('uv.lock').write_text(\n"
         '    \'[[package]]\\nname = "slow"\\nversion = "1.0"\\n\'\n'
         "    'source = { registry = \"https://pypi.org/simple\" }\\n'\n"
+        "    'sdist = { url = \"https://files.example/slow-1.0.tar.gz\" }\\n'\n"
         ")\n"
         "venv = Path('.venv')\n"
         "venv.mkdir()\n"

@@ -41,6 +41,14 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.example/sdist_only-2.0.tar.gz" }
 
 [[package]]
+name = "nvidia-cusparselt-cu13"
+version = "0.8.1"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.example/nvidia_cusparselt_cu13-0.8.1-py3-none-manylinux2014_aarch64.whl" },
+]
+
+[[package]]
 name = "local-version"
 version = "1.0+cpu"
 source = { registry = "https://download.example/whl" }
@@ -77,6 +85,9 @@ def test_only_packages_with_no_matching_published_wheel_are_reported(tmp_path):
             "watchdog-6.0.0.dist-info": "cp314-cp314-macosx_11_0_arm64",
             "sdist_only-2.0.dist-info": "py3-none-any",
             "local_version-1.0+cpu.dist-info": "py3-none-any",
+            # Its WHEEL file names a tag its filename doesn't, but with no
+            # sdist it can only have come from the published wheel.
+            "nvidia_cusparselt_cu13-0.8.1.dist-info": "py3-none-manylinux2014_sbsa",
         },
     )
     assert source_builds.source_builds(project) == [
