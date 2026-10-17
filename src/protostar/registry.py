@@ -35,7 +35,6 @@ from ._fallbacks import DEFAULT_REVISIONS
 logger = logging.getLogger("protostar")
 
 __all__ = [
-    "HookRegistry",
     "PinProvenance",
     "RemoteHook",
     "clear_hook_registry_cache",
@@ -211,39 +210,3 @@ def clear_hook_registry_cache() -> None:
     global _pending
     with _lock:
         _pending = None
-
-
-class HookRegistry:
-    """Memoized fetcher for the static JSON pre-commit hook registry."""
-
-    @classmethod
-    def resolve_placeholders(cls, content: str) -> str:
-        """Replaces any remote hook revision placeholders with resolved revisions.
-
-        Only fetches from the remote registry if at least one placeholder is present.
-
-        Args:
-            content: Text content containing optional `<% REV_* %>` placeholders.
-
-        Returns:
-            The content with all remote hook placeholders replaced by resolved versions.
-        """
-        rendered = content
-        for hook in RemoteHook:
-            if hook.placeholder in rendered:
-                rev = cls.get_revision(hook)
-                rendered = rendered.replace(hook.placeholder, rev)
-        return rendered
-
-    @classmethod
-    def get_revision(cls, hook: RemoteHook) -> str:
-        """Retrieves the latest revision for a hook, falling back to local defaults.
-
-        Args:
-            hook: The strongly typed RemoteHook enum value.
-
-        Returns:
-            The semantic version string (e.g., 'v6.0.0').
-        """
-        registry = _fetch_hook_registry()
-        return registry.get(hook.value, DEFAULT_REVISIONS[hook])

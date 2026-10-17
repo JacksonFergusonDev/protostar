@@ -258,21 +258,6 @@ def shield_sigint() -> Iterator[None]:
             signal.signal(signal.SIGINT, previous_handler)
 
 
-def execute_subprocess(
-    cmd: list[str],
-    timeout: int | None = None,
-    env: dict[str, str] | None = None,
-) -> None:
-    """Executes one isolated subprocess using a short-lived process runner.
-
-    Args:
-        cmd: The command and its arguments.
-        timeout: Optional execution timeout in seconds.
-        env: Optional environment overrides.
-    """
-    ProcessRunner().run(cmd, timeout=timeout, env=env)
-
-
 def is_interactive() -> bool:
     """Evaluates if the environment supports interactive TTY prompts."""
     if "PROTOSTAR_BENCHMARK_RECIPE_EDITOR" in os.environ:

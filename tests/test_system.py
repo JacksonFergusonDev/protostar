@@ -12,7 +12,6 @@ from protostar.errors import (
 from protostar.system import (
     GIT_REPOSITORY_VARIABLES,
     ProcessRunner,
-    execute_subprocess,
     get_git_config,
     shield_sigint,
 )
@@ -312,14 +311,6 @@ def test_shield_sigint_ignores_reentrant_interrupt(mocker):
     with shield_sigint():
         installed_handler = set_handler.call_args_list[0].args[1]
         installed_handler(signal.SIGINT, None)
-
-
-def test_execute_subprocess_uses_short_lived_runner(mocker):
-    run = mocker.patch("protostar.system.ProcessRunner.run")
-
-    execute_subprocess(["uv", "sync"], timeout=30)
-
-    run.assert_called_once_with(["uv", "sync"], timeout=30, env=None)
 
 
 def test_a_command_missing_from_path_is_never_started(mocker):

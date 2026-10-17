@@ -769,7 +769,7 @@ def test_executor_lifecycle_ordering(tmp_path, monkeypatch, mocker, mock_config)
 
 
 def test_executor_run_tasks(mocker, mock_config):
-    """Test that _run_tasks iterates and calls execute_subprocess with boundaries."""
+    """Test that _run_tasks runs each task through the process runner with its timeout."""
     manifest = EnvironmentManifest()
     manifest.tasks.add_post_install_task(["uv", "first_task"])
     manifest.tasks.add_post_install_task(["uv", "second_task"], timeout=45)
@@ -1742,7 +1742,9 @@ def test_executor_surfaces_non_destructive_rollback_failure(
 
     assert (tmp_path / "generated" / "external.txt").read_text() == "external"
     assert exc_info.value.__cause__ is not None
-    assert exc_info.value.rollback_result.failed_paths == (tmp_path / "generated",)
+    assert [failure.path for failure in exc_info.value.rollback_result.errors] == [
+        tmp_path / "generated"
+    ]
 
 
 def test_executor_run_tasks_records_footprints(

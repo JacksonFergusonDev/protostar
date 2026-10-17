@@ -178,10 +178,6 @@ class ProjectName:
         if not self.value.strip():
             raise ValueError("Project name cannot be empty.")
 
-    def to_package_name(self) -> PackageName:
-        """Derives a normalized Python package name from this project name."""
-        return PackageName.from_raw(self.value)
-
     def __str__(self) -> str:
         """Returns the project name string."""
         return self.value

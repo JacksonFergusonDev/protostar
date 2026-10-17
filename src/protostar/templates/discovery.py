@@ -47,11 +47,6 @@ class TemplateInfo:
     tiers: TemplateTiers | None = None
     is_alias: bool = False
 
-    @property
-    def is_built_in(self) -> bool:
-        """Whether the template is packaged with Protostar."""
-        return self.origin is TemplateOrigin.BUILT_IN
-
     def to_dict(self) -> dict[str, Any]:
         """Converts TemplateInfo to a serializable dictionary."""
         return {

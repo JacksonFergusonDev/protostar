@@ -106,7 +106,7 @@ The commit is the run's last step, so an interrupt can still arrive after it. Th
 - **`REGULAR_FILE`:** `atomic_write_bytes(path, original_bytes, mode=original_mode)` overwrites the current content with the captured snapshot.
 - **`DIRECTORY`:** Restores the original POSIX mode.
 
-Any path that cannot be restored is collected into a `RollbackFailure` tuple. If any failures occurred, `rollback()` returns `RollbackResult(succeeded=False, failed_paths=(...))`, which triggers `RollbackFailedError` in the executor.
+Any path that cannot be restored is collected into a `RollbackFailure` tuple. If any failures occurred, `rollback()` returns `RollbackResult(succeeded=False, errors=(...))`, which triggers `RollbackFailedError` in the executor.
 
 ### Path Normalization & Security
 

@@ -85,6 +85,7 @@ dev = [
     "pyinstrument>=5.1.3",
     "pytest-asyncio>=1.4.0",
     "pytest-textual-snapshot>=1.0.0",
+    "vulture>=2.16",
 ]
 mutation = ["mutmut>=3.8.0"]
 annotations = [
@@ -157,6 +158,74 @@ section-order = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["T201", "D", "S"]
 "scripts/**/*.py" = ["T201", "D", "S", "SIM", "E402"]
+
+# ---- vulture ---- #
+
+# Tests are left out on purpose: code that only tests reach is dead.
+[tool.vulture]
+paths = ["src/protostar", "scripts"]
+exclude = ["src/protostar/_secret_rules.py"]
+min_confidence = 60
+# Textual dispatches these by name or decorator.
+ignore_decorators = ["@on", "@work"]
+ignore_names = [
+    "on_*",
+    "action_*",
+    "check_action",
+    "compose",
+    "BINDINGS",
+    "CSS",
+    "CSS_PATH",
+    "DEFAULT_CSS",
+    "ENABLE_COMMAND_PALETTE",
+    "can_focus",
+    "show_root",
+    "theme",
+    "ansi_theme_dark",
+    "tooltip",
+    "link_style",
+    "link_style_hover",
+    "BUTTON_INNER",
+    "_fatal_error",
+    "_pressed_button",
+    # Named only in quoted annotations.
+    "HTTPMessage",
+    "OpenerDirector",
+    # Module-level lazy imports.
+    "__getattr__",
+    "__dir__",
+    # Read by argcomplete, ruamel.yaml, and pytest.
+    "completer",
+    "preserve_quotes",
+    "allow_duplicate_keys",
+    "always_dump",
+    "pytest_*",
+    # Parameters a protocol requires.
+    "namespace",
+    "option_string",
+    "exc_*",
+    # Read through getattr or by iterating the enum.
+    "direnv",
+    "markdownlint",
+    "rumdl",
+    "ruff",
+    "mypy",
+    "ty",
+    "pyrefly",
+    "commitizen",
+    "just",
+    "GETTING_STARTED",
+    "NPM",
+    "YARN",
+    "PNPM",
+    # Seams the tests drive.
+    "inspect_project",
+    "_parse",
+    "active_process",
+    "SEAMS",
+    "BUDGETED",
+    "imported_packages",
+]
 
 # ---- mypy ---- #
 

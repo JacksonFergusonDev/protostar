@@ -116,7 +116,6 @@ def test_project_name_value_object() -> None:
 
     proj = ProjectName("my-awesome-repo")
     assert str(proj) == "my-awesome-repo"
-    assert str(proj.to_package_name()) == "my_awesome_repo"
 
     with pytest.raises(ValueError, match="Project name cannot be empty"):
         ProjectName("   ")

@@ -140,6 +140,11 @@ check-schemas: sync
 # Alias for check-schemas
 schema-check: check-schemas
 
+# Find code nothing in the product calls (configured in [tool.vulture])
+deadcode: sync
+    @printf "\n{{ blue }}=== Finding Dead Code ==={{ nc }}\n"
+    uv run --locked vulture
+
 # Scan repository for hardcoded secrets with Gitleaks
 secrets:
     @printf "\n{{ blue }}=== Scanning for Hardcoded Secrets ==={{ nc }}\n"

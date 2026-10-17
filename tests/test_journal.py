@@ -214,7 +214,6 @@ def test_journal_continues_after_one_path_fails(tmp_path: Path) -> None:
     result = journal.rollback()
 
     assert not result.succeeded
-    assert result.failed_paths == (blocked_directory,)
     [failure] = result.errors
     assert failure.path == blocked_directory
     # The OS error names the directory it could not remove.

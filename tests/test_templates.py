@@ -25,7 +25,6 @@ def test_discover_builtin_templates() -> None:
     assert api_tmpl.trusted is True
     assert api_tmpl.origin == TemplateOrigin.BUILT_IN
     assert api_tmpl.is_alias is False
-    assert api_tmpl.is_built_in is True
 
     # Verify all built-ins have name, description, and are trusted
     for alias, tmpl in builtin_aliases.items():

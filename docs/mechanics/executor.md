@@ -71,8 +71,6 @@ Every command a run starts goes through `ProcessRunner` (`src/protostar/system.p
 - **A clean environment:** it removes the active virtual environment's variables (`VIRTUAL_ENV`, `PYTHONHOME`), so a command never picks up the caller's Python, and git's repository-local variables (`GIT_DIR`, `GIT_WORK_TREE`, and the rest of `git rev-parse --local-env-vars`), so git always works on the project. A caller can still set variables explicitly.
 - **Captured output:** it captures `stdout` and `stderr` while the command runs, and attaches both to `CommandExecutionError` if the command exits non-zero.
 
-For a single command outside a run, `protostar.system.execute_subprocess` wraps `ProcessRunner().run(...)`.
-
 ## API Reference
 
 ??? abstract "Core Interface: `SystemExecutor`"
