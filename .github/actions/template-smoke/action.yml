@@ -42,9 +42,28 @@ runs:
         git config --global core.autocrlf false
         git config --global credential.helper ""
 
+    # Building prek's hook environments takes most of a smoke job: gitleaks and
+    # actionlint compile with Go. Pull requests and main restore the newest that
+    # main saved for the platform; Nightly and a release build them as a user's
+    # first commit does, so that path is still tested every night.
+    - name: Restore prek hook environments
+      id: prek-restore
+      if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ${{ runner.temp }}/prek/repos
+          ${{ runner.temp }}/prek/hooks
+        key: prek-v1-${{ runner.os }}-${{ runner.arch }}-py${{ inputs.python }}-
+        restore-keys: |
+          prek-v1-${{ runner.os }}-${{ runner.arch }}-py${{ inputs.python }}-
+          prek-v1-${{ runner.os }}-${{ runner.arch }}-
+
     - name: Verify each first commit triggers prek hooks
+      id: smoke
       shell: bash
       env:
+        PREK_HOME: ${{ runner.temp }}/prek
         GIT_TERMINAL_PROMPT: "0"
         GCM_INTERACTIVE: "never"
         PREK_COLOR: "never"
@@ -82,6 +101,31 @@ runs:
           echo "::error title=Smoke test failed::${failed[*]} on Python $PYTHON"
           exit 1
         fi
+
+    # Only main saves, after every scaffold passed, keeping just the hook
+    # versions this run's scaffolds pinned.
+    - name: Prune prek hook environments
+      id: prek-prune
+      if: steps.smoke.outcome == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      shell: bash
+      env:
+        PREK_HOME: ${{ runner.temp }}/prek
+      run: |
+        temp_base="$RUNNER_TEMP"
+        if command -v cygpath >/dev/null 2>&1; then
+          temp_base=$(cygpath -u "$temp_base")
+        fi
+        digest=$(uv run --no-project python -m scripts.prek_cache "$PREK_HOME" "$temp_base"/smoke_*/.pre-commit-config.yaml)
+        echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+    - name: Save prek hook environments
+      if: steps.prek-prune.outcome == 'success' && steps.prek-restore.outputs.cache-matched-key != format('prek-v1-{0}-{1}-py{2}-{3}', runner.os, runner.arch, inputs.python, steps.prek-prune.outputs.digest)
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ${{ runner.temp }}/prek/repos
+          ${{ runner.temp }}/prek/hooks
+        key: prek-v1-${{ runner.os }}-${{ runner.arch }}-py${{ inputs.python }}-${{ steps.prek-prune.outputs.digest }}
 
     # After a failed smoke test too: what it built still slows init down.
     - name: Upload source builds

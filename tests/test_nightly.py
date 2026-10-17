@@ -466,6 +466,44 @@ def test_a_pull_request_is_never_failed_by_a_timing():
     assert "github-action-benchmark" not in ci
 
 
+def test_no_job_caches_uvs_downloads():
+    """A cache keyed on uv.lock fills with what scaffolds install, and its restore
+    takes longer than the locked install it skips."""
+    steps = [
+        step
+        for workflow in sorted(WORKFLOWS.glob("*.yml"))
+        for body in jobs(workflow.name).values()
+        for step in body.get("steps", [])
+        if step.get("uses", "").startswith("astral-sh/setup-uv@")
+    ]
+    assert steps
+    assert all(step["with"]["enable-cache"] is False for step in steps)
+
+
+def test_only_pull_requests_and_main_restore_prek_hook_environments():
+    """Nightly and a release build hook environments as a user's first commit does,
+    and only main saves them."""
+    action = YAML(typ="safe").load(
+        (REPO_ROOT / ".github/actions/template-smoke/action.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    steps = action["runs"]["steps"]
+    (restore,) = [
+        s for s in steps if s.get("uses", "").startswith("actions/cache/restore@")
+    ]
+    (save,) = [s for s in steps if s.get("uses", "").startswith("actions/cache/save@")]
+    (prune,) = [s for s in steps if s.get("id") == "prek-prune"]
+    assert restore["if"] == (
+        "github.event_name == 'pull_request' || "
+        "(github.event_name == 'push' && github.ref == 'refs/heads/main')"
+    )
+    assert "github.ref == 'refs/heads/main'" in prune["if"]
+    assert "steps.smoke.outcome == 'success'" in prune["if"]
+    assert "steps.prek-prune.outcome == 'success'" in save["if"]
+    assert restore["with"]["path"] == save["with"]["path"]
+
+
 def test_a_release_smoke_tests_the_wheel_it_publishes_on_every_os():
     smoke = job("release.yml", "smoke")
     assert smoke["needs"] == "build"
