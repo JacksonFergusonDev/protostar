@@ -96,7 +96,6 @@ class RollbackResult:
     """The outcome of an attempted rollback operation."""
 
     succeeded: bool
-    failed_paths: tuple[Path, ...]
     errors: tuple[RollbackFailure, ...] = ()
 
 
@@ -328,7 +327,6 @@ class MutationJournal:
         self._journal.clear()
         self._rollback_result = RollbackResult(
             succeeded=not failures,
-            failed_paths=tuple(failure.path for failure in failures),
             errors=tuple(failures),
         )
         return self._rollback_result

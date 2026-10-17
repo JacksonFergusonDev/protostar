@@ -226,6 +226,7 @@ Use these commands when targeted verification or debugging is necessary:
   just check-doc-links                # Validate embedded documentation URLs in error hints
   just check-docs-drift               # Fail when hand-written docs disagree with the code (errors, exit codes, templates, paths, commands, sample output)
   just check-schemas                  # Validate pre-commit, action, renovate, and metaschemas
+  just deadcode                       # Find code nothing in the product calls (vulture)
   just demo-init-headless           # Re-record the headless init demo cast and GIF (explicit prompt only)
   just demo-init-interactive        # Re-record the interactive init demo cast and GIF (explicit prompt only)
   just demo-sync                    # Re-record the sync conflict demo cast and GIF (explicit prompt only)
@@ -249,6 +250,7 @@ Use these commands when targeted verification or debugging is necessary:
    - **No Data Clumps / Primitive Obsession:** Group related parameters into `@dataclass(frozen=True)` or `TypedDict` models instead of passing loose tuples, untyped dictionaries (`dict[str, Any]`), or 4+ primitive arguments.
    - **Lean Modeling (Avoid Over-Engineering):** Strong typing means precise data structures, *not* elaborate architecture. Avoid speculative generic abstractions, factory classes, or deep inheritance trees. Prefer flat dataclasses, enums, and pure functions.
 1. **Google-Style Docstrings:** Required on all public functions, classes, and methods.
+1. **Dead Code Goes:** Run `just deadcode` after removing or moving code, and keep it clean. It scans `src/` and `scripts/` but not `tests/`, so code that only tests reach shows up: delete it with its tests, since they only prove that unused code works. Add a false positive (a name a framework calls, a field read through `getattr`, a seam tests need) to `ignore_names` in `[tool.vulture]` with the reason, never a blanket confidence change.
 1. **Filesystem Isolation in Tests:**
    - Ordinary tests write only under `pytest`'s `tmp_path` and mock external commands at the boundary they exercise (`ProcessRunner`, `subprocess.run`, or `subprocess.Popen`).
    - Tests explicitly marked `integration` may run real commands to verify the CLI and its tool integrations. Keep these few and focused on behavior mocks cannot establish. Isolate their workspace, home directory, and user configuration under `tmp_path`; never let them operate on the caller's repository. These tests may access the network when installing dependencies. The `real_tool_env` fixture deliberately shares uv's host cache to avoid repeated downloads; that cache is the only intentional test-owned write outside `tmp_path`.

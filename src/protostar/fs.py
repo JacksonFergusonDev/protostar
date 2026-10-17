@@ -99,16 +99,6 @@ class ArchiveFormat(enum.StrEnum):
     TAR_XZ = "tar.xz"
 
     @property
-    def is_tar(self) -> bool:
-        """Returns True if the format is a tarball variation."""
-        return self in (
-            ArchiveFormat.TAR,
-            ArchiveFormat.TAR_GZ,
-            ArchiveFormat.TAR_BZ2,
-            ArchiveFormat.TAR_XZ,
-        )
-
-    @property
     def extensions(self) -> tuple[str, ...]:
         """Returns the recognized file extensions for this archive format."""
         mapping = {

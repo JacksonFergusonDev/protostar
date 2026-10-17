@@ -9,12 +9,18 @@ import pytest
 from protostar._fallbacks import DEFAULT_REVISIONS
 from protostar.manifest import CollisionStrategy
 from protostar.registry import (
-    HookRegistry,
     RemoteHook,
     clear_hook_registry_cache,
     hook_registry_unreachable,
     prefetch_hook_registry,
+    resolve_hook_revisions,
 )
+
+
+def revision(hook: RemoteHook) -> str:
+    """Returns the revision one registry snapshot pins for ``hook``."""
+    (pin,) = (pin for pin in resolve_hook_revisions() if pin.hook is hook)
+    return pin.revision
 
 
 @pytest.fixture(autouse=True)
@@ -25,7 +31,7 @@ def reset_cache():
     clear_hook_registry_cache()
 
 
-def test_get_revision_success(mocker):
+def test_pinned_revision_success(mocker):
     mock_response = MagicMock()
     mock_response.read.return_value = json.dumps(
         {
@@ -39,42 +45,42 @@ def test_get_revision_success(mocker):
     mock_urlopen = mocker.patch("urllib.request.urlopen")
     mock_urlopen.return_value.__enter__.return_value = mock_response
 
-    rev = HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+    rev = revision(RemoteHook.PRE_COMMIT_HOOKS)
     assert rev == "v9.9.9"
 
     # Should use default for missing hook in the JSON
-    rev2 = HookRegistry.get_revision(RemoteHook.GITLEAKS)
+    rev2 = revision(RemoteHook.GITLEAKS)
     assert rev2 == DEFAULT_REVISIONS[RemoteHook.GITLEAKS]
 
 
-def test_get_revision_fallback_on_url_error(mocker):
+def test_pinned_revision_fallback_on_url_error(mocker):
     mocker.patch(
         "urllib.request.urlopen", side_effect=urllib.error.URLError("test error")
     )
 
-    rev = HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+    rev = revision(RemoteHook.PRE_COMMIT_HOOKS)
     assert rev == DEFAULT_REVISIONS[RemoteHook.PRE_COMMIT_HOOKS]
 
 
-def test_get_revision_fallback_on_timeout(mocker):
+def test_pinned_revision_fallback_on_timeout(mocker):
     mocker.patch("urllib.request.urlopen", side_effect=TimeoutError("timeout"))
 
-    rev = HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+    rev = revision(RemoteHook.PRE_COMMIT_HOOKS)
     assert rev == DEFAULT_REVISIONS[RemoteHook.PRE_COMMIT_HOOKS]
 
 
-def test_get_revision_fallback_on_bad_json(mocker):
+def test_pinned_revision_fallback_on_bad_json(mocker):
     mock_response = MagicMock()
     mock_response.read.return_value = b"invalid json"
 
     mock_urlopen = mocker.patch("urllib.request.urlopen")
     mock_urlopen.return_value.__enter__.return_value = mock_response
 
-    rev = HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+    rev = revision(RemoteHook.PRE_COMMIT_HOOKS)
     assert rev == DEFAULT_REVISIONS[RemoteHook.PRE_COMMIT_HOOKS]
 
 
-def test_get_revision_fallback_on_bad_schema(mocker):
+def test_pinned_revision_fallback_on_bad_schema(mocker):
     mock_response = MagicMock()
     mock_response.read.return_value = json.dumps(
         {
@@ -88,11 +94,11 @@ def test_get_revision_fallback_on_bad_schema(mocker):
     mock_urlopen = mocker.patch("urllib.request.urlopen")
     mock_urlopen.return_value.__enter__.return_value = mock_response
 
-    rev = HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+    rev = revision(RemoteHook.PRE_COMMIT_HOOKS)
     assert rev == DEFAULT_REVISIONS[RemoteHook.PRE_COMMIT_HOOKS]
 
 
-def test_get_revision_caches_result(mocker):
+def test_pinned_revision_caches_result(mocker):
     mock_response = MagicMock()
     mock_response.read.return_value = json.dumps(
         {
@@ -107,7 +113,7 @@ def test_get_revision_caches_result(mocker):
     mock_urlopen.return_value.__enter__.return_value = mock_response
 
     # First call
-    rev1 = HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+    rev1 = revision(RemoteHook.PRE_COMMIT_HOOKS)
     assert rev1 == "v9.9.9"
 
     # Change the mock response to see if it's still cached
@@ -121,7 +127,7 @@ def test_get_revision_caches_result(mocker):
     ).encode("utf-8")
 
     # Second call, should still be v9.9.9
-    rev2 = HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+    rev2 = revision(RemoteHook.PRE_COMMIT_HOOKS)
     assert rev2 == "v9.9.9"
 
     # urlopen should only have been called once
@@ -143,7 +149,7 @@ def test_clear_hook_registry_cache(mocker):
     mock_urlopen = mocker.patch("urllib.request.urlopen")
     mock_urlopen.return_value.__enter__.return_value = mock_response
 
-    rev1 = HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+    rev1 = revision(RemoteHook.PRE_COMMIT_HOOKS)
     assert rev1 == "v9.9.9"
     assert mock_urlopen.call_count == 1
 
@@ -158,7 +164,7 @@ def test_clear_hook_registry_cache(mocker):
         }
     ).encode("utf-8")
 
-    rev2 = HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+    rev2 = revision(RemoteHook.PRE_COMMIT_HOOKS)
     assert rev2 == "v8.8.8"
     assert mock_urlopen.call_count == 2
 
@@ -168,45 +174,6 @@ def test_remote_hook_placeholders():
     assert RemoteHook.GITLEAKS.placeholder == "<% REV_GITLEAKS %>"
     assert RemoteHook.MARKDOWNLINT.placeholder == "<% REV_MARKDOWNLINT %>"
     assert RemoteHook.COMMITIZEN.placeholder == "<% REV_COMMITIZEN %>"
-
-
-def test_resolve_placeholders_skips_fetch_when_no_placeholders(mocker):
-    mock_urlopen = mocker.patch("urllib.request.urlopen")
-    content = "repos:\n  - repo: builtin\n    hooks:\n      - id: check-yaml\n"
-
-    result = HookRegistry.resolve_placeholders(content)
-    assert result == content
-    assert mock_urlopen.call_count == 0
-
-
-def test_resolve_placeholders_replaces_all_present_hooks(mocker):
-    mock_response = MagicMock()
-    mock_response.read.return_value = json.dumps(
-        {
-            "schema_version": 1,
-            "hooks": {
-                RemoteHook.MARKDOWNLINT.value: "v0.50.0",
-                RemoteHook.COMMITIZEN.value: "v3.15.0",
-            },
-        }
-    ).encode("utf-8")
-
-    mock_urlopen = mocker.patch("urllib.request.urlopen")
-    mock_urlopen.return_value.__enter__.return_value = mock_response
-
-    raw_yaml = (
-        f"  - repo: {RemoteHook.MARKDOWNLINT.value}\n"
-        f"    rev: {RemoteHook.MARKDOWNLINT.placeholder}\n"
-        f"  - repo: {RemoteHook.COMMITIZEN.value}\n"
-        f"    rev: {RemoteHook.COMMITIZEN.placeholder}\n"
-    )
-
-    resolved = HookRegistry.resolve_placeholders(raw_yaml)
-    assert "rev: v0.50.0" in resolved
-    assert "rev: v3.15.0" in resolved
-    assert RemoteHook.MARKDOWNLINT.placeholder not in resolved
-    assert RemoteHook.COMMITIZEN.placeholder not in resolved
-    assert mock_urlopen.call_count == 1
 
 
 def test_plan_phase_makes_zero_network_requests(mocker):
@@ -241,7 +208,7 @@ def test_a_fetch_that_never_connects_is_unreachable(mocker, error):
     mocker.patch("urllib.request.urlopen", side_effect=error)
 
     assert hook_registry_unreachable()
-    rev = HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+    rev = revision(RemoteHook.PRE_COMMIT_HOOKS)
     assert rev == DEFAULT_REVISIONS[RemoteHook.PRE_COMMIT_HOOKS]
 
 
@@ -276,7 +243,7 @@ def test_reachability_shares_the_one_fetch(mocker):
         "urllib.request.urlopen", side_effect=urllib.error.URLError("down")
     )
 
-    HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+    revision(RemoteHook.PRE_COMMIT_HOOKS)
     assert hook_registry_unreachable()
     urlopen.assert_called_once()
 
@@ -313,9 +280,7 @@ def test_prefetch_returns_before_the_request_finishes(mocker):
     assert started.wait(5)
     taken: list[str] = []
     waiting = threading.Thread(
-        target=lambda: taken.append(
-            HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
-        )
+        target=lambda: taken.append(revision(RemoteHook.PRE_COMMIT_HOOKS))
     )
     waiting.start()
     waiting.join(0.2)
@@ -353,7 +318,7 @@ def test_prefetching_twice_makes_one_request(mocker):
     prefetch_hook_registry()
     prefetch_hook_registry()
 
-    assert HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS) == "v9.9.9"
+    assert revision(RemoteHook.PRE_COMMIT_HOOKS) == "v9.9.9"
     assert urlopen.call_count == 1
 
 
@@ -375,10 +340,10 @@ def test_clearing_during_a_fetch_is_not_overwritten_by_its_late_answer(mocker):
     assert started.wait(5)
 
     clear_hook_registry_cache()
-    assert HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS) == "v2.0.0"
+    assert revision(RemoteHook.PRE_COMMIT_HOOKS) == "v2.0.0"
     release.set()
 
-    assert HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS) == "v2.0.0"
+    assert revision(RemoteHook.PRE_COMMIT_HOOKS) == "v2.0.0"
 
 
 def test_an_unexpected_error_in_the_fetch_reaches_the_caller(mocker):
@@ -388,4 +353,4 @@ def test_an_unexpected_error_in_the_fetch_reaches_the_caller(mocker):
     prefetch_hook_registry()
 
     with pytest.raises(RuntimeError, match="boom"):
-        HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+        revision(RemoteHook.PRE_COMMIT_HOOKS)

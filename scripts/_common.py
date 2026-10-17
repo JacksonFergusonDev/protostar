@@ -15,7 +15,6 @@ from typing import Any, TextIO
 # Canonical repository root and directory anchors
 REPO_ROOT: Path = Path(__file__).resolve().parent.parent
 SRC_DIR: Path = REPO_ROOT / "src"
-SCRIPTS_DIR: Path = REPO_ROOT / "scripts"
 DOCS_DIR: Path = REPO_ROOT / "docs"
 DOCS_GENERATED_DIR: Path = (DOCS_DIR / "generated").resolve()
 DOCS_TERMINALS_DIR: Path = (DOCS_DIR / "assets" / "terminals").resolve()
