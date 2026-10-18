@@ -61,6 +61,11 @@ def test_prune_removes_what_no_config_names(tmp_path: Path) -> None:
         clone(tmp_path, "c", OLD_COMMITIZEN),
         environment(tmp_path, "python-c", OLD_COMMITIZEN),
     ]
+    # Git writes pack files read-only, which Windows won't delete as they are.
+    pack = stale[0] / ".git" / "objects" / "pack" / "pack-1.idx"
+    pack.parent.mkdir(parents=True)
+    pack.write_text("index")
+    pack.chmod(0o444)
     unreadable = tmp_path / "hooks" / "python-d"
     unreadable.mkdir()
 

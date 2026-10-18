@@ -18,8 +18,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
+import stat
+from collections.abc import Callable
 from pathlib import Path
 
 # Protostar writes block-style configurations, each `rev:` under its `repo:`.
@@ -88,9 +91,23 @@ def prune(prek_home: Path, wanted: set[Revision]) -> list[Path]:
         for entry in sorted(root.iterdir()):
             revision = _recorded(entry / metadata)
             if revision is not None and revision not in wanted:
-                shutil.rmtree(entry)
+                shutil.rmtree(entry, onexc=_writable_retry)
                 removed.append(entry)
     return removed
+
+
+def _writable_retry(
+    function: Callable[[str], object], path: str, error: BaseException
+) -> None:
+    """Clears a read-only bit and retries, which Windows needs to delete it.
+
+    Git writes its pack files read-only, and Windows refuses to delete a
+    read-only file.
+    """
+    if not isinstance(error, PermissionError):
+        raise error
+    os.chmod(path, stat.S_IWRITE)
+    function(path)
 
 
 def digest(wanted: set[Revision]) -> str:
