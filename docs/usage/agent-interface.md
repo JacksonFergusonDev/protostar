@@ -154,7 +154,7 @@ Add a `--resolve` for each decision the dry-run showed that the agent settles di
 
 The result lists `created_paths` and `mutated_paths`, each sorted, and `touched_paths`, which is both together.
 
-If the run fails or is interrupted, Protostar rolls back every change it made. See [Automatic Rollback](./rollback.md) for exactly what that covers.
+If the run fails or is interrupted, Protostar restores the files covered by [Automatic Rollback](./rollback.md) and reports any it cannot restore.
 
 ## Template Schema Export
 

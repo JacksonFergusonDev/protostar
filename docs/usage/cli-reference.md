@@ -52,7 +52,7 @@ Apply the update `status` shows. Safe changes apply, and each conflict keeps you
 
 `sync` exits `0` when everything applied, and `1` when it applied the safe changes and left conflicts open. It never reruns `init`'s setup commands. It runs `uv add` or `uv lock` only when dependencies change, and installs a git hook only when one is missing. For a template you haven't trusted, those commands need your confirmation first: a screen in a terminal, or `--trust` for one run; otherwise `sync` stops with exit code `77` before writing anything.
 
-Without `--to`, `sync` applies the commit `protostar.lock` records, however the template's branch or tag has moved since. If a run fails or you press `Ctrl+C`, every file it wrote is restored; see [Automatic Rollback](rollback.md). See [Project Lifecycle](lifecycle.md) and [Automating Updates](automating-updates.md).
+Without `--to`, `sync` applies the commit `protostar.lock` records, however the template's branch or tag has moved since. If a run fails or you press `Ctrl+C`, Protostar restores the files covered by [Automatic Rollback](rollback.md) and reports any it cannot restore. See [Project Lifecycle](lifecycle.md) and [Automating Updates](automating-updates.md).
 
 ### `protostar guide`
 

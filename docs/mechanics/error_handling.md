@@ -198,7 +198,7 @@ Raised when you cancel at a prompt or screen before anything runs.
 
 ### `ExecutionInterruptedError`
 
-Raised when you press `Ctrl+C` after the run started changing the project, once rollback has restored every change. `touched_paths: frozenset[str]` lists the paths it restored.
+Raised when you press `Ctrl+C` after the run started changing the project, once rollback has restored every journaled path. `touched_paths: frozenset[str]` lists the paths it restored.
 
 ## Machine-Readable Error Envelopes (`--json`)
 

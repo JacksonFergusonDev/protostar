@@ -31,7 +31,7 @@ Here the recipe turns Docker on and `just` off. Docker's files are new, and `CON
 
 ## What Sync Does
 
-`sync` applies the safe changes and keeps your version of every conflict, in one transaction: if it fails part-way, every file goes back ([Automatic Rollback](rollback.md)). With conflicts left open, it still applies the safe changes, and exits `1` rather than `0`.
+`sync` applies the safe changes and keeps your version of every conflict, in one transaction, with [Automatic Rollback](rollback.md) covering the project files it changes if a step fails. With conflicts left open, it still applies the safe changes, and exits `1` rather than `0`.
 
 It runs a command only when the update needs one: `uv add` or `uv lock` when dependencies change, and a git hook install when a hook is missing. It never reruns `init`'s setup, such as `git init`, a template's own tasks, or a reinstall of the environment. A repeat with nothing new writes nothing and runs nothing.
 

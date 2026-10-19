@@ -4,7 +4,7 @@ description: "Set up a new or existing project with protostar init: templates, t
 
 # Setting Up a Project
 
-`protostar init` sets up a project in the current directory, either an empty folder or a project you already have. In a terminal with no template given, it opens the recipe editor. With `--template` or `--from`, it runs without any screens. Either way, nothing is written until you have seen the plan, in the change review or with `--dry-run`, and if anything fails part-way, every change is [rolled back](rollback.md).
+`protostar init` sets up a project in the current directory, either an empty folder or a project you already have. In a terminal with no template given, it opens the recipe editor. With `--template` or `--from`, it runs without any screens. The change review lets you inspect the plan before applying it; headless runs can preview it with `--dry-run`. If a step fails part-way, [Automatic Rollback](rollback.md) restores the files it covers and reports any it cannot restore.
 
 Afterwards Protostar tracks the project: `pyproject.toml` records what you asked for (the [recipe](project-recipes.md)), `protostar.lock` records what Protostar wrote, and `status`, `diff`, and `sync` keep it current. [How Protostar Tracks Your Files](tracking.md) explains how these fit together, and [Project Lifecycle](lifecycle.md) shows the commands.
 

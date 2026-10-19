@@ -2,10 +2,10 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/JacksonFergusonDev/protostar/main/docs/assets/readme-dark.webp">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/JacksonFergusonDev/protostar/main/docs/assets/readme-light.webp">
   <img alt="Protostar Logo"
-       src="docs/assets/readme-light.svg"
+       src="https://raw.githubusercontent.com/JacksonFergusonDev/protostar/main/docs/assets/readme-light.webp"
        width="480"
        style="max-width:100%; height:auto;">
 </picture>
@@ -36,7 +36,7 @@ Protostar sets up Python projects and keeps them current. Pick your tools, and i
 <div align="center">
 <picture>
   <img alt="Protostar init interactive demo"
-       src="docs/assets/demo_init_interactive.gif"
+       src="https://raw.githubusercontent.com/JacksonFergusonDev/protostar/main/docs/assets/demo_init_interactive.gif"
        width="750"
        style="max-width:100%; height:auto;">
 </picture>
@@ -54,7 +54,7 @@ Plenty of tools can create a Python project. What sets Protostar apart is that i
 
 - **Updates that understand your files.** When a template improves, Protostar merges the change into your project by meaning, not line by line. Your own edits stay, and if you and the update changed the same setting, you choose between the two versions of that one setting instead of untangling conflict markers.
 
-- **Preview first, recover on failure.** Protostar shows you every change before making it and restores the files it changed if a step fails. The [published rollback results](https://protostar.jacksonferguson.me/metrics/#rollback) show this recovery tested across Linux, macOS, and Windows; the [rollback guide](https://protostar.jacksonferguson.me/usage/rollback/) explains what is covered.
+- **Preview first, recover on failure.** Protostar lets you review changes before applying them and restores the files covered by rollback if a step fails. The [published rollback results](https://protostar.jacksonferguson.me/metrics/#rollback) show this recovery tested across Linux, macOS, and Windows; the [rollback guide](https://protostar.jacksonferguson.me/usage/rollback/) explains what is covered.
 
 - **Fits the project you already have**, and runs from scripts, CI, and coding agents without stopping to ask questions.
 
@@ -63,7 +63,7 @@ In a terminal, `protostar sync` shows each conflict with both sides before anyth
 <div align="center">
 <picture>
   <img alt="Protostar sync resolving conflicts"
-       src="docs/assets/demo_sync.gif"
+       src="https://raw.githubusercontent.com/JacksonFergusonDev/protostar/main/docs/assets/demo_sync.gif"
        width="750"
        style="max-width:100%; height:auto;">
 </picture>
@@ -205,7 +205,7 @@ Written for people who already know Python tooling:
 
 Protostar edits other people's work, so it's built to be careful:
 
-- **It plans before it acts.** Every change is worked out in memory and shown to you first. If a step fails or you press Ctrl+C, every file it wrote is restored exactly as it was, and nightly tests exercise that recovery by failing real runs at every step; see the [rollback results](https://protostar.jacksonferguson.me/metrics/#rollback).
+- **It plans before it acts.** Changes are planned in memory and can be reviewed before execution. If a step fails or you press Ctrl+C, Protostar restores the files covered by [rollback](https://protostar.jacksonferguson.me/usage/rollback/) and reports any it cannot restore. Nightly tests exercise that recovery by failing real runs at every step; see the [rollback results](https://protostar.jacksonferguson.me/metrics/#rollback).
 - **The engine is separate from the interface.** The same core runs behind the interactive editor, the command line, and coding agents, which is why every command can also answer in JSON.
 - **It's written in Python, on purpose.** The slow part of setting up a project, resolving and installing packages, belongs to uv, which is already Rust. Protostar's own work takes about half a second, and Python gives it the libraries that edit TOML and YAML without losing a comment; see [why it's written in Python](https://protostar.jacksonferguson.me/why-protostar/#why-is-it-written-in-python) for the measurements.
 - **It's tested on every platform.** Over 5,000 tests, including runs of the real tools, pass on Linux, macOS, and Windows, with strict type checking and at least 85% coverage.
@@ -217,7 +217,7 @@ Protostar edits other people's work, so it's built to be careful:
 
 ## Contributing
 
-Bug reports and feature requests are welcome in [GitHub issues](https://github.com/jacksonfergusondev/protostar/issues). To work on Protostar itself, start with [CONTRIBUTING.md](CONTRIBUTING.md) and the [developer guide](https://protostar.jacksonferguson.me/developer/overview/).
+Bug reports and feature requests are welcome in [GitHub issues](https://github.com/jacksonfergusondev/protostar/issues). To work on Protostar itself, start with [CONTRIBUTING.md](https://github.com/JacksonFergusonDev/protostar/blob/main/CONTRIBUTING.md) and the [developer guide](https://protostar.jacksonferguson.me/developer/overview/).
 
 ---
 
@@ -227,10 +227,11 @@ Bug reports and feature requests are welcome in [GitHub issues](https://github.c
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/jackson--ferguson/)
 [![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:jackson.ferguson0@gmail.com)
 
-[![Website](https://raw.githubusercontent.com/JacksonFergusonDev/JacksonFergusonDev.github.io/refs/heads/main/.github/assets/badge.svg)](https://jacksonferguson.me)
+<!-- Lossless WebP exported from https://raw.githubusercontent.com/JacksonFergusonDev/JacksonFergusonDev.github.io/refs/heads/main/.github/assets/badge.svg -->
+<a href="https://jacksonferguson.me"><img alt="Website" src="https://raw.githubusercontent.com/JacksonFergusonDev/protostar/main/docs/assets/website-badge.webp" width="236" height="36"></a>
 
 ---
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](https://github.com/JacksonFergusonDev/protostar/blob/main/LICENSE) file for details.

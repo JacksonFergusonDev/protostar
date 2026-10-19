@@ -65,7 +65,7 @@ Press `a` to apply. Protostar writes the files and runs each step in turn:
   ✔ Running uv run nbdime config-git --enable
 ```
 
-The packages go into the project's **virtual environment**: a folder named `.venv` inside the project that holds its own Python and packages, separate from every other project on your computer, so projects that need different versions never interfere. You never activate it by hand in this walkthrough: `uv run` runs a command inside it. If anything fails part-way, Protostar undoes everything it did (see [Automatic Rollback](usage/rollback.md)).
+The packages go into the project's **virtual environment**: a folder named `.venv` inside the project that holds its own Python and packages, separate from every other project on your computer, so projects that need different versions never interfere. You never activate it by hand in this walkthrough: `uv run` runs a command inside it. If a step fails part-way, Protostar restores the files covered by [Automatic Rollback](usage/rollback.md) and reports any it cannot restore.
 
 ## 5. Read the Success Line
 

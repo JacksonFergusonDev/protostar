@@ -191,7 +191,7 @@ pyproject.toml tool.ruff.line-length: You and the update both changed it.
 - `protostar status`, `protostar diff`, and `protostar sync --dry-run` show every pending change as a labelled file tree and unified diffs, before anything is written.
 - In a terminal, `protostar sync` opens a review screen with your side, the update's side, and the file each choice produces. Headless, `--resolve` settles each conflict by an ID derived from its content, so a choice can never apply to content you didn't review.
 - An edit you keep stays kept, and `sync --check` still passes. You can take the update later, one edit at a time.
-- Execution is transactional. If a step fails or you press Ctrl+C, every file Protostar wrote, including `pyproject.toml` and `uv.lock`, is restored to its exact original bytes.
+- Execution is transactional. If a step fails or you press Ctrl+C, Protostar restores the files covered by [rollback](usage/rollback.md), including `pyproject.toml` and `uv.lock`, to their original bytes. It reports any path it cannot restore.
 
 You can inspect the evidence behind that recovery: the [rollback results](https://protostar.jacksonferguson.me/metrics/#rollback) count faults restored across operating systems and templates. Nightly tests fail real runs before, during, and after each step, then compare the project and home directory byte for byte within the [rollback boundary](usage/rollback.md#what-might-remain). Separately, [mutation testing results](https://protostar.jacksonferguson.me/metrics/#mutations) show whether the tests catch deliberate bugs in selected engine modules. The score names its scope so you can see which parts were measured.
 

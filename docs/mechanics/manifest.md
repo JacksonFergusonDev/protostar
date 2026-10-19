@@ -4,7 +4,7 @@ description: "The EnvironmentManifest: the one object every module declares into
 
 # The Environment Manifest
 
-The `EnvironmentManifest` is the plan. While planning, each module declares into it what its tool needs: files, settings, dependencies, hooks, CI steps, and commands. Modules never write a file or run a command themselves. The `SystemExecutor` then reads the manifest and makes every change, in one place that rollback covers.
+The `EnvironmentManifest` is the plan. While planning, each module declares into it what its tool needs: files, settings, dependencies, hooks, CI steps, and commands. Modules never write a file or run a command themselves. The `SystemExecutor` then reads the manifest and applies the changes. Its direct filesystem writes and declared command outputs are covered by [rollback](../usage/rollback.md).
 
 <div class="grid cards" markdown>
 

@@ -4,19 +4,21 @@ description: "What Protostar restores when a run fails or you press Ctrl+C, what
 
 # Automatic Rollback
 
-If `protostar init` or `protostar sync` fails part-way, or you press `Ctrl+C`, Protostar puts back every file it changed, byte for byte, before it exits. A run either finishes or leaves the project as it found it.
+If `protostar init` or `protostar sync` fails part-way, or you press `Ctrl+C` before it finishes, Protostar restores the files it recorded before changing them, byte for byte. Virtual environments, caches, and undeclared command effects fall outside that recovery. If a recorded path cannot be restored, the error identifies it.
 
 This page is the one statement of what rollback covers; other pages link here.
 
 ## When Rollback Happens
 
-Rollback starts on any failure after Protostar begins changing the project:
+Rollback starts when a failure stops execution after Protostar begins changing the project:
 
 - A command fails or runs out of time, such as `uv add` failing to resolve a package.
 - Something unexpected goes wrong, such as a file that can't be written.
 - You press `Ctrl+C`.
 
 Before restoring anything, Protostar stops the command that was running, along with every process it started, so nothing is still writing while the files go back. A process that won't stop never prevents the restore; see [When a Process Won't Stop](#when-a-process-wont-stop-processterminationerror). The error that follows says what failed and whether everything was restored.
+
+A failed Git hook install during `sync` is a warning: it leaves the applied project changes in place.
 
 Previews never need it: `--dry-run`, `status`, `diff`, and `sync --check` change nothing.
 
@@ -61,7 +63,7 @@ If a restore also fails, `RollbackFailedError` lists the processes that wouldn't
 
 ## Interrupting with Ctrl+C (`ExecutionInterruptedError`)
 
-`Ctrl+C` during a run starts rollback at once. A second `Ctrl+C` can't interrupt the restore halfway. When it finishes, Protostar raises `ExecutionInterruptedError` and exits with code `130`, meaning the run was cancelled and every change was undone, so you can run the command again.
+`Ctrl+C` during a run starts rollback at once. A second `Ctrl+C` can't interrupt the restore halfway. After a successful restore, Protostar raises `ExecutionInterruptedError` and exits with code `130`, meaning the run was cancelled and the recorded paths were restored. The [exclusions above](#what-might-remain) still apply. If recovery fails, the error names the paths or processes that need attention.
 
 A `Ctrl+C` that lands after the run has finished its last change undoes nothing: the run is complete, so Protostar keeps it and exits with code `130` as a plain interrupt, without `ExecutionInterruptedError`.
 

@@ -146,16 +146,16 @@ hide:
 
 <section class="ps-section" id="guarantees" aria-labelledby="ps-guarantees">
   <div class="hs-section-marker"><span>04 / GUARANTEES</span></div>
-  <h2 id="ps-guarantees">Nothing changes that you didn't see, and nothing stops halfway.</h2>
+  <h2 id="ps-guarantees">Review changes before applying them, with rollback if a step fails.</h2>
   <ul class="ps-principles">
-    <li><h3>Rolls back on failure</h3><p>If a run fails or you press <kbd>Ctrl</kbd>+<kbd>C</kbd>, every file Protostar wrote goes back to its original bytes.</p><a class="ps-text-link" href="usage/rollback.md">How rollback works<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></li>
+    <li><h3>Rolls back on failure</h3><p>If a run fails or you press <kbd>Ctrl</kbd>+<kbd>C</kbd>, Protostar restores the files covered by rollback and reports any it cannot restore.</p><a class="ps-text-link" href="usage/rollback.md">How rollback works<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></li>
     <li><h3>Merges, never overwrites</h3><p>Existing files are merged, not replaced. Where your content and the template disagree, yours stays until you choose.</p><a class="ps-text-link" href="usage/lifecycle.md#resolve-conflicts">How conflicts are resolved<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></li>
     <li><h3>Works on existing projects</h3><p>Point it at a repository you already have. It reads the tools you use, proposes each change, and lets you keep all of yours.</p><a class="ps-text-link" href="usage/init.md#existing-projects">Set up an existing project<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></li>
     <li><h3>Asks before running commands</h3><p>A template you haven't trusted runs no command until you confirm it, on <code>init</code> and on <code>sync</code>.</p><a class="ps-text-link" href="usage/templates.md#trusting-a-template">How template trust works<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></li>
     <li><h3>Previews are read-only</h3><p><code>--dry-run</code>, <code>status</code>, and <code>diff</code> never write a file or run a command.</p><a class="ps-text-link" href="usage/lifecycle.md#review-apply-repeat">Preview project changes<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></li>
     <li><h3>Built for automation</h3><p><code>--json</code> puts one payload on stdout and never prompts, so scripts, CI, and coding agents can drive every command.</p><a class="ps-text-link" href="usage/agent-interface.md">The machine interface<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></li>
   </ul>
-  <p class="ps-note">These safeguards are tested: nightly runs deliberately fail projects and check that their files come back byte for byte. The <a href="https://protostar.jacksonferguson.me/metrics/#rollback">rollback results</a> show recovery across platforms, and <a href="https://protostar.jacksonferguson.me/metrics/#mutations">mutation testing results</a> show whether tests catch deliberate bugs in selected engine modules.</p>
+  <p class="ps-note">These safeguards are tested: nightly runs deliberately fail projects and check that the files covered by rollback come back byte for byte. The <a href="https://protostar.jacksonferguson.me/metrics/#rollback">rollback results</a> show recovery across platforms, and <a href="https://protostar.jacksonferguson.me/metrics/#mutations">mutation testing results</a> show whether tests catch deliberate bugs in selected engine modules.</p>
 </section>
 
 <section class="ps-section" id="docs" aria-labelledby="ps-docs">
