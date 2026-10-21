@@ -111,12 +111,12 @@ def arm_linux(matrices: dict[str, list[Entry]]) -> dict[str, list[Entry]]:
 def job_count(workflow: str) -> int:
     """How many jobs a run of the workflow starts at once.
 
-    A job that needs others starts only after they finish, so it never runs
-    beside them.
+    The selector finishes before the check jobs start; the final gate waits
+    for them. Neither adds to the concurrent check jobs.
     """
     count = 0
     for name, spec in jobs(workflow).items():
-        if "needs" in spec:
+        if name == "select" or ("needs" in spec and spec["needs"] != "select"):
             continue
         if spec.get("uses") == "./.github/workflows/platforms.yml":
             count += sum(map(len, platforms(workflow, name).values()))
