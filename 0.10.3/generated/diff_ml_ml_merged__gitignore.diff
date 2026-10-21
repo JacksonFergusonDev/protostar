@@ -1,0 +1,12 @@
+--- a/.gitignore
++++ b/.gitignore
+@@ -22,3 +22,9 @@
+ mlruns/
+ runs/
+ wandb/
++*.csv
++*.fit
++*.fits
++*.fts
++*.parquet
++.mypy_cache/

@@ -1,0 +1,2171 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Where Protostar's checks run: pull requests, Nightly, and releases, and the rollback, mutation, and benchmark metrics they publish.">
+      
+      
+      
+        <link rel="canonical" href="https://protostar.jacksonferguson.me/0.10.3/developer/ci/">
+      
+      
+        <link rel="prev" href="../testing/">
+      
+      
+        <link rel="next" href="../api-reference/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/favicon.png">
+      <meta name="generator" content="zensical-0.0.69">
+    
+    
+      
+        <title>CI, Nightly & Metrics - Protostar</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.e15858d4.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.b27955a4.min.css">
+      
+      
+  
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+  
+  <style>:root{--md-admonition-icon--info:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22m11.62%201%205.66%205.67-2.12%202.12-2.12-2.12-1.42%201.42%202.33%202.32-1.16%201.17.45.46a2.5%202.5%200%200%201%202.83.5l-3.53%203.53a2.5%202.5%200%200%201-.5-2.83l-.46-.45-1.17%201.16-2.32-2.33-1.42%201.42%202.12%202.12-2.12%202.12L1%2011.62%203.14%209.5l2.12%202.12%201.41-1.41-2.83-2.83c-.78-.78-.78-2.05%200-2.83l.71-.71c.78-.78%202.05-.78%202.83%200l2.83%202.83%201.41-1.41L9.5%203.14zM18%2014a4%204%200%200%201-4%204v-2a2%202%200%200%200%202-2zm4%200a8%208%200%200%201-8%208v-2a6%206%200%200%200%206-6z%22/%3E%3C/svg%3E');--md-admonition-icon--note:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22m21.9%208.9-1.7%201-4-6.9%201.7-1zm-12.1-1%203%205.2%206.1-3.5-3-5.2zm1.6%204.8-2-3.5-4.3%202.5%202%203.5zm-9.3%201.9%201%201.7%202.6-1.5-1-1.7zm10-.6-.3-.4-4.3%202.5.3.4c.2.3.5.6.8.8L7%2022h2l1.4-4.3h.1L12%2022h2l-1.9-5.6c.5-.7.5-1.6%200-2.4%22/%3E%3C/svg%3E');--md-admonition-icon--tip:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22m13.13%2022.19-1.63-3.83c1.57-.58%203.04-1.36%204.4-2.27zM5.64%2012.5l-3.83-1.63%206.1-2.77C7%209.46%206.22%2010.93%205.64%2012.5M21.61%202.39S16.66.269%2011%205.93c-2.19%202.19-3.5%204.6-4.35%206.71-.28.75-.09%201.57.46%202.13l2.13%202.12c.55.56%201.37.74%202.12.46A19.1%2019.1%200%200%200%2018.07%2013c5.66-5.66%203.54-10.61%203.54-10.61m-7.07%207.07c-.78-.78-.78-2.05%200-2.83s2.05-.78%202.83%200c.77.78.78%202.05%200%202.83s-2.05.78-2.83%200m-5.66%207.07-1.41-1.41zM6.24%2022l3.64-3.64c-.34-.09-.67-.24-.97-.45L4.83%2022zM2%2022h1.41l4.77-4.76-1.42-1.41L2%2020.59zm0-2.83%204.09-4.08c-.21-.3-.36-.62-.45-.97L2%2017.76z%22/%3E%3C/svg%3E');--md-admonition-icon--warning:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M13%2014h-2V9h2m0%209h-2v-2h2M1%2021h22L12%202z%22/%3E%3C/svg%3E');}</style>
+
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="../../house/css/fonts.css">
+    
+      <link rel="stylesheet" href="../../house/css/fonts-extended.css">
+    
+      <link rel="stylesheet" href="../../house/css/tokens.css">
+    
+      <link rel="stylesheet" href="../../house/css/terminal.css">
+    
+      <link rel="stylesheet" href="../../house/css/icons.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  <meta name="theme-color" content="#0a0c0e">
+  
+    
+  
+  
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Protostar">
+  <meta property="og:title" content="CI, Nightly & Metrics">
+  <meta property="og:description" content="Where Protostar's checks run: pull requests, Nightly, and releases, and the rollback, mutation, and benchmark metrics they publish.">
+  
+    <meta property="og:url" content="https://protostar.jacksonferguson.me/0.10.3/developer/ci/">
+  
+  <meta property="og:image" content="https://protostar.jacksonferguson.me/0.10.3assets/og-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Protostar: Simple Python project scaffolding that understands your tools.">
+  <meta name="twitter:card" content="summary_large_image">
+
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Protostar" class="md-header__button md-logo" aria-label="Protostar" data-md-component="logo">
+      
+  <img src="../../assets/favicon.svg" alt="Protostar">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Protostar
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              CI, Nightly & Metrics
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/jacksonfergusondev/protostar" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jacksonfergusondev/protostar
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Protostar" class="md-nav__button md-logo" aria-label="Protostar" data-md-component="logo">
+      
+  <img src="../../assets/favicon.svg" alt="Protostar">
+
+    </a>
+    Protostar
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/jacksonfergusondev/protostar" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jacksonfergusondev/protostar
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../first-project/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3 1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Your First Project
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m20 22-3.86-1.55c.7-1.53 1.2-3.11 1.51-4.72zM7.86 20.45 4 22l2.35-6.27c.31 1.61.81 3.19 1.51 4.72M12 2s5 2 5 10c0 3.1-.75 5.75-1.67 7.83A2 2 0 0 1 13.5 21h-3a2 2 0 0 1-1.83-1.17C7.76 17.75 7 15.1 7 12c0-8 5-10 5-10m0 10c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Getting Started
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../why-protostar/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3c-1.27 0-2.4.8-2.82 2H3v2h1.95L2 14c-.47 2 1 3 3.5 3s4.06-1 3.5-3L6.05 7h3.12c.33.85.98 1.5 1.83 1.83V20H2v2h20v-2h-9V8.82c.85-.32 1.5-.97 1.82-1.82h3.13L15 14c-.47 2 1 3 3.5 3s4.06-1 3.5-3l-2.95-7H21V5h-6.17C14.4 3.8 13.27 3 12 3m0 2a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1m-6.5 5.25L7 14H4zm13 0L20 14h-3z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Why Protostar?
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design-principles/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11h3v2h-3zM1 11h3v2H1zM13 1v3h-2V1zM4.92 3.5l2.13 2.14-1.42 1.41L3.5 4.93zm12.03 2.13 2.12-2.13 1.43 1.43-2.13 2.12zM12 6a6 6 0 0 1 6 6c0 2.22-1.21 4.16-3 5.2V19a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1.8c-1.79-1.04-3-2.98-3-5.2a6 6 0 0 1 6-6m2 15v1a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-1zm-3-3h2v-2.13c1.73-.44 3-2.01 3-3.87a4 4 0 0 0-4-4 4 4 0 0 0-4 4c0 1.86 1.27 3.43 3 3.87z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Design Principles
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  User Guide
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  User Guide
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/init/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Setting Up a Project
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/tracking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  How Protostar Tracks Your Files
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Project Lifecycle
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/automating-updates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Automating Updates
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Templates
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/authoring-templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Authoring Templates
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/releasing-templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Checking & Releasing Templates
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/tooling-matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Tooling & Flags Matrix
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Global Configuration
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/project-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Project Recipes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/agent-interface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Agent & Machine Interface
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/rollback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Automatic Rollback
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CLI Reference
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Troubleshooting & FAQ
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Mechanics
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_8">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Mechanics
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mechanics/manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Manifest
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mechanics/orchestrator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Orchestrator
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mechanics/executor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Executor
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mechanics/rollback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Rollback Internals
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mechanics/modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Modules
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mechanics/error_handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Error Handling
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Developer Guide
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_9">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Developer Guide
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Overview
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extending-protostar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Extending Protostar
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../built-in-templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Built-in Templates
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pyproject-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  pyproject.toml Layout
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_5" id="__nav_9_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reconciliation
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_5_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_9_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Reconciliation
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reconciliation/kernel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Kernel & Ownership
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reconciliation/state/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Ownership State
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reconciliation/formats/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Format Engines
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reconciliation/documents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Managed Documents
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reconciliation/execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Execution & Review
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Testing & Philosophy
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CI, Nightly & Metrics
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CI, Nightly & Metrics
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#pull-request-nightly-and-release-platforms" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Pull Request, Nightly, and Release Platforms
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#template-hooks-smoke-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Template Hooks Smoke Matrix
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#counting-rollback-faults" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Counting Rollback Faults
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mutation-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Mutation Testing
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mutation Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Adding a Module
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-latency-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Performance &amp; Latency Testing
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Performance &amp; Latency Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#nightly-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Nightly Benchmarks
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#local-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Local Benchmarks
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-developer-guides" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Related Developer Guides
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  API Reference
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#pull-request-nightly-and-release-platforms" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Pull Request, Nightly, and Release Platforms
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#template-hooks-smoke-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Template Hooks Smoke Matrix
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#counting-rollback-faults" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Counting Rollback Faults
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mutation-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Mutation Testing
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mutation Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Adding a Module
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-latency-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Performance &amp; Latency Testing
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Performance &amp; Latency Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#nightly-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Nightly Benchmarks
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#local-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Local Benchmarks
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-developer-guides" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Related Developer Guides
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="../.." class="md-path__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="../overview/" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    Developer Guide
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+  
+
+
+<h1 id="ci-nightly-metrics">CI, Nightly &amp; Metrics<a class="headerlink" href="#ci-nightly-metrics" title="Permanent link">&para;</a></h1>
+<p><a href="../testing/">Testing &amp; Philosophy</a> covers the tests themselves. This page covers where they run: what a pull request checks, what Nightly adds, what a release waits for, and the measurements published to the <a href="https://protostar.jacksonferguson.me/metrics/">metrics dashboard</a>.</p>
+<h2 id="pull-request-nightly-and-release-platforms">Pull Request, Nightly, and Release Platforms<a class="headerlink" href="#pull-request-nightly-and-release-platforms" title="Permanent link">&para;</a></h2>
+<p>The pytest suite and the smoke matrix are defined once, in <code>.github/workflows/platforms.yml</code>, and each caller hands it the matrix to run:</p>
+<ul>
+<li><strong>Pull requests</strong> (<code>ci.yml</code>) run the suite on every operating system and supported Python. They smoke-test every template at every Python on Linux, at the oldest and newest on Windows, and once on macOS, where each test job scaffolds a template or two after its suite. The <code>main</code> ruleset requires one check, <code>CI passed</code>, which fails unless every other job passed, so rebalancing the matrix never leaves a pull request waiting on a check that no longer exists. A job that hits its timeout gets up to two fresh attempts (<code>retry-timeouts.yml</code>); a job that fails is never retried.</li>
+<li><strong>Nightly</strong> (<code>nightly.yml</code>) runs, each day on <code>main</code>, the smoke tests pull requests leave out, so the two together scaffold every template on every operating system and Python exactly once. It also runs the suite everywhere again, with retries, which is how a flaky test is found, and the full <a href="../testing/#rollback-fault-injection">rollback fault injection</a> with real commands. Only Nightly runs ARM Linux (<code>ubuntu-24.04-arm</code>): the suite once, on the newest Python, and every template at the oldest and newest. Protostar is pure Python and macOS already runs on ARM, so what only ARM Linux tests is the wheels a scaffold installs, and a package with no wheel for it builds from source. Its flaky-test results count as their own platform (<code>linux-arm64</code>). It skips a day when <code>main</code> hasn't changed since its last pass, except for the dependency runs. Those run the suite on Python 3.12 and 3.14 under the versions a user can install rather than <code>uv.lock</code>'s: the newest release of everything, past the week <code>exclude-newer</code> holds locks to, and each direct dependency at its declared minimum. New releases arrive whether or not <code>main</code> changes, so these run every night, and a failure in the newest is an upstream release Protostar doesn't work with yet, found before most users install it.</li>
+<li><strong>A release</strong> (<code>release.yml</code>) publishes only when CI and Nightly have passed on eligible commits. Both may precede a version bump that only modifies <code>pyproject.toml</code> and <code>uv.lock</code>. Nightly may also precede one commit that only modifies the generated release inputs (<code>src/protostar/_fallbacks.py</code> and <code>src/protostar/_secret_rules.py</code>); CI must cover that refresh. The shared rules in <code>scripts/release_commits.py</code> inspect Git diffs, never commit messages. The release also smoke-tests the wheel it is about to publish on each operating system, and publishes that same wheel.</li>
+</ul>
+<p>GitHub starts scheduled runs hours late, so <a href="https://cron-job.org">cron-job.org</a> starts the nightly work instead: Nightly and Mutation Testing at 3am Pacific, each dispatched with <code>scheduled=true</code> so it behaves as a scheduled run, and Benchmarks an hour later. The calls use a fine-grained token limited to this repository with Actions read and write, which can start and cancel runs but can't push code. Each workflow keeps its own schedule as a fallback for a night the call never arrives, and the fallback repeats nothing: Nightly runs nothing once a run named <code>Nightly (scheduled)</code> has started in the last 20 hours, Mutation Testing skips inputs it already recorded, and Benchmarks skip a commit already measured.</p>
+<p>The account runs 20 jobs at a time, five of them on macOS, so a pull request starts at most 20, three on macOS, and every job starts at once. Nightly has no such limit: it runs overnight, when nothing waits on it, and starts as many jobs as its work needs. The quick checks share two runners (<code>Lint, Docs &amp; Secrets</code> and <code>Docker Images &amp; Dashboard</code>), since each finishes well before the Windows suite that sets how long a run takes. A new push to a pull request cancels the run it replaces.</p>
+<p><code>tests/test_nightly.py</code> checks that both test every operating system and Python, that only Nightly runs ARM Linux, that together they smoke-test every template on every platform once, that a pull request stays within the runner limits, that Nightly fails every template at every site on every operating system, and that a release can't publish before CI, Nightly, and its smoke test pass.</p>
+<p>Nightly retries a failed test or smoke run once. A test that then passes doesn't fail the run; it is filed as flaky instead. Nightly Report (<code>nightly-report.yml</code>) opens a <code>nightly-failure</code> issue when the run fails, naming the failing jobs and the commits since the last pass, and closes it when a later run passes. Each flaky test gets an issue of its own, labelled <code>flaky-test</code>, which a later flake of the same test comments on rather than duplicating (<code>scripts/flaky_tracking.py</code>).</p>
+<p>A fix doesn't close that issue. Once it lands on <code>main</code>, add the <code>awaiting-verification</code> label to the test's issue, link the fix, and name the platforms it flaked on. Nightly Report then counts clean runs from each run's explicit per-test results: a run counts only when the test ran and passed on every affected platform without a retry. After three in a row it closes the issue; a skipped or narrowed run counts for nothing. If the test fails or flakes again, the count resets and the label comes off, and a closed issue reopens. Leave the managed block in the issue body alone: it holds that count.</p>
+<p>To run Nightly before merging a risky change, or before a release when it hasn't run on the commit yet, start it from the Actions tab or with <code>gh workflow run nightly.yml --ref &lt;branch or tag&gt;</code>. To reproduce one rollback failure without starting every job, narrow it: <code>gh workflow run nightly.yml --ref &lt;branch&gt; -f rollback-only=true -f os=windows-latest -f template=cli</code> runs only that template's rollback jobs on that operating system.</p>
+<p><code>just bump &lt;major|minor|patch&gt;</code> runs <code>scripts/prepare_release.py</code> before creating the version commit or tag. Preparation requires a clean <code>main</code> checkout matching the live <code>origin/main</code>. It refreshes the registry fallbacks and secret rules first; if you accept changes, it commits and pushes only those inputs. It then uses <code>gh</code> to check CI on the resulting SHA. If Nightly has no run on that SHA and the commit only modifies generated release inputs, preparation checks its immediate parent. This works both after a refresh in the current invocation and when retrying later. It never skips an ordinary code change, merge, deletion, or file addition. An older passing run on the same commit cannot hide a newer failure. Nightly must include the platform tests and every rollback job, so a narrowed reproduction run does not qualify. <code>tests/test_prepare_release.py</code> checks the workflow decisions, and <code>tests/test_release_commits.py</code> checks the allowed histories in real Git repositories.</p>
+<p>If CI is pending, preparation asks whether to wait and automatically continue. If Nightly has no run on either eligible commit, it asks whether to trigger a full run on current <code>main</code>, then separately asks whether to wait. An existing pending Nightly can also be watched, including one on the refresh's parent. Answering yes uses <code>gh run watch --exit-status</code> on the specific run ID, then reads its result and commit again. A newly pushed or dispatched run gets up to two minutes to appear before preparation stops with instructions. Before dispatching and after waiting, preparation checks that the checkout and remote <code>main</code> still match the refreshed source commit, even when Nightly covers its parent.</p>
+<p>Declining to wait stops before the version bump. Failed, cancelled, skipped, or incomplete checks also stop it. Redirected input never prompts, dispatches, or waits; it reports what needs to pass so you can retry. <code>Ctrl+C</code> stops preparation while any workflows already started continue on GitHub.</p>
+<p>Once those checks pass, preparation checks <code>uv.lock</code>, builds the distribution, validates its metadata with Twine, and builds the docs in strict mode. Distribution artifacts use a temporary directory; docs use the usual ignored <code>site/</code> directory. The shared release script then checks the version, local and remote tag collisions, and branch synchronization before committing and pushing the bump. Local preflight cannot verify the future version's wheel on all three platforms, PyPI's publishing authorization, Homebrew's token, or GitHub Pages permissions; the release workflow still checks those when it runs.</p>
+<h2 id="template-hooks-smoke-matrix">Template Hooks Smoke Matrix<a class="headerlink" href="#template-hooks-smoke-matrix" title="Permanent link">&para;</a></h2>
+<p>End-to-end template validation runs through the <code>template-smoke</code> action (<code>.github/actions/template-smoke</code>). It scaffolds each built-in template it is given in turn, verifies that <code>prek</code> hooks are installed, checks that a commit message that isn't conventional is rejected, and asserts that the first commit runs and passes every pre-commit hook. A <code>template-hooks-smoke</code> job runs it for a list of templates, and a test job can run it after the suite through its matrix entry's <code>smoke</code> list, which is how macOS smoke-tests templates without a runner of its own.</p>
+<p>The first commit of a job's first scaffold builds prek's hook environments, which takes most of the job: gitleaks and actionlint compile with Go, about 50 seconds on Linux and macOS and up to two minutes on Windows. Pull requests and pushes to <code>main</code> restore those environments from the newest cache <code>main</code> saved for the platform and Python, and prek rebuilds any it finds broken. Only a push to <code>main</code> saves, after every scaffold passed, and <code>scripts/prek_cache.py</code> first removes each environment whose hook version no scaffold pinned, so a hook's release never leaves an old one in the cache. Nightly and a release restore nothing: they build every environment as a user's first commit does. No job caches uv's downloads. Installing Protostar's locked dependencies takes seconds without one, and a cache keyed on <code>uv.lock</code> filled up with the packages the scaffolds install, so restoring it took longer than the install it skipped.</p>
+<p>After each scaffold, <code>scripts/source_builds.py</code> lists the packages <code>init</code> built from source instead of installing a published wheel. A wheel built locally carries tags that none of the wheels <code>uv.lock</code> records for its package do, so the comparison finds every build, even one uv's cache already held. A build only makes <code>init</code> slower, so it never fails the smoke test. Each job uploads what it found as a <code>source-builds-*</code> artifact, and after Nightly, Nightly Report keeps a <code>source-build</code> issue open that lists each template, platform, and package. It comments only when that list changes, and closes once a run's smoke tests all pass without building anything. A pull request's smoke tests record their builds too, but only Nightly files them.</p>
+<h2 id="counting-rollback-faults">Counting Rollback Faults<a class="headerlink" href="#counting-rollback-faults" title="Permanent link">&para;</a></h2>
+<p>Every test that injects a fault carries the <code>rollback_fault</code> marker, and <code>--rollback-report PATH</code> writes how many of them passed, and which failed, per scenario (<code>tests/rollback_report.py</code>). A retry of failed tests updates the same file, so it holds each fault's last outcome, and a run that is killed or interrupted writes nothing. Nightly's rollback jobs pass the option and upload the file as an artifact, even when the job fails.</p>
+<p>The <code>Rollback Metrics</code> workflow (<code>rollback-metrics.yml</code>) runs after each scheduled Nightly, apart from it so a publishing failure can never fail the run a release requires. It adds the reports up with <code>scripts/rollback_report.py</code> and writes two files under <code>metrics/</code> on <code>gh-pages</code>: <code>rollback-history.json</code>, one entry per fully green run with the count for each operating system and template, and <code>rollback-latest.json</code>, a Shields endpoint that reads <code>rollback faults restored</code> with the total. The badge stays cyan like the others, so a failure shows in its text, as <code>N failing</code>, and never in its color; only green runs reach the history. A run publishes only when every job in the rollback matrix reported: a missing, empty, or foreign report means the result is unknown, so nothing changes. A manual Nightly that covers the whole matrix publishes too; one narrowed to an OS or template is incomplete and records nothing. The count adds every operating system, so the same fault restored on three platforms counts three times. The <a href="https://protostar.jacksonferguson.me/metrics/#rollback">rollback section of the metrics dashboard</a> graphs the history by operating system and template, and the Pages workflow deploys both files, after which the site is asked to rebuild as it is for the mutation score.</p>
+<h2 id="mutation-testing">Mutation Testing<a class="headerlink" href="#mutation-testing" title="Permanent link">&para;</a></h2>
+<p>Mutation testing checks that the tests would notice a bug: <a href="https://github.com/boxed/mutmut">mutmut</a> changes the code one small edit at a time, such as <code>&lt;</code> to <code>&lt;=</code>, and reports each edit the suite still passes. <code>[tool.mutmut]</code> in <code>pyproject.toml</code> lists the modules it covers.</p>
+<p>The set comes from <code>[tool.mutmut].source_paths</code> in <code>pyproject.toml</code>; it excludes the CLI, generated code, and modules reached mainly through mocked boundaries. The score describes that selected engine set, not the whole codebase.</p>
+<p>The <strong>Mutation Testing</strong> workflow runs nightly at 3am Pacific, with Nightly. After the survivor fixes, the slowest measured module, reconciliation, took about 36 minutes across six parallel shards; nightly runs leave room for that work without running it on every commit. A scheduled run skips mutation testing unless its inputs changed since the last published commit: the selected source modules, <code>tests/</code>, <code>pyproject.toml</code>, <code>uv.lock</code>, or the reporting script and mutation workflow. A missing history or a recorded commit no longer in the current branch's ancestry starts a full run.</p>
+<p>Run a module locally, or select modules and individual shards through the workflow's manual trigger:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>just<span class="w"> </span>mutate<span class="w"> </span>journal
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>gh<span class="w"> </span>workflow<span class="w"> </span>run<span class="w"> </span>mutation.yml<span class="w"> </span>--ref<span class="w"> </span>main<span class="w"> </span>-f<span class="w"> </span><span class="nv">modules</span><span class="o">=</span>journal
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>gh<span class="w"> </span>workflow<span class="w"> </span>run<span class="w"> </span>mutation.yml<span class="w"> </span>--ref<span class="w"> </span>main<span class="w"> </span>-f<span class="w"> </span><span class="nv">modules</span><span class="o">=</span>reconciliation:append-files
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>gh<span class="w"> </span>workflow<span class="w"> </span>run<span class="w"> </span>mutation.yml<span class="w"> </span>--ref<span class="w"> </span>main<span class="w"> </span>-f<span class="w"> </span><span class="nv">modules</span><span class="o">=</span>all
+</span></code></pre></div>
+<p>Local runs write each surviving edit as a diff to <code>mutants/survivors.md</code>. Each CI runner uploads raw counts, survivor names, and survivor diffs. The combined job adds shard counts into one result per module. The mutation score is <code>(killed + timeout) / (killed + timeout + survived + suspicious)</code>; mutants no test reaches are reported separately. Surviving mutants reduce the score but do not make the workflow fail: inspect their diffs and strengthen tests where a meaningful behavior change went unnoticed.</p>
+<p>Only a successful complete run on <code>main</code> publishes. Failed or cancelled jobs and manual subset runs cannot update the public score. Publication checks every expected artifact and the configured module set, then appends the commit, UTC date, and raw per-module counts to <code>metrics/mutation-history.json</code> on <code>gh-pages</code>. <code>metrics/mutation-latest.json</code> is a Shields endpoint with the aggregate score and an explicit engine label. Retrying a recorded commit does not add another history point. Counts are retained so the dashboard can later show changes in the module set without averaging percentages.</p>
+<p>Publication rebases and retries if the benchmark or release workflow updates <code>gh-pages</code> concurrently; a conflicting history update is regenerated against the new branch contents. The shared Pages workflow deploys both mutation JSON files alongside the performance history. The <a href="https://protostar.jacksonferguson.me/metrics/#mutations">mutation testing section of the metrics dashboard</a> graphs the aggregate and per-module history, marks changes in the module set, and lists the latest raw counts. Use it to inspect a trend, then use survivor diffs to investigate a missed behavior. The README badge reads the latest score.</p>
+<p>jacksonferguson.me shows the latest score on Protostar's project card, and fetches it only when it builds. Once the Pages deploy finishes, the workflow sends the site's repository a <code>remote-assets-updated</code> dispatch, so the site rebuilds from the file just deployed. The dispatch uses <code>PORTFOLIO_DISPATCH_TOKEN</code>, a fine-grained token limited to that repository with Contents read and write; the job fails with a pointer to it when the secret is missing.</p>
+<p>GitHub disables scheduled workflows in public repositories after 60 days without repository activity. Re-enable this workflow with:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>gh<span class="w"> </span>workflow<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>mutation.yml
+</span></code></pre></div>
+<h3 id="adding-a-module">Adding a Module<a class="headerlink" href="#adding-a-module" title="Permanent link">&para;</a></h3>
+<p>Add engine modules one or a few at a time: add the module to <code>source_paths</code>, run it through the manual workflow, kill the survivors worth killing, and run it again on the finished tests. Strengthen a test rather than excuse a survivor; mark only a mutant that cannot change behavior, with <code># pragma: no mutate</code> and a reason on the line above. A module's first run takes far longer than its run on finished tests, because a surviving mutant runs every test that reaches its function while a killed one stops at its first failure.</p>
+<p>Before the survivor pass, check for two things that hide mutants:</p>
+<ul>
+<li><strong>State built before a test runs.</strong> mutmut forks each mutant from a process that has already imported the tests and run the module once, so an <code>lru_cache</code> in the module or an object built at import in a test file means the mutated code never runs. Clear caches in an autouse fixture and build test objects in fixtures.</li>
+<li><strong>Local runs on macOS.</strong> Forked workers there crash on mutants in widely reached functions, which then count as suspicious instead of surviving. Trust the workflow's counts.</li>
+</ul>
+<p>A module too large for one runner is split by function through <code>[tool.mutmut-shards]</code> in <code>pyproject.toml</code>, as <code>reconciliation</code> is.</p>
+<h2 id="performance-latency-testing">Performance &amp; Latency Testing<a class="headerlink" href="#performance-latency-testing" title="Permanent link">&para;</a></h2>
+<p>Performance is checked in two ways. A pull request is checked exactly, by the <a href="../testing/#cost-budgets">cost budgets</a>: what each command does, never how long it takes, since a duration on a shared runner varies more from machine to machine than most regressions change it. Durations are measured every night, where two versions can be compared fairly, and locally when a change is meant to be faster.</p>
+<h3 id="nightly-benchmarks">Nightly Benchmarks<a class="headerlink" href="#nightly-benchmarks" title="Permanent link">&para;</a></h3>
+<p><code>benchmark.yml</code> runs an hour after Nightly, apart from it, so a slowdown can never fail the run a release requires. On Linux it compares the commit with a baseline, running every scenario of the <a href="#local-benchmarks">local harness</a> in alternating rounds on one runner. <code>scripts/benchmarks/report.py</code> then records the result in <code>metrics/benchmark-history.json</code> on <code>gh-pages</code>: one entry per night, with each scenario's median timings, and its change in Protostar's own CPU time with a 95% interval. The baseline is the last commit recorded on Linux, so each night measures what changed since, and a night with nothing new runs nothing. Routine benchmarks use Linux to conserve macOS runners; use the local harness to investigate platform-specific performance.</p>
+<p>A slowdown is judged on CPU time, the steadiest measure: the commands a run waits on are uv's and git's, and the cost budgets already check which ones run. A scenario is suspect when its whole interval lies at least 10% (<code>THRESHOLD</code>) slower. A run with a suspect keeps its baseline, so the next night measures the same change again, with or without new commits, and a slowdown found twice is a regression: the run opens a <code>performance-regression</code> issue naming the scenario, the change, and the commits. Close it once the slowdown is fixed, or accepted as the cost of a change. Two measurements make a false alarm unlikely, and measuring both against the same baseline still catches a slowdown that landed in a single commit.</p>
+<p>The threshold must stay well clear of the noise. A manual run with <code>calibrate</code> compares the commit with itself several times on Linux, records nothing, and summarizes the widest interval the noise produced:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>gh<span class="w"> </span>workflow<span class="w"> </span>run<span class="w"> </span>benchmark.yml<span class="w"> </span>-f<span class="w"> </span><span class="nv">calibrate</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span>-f<span class="w"> </span><span class="nv">repeats</span><span class="o">=</span><span class="m">3</span>
+</span></code></pre></div>
+<p>A pull request labelled <code>run-benchmark</code> is compared with its base on one Linux runner, and gets the table as a comment, which each later run replaces. Remove and add the label to run it again. It is never recorded.</p>
+<p>The <a href="https://protostar.jacksonferguson.me/metrics/#benchmarks">benchmark section of the metrics dashboard</a> graphs each scenario's median by operating system and measure, and lists the latest run's changes and verdicts. Shared runners are slower than most computers, so read the trend rather than the number. The startup timings Hyperfine recorded on every push to main from March to October 2026 stay in <code>metrics/data.js</code>, shown collapsed as an archive: each was measured on whichever runner its push got, so they can't be compared with the nightly runs.</p>
+<p>The <code>editor</code> scenario sets a hidden environment variable, <code>PROTOSTAR_BENCHMARK_RECIPE_EDITOR=1</code>. It treats the session as interactive and makes <code>protostar init</code> exit as soon as the recipe editor draws its first frame, without waiting on input.</p>
+<p>Help and version requests load argument definitions and tool descriptions, but do not load project analysis, reviews, execution, or format engines. Command implementations load only after dispatch. A tool reads its document-backed signals when analysis asks for them, and loads its document generators when planning calls <code>build()</code>. <code>tests/test_cli_startup.py</code> checks this boundary in fresh interpreters, including JSON help, and the cost budgets list the third-party packages each command imports.</p>
+<p>The dashboard source lives in <code>metrics/</code> on <code>main</code>. Pages publishing combines that source with the recorded data files from <code>gh-pages</code>; it never publishes dashboard code from the data branch. To test its data handling locally, use Node.js 18 or newer, and to preview a benchmark history before one is published, pass it to the preview server:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>node<span class="w"> </span>--test<span class="w"> </span>tests/metrics_dashboard.test.mjs
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>scripts.serve_metrics<span class="w"> </span>--benchmark-history<span class="w"> </span>.benchmarks/history.json
+</span></code></pre></div>
+<h3 id="local-benchmarks">Local Benchmarks<a class="headerlink" href="#local-benchmarks" title="Permanent link">&para;</a></h3>
+<p><code>scripts/benchmarks/</code> times the scenarios the <a href="../testing/#cost-budgets">cost budgets</a> count, for real: real <code>uv</code>, <code>git</code>, and hook installs. Use it for performance work, not to check a change; the cost budgets do that in every test run. Each sample runs a scenario's command in a fresh interpreter, in an isolated home directory and project, with configuration off and the hook registry offline. A warm-up round fills uv's cache, and the measured rounds run uv offline from it, so the network never enters a timing. A sample records the whole process's duration (<code>wall</code>), the CPU time Protostar's own process used (<code>cpu</code>), and the time it waited on commands (<code>commands</code>). <code>protostar</code> is the duration with the commands taken out: the part Protostar's own code decides.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>just<span class="w"> </span>bench<span class="w"> </span>sync<span class="w"> </span><span class="s1">'init-*'</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>just<span class="w"> </span>bench-compare<span class="w"> </span>main<span class="w"> </span>sync
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>just<span class="w"> </span>bench-profile<span class="w"> </span>sync
+</span></code></pre></div>
+<p>Nothing runs until a scenario is named (<code>--all</code> times every one, which takes several minutes), and <code>uv run python -m scripts.benchmarks list</code> lists them. <code>bench-compare</code> checks the other version out into a temporary worktree with its own locked environment, then runs the two in alternating rounds, each going first in turn, so a machine that slows down slows both. It reports each scenario's change as the median ratio across rounds, with a 95% bootstrap interval, and a change reads faster or slower only when that interval excludes zero. The verdict says a change isn't noise, not that it matters: a 1ms change in startup can be real. Comparing the working tree with an identical commit reports no detectable change, within about 2% on a quiet machine. Samples go to <code>.benchmarks/latest.json</code>, and <code>bench-profile</code> writes a pyinstrument profile to <code>.benchmarks/</code>, or prints one with <code>--text</code>.</p>
+<h2 id="related-developer-guides">Related Developer Guides<a class="headerlink" href="#related-developer-guides" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><a href=".././testing/">Testing &amp; Philosophy<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a>:</strong> The rules a test follows, the fixtures that help, and the suites CI runs.</li>
+<li><strong><a href=".././overview/">Developer Overview &amp; Contributing<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a>:</strong> Setup instructions, coding standards, and PR workflows.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../testing/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Testing &amp; Philosophy">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Testing & Philosophy
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../api-reference/" class="md-footer__link md-footer__link--next" aria-label="Next: API Reference">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                API Reference
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      &copy; 2026 Jackson Ferguson. <a href="https://github.com/jacksonfergusondev/protostar/blob/main/LICENSE">License</a>
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/jacksonfergusondev/protostar" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/protostar/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.linkedin.com/in/jackson--ferguson/" target="_blank" rel="noopener" title="www.linkedin.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3M135.4 416H69V202.2h66.5V416zM102.2 96a38.5 38.5 0 1 1 0 77 38.5 38.5 0 1 1 0-77m282.1 320h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="mailto:jackson.ferguson0@gmail.com" target="_blank" rel="noopener" title="" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4l208 156a48 48 0 0 0 57.6 0l208-156c12.1-9.1 19.2-23.3 19.2-38.4 0-26.5-21.5-48-48-48zM0 196v188c0 35.3 28.7 64 64 64h384c35.3 0 64-28.7 64-64V196L313.6 344.8c-34.1 25.6-81.1 25.6-115.2 0z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["content.code.copy","content.tabs.link","content.tooltips","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.sections","navigation.top","search.highlight"],"redirect":null,"search":"../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":{"alias":true,"default":"latest","provider":"mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.8b1c90bd.min.js"></script>
+      
+        <script src="../../javascripts/casts.js" type="module"></script>
+      
+    
+  </body>
+</html>

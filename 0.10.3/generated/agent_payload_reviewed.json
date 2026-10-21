@@ -1,0 +1,79 @@
+{
+  "api_version": 2,
+  "status": "reviewed",
+  "pending": true,
+  "template": null,
+  "review": {
+    "edits": [
+      {
+        "path": "safe.txt",
+        "before": null,
+        "after": "accepted\n"
+      }
+    ],
+    "directories": [],
+    "migrations": [],
+    "conflicts": [
+      {
+        "id": "7931c07f49c0",
+        "file": ".github/renovate.json",
+        "keys": [
+          "value"
+        ],
+        "identity": null,
+        "lines": null,
+        "reason": "diverged",
+        "choices": [
+          "local",
+          "desired"
+        ],
+        "sides": {
+          "text": false,
+          "base": {
+            "value": "original"
+          },
+          "local": {
+            "value": "local"
+          },
+          "desired": {
+            "value": "desired"
+          }
+        }
+      }
+    ],
+    "resolved": [],
+    "proposals": [],
+    "preserved": [],
+    "state_changed": true,
+    "resolver": {
+      "requirements": {
+        "main": [],
+        "dev": [],
+        "docs": []
+      },
+      "lock_required": false,
+      "footprint": {
+        "paths": [
+          "pyproject.toml",
+          "uv.lock"
+        ]
+      },
+      "output": null
+    },
+    "initialization_only": [],
+    "initialization_only_ide_probe": false,
+    "hooks": {
+      "install": null,
+      "remove": []
+    },
+    "missing_tools": [],
+    "selections": [],
+    "producers": []
+  },
+  "diffs": [
+    {
+      "path": "safe.txt",
+      "diff": "--- /dev/null\n+++ b/safe.txt\n@@ -0,0 +1 @@\n+accepted\n"
+    }
+  ]
+}

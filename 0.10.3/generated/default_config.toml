@@ -1,0 +1,66 @@
+[env]
+# Preferred IDE: 'vscode', 'cursor', or 'none'
+# ide = "vscode"
+
+# Default Author Information
+# author_name = "your-name"
+# author_email = "your-email@example.com"
+# github_username = "your-github-username"
+
+# Default Python version
+python_version = "3.13"
+# supported_os = ["MacOS", "Linux", "Windows"]
+
+# Tools: uncomment a line to change that default for new projects
+# Activate the project's environment whenever you enter its folder.
+# direnv = true
+# Check Markdown files for formatting mistakes, with relaxed rules.
+# markdownlint = true
+# Check and format Markdown files quickly.
+# rumdl = true
+# Find common bugs and style problems in Python code, and format it.
+# ruff = false
+# Check type hints to catch mistakes before the code runs.
+# mypy = true
+# Check type hints quickly, with Astral's type checker.
+# ty = true
+# Check type hints quickly, with Meta's type checker.
+# pyrefly = true
+# Run the project's tests.
+# pytest = true
+# Run the project's checks automatically each time you commit.
+# pre_commit = true
+# Run the project's checks automatically each time you commit, faster.
+# prek = true
+# Write commit messages in a standard form that sets the next version.
+# commitizen = true
+# Open pull requests that keep dependencies up to date.
+# renovate = true
+# Report how much of the code the tests exercise, on each pull request.
+# codecov = true
+# Build a documentation website from Markdown files.
+# zensical = true
+# Publish the documentation website on Read the Docs.
+# readthedocs = true
+# Run the checks and tests on GitHub for every push and pull request.
+# ci = true
+# Publish the package to PyPI when you push a version tag.
+# release = true
+# Package the project as a container image that runs anywhere.
+# docker = true
+# Give the project's common commands short names, like `just test`.
+# just = true
+# Tell coding assistants how to work on the project.
+# agents = true
+# Add the files GitHub shows people who want to contribute.
+# community = true
+
+# [templates]
+# my-org-api = "https://raw.githubusercontent.com/MyOrg/standards/main/api.toml"
+# data-science-base = "~/Developer/templates/ds_base.toml"
+#
+# [templates.enterprise-api]
+# name = "Enterprise API"
+# source = "https://github.com/myorg/enterprise-template"
+# description = "Internal enterprise microservice scaffold with auth & tracing"
+# trusted = true

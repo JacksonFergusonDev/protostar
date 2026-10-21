@@ -1,0 +1,25 @@
+.
+├── .dockerignore
+├── .envrc
+├── .gitattributes
+├── .gitignore
+├── .python-version
+├── Dockerfile
+├── README.md
+├── data
+│   ├── 01_raw
+│   ├── 02_processed
+│   └── 03_features
+├── justfile
+├── models
+│   └── weights
+├── notebooks
+│   └── exploratory
+├── protostar.lock
+├── pyproject.toml
+├── src
+│   └── demo_project
+│       ├── data
+│       ├── models
+│       └── training
+└── uv.lock

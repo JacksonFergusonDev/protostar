@@ -1,0 +1,736 @@
+{
+  "analysis": {
+    "existing": true,
+    "facts": {
+      "author_name": {
+        "source": "pyproject.toml [project].authors",
+        "value": "Demo Author"
+      },
+      "current_year": {
+        "source": "LICENSE",
+        "value": "2024"
+      },
+      "license": {
+        "source": "LICENSE",
+        "value": "MIT"
+      },
+      "minimum_python": {
+        "source": "pyproject.toml [project].requires-python",
+        "value": "3.12"
+      },
+      "python_version": {
+        "source": "pyproject.toml [project].requires-python",
+        "value": "3.12"
+      }
+    },
+    "notes": [],
+    "tools": [
+      {
+        "sources": [
+          "pytest in pyproject.toml dependencies"
+        ],
+        "tool": "pytest"
+      },
+      {
+        "sources": [
+          "pyproject.toml [tool.ruff]"
+        ],
+        "tool": "ruff"
+      }
+    ]
+  },
+  "api_version": 2,
+  "entries": [
+    {
+      "change": "after-setup",
+      "conflicts": [],
+      "directory": false,
+      "path": ".gitignore",
+      "proposals": []
+    },
+    {
+      "change": "after-setup",
+      "conflicts": [],
+      "directory": false,
+      "path": "protostar.lock",
+      "proposals": []
+    },
+    {
+      "change": "modified",
+      "conflicts": [
+        "f58240b0a856"
+      ],
+      "directory": false,
+      "path": "pyproject.toml",
+      "proposals": [
+        "010a7a6a85ce",
+        "ebc9216411f8"
+      ]
+    },
+    {
+      "change": "after-setup",
+      "conflicts": [],
+      "directory": false,
+      "path": "uv.lock",
+      "proposals": []
+    }
+  ],
+  "manifest": {
+    "collision_strategy": "merge",
+    "collisions": [
+      "pyproject.toml"
+    ],
+    "dependencies": {
+      "dependencies": [],
+      "dev_dependencies": [
+        "ruff"
+      ],
+      "docs_dependencies": [],
+      "includes": [],
+      "resolver_footprint": {
+        "paths": [
+          "pyproject.toml",
+          "uv.lock"
+        ]
+      }
+    },
+    "filesystem": {
+      "directories": [],
+      "file_injections": {},
+      "file_policy": "seed-only",
+      "regions": {},
+      "structured": {
+        "pyproject.toml": [
+          {
+            "content": "[project]\ndescription = \"Add your description here.\"\nauthors = [{ name = \"your-name\", email = \"your-email@example.com\" }]\n",
+            "format": "toml",
+            "producer": "module:PythonCore",
+            "resolver_footprint": null
+          },
+          {
+            "content": "[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nselect = [\n    \"A\",   # flake8-builtins\n    \"B\",   # flake8-bugbear\n    \"C4\",  # flake8-comprehensions\n    \"E\",   # pycodestyle errors\n    \"F\",   # Pyflakes\n    \"I\",   # isort\n    \"RUF\", # Ruff-specific\n    \"UP\",  # pyupgrade\n]\nignore = [\n    \"E501\", # Line too long - handled automatically by `ruff format`\n]\n",
+            "format": "toml",
+            "producer": "module:RuffModule",
+            "resolver_footprint": null
+          }
+        ]
+      },
+      "vcs_ignores": [
+        "*~",
+        ".DS_Store",
+        ".cache/",
+        ".env",
+        ".idea/",
+        ".ruff_cache/",
+        ".venv/",
+        ".vscode/",
+        "Thumbs.db",
+        "__pycache__/"
+      ],
+      "workspace_hides": [
+        "*~",
+        ".DS_Store",
+        ".cache/",
+        ".env",
+        ".idea/",
+        ".ruff_cache/",
+        ".venv/",
+        ".vscode/",
+        "Thumbs.db",
+        "__pycache__/"
+      ]
+    },
+    "ide_settings": {},
+    "metadata": {},
+    "migrations": [],
+    "missing_tools": [],
+    "one_shot": false,
+    "tasks": {
+      "post_install_tasks": [],
+      "system_tasks": [
+        {
+          "command": [
+            "git",
+            "init"
+          ],
+          "description": "Initializing git repository",
+          "owned_files": [],
+          "owned_trees": [
+            ".git"
+          ],
+          "timeout": 30
+        }
+      ]
+    },
+    "template_reference": null,
+    "tooling": {
+      "ci_flags": [],
+      "ci_steps": [
+        "      - name: Run Ruff Linter\n        run: uv run ruff check --output-format=github .\n\n      - name: Run Ruff Formatter\n        run: uv run ruff format --check --output-format=github ."
+      ],
+      "conventional_commits": false,
+      "hook_runner": "none",
+      "ide_extensions": [
+        "charliermarsh.ruff"
+      ],
+      "just_clean_paths": [
+        ".ruff_cache"
+      ],
+      "just_format_commands": [
+        "uv run ruff check --fix .",
+        "uv run ruff format ."
+      ],
+      "just_lint_commands": [
+        "uv run ruff check .",
+        "uv run ruff format --check ."
+      ],
+      "just_typecheck_commands": [],
+      "pre_commit_hooks": [],
+      "pre_commit_local_hooks": [
+        "      - id: ruff-check\n        name: ruff check\n        entry: uv run ruff check --fix\n        language: system\n        types: [python]\n        require_serial: true\n\n      - id: ruff-format\n        name: ruff format\n        entry: uv run ruff format\n        language: system\n        types: [python]\n        require_serial: true"
+      ],
+      "wants_agents": false,
+      "wants_ci": false,
+      "wants_community": false,
+      "wants_docker": false,
+      "wants_just": false,
+      "wants_release": false
+    }
+  },
+  "review": {
+    "conflicts": [
+      {
+        "choices": [
+          "local",
+          "desired"
+        ],
+        "file": "pyproject.toml",
+        "id": "f58240b0a856",
+        "identity": null,
+        "keys": [
+          "tool",
+          "ruff",
+          "line-length"
+        ],
+        "lines": null,
+        "reason": "unowned",
+        "sides": {
+          "base": null,
+          "desired": {
+            "value": 88
+          },
+          "local": {
+            "value": 100
+          },
+          "text": false
+        }
+      }
+    ],
+    "directories": [],
+    "edits": [
+      {
+        "after": "[project]\nname = \"demo\"\nrequires-python = \">=3.12\"\nauthors = [{ name = \"Demo Author\" }]\ndependencies = []\n\n[dependency-groups]\ndev = [\"pytest\"]\n\n[tool.ruff]\nline-length = 100\n\n[tool.ruff.lint]\nselect = [\n    \"A\",   # flake8-builtins\n    \"B\",   # flake8-bugbear\n    \"C4\",  # flake8-comprehensions\n    \"E\",   # pycodestyle errors\n    \"F\",   # Pyflakes\n    \"I\",   # isort\n    \"RUF\", # Ruff-specific\n    \"UP\",  # pyupgrade\n]\nignore = [\n    \"E501\", # Line too long - handled automatically by `ruff format`\n]\n",
+        "before": "[project]\nname = \"demo\"\nrequires-python = \">=3.12\"\nauthors = [{ name = \"Demo Author\" }]\ndependencies = []\n\n[dependency-groups]\ndev = [\"pytest\"]\n\n[tool.ruff]\nline-length = 100\n",
+        "path": "pyproject.toml"
+      }
+    ],
+    "hooks": {
+      "install": null,
+      "remove": []
+    },
+    "initialization_only": [
+      [
+        "git",
+        "init"
+      ]
+    ],
+    "initialization_only_ide_probe": true,
+    "migrations": [],
+    "missing_tools": [],
+    "preserved": [],
+    "producers": [
+      {
+        "path": [
+          "tasks",
+          "system_tasks",
+          "a1b9a5a52ba39c1969d18d972313c3f56187657f2becb5fa4726e9a6a6fe0cb4"
+        ],
+        "producer": "module:SystemWorkspaceModule",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "vcs_ignores",
+          ".DS_Store"
+        ],
+        "producer": "module:SystemWorkspaceModule",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "workspace_hides",
+          ".DS_Store"
+        ],
+        "producer": "module:SystemWorkspaceModule",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "vcs_ignores",
+          "Thumbs.db"
+        ],
+        "producer": "module:SystemWorkspaceModule",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "workspace_hides",
+          "Thumbs.db"
+        ],
+        "producer": "module:SystemWorkspaceModule",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "vcs_ignores",
+          "*~"
+        ],
+        "producer": "module:SystemWorkspaceModule",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "workspace_hides",
+          "*~"
+        ],
+        "producer": "module:SystemWorkspaceModule",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "vcs_ignores",
+          ".idea/"
+        ],
+        "producer": "module:SystemWorkspaceModule",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "workspace_hides",
+          ".idea/"
+        ],
+        "producer": "module:SystemWorkspaceModule",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "vcs_ignores",
+          ".vscode/"
+        ],
+        "producer": "module:SystemWorkspaceModule",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "workspace_hides",
+          ".vscode/"
+        ],
+        "producer": "module:SystemWorkspaceModule",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "vcs_ignores",
+          ".env"
+        ],
+        "producer": "module:SystemWorkspaceModule",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "workspace_hides",
+          ".env"
+        ],
+        "producer": "module:SystemWorkspaceModule",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "vcs_ignores",
+          ".venv/"
+        ],
+        "producer": "module:PythonCore",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "workspace_hides",
+          ".venv/"
+        ],
+        "producer": "module:PythonCore",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "vcs_ignores",
+          "__pycache__/"
+        ],
+        "producer": "module:PythonCore",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "workspace_hides",
+          "__pycache__/"
+        ],
+        "producer": "module:PythonCore",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "vcs_ignores",
+          ".cache/"
+        ],
+        "producer": "module:PythonCore",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "workspace_hides",
+          ".cache/"
+        ],
+        "producer": "module:PythonCore",
+        "tool": null
+      },
+      {
+        "path": [
+          "filesystem",
+          "structured",
+          "pyproject.toml",
+          "module:PythonCore"
+        ],
+        "producer": "module:PythonCore",
+        "tool": null
+      },
+      {
+        "path": [
+          "dependencies",
+          "dev_dependencies",
+          "ruff"
+        ],
+        "producer": "module:RuffModule",
+        "tool": "ruff"
+      },
+      {
+        "path": [
+          "filesystem",
+          "vcs_ignores",
+          ".ruff_cache/"
+        ],
+        "producer": "module:RuffModule",
+        "tool": "ruff"
+      },
+      {
+        "path": [
+          "filesystem",
+          "workspace_hides",
+          ".ruff_cache/"
+        ],
+        "producer": "module:RuffModule",
+        "tool": "ruff"
+      },
+      {
+        "path": [
+          "tooling",
+          "ide_extensions",
+          "charliermarsh.ruff"
+        ],
+        "producer": "module:RuffModule",
+        "tool": "ruff"
+      },
+      {
+        "path": [
+          "tooling",
+          "pre_commit_local_hooks",
+          "423d5bdd7fbaef84954875834219849e090925648ef11267fea06e6399b24f0f"
+        ],
+        "producer": "module:RuffModule",
+        "tool": "ruff"
+      },
+      {
+        "path": [
+          "tooling",
+          "ci_steps",
+          "3f7d41aa5a93b27986800b9b1df98e3e8f4ee1adc615781d9a078b288d1f03d7"
+        ],
+        "producer": "module:RuffModule",
+        "tool": "ruff"
+      },
+      {
+        "path": [
+          "filesystem",
+          "structured",
+          "pyproject.toml",
+          "module:RuffModule"
+        ],
+        "producer": "module:RuffModule",
+        "tool": "ruff"
+      },
+      {
+        "path": [
+          "tooling",
+          "just_format_commands",
+          "dda851df0e9de0de041b44f61d4e7c810567161016588af2dfef77556179ad1f"
+        ],
+        "producer": "module:RuffModule",
+        "tool": "ruff"
+      },
+      {
+        "path": [
+          "tooling",
+          "just_format_commands",
+          "2556b800e20efb42515b7657d96cddbcb0b3a26cc23065db706eb43c63f39854"
+        ],
+        "producer": "module:RuffModule",
+        "tool": "ruff"
+      },
+      {
+        "path": [
+          "tooling",
+          "just_lint_commands",
+          "64776c1ca0c426f361df9362b24f35323bd843c12b79af437d10aa080db1b36f"
+        ],
+        "producer": "module:RuffModule",
+        "tool": "ruff"
+      },
+      {
+        "path": [
+          "tooling",
+          "just_lint_commands",
+          "e80bd1c21d871732b141f29648107c8bf9c866291cac15fd2ad0f966bcd8c78f"
+        ],
+        "producer": "module:RuffModule",
+        "tool": "ruff"
+      },
+      {
+        "path": [
+          "tooling",
+          "just_clean_paths",
+          "34b6c9706ed1a922a8f246c632d25c6f5a605b3686b3a3d82e61f09e70272b75"
+        ],
+        "producer": "module:RuffModule",
+        "tool": "ruff"
+      }
+    ],
+    "proposals": [
+      {
+        "choices": [
+          "local",
+          "desired"
+        ],
+        "file": "pyproject.toml",
+        "id": "010a7a6a85ce",
+        "identity": "ruff:",
+        "keys": [
+          "dependencies",
+          "dev"
+        ],
+        "lines": null,
+        "reason": "proposed",
+        "resolution": null,
+        "sides": {
+          "base": null,
+          "desired": {
+            "value": "ruff"
+          },
+          "local": null,
+          "text": false
+        }
+      },
+      {
+        "choices": [
+          "local",
+          "desired"
+        ],
+        "file": "pyproject.toml",
+        "id": "ebc9216411f8",
+        "identity": null,
+        "keys": [
+          "tool",
+          "ruff",
+          "lint"
+        ],
+        "lines": null,
+        "reason": "proposed",
+        "resolution": null,
+        "sides": {
+          "base": null,
+          "desired": {
+            "value": {
+              "ignore": [
+                "E501"
+              ],
+              "select": [
+                "A",
+                "B",
+                "C4",
+                "E",
+                "F",
+                "I",
+                "RUF",
+                "UP"
+              ]
+            }
+          },
+          "local": null,
+          "text": false
+        }
+      }
+    ],
+    "resolved": [],
+    "resolver": {
+      "footprint": {
+        "paths": [
+          "pyproject.toml",
+          "uv.lock"
+        ]
+      },
+      "lock_required": false,
+      "output": "unknown",
+      "requirements": {
+        "dev": [
+          "ruff"
+        ],
+        "docs": [],
+        "main": []
+      }
+    },
+    "selections": [
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "direnv"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "markdownlint"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "rumdl"
+      },
+      {
+        "enabled": true,
+        "layer": "fallback",
+        "tool": "ruff"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "mypy"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "ty"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "pyrefly"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "pytest"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "pre_commit"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "prek"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "commitizen"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "renovate"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "codecov"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "zensical"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "readthedocs"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "ci"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "release"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "docker"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "just"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "agents"
+      },
+      {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "community"
+      }
+    ],
+    "state_changed": true
+  },
+  "status": "planned"
+}
