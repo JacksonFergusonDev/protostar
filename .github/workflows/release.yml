@@ -180,7 +180,7 @@ jobs:
           python-version: "3.14"
 
       - name: Install docs dependencies
-        run: uv sync --only-group docs --locked
+        run: uv sync --no-default-groups --group docs --locked
 
       - name: Configure Git Author
         run: |
@@ -198,11 +198,11 @@ jobs:
             # Benchmarks, mutation scores, and rollback counts also write here,
             # so each attempt deploys onto the branch as it is now.
             git fetch origin +gh-pages:gh-pages || true
-            uv run --only-group docs mike deploy \
+            uv run --no-default-groups --group docs --locked mike deploy \
               --update-aliases \
               --alias-type redirect \
               "$VERSION" latest
-            uv run --only-group docs mike set-default latest
+            uv run --no-default-groups --group docs --locked mike set-default latest
             if git push origin gh-pages; then
               exit 0
             fi

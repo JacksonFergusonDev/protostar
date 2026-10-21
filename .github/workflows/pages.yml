@@ -42,13 +42,13 @@ jobs:
           python-version: "3.14"
 
       - name: Install documentation dependencies
-        run: uv sync --only-group docs --locked
+        run: uv sync --no-default-groups --group docs --locked
 
       - name: Assemble documentation, redirects, and metrics
         run: |
-          latest_version="$(uv run --only-group docs python -m scripts.prepare_pages pages-source --print-latest)"
+          latest_version="$(uv run --no-default-groups --group docs --locked python -m scripts.prepare_pages pages-source --print-latest)"
           git show "refs/tags/v${latest_version}:zensical.toml" > latest-zensical.toml
-          uv run --only-group docs python -m scripts.prepare_pages pages-source \
+          uv run --no-default-groups --group docs --locked python -m scripts.prepare_pages pages-source \
             --output published --config latest-zensical.toml
 
       - name: Test metrics dashboard data handling
