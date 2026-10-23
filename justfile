@@ -33,6 +33,7 @@ lint: sync
     uv run rumdl check .
     uv run rumdl fmt --check .
     uv run actionlint .github/workflows/*.yml
+    uv run zizmor --offline --config .github/zizmor.yml .github/
     @printf "{{ green }}✔ Linting passed{{ nc }}\n"
 
 # Run static type checking with Mypy

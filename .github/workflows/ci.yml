@@ -97,7 +97,9 @@ jobs:
 
     - name: Audit workflow security with zizmor
       if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-      run: uv run zizmor --offline --config .github/zizmor.yml --format github .github/
+      env:
+        GH_TOKEN: ${{ github.token }} # enables zizmor's online audits
+      run: uv run zizmor --config .github/zizmor.yml --format github .github/
 
     - name: Type check with Mypy
       if: ${{ !cancelled() && steps.setup.outcome == 'success' }}

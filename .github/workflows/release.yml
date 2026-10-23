@@ -134,12 +134,12 @@ jobs:
           path: dist/
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
 
   sync-homebrew:
     name: Delegate Homebrew Update
     needs: publish
-    uses: JacksonFergusonDev/ci-cd-release-infrastructure/.github/workflows/update-homebrew.yml@7281f92f055b77539caa67347726475d64107c2d # main
+    uses: JacksonFergusonDev/ci-cd-release-infrastructure/.github/workflows/update-homebrew.yml@7281f92f055b77539caa67347726475d64107c2d
     with:
       tag: ${{ github.ref_name }}
       package_name: "protostar"
