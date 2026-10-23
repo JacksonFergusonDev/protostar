@@ -110,7 +110,7 @@
   min-width: 116px;
   border: 0;
   border-left: 1px solid var(--code-border);
-  color: #000;
+  color: var(--copy-fg);
   background: var(--accent);
   cursor: pointer;
   font-family: inherit;
@@ -121,13 +121,13 @@
     border-color 0.25s ease;
 }
 .hs-install-copy:hover {
-  background: #00e5ff;
+  background: var(--copy-hover);
 }
 .hs-install-copy:active {
-  background: #00b4d8;
+  background: var(--copy-active);
 }
 .hs-install-copy:focus-visible {
-  outline: 2px solid #ffffff;
+  outline: 2px solid var(--copy-focus);
   outline-offset: -2px;
 }
 @media (max-width: 800px) {

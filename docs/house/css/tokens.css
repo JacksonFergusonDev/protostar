@@ -8,6 +8,18 @@
   --text: #e8edef;
   --muted: #939da6;
   --accent: #22d3ee;
+  --accent-soft: rgb(from var(--accent) r g b / 0.08);
+  --accent-border: rgb(from var(--accent) r g b / 0.22);
+  /* Relative states keep the reference site's exact cyan shades at the default
+   * accent. A project only needs to set --accent; each state follows its hue.
+   * Default hover/pressed shades: #86eaf7, #00e5ff, and #00b4d8.
+   * Individual states and foregrounds can be overridden for contrast. */
+  --accent-hover: hsl(from var(--accent) calc(h - 1.0385) calc(s * 1.022) calc(l + 21.3725));
+  --button-fg: #081014;
+  --copy-hover: hsl(from var(--accent) calc(h - 1.8235) calc(s * 1.1667) calc(l - 3.3333));
+  --copy-active: hsl(from var(--accent) calc(h + 2.0588) calc(s * 1.1667) calc(l - 10.9804));
+  --copy-fg: #000;
+  --copy-focus: #ffffff;
   --line: #252c31;
   --sans: 'DM Sans', sans-serif;
   --mono: 'JetBrains Mono', monospace;
