@@ -441,6 +441,8 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
         jobs_builder.append_raw(f"""  lint:
     name: Lint & Type Check
     runs-on: {primary_os}
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -463,6 +465,8 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
         jobs_builder.append_raw(f"""  test:
     name: Test on {os_matrix[0]} with Python {python_matrix[0]}
     runs-on: {os_matrix[0]}
+    permissions:
+      contents: read
 
     steps:
 {test_steps}""")
@@ -470,6 +474,8 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
         jobs_builder.append_raw(f"""  test:
     name: Test on ${{{{ matrix.os }}}} with Python ${{{{ matrix.python-version }}}}
     runs-on: ${{{{ matrix.os }}}}
+    permissions:
+      contents: read
     strategy:
       matrix:
         os: [{os_matrix_str}]
@@ -488,9 +494,6 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  contents: read
-
 jobs:
 {jobs_body}"""
 
@@ -507,9 +510,6 @@ def generate_release_workflow() -> str:
           push:
             tags:
               - "v*"
-
-        permissions:
-          contents: read
 
         jobs:
           pypi-publish:
