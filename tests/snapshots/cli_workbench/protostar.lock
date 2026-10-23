@@ -10,7 +10,7 @@ hook_pins = []
 [template]
 origin = "built-in"
 locator = "cli"
-digest = "cc7a1de28c078b3486e151003bcd09abfe343b6874fbc180aed7f118fed54945"
+digest = "1822516e2bb588715955f1c6a1d64a7073dbdccb32f6a636333ab2811290ae8c"
 display_name = "cli"
 
 [[files]]

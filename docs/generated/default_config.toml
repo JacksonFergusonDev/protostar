@@ -18,6 +18,8 @@ python_version = "3.13"
 # markdownlint = true
 # Check and format Markdown files quickly.
 # rumdl = true
+# Find security problems in GitHub Actions workflows.
+# zizmor = true
 # Find common bugs and style problems in Python code, and format it.
 # ruff = false
 # Check type hints to catch mistakes before the code runs.

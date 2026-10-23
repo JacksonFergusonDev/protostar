@@ -10,7 +10,7 @@ from .base import (
     ToolInfo,
     ToolModule,
 )
-from .ci_layer import CIModule, ReleaseModule
+from .ci_layer import CIModule, ReleaseModule, ZizmorModule
 from .community_layer import CommunityModule
 from .docker import DOCKER_INFO, DOCKER_NAME, DockerModule
 from .lang_layer import LICENSE_MAP, PythonCore, declare_readme
@@ -40,6 +40,7 @@ TOOLING_MODULES: tuple[ToolModule, ...] = (
     DirenvModule(),
     MarkdownLintModule(),
     RumdlModule(),
+    ZizmorModule(),
     RuffModule(),
     MypyModule(),
     TyModule(),
@@ -100,5 +101,6 @@ __all__ = [
     "ToolModule",
     "TyModule",
     "ZensicalModule",
+    "ZizmorModule",
     "declare_readme",
 ]

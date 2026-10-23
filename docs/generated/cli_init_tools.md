@@ -3,6 +3,7 @@
 | `--direnv, --no-direnv` | Activate the project's environment whenever you enter its folder |
 | `--markdownlint, --no-markdownlint` | Check Markdown files for formatting mistakes, with relaxed rules |
 | `--rumdl, --no-rumdl` | Check and format Markdown files quickly |
+| `--zizmor, --no-zizmor` | Find security problems in GitHub Actions workflows |
 | `--ruff, --no-ruff` | Find common bugs and style problems in Python code, and format it |
 | `--mypy, --no-mypy` | Check type hints to catch mistakes before the code runs |
 | `--ty, --no-ty` | Check type hints quickly, with Astral's type checker |

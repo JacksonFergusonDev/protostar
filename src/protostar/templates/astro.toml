@@ -77,6 +77,7 @@ pythonpath = [".", "src"]
 
 # --- Tiers ---
 [tiers.workbench]
+zizmor = false
 mypy = false
 pytest = false
 prek = false
@@ -86,6 +87,7 @@ commitizen = false
 renovate = false
 
 [tiers.production]
+zizmor = true
 mypy = true
 pytest = true
 prek = true

@@ -79,6 +79,7 @@ ruff = true
 rumdl = false
 ty = false
 zensical = false
+zizmor = false
 
 # The tier a project follows until it chooses one; requires [tiers].
 tier = "workbench"

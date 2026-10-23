@@ -640,6 +640,11 @@
         "tool": "rumdl"
       },
       {
+        "enabled": false,
+        "layer": "fallback",
+        "tool": "zizmor"
+      },
+      {
         "enabled": true,
         "layer": "fallback",
         "tool": "ruff"

@@ -55,6 +55,7 @@ packages = ["src/<% PACKAGE_NAME %>"]
 
 # --- Tiers ---
 [tiers.workbench]
+zizmor = false
 mypy = false
 pytest = false
 prek = false
@@ -65,6 +66,7 @@ renovate = false
 docker = false
 
 [tiers.production]
+zizmor = true
 mypy = true
 pytest = true
 prek = true

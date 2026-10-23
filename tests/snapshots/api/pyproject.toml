@@ -36,6 +36,7 @@ dev = [
     "pytest-mock>=3.15.1",
     "ruff>=0.16.8",
     "rumdl>=0.2.73",
+    "zizmor>=1.31.1",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -176,6 +177,7 @@ ruff = true
 rumdl = false
 ty = false
 zensical = false
+zizmor = false
 
 [tool.protostar.context]
 AUTHOR_NAME = "your-name"
