@@ -516,7 +516,7 @@ async def test_a_whole_init_from_the_keyboard():
     app = make_app()
     async with app.run_test(size=(110, 45)) as pilot:
         await settle(pilot)
-        await pilot.press("tab", *["down"] * 9, "space")  # Docker
+        await pilot.press("tab", *["down"] * 10, "space")  # Docker
         await pilot.press("tab", "down", "down", "space")  # prek
         await pilot.press("tab")
         assert legend(app) == {"Move", "Accept", "Next"}
@@ -1897,12 +1897,13 @@ async def test_review_lists_its_decisions_and_settles_them_one_by_one(conflicts)
         assert tabs(app) == "DECISIONS 3 open d   FILES f   SETUP s"
         rows = decision_rows(app)
         # Conflicts first, each row led by what happens to it.
-        assert rows[:6] == [
-            f"{ci}  4",
+        assert rows[:7] == [
+            f"{ci}  5",
             "open         name  already yours",
             "open         on  both changed",
             "adds         jobs.lint  new to your file",
             "adds         jobs.test  new to your file",
+            "adds         permissions  new to your file",
             "justfile  1",
         ]
         assert highlighted_decision(app) == (ci, "name")
@@ -1966,14 +1967,14 @@ async def test_a_file_row_settles_every_decision_in_it(conflicts):
         tree.move_cursor(tree.root.children[0])
         await pilot.pause()
         await pilot.press("k")
-        assert [row.split()[:2] for row in decision_rows(app)[1:5]] == [
+        assert [row.split()[:2] for row in decision_rows(app)[1:6]] == [
             ["keep", "mine"]
-        ] * 2 + [["kept", "out"]] * 2
+        ] * 2 + [["kept", "out"]] * 3
         # The next open conflict is in the next file.
         assert highlighted_decision(app) == ("justfile", "whole file")
         await settle(pilot)
         await pilot.press("a")
-    assert len(app.return_value.resolutions) == 4
+    assert len(app.return_value.resolutions) == 5
 
 
 @pytest.mark.asyncio

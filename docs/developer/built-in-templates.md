@@ -54,7 +54,7 @@ A template is a shape; how much tooling that shape starts with is a separate swi
 | Flag | Where | `cli`, `lib` | `api` | `astro`, `ml` |
 | :--- | :--- | :---: | :---: | :---: |
 | `ruff`, `direnv`, `just` | root | on | on | on |
-| `mypy`, `pytest`, `prek`, `ci`, `rumdl`, `commitizen`, `renovate` | tiers | production | production | production |
+| `mypy`, `pytest`, `prek`, `ci`, `rumdl`, `zizmor`, `commitizen`, `renovate` | tiers | production | production | production |
 | `codecov`, `zensical`, `readthedocs`, `release`, `community` | tiers | production | not set | not set |
 | `docker` | tiers | not set | production | not set |
 
@@ -118,7 +118,7 @@ A payload that configures a tool declares it with `requires`, so `protostar init
 
 ## Conventions Every Built-in Follows
 
-1. **Declare every quality flag explicitly.** Each built-in sets `ruff`, `mypy`, `pytest`, `prek`, `ci`, `rumdl`, `direnv`, and `just` to `true` or `false`, at the root or in both tiers. A reader should see every choice and never infer one from an omission.
+1. **Declare every quality flag explicitly.** Each built-in sets `ruff`, `mypy`, `pytest`, `prek`, `ci`, `rumdl`, `zizmor`, `direnv`, and `just` to `true` or `false`, at the root or in both tiers. A reader should see every choice and never infer one from an omission.
 1. **Declare both tiers.** Each built-in declares `[tiers.workbench]` and `[tiers.production]` and its default `tier`. The tiers name only production infrastructure: workbench sets every one of them off and production sets every one on.
 1. **A fresh scaffold passes its own gates, in both tiers.** If a tier turns on `ruff`, `mypy`, or `pytest`, then `ruff check`, `ruff format --check`, `mypy .`, and `pytest` must succeed on a brand-new project. If there is no code to test, do not enable `pytest`. `pytest` exits with an error when it collects nothing, and a generated CI workflow would fail on its first run.
 1. **Package shapes are installable packages.** `cli`, `api`, and `lib` are installable in either tier. They use a `src/` layout and a real build backend, so tests import the package the way any consumer would, the console script exists, and the container build can install the project. Use `hatchling` with an explicit `packages` entry, and ship the `README.md` the generated `pyproject.toml` already references. Avoid `uv_build`: uv generates a version bound tied to the exact uv release, which goes stale in a static template.

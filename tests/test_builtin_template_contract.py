@@ -27,7 +27,17 @@ BUILTIN_ALIASES = sorted(
 
 # Every built-in states each of these explicitly, as true or false, so a reader can
 # always see the choice and never has to infer it from an omission.
-QUALITY_FLAGS = ("ruff", "mypy", "pytest", "prek", "ci", "rumdl", "direnv", "just")
+QUALITY_FLAGS = (
+    "ruff",
+    "mypy",
+    "pytest",
+    "prek",
+    "ci",
+    "rumdl",
+    "zizmor",
+    "direnv",
+    "just",
+)
 
 # Products start with the full quality gate; analysis starts lean.
 DEFAULT_TIERS = {

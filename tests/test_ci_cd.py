@@ -120,4 +120,7 @@ def test_executor_release_assembly(
     args, _ = mock_write.call_args
     path, content = args
     assert path.as_posix() == ".github/workflows/release.yml"
-    assert "pypa/gh-action-pypi-publish@release/v1" in content
+    assert (
+        "pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086"
+        in content
+    )

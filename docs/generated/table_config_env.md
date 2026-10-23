@@ -10,6 +10,7 @@
 | `direnv` | `bool` | Activate the project's environment whenever you enter its folder. Default: `false`. |
 | `markdownlint` | `bool` | Check Markdown files for formatting mistakes, with relaxed rules. Default: `false`. |
 | `rumdl` | `bool` | Check and format Markdown files quickly. Default: `false`. |
+| `zizmor` | `bool` | Find security problems in GitHub Actions workflows. Default: `false`. |
 | `ruff` | `bool` | Find common bugs and style problems in Python code, and format it. Default: `true`. |
 | `mypy` | `bool` | Check type hints to catch mistakes before the code runs. Default: `false`. |
 | `ty` | `bool` | Check type hints quickly, with Astral's type checker. Default: `false`. |

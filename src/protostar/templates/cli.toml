@@ -114,6 +114,7 @@ fail_under = 90
 
 # --- Tiers ---
 [tiers.workbench]
+zizmor = false
 mypy = false
 pytest = false
 prek = false
@@ -128,6 +129,7 @@ release = false
 community = false
 
 [tiers.production]
+zizmor = true
 mypy = true
 pytest = true
 prek = true
