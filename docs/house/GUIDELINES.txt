@@ -6,8 +6,8 @@ A site may add its own rules, but it never contradicts these. When a rule here i
 
 ## Color and type
 
-- **Read the tokens, never raw values.** Colors, typefaces, and sizes come from `css/tokens.css`. A value a site needs that no token covers is a sign the token is missing.
-- **Cyan is the only accent.** `--accent` marks what the reader can act on and what's current. Green, amber, and red only report an outcome. The `--prompt` green belongs to the terminal.
+- **Read the tokens, never raw values.** Colors, typefaces, and sizes come from `css/tokens.css`. Product sites and apps may load `css/product.css` after it for shared navy surfaces, then define their brand accent in a `:root` rule. A value a site needs that no token covers is a sign the token is missing.
+- **Each site uses one primary accent.** `--accent` marks what the reader can act on and what's current. Cyan is the default; a project may set its own brand color. Accent tints and interaction states follow that token, and a site may adjust their tokens and foregrounds for contrast. Success, warning, and error colors report outcomes independently of the accent, with a label or icon carrying the meaning too. The `--prompt` green belongs to the terminal.
 - **Dark first.** The palette is dark. A site may offer a light scheme by redefining the tokens it reads, but terminals, recordings, and install boxes stay dark in both.
 - **Two typefaces.** DM Sans for prose and headings, JetBrains Mono for code, commands, labels, and section markers. Headings are weight 500 with tight tracking, never bold.
 - **One type scale.** Each tier has one token (`--fs-h1` to `--fs-label`), and the tiers shrink together on phones. Components never set their own sizes.
@@ -45,7 +45,7 @@ A site may add its own rules, but it never contradicts these. When a rule here i
 ## Motion and loading
 
 - **The first screen is text.** Nothing heavy (an image, a recording, a canvas, a library) holds up the first paint. Load it after the page is up, or when the reader scrolls toward it.
-- **Background motion is texture, not a centerpiece.** An animated field behind a hero stays in the dark cyan family, sits well below the text in contrast, and never competes with it.
+- **Background motion is texture, not a centerpiece.** An animated field behind a hero uses dark, subdued shades of the site's accent, sits well below the text in contrast, and never competes with it.
 - **Motion can be stopped.** Anything that moves on its own for more than a few seconds has a visible pause control, stops when it's off screen or the tab is hidden, and stays still for readers who asked for reduced motion.
 
 ## Writing
@@ -79,6 +79,6 @@ Rules for project documentation built on a docs theme (Zensical or Material for 
 
 ## Interaction
 
-- **Focus is always visible:** a 2px `--accent` outline.
+- **Focus is always visible:** a 2px `--accent` outline. Filled copy buttons use a contrasting inset outline from `--copy-focus`.
 - **One install box per product**, with uv first.
 - **Copy buttons confirm.** They say `Copied!` or `Failed` for a moment, then show their label again (`js/copy-command.js` does this).

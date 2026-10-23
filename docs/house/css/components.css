@@ -17,8 +17,8 @@
   display: inline-flex;
   align-items: center;
   color: var(--accent);
-  background: rgba(34, 211, 238, 0.08);
-  border: 1px solid rgba(34, 211, 238, 0.22);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
   padding: 4px 10px;
   border-radius: 4px;
 }
@@ -35,12 +35,12 @@
 .hs-button.hs-button--primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #081014;
+  color: var(--button-fg);
   font-weight: 500;
 }
 .hs-button.hs-button--primary:hover {
-  background: #86eaf7;
-  border-color: #86eaf7;
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 .hs-button svg {
   flex-shrink: 0;
