@@ -165,7 +165,7 @@ def test_existing_svg_documentation_fixtures():
     terminals_dir = Path("docs/assets/terminals")
     expected_fixtures = {
         "cli_config_help.svg": 909,  # 73 cols
-        "cli_dry_run.svg": 1129,  # 91 cols (the dev dependency list wraps)
+        "cli_dry_run.svg": 1226,  # 99 cols (the dev dependency list wraps)
         "diagnostic_panel.svg": 970,  # 78 cols (a real run's diagnostics at width 80)
         "cli_help.svg": 1202,  # 97 cols (widened by the --config <path> flag)
     }
@@ -256,3 +256,27 @@ def test_exit_codes_documentation_matches_cli_behavior():
     # Ensure stale / inaccurate errors are absent
     assert "InvalidRollbackStateError" not in content
     assert "`73`" not in content
+
+
+def test_tui_documentation_svgs_ignore_no_color(tmp_path, monkeypatch):
+    """Published screenshots have the same colors with or without NO_COLOR."""
+    import os
+    import tempfile
+
+    from protostar.cli.tui.theme import ACCENT
+    from scripts.generate_docs_assets import tui_terminals
+
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+    monkeypatch.setattr(tui_terminals, "DOCS_TERMINALS_DIR", tmp_path)
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    tui_terminals.generate_tui_svgs()
+    colored = {path.name: path.read_bytes() for path in tmp_path.glob("tui_*.svg")}
+    assert len(colored) == 3
+    assert all(ACCENT.encode() in content for content in colored.values())
+
+    monkeypatch.setenv("NO_COLOR", "1")
+    tui_terminals.generate_tui_svgs()
+    assert os.environ["NO_COLOR"] == "1"
+    assert {
+        path.name: path.read_bytes() for path in tmp_path.glob("tui_*.svg")
+    } == colored

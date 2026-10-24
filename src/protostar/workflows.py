@@ -369,7 +369,7 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
             pytest_step += f"""
 
       - name: Upload coverage to Codecov{coverage_if}
-        uses: codecov/codecov-action@v7
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
         with:
           token: ${{{{ secrets.CODECOV_TOKEN }}}}
           files: coverage.xml
@@ -379,7 +379,7 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
 
       - name: Upload test analytics to Codecov
         if: {analytics_if}
-        uses: codecov/codecov-action@v7
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
         with:
           token: ${{{{ secrets.CODECOV_TOKEN }}}}
           files: junit.xml
@@ -393,10 +393,12 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
     if is_single_matrix:
         test_steps_list = [
             "      - name: Checkout",
-            "        uses: actions/checkout@v7",
+            "        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7",
+            "        with:",
+            "          persist-credentials: false",
             "",
             "      - name: Install uv",
-            "        uses: astral-sh/setup-uv@v10.0.0",
+            "        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0",
             "        with:",
             "          enable-cache: true",
             f'          python-version: "{python_matrix[0]}"',
@@ -409,10 +411,12 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
     else:
         test_steps_list = [
             "      - name: Checkout",
-            "        uses: actions/checkout@v7",
+            "        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7",
+            "        with:",
+            "          persist-credentials: false",
             "",
             "      - name: Install uv",
-            "        uses: astral-sh/setup-uv@v10.0.0",
+            "        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0",
             "        with:",
             "          enable-cache: true",
             "          python-version: ${{ matrix.python-version }}",
@@ -437,13 +441,17 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
         jobs_builder.append_raw(f"""  lint:
     name: Lint & Type Check
     runs-on: {primary_os}
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.0.0
+        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
           enable-cache: true
           python-version: "{baseline_python}"
@@ -457,6 +465,8 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
         jobs_builder.append_raw(f"""  test:
     name: Test on {os_matrix[0]} with Python {python_matrix[0]}
     runs-on: {os_matrix[0]}
+    permissions:
+      contents: read
 
     steps:
 {test_steps}""")
@@ -464,6 +474,8 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
         jobs_builder.append_raw(f"""  test:
     name: Test on ${{{{ matrix.os }}}} with Python ${{{{ matrix.python-version }}}}
     runs-on: ${{{{ matrix.os }}}}
+    permissions:
+      contents: read
     strategy:
       matrix:
         os: [{os_matrix_str}]
@@ -507,19 +519,22 @@ def generate_release_workflow() -> str:
               name: pypi
               url: https://pypi.org/p/${{ github.event.repository.name }}
             permissions:
+              contents: read
               id-token: write
             steps:
               - name: Checkout
-                uses: actions/checkout@v7
+                uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+                with:
+                  persist-credentials: false
 
               - name: Install uv
-                uses: astral-sh/setup-uv@v10.0.0
+                uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
 
               - name: Build package
                 run: uv build
 
               - name: Publish to PyPI
-                uses: pypa/gh-action-pypi-publish@release/v1
+                uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
     """
         )
         .build()

@@ -34,8 +34,8 @@ from protostar.yaml_ast import (
 )
 
 RUFF = "      - name: Run Ruff Linter\n        run: uv run ruff check ."
-SETUP_UV = "astral-sh/setup-uv@v10.0.0"
-BUMPED_UV = "astral-sh/setup-uv@v11.0.0"
+SETUP_UV = "astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d"
+BUMPED_UV = "astral-sh/setup-uv@" + "f" * 40
 
 
 def ci(
@@ -165,13 +165,23 @@ def test_changed_action_ref_is_kept_silently_and_converges():
     pinned = "actions/checkout@0123456789abcdef0123456789abcdef01234567"
     desired = ci("pytest")
     first = run(None, desired)
-    local = first.content.replace("actions/checkout@v7", f"{pinned} # v7")
-    bumped = desired.replace("actions/checkout@v7", "actions/checkout@v8")
+    local = first.content.replace(
+        "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", f"{pinned} # v7"
+    )
+    bumped = desired.replace(
+        "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "actions/checkout@v8",
+    )
     result = run(local, bumped, first)
     assert not result.conflicts
     assert result.content == local
-    assert step(owned(result), "Checkout")["uses"] == ("actions/checkout@v7")
-    renovated = first.content.replace("actions/checkout@v7", "actions/checkout@v8")
+    assert step(owned(result), "Checkout")["uses"] == (
+        "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
+    )
+    renovated = first.content.replace(
+        "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "actions/checkout@v8",
+    )
     converged = run(renovated, bumped, first)
     assert converged.content == renovated
     assert step(owned(converged), "Checkout")["uses"] == ("actions/checkout@v8")
@@ -180,9 +190,18 @@ def test_changed_action_ref_is_kept_silently_and_converges():
 def test_changed_action_is_an_ordinary_conflict():
     desired = ci("pytest")
     first = run(None, desired)
-    local = first.content.replace("actions/checkout@v7", "my-org/checkout@v1", 1)
+    local = first.content.replace(
+        "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "my-org/checkout@v1",
+        1,
+    )
     result = run(
-        local, desired.replace("actions/checkout@v7", "actions/checkout@v8"), first
+        local,
+        desired.replace(
+            "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "actions/checkout@v8",
+        ),
+        first,
     )
     assert reasons(result) == [ConflictReason.DIVERGED]
     assert keys(result.conflicts[0]) == ("jobs", "lint", "steps", "Checkout", "uses")

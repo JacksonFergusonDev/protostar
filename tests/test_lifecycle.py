@@ -1139,7 +1139,8 @@ def test_action_pin_by_renovate_keeps_sync_check_passing(
     prepare_project().apply()
     workflow = Path(".github/workflows/ci.yml")
     pinned = workflow.read_text().replace(
-        "actions/checkout@v7", "actions/checkout@" + "0" * 40 + " # v7"
+        "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "actions/checkout@" + "0" * 40 + " # v7",
     )
     workflow.write_text(pinned)
     assert invoke_sync(monkeypatch, capsys, "--check")["check_passed"] is True
@@ -1147,7 +1148,8 @@ def test_action_pin_by_renovate_keeps_sync_check_passing(
     mocker.patch(
         "protostar.reconciliation.generate_ci_workflow",
         side_effect=lambda spec: generate_ci_workflow(spec).replace(
-            "actions/checkout@v7", "actions/checkout@v8"
+            "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "actions/checkout@v8",
         ),
     )
     review = inspect_project()

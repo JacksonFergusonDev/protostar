@@ -516,7 +516,7 @@ async def test_a_whole_init_from_the_keyboard():
     app = make_app()
     async with app.run_test(size=(110, 45)) as pilot:
         await settle(pilot)
-        await pilot.press("tab", *["down"] * 9, "space")  # Docker
+        await pilot.press("tab", *["down"] * 10, "space")  # Docker
         await pilot.press("tab", "down", "down", "space")  # prek
         await pilot.press("tab")
         assert legend(app) == {"Move", "Accept", "Next"}

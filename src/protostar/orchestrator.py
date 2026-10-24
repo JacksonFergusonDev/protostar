@@ -23,6 +23,7 @@ from .modules import (
     PreCommitModule,
     PrekModule,
     PythonCore,
+    ZizmorModule,
     declare_readme,
 )
 from .options import Condition, OptionValue, resolve_options
@@ -238,6 +239,9 @@ class Orchestrator:
         # Phase 4: Documents and tasks derived from the aggregated tooling state.
         # Rendered after every module builds so no module inspects its siblings,
         # and before template appends so a template's own AGENTS.md regions follow it.
+        for mod in active_modules:
+            if isinstance(mod, ZizmorModule):
+                mod.check_runners(manifest)
         if manifest.tooling.wants_hooks:
             runner = manifest.tooling.hook_runner
             runner_module = PrekModule if runner is HookRunner.PREK else PreCommitModule

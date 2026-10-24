@@ -416,6 +416,7 @@ def test_diagnostic_phases_and_severities_keep_their_wording() -> None:
         "CI": "CI",
         "GIT": "Git",
         "MARKDOWNLINT": "MarkdownLint",
+        "ZIZMOR": "zizmor",
     }
     assert {level.name: level.value for level in Severity} == {
         "INFO": "info",
