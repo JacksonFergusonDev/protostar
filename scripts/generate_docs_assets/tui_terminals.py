@@ -9,6 +9,7 @@ import os
 import tempfile
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 from protostar.config import TemplateSource, UserConfig
 from protostar.fs import atomic_write_text
@@ -120,13 +121,18 @@ async def _capture_conflict_screen() -> None:
 
 def generate_tui_svgs() -> None:
     """Captures the recipe editor, change review, and conflict screen."""
-    # Every tool installed, so the host's PATH never marks a row.
-    with demo_project(), stable_host():
-        asyncio.run(_capture_tui_screens())
-    orig_cwd = Path.cwd()
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        try:
-            os.chdir(tmp_dir)
-            asyncio.run(_capture_conflict_screen())
-        finally:
-            os.chdir(orig_cwd)
+    # Textual chooses a monochrome filter when the app is constructed under
+    # NO_COLOR. Published screenshots always show the palette, independently
+    # of the terminal running the generator; restore its preference afterward.
+    with mock.patch.dict(os.environ):
+        os.environ.pop("NO_COLOR", None)
+        # Every tool installed, so the host's PATH never marks a row.
+        with demo_project(), stable_host():
+            asyncio.run(_capture_tui_screens())
+        orig_cwd = Path.cwd()
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            try:
+                os.chdir(tmp_dir)
+                asyncio.run(_capture_conflict_screen())
+            finally:
+                os.chdir(orig_cwd)
