@@ -87,6 +87,12 @@ So a template's later release can change a tool the project never chose, while a
 
 Turning a tool off affects only what that tool added: a template or another tool can still write to the same file or dependency group.
 
+### Checks and Their Runners
+
+Checks contribute commands to runner files only when the recipe enables those runners: `just`, CI, and either `pre_commit` or `prek`. An existing runner file alone does not enable its Protostar option or authorize adding checks to it. The recipe editor can suggest a runner it finds, and you decide whether to enable it. Once enabled, existing files go through the usual change review.
+
+For example, `zizmor = true` adds a development dependency and contributes a check to each enabled runner. If none of those runners is enabled, nothing runs it until you enable one or run `uv run zizmor .` yourself.
+
 ## Template Variables
 
 A template's custom variables, every `<% NAME %>` placeholder that isn't built in, get their values when you set up the project, and the recipe records them:

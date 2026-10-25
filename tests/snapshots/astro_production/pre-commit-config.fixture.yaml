@@ -49,6 +49,14 @@ repos:
         types: [markdown]
         require_serial: true
 
+      - id: zizmor
+        name: zizmor
+        entry: uv run zizmor --offline --no-progress
+        language: system
+        files: (^|/)(\.github/(workflows/[^/]+|dependabot)\.ya?ml|action\.ya?ml|\.pre-commit-(config|hooks)\.ya?ml)$
+        types: [yaml]
+        require_serial: true
+
       - id: ruff-check
         name: ruff check
         entry: uv run ruff check --fix

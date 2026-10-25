@@ -30,6 +30,7 @@ lint: sync
     @printf "\n{{ blue }}=== Running Linters ==={{ nc }}\n"
     uv run rumdl check .
     uv run rumdl fmt --check .
+    uv run zizmor --offline .
     uv run ruff check .
     uv run ruff format --check .
     if command -v actionlint >/dev/null 2>&1; then \

@@ -80,6 +80,7 @@ ruff = true
 rumdl = false
 ty = false
 zensical = false
+zizmor = false
 
 [tool.protostar.context]
 AUTHOR_NAME = "your-name"

@@ -10,7 +10,7 @@ hook_pins = []
 [template]
 origin = "built-in"
 locator = "astro"
-digest = "5e7a245c134d38f81d155335e6712c1d3fa2c7fc9a850ddb3464e0505fb122f8"
+digest = "4f1a6f7423b45b0f7056bb3eeca5430ece13b8ddcca67be12b12fdda3734c843"
 display_name = "astro"
 
 [[files]]

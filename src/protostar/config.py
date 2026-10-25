@@ -287,6 +287,7 @@ class UserConfig:
     supported_os: list[str] = field(default_factory=list)
     markdownlint: bool = False
     rumdl: bool = False
+    zizmor: bool = False
     ruff: bool = True
     mypy: bool = False
     ty: bool = False

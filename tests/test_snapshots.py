@@ -165,7 +165,7 @@ def test_existing_svg_documentation_fixtures():
     terminals_dir = Path("docs/assets/terminals")
     expected_fixtures = {
         "cli_config_help.svg": 909,  # 73 cols
-        "cli_dry_run.svg": 1129,  # 91 cols (the dev dependency list wraps)
+        "cli_dry_run.svg": 1226,  # 99 cols (the dev dependency list wraps)
         "diagnostic_panel.svg": 970,  # 78 cols (a real run's diagnostics at width 80)
         "cli_help.svg": 1202,  # 97 cols (widened by the --config <path> flag)
     }
@@ -256,3 +256,25 @@ def test_exit_codes_documentation_matches_cli_behavior():
     # Ensure stale / inaccurate errors are absent
     assert "InvalidRollbackStateError" not in content
     assert "`73`" not in content
+
+
+def test_tui_documentation_svgs_ignore_no_color(monkeypatch):
+    """Screens are captured without NO_COLOR, and the caller's setting comes back."""
+    import contextlib
+    import os
+
+    from scripts.generate_docs_assets import tui_terminals
+
+    seen: list[str | None] = []
+
+    async def capture() -> None:
+        seen.append(os.environ.get("NO_COLOR"))
+
+    monkeypatch.setattr(tui_terminals, "_capture_tui_screens", capture)
+    monkeypatch.setattr(tui_terminals, "_capture_conflict_screen", capture)
+    monkeypatch.setattr(tui_terminals, "demo_project", contextlib.nullcontext)
+    monkeypatch.setattr(tui_terminals, "stable_host", contextlib.nullcontext)
+    monkeypatch.setenv("NO_COLOR", "1")
+    tui_terminals.generate_tui_svgs()
+    assert seen == [None, None]
+    assert os.environ["NO_COLOR"] == "1"

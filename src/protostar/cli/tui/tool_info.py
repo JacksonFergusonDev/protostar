@@ -32,6 +32,7 @@ TOOL_GROUPS: dict[str, tuple[Tool, ...]] = {
         Tool.PYTEST,
         Tool.RUMDL,
         Tool.MARKDOWNLINT,
+        Tool.ZIZMOR,
     ),
     "Automation": (
         Tool.CI,

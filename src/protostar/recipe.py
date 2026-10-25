@@ -51,6 +51,7 @@ class Tool(StrEnum):
     DIRENV = "direnv"
     MARKDOWNLINT = "markdownlint"
     RUMDL = "rumdl"
+    ZIZMOR = "zizmor"
     RUFF = "ruff"
     MYPY = "mypy"
     TY = "ty"
