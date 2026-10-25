@@ -2,7 +2,7 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/JacksonFergusonDev/protostar/main/docs/assets/readme-dark.webp">
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/assets/readme-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/JacksonFergusonDev/protostar/main/docs/assets/readme-light.webp">
   <img alt="Protostar Logo"
        src="https://raw.githubusercontent.com/JacksonFergusonDev/protostar/main/docs/assets/readme-light.webp"

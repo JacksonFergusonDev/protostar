@@ -34,6 +34,8 @@
        height="192"
        rx="40"
        fill="#0f172a"
+       stroke="#22d3ee"
+       stroke-width="4"
        id="rect2" />
     <line
        x1="0"
