@@ -6,7 +6,7 @@ A site may add its own rules, but it never contradicts these. When a rule here i
 
 ## Color and type
 
-- **Read the tokens, never raw values.** Colors, typefaces, and sizes come from `css/tokens.css`. Product sites and apps may load `css/product.css` after it for shared navy surfaces, then define their brand accent in a `:root` rule. A value a site needs that no token covers is a sign the token is missing.
+- **Read the tokens, never raw values.** Colors, typefaces, and sizes come from `css/tokens.css`; a project defines only its brand accent, in a `:root` rule. A value a site needs that no token covers is a sign the token is missing.
 - **Each site uses one primary accent.** `--accent` marks what the reader can act on and what's current. Cyan is the default; a project may set its own brand color. Accent tints and interaction states follow that token, and a site may adjust their tokens and foregrounds for contrast. Success, warning, and error colors report outcomes independently of the accent, with a label or icon carrying the meaning too. The `--prompt` green belongs to the terminal.
 - **Dark first.** The palette is dark. A site may offer a light scheme by redefining the tokens it reads, but terminals, recordings, and install boxes stay dark in both.
 - **Two typefaces.** DM Sans for prose and headings, JetBrains Mono for code, commands, labels, and section markers. Headings are weight 500 with tight tracking, never bold.
@@ -18,6 +18,7 @@ A site may add its own rules, but it never contradicts these. When a rule here i
 - **Card eyebrows are unnumbered labels** (`FEATURED PROJECT`), in mono at `--fs-label`.
 - **Cards are panels with a line border** (`--panel`, `--line`, 5px radius), and are never nested inside cards. A card that links lightens its border on hover; it never lifts, glows, or casts a shadow.
 - **A page that scrolls far has a grid behind its sections**: 80px lines in the line color, faint enough to read as texture.
+- **Project sites share one shell.** The header bar, hero field, jump links, section grid, and footer come from `css/site.css`. A site fills them with its own name, links, and notes, and changes their look here, never in the site.
 
 ## Navigation and icons
 

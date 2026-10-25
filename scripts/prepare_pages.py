@@ -39,8 +39,6 @@ METRICS_DATA = (
     "rollback-latest.json",
 )
 HOUSE_DIR = REPO_ROOT / "docs" / "house"
-HEADER_CSS = REPO_ROOT / "docs" / "stylesheets" / "site-header.css"
-FOOTER_CSS = REPO_ROOT / "docs" / "stylesheets" / "site-footer.css"
 FOOTER_HTML = REPO_ROOT / "overrides" / "partials" / "site-footer.html"
 # jacksonferguson.me's policy: search and AI search agents read the docs,
 # AI training crawlers don't.
@@ -285,9 +283,8 @@ def assemble_pages(source: Path, output: Path, config_path: Path) -> str:
         (metrics_output / "index.html").write_text(
             render_metrics_index(), encoding="utf-8"
         )
+        # The header and footer styles come with house-style (css/site.css).
         shutil.copytree(HOUSE_DIR, metrics_output / "house")
-        shutil.copyfile(HEADER_CSS, metrics_output / "site-header.css")
-        shutil.copyfile(FOOTER_CSS, metrics_output / "site-footer.css")
         # The dashboard's old address, which links outside the repository keep.
         (output / "benchmarks").mkdir()
         (output / "benchmarks" / "index.html").write_text(

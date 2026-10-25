@@ -17,8 +17,6 @@ from typing import BinaryIO
 
 from scripts._common import DOCS_DIR, OutputStyle, fetch_bytes, report
 from scripts.prepare_pages import (
-    FOOTER_CSS,
-    HEADER_CSS,
     HOUSE_DIR,
     METRICS_ASSETS,
     METRICS_DATA,
@@ -46,10 +44,6 @@ class PreviewHandler(SimpleHTTPRequestHandler):
         if relative.parts[:2] == ("metrics", "house"):
             return str(HOUSE_DIR.joinpath(*relative.parts[2:]))
         if relative.parent == Path("metrics"):
-            if relative.name == "site-header.css":
-                return str(HEADER_CSS)
-            if relative.name == "site-footer.css":
-                return str(FOOTER_CSS)
             if relative.name in METRICS_ASSETS:
                 return str(METRICS_DIR / relative.name)
             if relative.name in ("favicon.svg", "favicon.png"):

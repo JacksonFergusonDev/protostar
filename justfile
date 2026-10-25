@@ -158,12 +158,12 @@ sync-secret-rules: sync
     uv run python -m scripts.sync_secret_rules
 
 # The house-style release vendored into docs/house/
-house_style := "v1.6.0"
+house_style := "v2.0.0"
 
 # Vendor the house-style release pinned in `house_style` into docs/house/ (--check to compare only)
 sync-house-style *args:
     @printf "\n{{ blue }}=== Vendoring house-style {{ house_style }} ==={{ nc }}\n"
-    uv run https://raw.githubusercontent.com/JacksonFergusonDev/house-style/{{ house_style }}/scripts/vendor.py --tag {{ house_style }} docs/house {{ args }}
+    uv run https://raw.githubusercontent.com/JacksonFergusonDev/house-style/{{ house_style }}/scripts/vendor.py --tag {{ house_style }} --parts docs,site docs/house {{ args }}
 
 # Pre-warm environment and caches for demo generation
 demo-prewarm: sync

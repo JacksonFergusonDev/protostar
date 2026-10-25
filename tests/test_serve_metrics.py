@@ -16,7 +16,6 @@ def handler(
     monkeypatch.setattr(serve_metrics, "METRICS_DIR", tmp_path / "source")
     monkeypatch.setattr(serve_metrics, "HOUSE_DIR", tmp_path / "house")
     monkeypatch.setattr(serve_metrics, "DOCS_DIR", tmp_path / "docs")
-    monkeypatch.setattr(serve_metrics, "HEADER_CSS", tmp_path / "header.css")
     instance = object.__new__(serve_metrics.PreviewHandler)
     instance.directory = str(tmp_path / "preview")
     return instance
@@ -28,7 +27,7 @@ def handler(
         ("/metrics/", "source"),
         ("/metrics/index.html", "source/index.html"),
         ("/metrics/style.css?reload=1", "source/style.css"),
-        ("/metrics/site-header.css", "header.css"),
+        ("/metrics/house/css/site.css", "house/css/site.css"),
         ("/metrics/benchmark-dashboard.js", "source/benchmark-dashboard.js"),
         ("/metrics/metrics.mjs", "source/metrics.mjs"),
         ("/metrics/house/css/tokens.css", "house/css/tokens.css"),

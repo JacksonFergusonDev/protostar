@@ -1,0 +1,415 @@
+/*
+ * The project-site shell: a header bar, a hero with a moving background field,
+ * jump links, the section grid, and a footer. Load after tokens.css and
+ * components.css. The markup each piece expects:
+ *
+ *   <header class="hs-bar">
+ *     <div class="hs-bar-inner">
+ *       <a class="hs-bar-mark" href="/"><img src="logo.svg" alt=""> Name</a>
+ *       <nav class="hs-bar-nav" aria-label="Primary">
+ *         <a href="docs/">Docs</a> <a class="hs-wide" href="why/">Why?</a>
+ *       </nav>
+ *       <div class="hs-bar-end">
+ *         <button class="hs-bar-icon" aria-label="Search"><svg>…</svg></button>
+ *         <a class="hs-bar-link" href="https://github.com/…"><svg>…</svg>GitHub</a>
+ *       </div>
+ *     </div>
+ *   </header>
+ *
+ *   <section class="hs-hero">
+ *     <canvas class="hs-field" aria-hidden="true"></canvas>
+ *     <button class="hs-motion" hidden>
+ *       <span data-hs-motion-label>Pause motion</span>
+ *       <svg class="hs-motion-pause">…</svg><svg class="hs-motion-play">…</svg>
+ *     </button>
+ *     …
+ *     <nav class="hs-jumps" aria-label="On this page"><a href="#one">01 / ONE<svg>…</svg></a></nav>
+ *   </section>
+ *   <section class="hs-grid">…</section>
+ *
+ *   <footer class="hs-footer">
+ *     <div class="hs-footer-note"><p>An optional note above the row.</p></div>
+ *     <div class="hs-footer-inner">
+ *       <p>© 2026 Jackson Ferguson.</p>
+ *       <nav class="hs-footer-links" aria-label="Social links">
+ *         <a href="https://github.com/…" aria-label="GitHub"><svg>…</svg></a>
+ *       </nav>
+ *     </div>
+ *   </footer>
+ *
+ * Icons are inline SVG or css/icons.css spans; either is sized here. js/field.js
+ * draws the field and drives the motion button.
+ */
+
+/* --- Header bar --- */
+:root {
+  --hs-bar-height: 80px;
+}
+.hs-bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  width: 100vw;
+  height: var(--hs-bar-height);
+  margin-left: calc(50% - 50vw);
+  font-family: var(--sans);
+  font-weight: 400;
+  line-height: 1.6;
+  letter-spacing: normal;
+}
+.hs-bar::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  backdrop-filter: blur(16px);
+  content: '';
+}
+.hs-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  width: min(1160px, calc(100% - 64px));
+  height: 100%;
+  margin-inline: auto;
+}
+.hs-bar-mark {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+  color: var(--text);
+  font-size: var(--fs-h4);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.hs-bar-mark img {
+  width: 30px;
+  height: 30px;
+}
+.hs-bar-nav {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 75%, transparent);
+}
+.hs-bar-nav a {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+.hs-bar-nav a:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--muted) 8%, transparent);
+}
+.hs-bar-end {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-left: auto;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.hs-bar-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  text-decoration: none;
+}
+.hs-bar-link:hover {
+  color: var(--accent);
+}
+.hs-bar-link .hs-icon,
+.hs-bar-link svg {
+  width: 14px;
+  height: 14px;
+  color: inherit;
+}
+.hs-bar-link img {
+  width: 18px;
+  height: 18px;
+}
+.hs-bar-link + .hs-bar-link {
+  padding-left: 18px;
+  border-left: 1px solid var(--line);
+}
+.hs-bar-link--accent {
+  color: var(--accent);
+}
+.hs-bar-context {
+  color: var(--muted);
+  font-size: var(--fs-ui);
+}
+.hs-bar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.hs-bar-icon:hover {
+  border-color: var(--muted);
+  color: var(--text);
+}
+.hs-bar-icon svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.hs-bar a:focus-visible,
+.hs-bar button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 6px;
+}
+
+/* --- Hero and sections: a rule under each, and the grid behind sections --- */
+.hs-hero,
+.hs-grid {
+  position: relative;
+  isolation: isolate;
+}
+.hs-hero::before,
+.hs-grid::before {
+  position: absolute;
+  inset: 0 calc(50% - 50vw);
+  z-index: -1;
+  border-bottom: 1px solid var(--line);
+  content: '';
+}
+.hs-grid::before {
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-position: center top;
+  background-size: 80px 80px;
+}
+/* The hero has no grid: js/field.js draws behind it, faint enough to read as texture. */
+.hs-hero {
+  /* Padding counts inside the height, whatever box model the site uses. */
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: calc(100svh - var(--hs-bar-height));
+  padding: 36px 0 115px;
+}
+.hs-field {
+  /* js/field.js reads these; a site may override them, e.g. for a light scheme. */
+  --hs-field-color: var(--accent);
+  --hs-field-strength: 0.36;
+  --hs-field-blend: add;
+
+  position: absolute;
+  top: 0;
+  left: calc(50% - 50vw);
+  z-index: -1;
+  width: 100vw;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.2s ease;
+  mask-image: linear-gradient(180deg, #000 80%, transparent);
+}
+.hs-field--ready {
+  opacity: 1;
+}
+.hs-motion {
+  position: absolute;
+  top: 24px;
+  right: 0;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  color: var(--subtle);
+  background: none;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+.hs-motion[hidden] {
+  display: none;
+}
+.hs-motion:hover {
+  color: var(--text);
+}
+.hs-motion :is(.hs-icon, svg) {
+  width: 1em;
+  height: 1em;
+}
+.hs-motion[data-hs-paused='true'] .hs-motion-pause,
+.hs-motion:not([data-hs-paused='true']) .hs-motion-play {
+  display: none;
+}
+.hs-jumps {
+  position: absolute;
+  right: 0;
+  bottom: 27px;
+  left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  letter-spacing: 1.2px;
+  line-height: 1.7;
+}
+.hs-jumps a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--subtle);
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+}
+.hs-jumps a:hover {
+  border-color: rgb(from var(--accent) r g b / 0.4);
+  color: var(--accent);
+}
+.hs-jumps :is(.hs-icon, svg) {
+  width: 12px;
+  height: 12px;
+  color: var(--accent);
+}
+
+/* --- Footer --- */
+.hs-footer {
+  background: var(--bg);
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: var(--fs-ui);
+  line-height: 1.6;
+}
+.hs-footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(1160px, calc(100% - 64px));
+  margin-inline: auto;
+  padding-block: 20px;
+}
+.hs-footer p {
+  margin: 0;
+}
+.hs-footer-note {
+  width: min(1160px, calc(100% - 64px));
+  margin-inline: auto;
+  padding-top: 28px;
+}
+.hs-footer-note p {
+  max-width: 64ch;
+}
+.hs-footer-note a {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.hs-footer a {
+  color: inherit;
+  text-decoration: none;
+}
+.hs-footer a:hover {
+  color: var(--accent);
+}
+.hs-footer-links {
+  display: flex;
+  gap: 8px;
+}
+.hs-footer-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+.hs-footer-links :is(.hs-icon, svg) {
+  width: 16px;
+  height: 16px;
+}
+.hs-footer :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 5px;
+}
+
+/* --- Narrower screens, at jacksonferguson.me's breakpoints --- */
+@media (max-width: 1100px) {
+  .hs-bar-inner {
+    gap: 24px;
+  }
+}
+@media (max-width: 800px) {
+  .hs-bar .hs-wide {
+    display: none;
+  }
+  .hs-bar-inner,
+  .hs-footer-note,
+  .hs-footer-inner {
+    width: calc(100% - 40px);
+  }
+}
+@media (max-width: 560px) {
+  :root {
+    --hs-bar-height: 64px;
+  }
+  .hs-bar-inner {
+    gap: 12px;
+  }
+  .hs-bar-mark {
+    gap: 8px;
+    font-size: 16px;
+  }
+  .hs-bar-mark img {
+    width: 26px;
+    height: 26px;
+  }
+  .hs-bar-nav a {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  .hs-bar-end {
+    gap: 8px;
+  }
+  .hs-bar-link {
+    display: none;
+  }
+  .hs-bar-link--accent {
+    display: inline-flex;
+  }
+  .hs-hero {
+    padding-bottom: 150px;
+  }
+  .hs-motion {
+    top: 16px;
+  }
+}
