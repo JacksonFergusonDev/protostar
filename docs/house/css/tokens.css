@@ -21,6 +21,10 @@
   --copy-fg: #000;
   --copy-focus: #ffffff;
   --line: #252c31;
+  /* Quiet labels over moving or busy backgrounds, such as jump links. */
+  --subtle: #a1abb3;
+  /* The 80px grid behind long pages' sections. */
+  --grid: #14202570;
   --sans: 'DM Sans', sans-serif;
   --mono: 'JetBrains Mono', monospace;
   /* Type scale. Components use these tokens, not raw sizes. */

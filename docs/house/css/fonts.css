@@ -1,7 +1,7 @@
 /*
- * The house typefaces, self-hosted: DM Sans for prose, JetBrains Mono for
- * code and labels, and the Nerd Font symbols terminal recordings draw with.
- * Only the faces every site uses; fonts-extended.css adds the rest.
+ * The house typefaces, self-hosted: DM Sans for prose and JetBrains Mono for
+ * code and labels. Only the faces every site uses; fonts-extended.css adds
+ * the rest, and terminal.css the symbols terminal recordings draw with.
  */
 @font-face {
   font-family: 'DM Sans';
@@ -37,11 +37,4 @@
   font-display: swap;
   font-weight: 400;
   src: url('../fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Symbols Nerd Font';
-  src: url('../fonts/SymbolsNerdFontMono-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
 }

@@ -11,31 +11,31 @@ hide:
 
 <div class="ps-home">
 
-<header class="ps-bar">
-  <div class="ps-bar__inner">
-    <a class="ps-bar__mark" href="./"><img src="assets/favicon.svg" alt="" width="30" height="30"> Protostar</a>
-    <nav class="ps-console" aria-label="Primary">
+<header class="hs-bar">
+  <div class="hs-bar-inner">
+    <a class="hs-bar-mark" href="./"><img src="assets/favicon.svg" alt="" width="30" height="30"> Protostar</a>
+    <nav class="hs-bar-nav" aria-label="Primary">
       <a href="getting-started.md">Docs</a>
-      <a class="ps-wide" href="why-protostar.md">Why Protostar?</a>
-      <a class="ps-wide" href="usage/cli-reference.md">Reference</a>
+      <a class="hs-wide" href="why-protostar.md">Why Protostar?</a>
+      <a class="hs-wide" href="usage/cli-reference.md">Reference</a>
     </nav>
-    <div class="ps-bar__end">
-      <button type="button" class="ps-bar__icon" data-ps-search aria-label="Search the documentation">
+    <div class="hs-bar-end">
+      <button type="button" class="hs-bar-icon" data-ps-search aria-label="Search the documentation">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
       </button>
-      <button type="button" class="ps-bar__icon" data-ps-theme aria-label="Switch color scheme">
+      <button type="button" class="hs-bar-icon" data-ps-theme aria-label="Switch color scheme">
         <svg class="ps-icon-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"/></svg>
         <svg class="ps-icon-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>
       </button>
-      <a class="ps-bar__link" href="https://github.com/jacksonfergusondev/protostar"><span class="hs-icon hs-icon-brand-github" aria-hidden="true"></span>GitHub</a>
-      <a class="ps-bar__link ps-wide" href="https://jacksonferguson.me"><img src="house/icons/jacksonferguson.svg" alt="" width="18" height="18">jacksonferguson.me</a>
+      <a class="hs-bar-link" href="https://github.com/jacksonfergusondev/protostar"><span class="hs-icon hs-icon-brand-github" aria-hidden="true"></span>GitHub</a>
+      <a class="hs-bar-link hs-wide" href="https://jacksonferguson.me"><img src="house/icons/jacksonferguson.svg" alt="" width="18" height="18">jacksonferguson.me</a>
     </div>
   </div>
 </header>
 
-<section class="ps-hero">
-  <canvas class="ps-field" aria-hidden="true"></canvas>
-  <button type="button" class="ps-motion" data-ps-motion aria-pressed="false" aria-label="Pause background animation" hidden><span data-ps-motion-label>Pause motion</span><span class="hs-icon hs-icon-pause" aria-hidden="true"></span></button>
+<section class="ps-hero hs-hero">
+  <canvas class="hs-field" aria-hidden="true"></canvas>
+  <button type="button" class="hs-motion" hidden><span data-hs-motion-label>Pause motion</span><span class="hs-icon hs-icon-pause hs-motion-pause" aria-hidden="true"></span><span class="hs-icon hs-icon-play hs-motion-play" aria-hidden="true"></span></button>
   <!-- The theme's "Skip to content" link targets #__skip on a page without a table of contents. -->
   <h1 id="__skip" tabindex="-1">Simple Python project scaffolding that understands your tools.</h1>
   <p class="ps-hero__lede">Protostar sets up Python projects and keeps them current. Pick your tools, and it writes their configuration, commit hooks, and CI. When your template improves, the update merges into your files setting by setting, so your own edits stay.</p>
@@ -54,7 +54,7 @@ hide:
     <a class="hs-button hs-button--primary" href="getting-started.md">Get started<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a>
     <a class="ps-text-link" href="why-protostar.md">Why Protostar?<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a>
   </div>
-  <nav class="ps-hero__bottom" aria-label="On this page">
+  <nav class="hs-jumps" aria-label="On this page">
     <a href="#init">01 / INIT<span class="hs-icon hs-icon-arrow-down" aria-hidden="true"></span></a>
     <a href="#sync">02 / SYNC<span class="hs-icon hs-icon-arrow-down" aria-hidden="true"></span></a>
     <a href="#commands">03 / COMMANDS<span class="hs-icon hs-icon-arrow-down" aria-hidden="true"></span></a>
@@ -63,7 +63,7 @@ hide:
   </nav>
 </section>
 
-<section class="ps-section ps-init" id="init" aria-labelledby="ps-init">
+<section class="ps-section ps-init hs-grid" id="init" aria-labelledby="ps-init">
   <div class="ps-init__text">
     <div class="hs-section-marker"><span>01 / INIT</span></div>
     <h2 id="ps-init">Choose your tools in a recipe editor. Review every file before it's written.</h2>
@@ -88,7 +88,7 @@ hide:
   </div>
 </section>
 
-<section class="ps-section" id="sync" aria-labelledby="ps-sync">
+<section class="ps-section hs-grid" id="sync" aria-labelledby="ps-sync">
   <div class="hs-section-marker"><span>02 / SYNC</span></div>
   <h2 id="ps-sync">Template updates merge by meaning. Your edits stay.</h2>
   <p class="ps-section__lede">Protostar knows <code>pyproject.toml</code> key by key, workflows job by job, and dependencies through uv. Changes that would collide in a line-based merge combine instead. A real conflict is one setting, with both sides and a command for each choice.</p>
@@ -129,7 +129,7 @@ hide:
   <p class="ps-note">Your line length and its comment stay where they are, and <code>protostar status</code> lists the kept edit with the command that takes the template's value instead. <a class="ps-text-link" href="usage/lifecycle.md">How updates work<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></p>
 </section>
 
-<section class="ps-section" id="commands" aria-labelledby="ps-commands">
+<section class="ps-section hs-grid" id="commands" aria-labelledby="ps-commands">
   <div class="hs-section-marker"><span>03 / COMMANDS</span></div>
   <h2 id="ps-commands">One lifecycle, from the first commit to the next template release.</h2>
   <dl class="ps-commands">
@@ -144,7 +144,7 @@ hide:
   <p class="ps-note"><a class="ps-text-link" href="usage/cli-reference.md">CLI reference<span class="hs-icon hs-icon-arrow-right" aria-hidden="true"></span></a></p>
 </section>
 
-<section class="ps-section" id="guarantees" aria-labelledby="ps-guarantees">
+<section class="ps-section hs-grid" id="guarantees" aria-labelledby="ps-guarantees">
   <div class="hs-section-marker"><span>04 / GUARANTEES</span></div>
   <h2 id="ps-guarantees">Review changes before applying them, with rollback if a step fails.</h2>
   <ul class="ps-principles">
@@ -158,7 +158,7 @@ hide:
   <p class="ps-note">These safeguards are tested: nightly runs deliberately fail projects and check that the files covered by rollback come back byte for byte. The <a href="https://protostar.jacksonferguson.me/metrics/#rollback">rollback results</a> show recovery across platforms, and <a href="https://protostar.jacksonferguson.me/metrics/#mutations">mutation testing results</a> show whether tests catch deliberate bugs in selected engine modules.</p>
 </section>
 
-<section class="ps-section" id="docs" aria-labelledby="ps-docs">
+<section class="ps-section hs-grid" id="docs" aria-labelledby="ps-docs">
   <div class="hs-section-marker"><span>05 / DOCS</span></div>
   <h2 id="ps-docs">Explore the docs.</h2>
   <nav class="ps-index" aria-label="Documentation">
@@ -179,6 +179,9 @@ hide:
 <script type="module">
 import { initCopyCommands } from "./house/js/copy-command.js";
 
+// The version jacksonferguson.me bundles.
+const THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.186.0/+esm";
+
 // The landing page hides the theme's header; these drive its controls.
 const home = document.querySelector(".ps-home");
 if (home && !home.dataset.psReady) {
@@ -195,8 +198,14 @@ if (home && !home.dataset.psReady) {
   const startField = () => {
     const idle = window.requestIdleCallback ?? ((callback) => window.setTimeout(callback, 200));
     idle(() => {
-      import("./javascripts/field.js")
-        .then(({ startField }) => startField(home.querySelector(".ps-field"), home.querySelector("[data-ps-motion]")))
+      Promise.all([import(THREE_URL), import("./house/js/field.js")])
+        .then(([THREE, { startField }]) => {
+          const field = startField(THREE, home.querySelector(".hs-field"), home.querySelector(".hs-motion"));
+          // The field takes its colours from CSS, which the color scheme changes.
+          new MutationObserver(() => field?.refresh()).observe(document.body, {
+            attributeFilter: ["data-md-color-scheme"],
+          });
+        })
         .catch(() => {});
     });
   };

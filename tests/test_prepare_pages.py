@@ -7,7 +7,6 @@ import pytest
 
 from protostar.errors import ConfigurationError
 from scripts.prepare_pages import (
-    HEADER_CSS,
     HOUSE_DIR,
     METRICS_ASSETS,
     METRICS_DIR,
@@ -95,9 +94,9 @@ def test_latest_content_is_served_at_bare_urls_beside_every_release(
     before = {path: path.read_bytes() for path in source.rglob("*") if path.is_file()}
 
     assert assemble_pages(source, output, config) == "0.10.1"
-    assert (
-        output / "metrics" / "site-header.css"
-    ).read_bytes() == HEADER_CSS.read_bytes()
+    assert (output / "metrics" / "house" / "css" / "site.css").read_bytes() == (
+        HOUSE_DIR / "css" / "site.css"
+    ).read_bytes()
 
     for relative in ("index.html", "why-protostar/index.html"):
         route = relative.removesuffix("index.html")

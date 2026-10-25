@@ -145,3 +145,11 @@
     pointer-events: auto;
   }
 }
+/* The symbols recordings draw with (js/cast.js loads them). */
+@font-face {
+  font-family: 'Symbols Nerd Font';
+  src: url('../fonts/SymbolsNerdFontMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
