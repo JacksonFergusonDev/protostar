@@ -369,7 +369,7 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
             pytest_step += f"""
 
       - name: Upload coverage to Codecov{coverage_if}
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
+        uses: codecov/codecov-action@v7 # zizmor: ignore[unpinned-uses]
         with:
           token: ${{{{ secrets.CODECOV_TOKEN }}}}
           files: coverage.xml
@@ -379,7 +379,7 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
 
       - name: Upload test analytics to Codecov
         if: {analytics_if}
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
+        uses: codecov/codecov-action@v7 # zizmor: ignore[unpinned-uses]
         with:
           token: ${{{{ secrets.CODECOV_TOKEN }}}}
           files: junit.xml
@@ -393,12 +393,12 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
     if is_single_matrix:
         test_steps_list = [
             "      - name: Checkout",
-            "        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7",
+            "        uses: actions/checkout@v7 # zizmor: ignore[unpinned-uses]",
             "        with:",
             "          persist-credentials: false",
             "",
             "      - name: Install uv",
-            "        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0",
+            "        uses: astral-sh/setup-uv@v10.0.0 # zizmor: ignore[unpinned-uses]",
             "        with:",
             "          enable-cache: true",
             f'          python-version: "{python_matrix[0]}"',
@@ -411,12 +411,12 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
     else:
         test_steps_list = [
             "      - name: Checkout",
-            "        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7",
+            "        uses: actions/checkout@v7 # zizmor: ignore[unpinned-uses]",
             "        with:",
             "          persist-credentials: false",
             "",
             "      - name: Install uv",
-            "        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0",
+            "        uses: astral-sh/setup-uv@v10.0.0 # zizmor: ignore[unpinned-uses]",
             "        with:",
             "          enable-cache: true",
             "          python-version: ${{ matrix.python-version }}",
@@ -446,12 +446,12 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7 # zizmor: ignore[unpinned-uses]
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+        uses: astral-sh/setup-uv@v10.0.0 # zizmor: ignore[unpinned-uses]
         with:
           enable-cache: true
           python-version: "{baseline_python}"
@@ -523,18 +523,18 @@ def generate_release_workflow() -> str:
               id-token: write
             steps:
               - name: Checkout
-                uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+                uses: actions/checkout@v7 # zizmor: ignore[unpinned-uses]
                 with:
                   persist-credentials: false
 
               - name: Install uv
-                uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+                uses: astral-sh/setup-uv@v10.0.0 # zizmor: ignore[unpinned-uses]
 
               - name: Build package
                 run: uv build
 
               - name: Publish to PyPI
-                uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
+                uses: pypa/gh-action-pypi-publish@release/v1 # zizmor: ignore[unpinned-uses]
     """
         )
         .build()

@@ -1,17 +1,13 @@
 """zizmor reaches enabled runners and never silently adopts existing files."""
 
-import io
 import re
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
-from rich.console import Console
 
-from protostar.cli import ui
 from protostar.config import UserConfig
-from protostar.manifest import DiagnosticPhase, Severity
 from protostar.modules import (
     BootstrapModule,
     CIModule,
@@ -31,7 +27,6 @@ from protostar.yaml_ast import decode_yaml_baseline
 @pytest.mark.parametrize("hooks", [None, PreCommitModule, PrekModule])
 def test_checks_reach_only_enabled_runners(tmp_path, monkeypatch, just, ci, hooks):
     monkeypatch.chdir(tmp_path)
-    # Put zizmor first: checking runners must wait until every module builds.
     modules: list[BootstrapModule] = [ZizmorModule()]
     if just:
         modules.append(JustModule())
@@ -53,20 +48,12 @@ def test_checks_reach_only_enabled_runners(tmp_path, monkeypatch, just, ci, hook
     assert (".github/workflows/ci.yml" in contents) == ci
     assert (".pre-commit-config.yaml" in contents) == bool(hooks)
     if just:
-        assert "uv run zizmor ." in contents["justfile"]
+        assert "uv run zizmor --offline ." in contents["justfile"]
     if ci:
         assert "uv run zizmor --format=github ." in contents[".github/workflows/ci.yml"]
     if hooks:
-        assert (
-            "entry: uv run zizmor --no-progress" in contents[".pre-commit-config.yaml"]
-        )
-    warnings = [
-        event for event in manifest.diagnostics if event.phase is DiagnosticPhase.ZIZMOR
-    ]
-    assert bool(warnings) == (not just and not ci and not hooks)
-    if warnings:
-        assert warnings[0].severity is Severity.WARNING
-        assert "uv run zizmor ." in warnings[0].message
+        hook_config = contents[".pre-commit-config.yaml"]
+        assert "entry: uv run zizmor --offline --no-progress" in hook_config
     assert {
         p.relative_to(tmp_path): p.read_bytes()
         for p in tmp_path.rglob("*")
@@ -74,7 +61,7 @@ def test_checks_reach_only_enabled_runners(tmp_path, monkeypatch, just, ci, hook
     } == before
 
 
-def test_existing_disabled_runners_stay_untouched_and_warn(tmp_path, monkeypatch):
+def test_existing_disabled_runners_stay_untouched(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     files = {
         "justfile": "lint:\n    echo custom\n",
@@ -91,7 +78,6 @@ def test_existing_disabled_runners_stay_untouched_and_warn(tmp_path, monkeypatch
     )
     review = prepare_review(manifest, config)
     assert not (set(files) & {edit.path for edit in review.edits})
-    assert any(event.phase is DiagnosticPhase.ZIZMOR for event in manifest.diagnostics)
     for path, content in files.items():
         assert (tmp_path / path).read_text() == content
 
@@ -125,22 +111,11 @@ def test_hook_checks_supported_inputs(path):
     assert not re.search(pattern, "settings.yaml")
 
 
-def test_runner_warning_prints_on_strict_cp1252(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    manifest = Orchestrator([ZizmorModule()], UserConfig()).plan(
-        check_executables=False
-    )
-    stream = io.TextIOWrapper(io.BytesIO(), encoding="cp1252", errors="strict")
-    console = Console(file=stream, force_terminal=False, color_system=None)
-    monkeypatch.setattr(ui, "console", console)
-    console.print(ui.diagnostics_report(manifest.diagnostics))
-    stream.flush()
-    assert "no runner invokes it" in stream.buffer.getvalue().decode("cp1252")
-
-
 @pytest.mark.integration
 @pytest.mark.parametrize("python", ["3.13", "3.14"])
 def test_generated_workflows_pass_zizmor(tmp_path, real_tool_env, python):
+    # The zizmor beside this interpreter: the locked one on pull requests, and the
+    # newest release in nightly's latest-dependencies job, which scaffolds install.
     from protostar.manifest import EnvironmentManifest
     from protostar.modules import MarkdownLintModule
     from protostar.workflows import (

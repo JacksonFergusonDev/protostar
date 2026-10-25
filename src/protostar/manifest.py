@@ -66,7 +66,6 @@ class DiagnosticPhase(enum.StrEnum):
     CI = "CI"
     GIT = "Git"
     MARKDOWNLINT = "MarkdownLint"
-    ZIZMOR = "zizmor"
 
 
 class Severity(enum.StrEnum):

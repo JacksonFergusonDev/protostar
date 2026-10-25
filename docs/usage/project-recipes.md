@@ -91,7 +91,7 @@ Turning a tool off affects only what that tool added: a template or another tool
 
 Checks contribute commands to runner files only when the recipe enables those runners: `just`, CI, and either `pre_commit` or `prek`. An existing runner file alone does not enable its Protostar option or authorize adding checks to it. The recipe editor can suggest a runner it finds, and you decide whether to enable it. Once enabled, existing files go through the usual change review.
 
-For example, `zizmor = true` adds a development dependency and contributes a check to each enabled runner. If none of those runners is enabled, Protostar warns that nothing invokes zizmor. You can enable a runner or run `uv run zizmor .` manually.
+For example, `zizmor = true` adds a development dependency and contributes a check to each enabled runner. If none of those runners is enabled, nothing runs it until you enable one or run `uv run zizmor .` yourself.
 
 ## Template Variables
 

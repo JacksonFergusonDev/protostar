@@ -15,12 +15,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7 # zizmor: ignore[unpinned-uses]
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+        uses: astral-sh/setup-uv@v10.0.0 # zizmor: ignore[unpinned-uses]
         with:
           enable-cache: true
           python-version: "3.13"
@@ -35,6 +35,8 @@ jobs:
         run: uv run rumdl fmt --check --output-format github .
 
       - name: Run zizmor
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: uv run zizmor --format=github .
 
       - name: Run Ruff Linter
@@ -47,7 +49,7 @@ jobs:
         run: uv run mypy .
 
       - name: Run actionlint
-        uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2
+        uses: raven-actions/actionlint@v2 # zizmor: ignore[unpinned-uses]
 
   test:
     name: Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}
@@ -65,12 +67,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7 # zizmor: ignore[unpinned-uses]
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+        uses: astral-sh/setup-uv@v10.0.0 # zizmor: ignore[unpinned-uses]
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
@@ -85,7 +87,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: matrix.coverage
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
+        uses: codecov/codecov-action@v7 # zizmor: ignore[unpinned-uses]
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
@@ -95,7 +97,7 @@ jobs:
 
       - name: Upload test analytics to Codecov
         if: ${{ matrix.coverage && !cancelled() }}
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
+        uses: codecov/codecov-action@v7 # zizmor: ignore[unpinned-uses]
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: junit.xml

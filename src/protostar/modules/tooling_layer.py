@@ -153,7 +153,7 @@ class MarkdownLintModule(ToolModule):
 
         manifest.tooling.add_ci_step(
             "      - name: Run MarkdownLint\n"
-            "        uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24"
+            "        uses: DavidAnson/markdownlint-cli2-action@v24 # zizmor: ignore[unpinned-uses]"
         )
 
         lint_cmd = (

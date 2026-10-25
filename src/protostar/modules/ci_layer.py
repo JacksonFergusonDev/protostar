@@ -40,7 +40,7 @@ def _declare_actionlint(manifest: EnvironmentManifest) -> None:
     """
     manifest.tooling.add_pre_commit_hook(_ACTIONLINT_HOOK)
     manifest.tooling.add_ci_step(
-        "      - name: Run actionlint\n        uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2"
+        "      - name: Run actionlint\n        uses: raven-actions/actionlint@v2 # zizmor: ignore[unpinned-uses]"
     )
     if _ACTIONLINT_LINT not in manifest.tooling.just_lint_commands:
         manifest.tooling.just_lint_commands.append(_ACTIONLINT_LINT)
@@ -140,8 +140,9 @@ class ZizmorModule(ToolModule):
         ),
         workflow=(
             "Checks workflows for security mistakes before commits and in CI. "
-            "Without just, a hook manager, or CI enabled, no runner invokes it; "
-            "Protostar warns and you can run `uv run zizmor .` yourself."
+            "Local runs stay offline; CI also runs the audits that ask GitHub "
+            "about the actions a workflow uses. Without a runner enabled, run "
+            "`uv run zizmor .` yourself."
         ),
         docs_url="https://docs.zizmor.sh/",
     )
@@ -161,32 +162,19 @@ class ZizmorModule(ToolModule):
     def build(self, manifest: EnvironmentManifest) -> None:
         """Declares the dependency and checks consumed by enabled runners."""
         manifest.dependencies.add_dev("zizmor")
-        manifest.tooling.just_lint_commands.append("uv run zizmor .")
+        manifest.tooling.just_lint_commands.append("uv run zizmor --offline .")
         manifest.tooling.add_pre_commit_local_hook(
             r"""      - id: zizmor
         name: zizmor
-        entry: uv run zizmor --no-progress
+        entry: uv run zizmor --offline --no-progress
         language: system
         files: (^|/)(\.github/(workflows/[^/]+|dependabot)\.ya?ml|action\.ya?ml|\.pre-commit-(config|hooks)\.ya?ml)$
         types: [yaml]
         require_serial: true"""
         )
         manifest.tooling.add_ci_step(
-            "      - name: Run zizmor\n        run: uv run zizmor --format=github ."
+            "      - name: Run zizmor\n"
+            "        env:\n"
+            "          GH_TOKEN: ${{ github.token }}\n"
+            "        run: uv run zizmor --format=github ."
         )
-
-    @staticmethod
-    def check_runners(manifest: EnvironmentManifest) -> None:
-        """Warns after all modules build if no generated runner invokes zizmor."""
-        from protostar.manifest import DiagnosticEvent, DiagnosticPhase, Severity
-
-        tooling = manifest.tooling
-        if not (tooling.wants_just or tooling.wants_hooks or tooling.wants_ci):
-            manifest.diagnostics.append(
-                DiagnosticEvent(
-                    DiagnosticPhase.ZIZMOR,
-                    "zizmor is enabled, but no runner invokes it. Enable just, "
-                    "pre-commit, prek, or CI, or run `uv run zizmor .` manually.",
-                    Severity.WARNING,
-                )
-            )

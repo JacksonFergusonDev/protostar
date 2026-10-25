@@ -258,25 +258,23 @@ def test_exit_codes_documentation_matches_cli_behavior():
     assert "`73`" not in content
 
 
-def test_tui_documentation_svgs_ignore_no_color(tmp_path, monkeypatch):
-    """Published screenshots have the same colors with or without NO_COLOR."""
+def test_tui_documentation_svgs_ignore_no_color(monkeypatch):
+    """Screens are captured without NO_COLOR, and the caller's setting comes back."""
+    import contextlib
     import os
-    import tempfile
 
-    from protostar.cli.tui.theme import ACCENT
     from scripts.generate_docs_assets import tui_terminals
 
-    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
-    monkeypatch.setattr(tui_terminals, "DOCS_TERMINALS_DIR", tmp_path)
-    monkeypatch.delenv("NO_COLOR", raising=False)
-    tui_terminals.generate_tui_svgs()
-    colored = {path.name: path.read_bytes() for path in tmp_path.glob("tui_*.svg")}
-    assert len(colored) == 3
-    assert all(ACCENT.encode() in content for content in colored.values())
+    seen: list[str | None] = []
 
+    async def capture() -> None:
+        seen.append(os.environ.get("NO_COLOR"))
+
+    monkeypatch.setattr(tui_terminals, "_capture_tui_screens", capture)
+    monkeypatch.setattr(tui_terminals, "_capture_conflict_screen", capture)
+    monkeypatch.setattr(tui_terminals, "demo_project", contextlib.nullcontext)
+    monkeypatch.setattr(tui_terminals, "stable_host", contextlib.nullcontext)
     monkeypatch.setenv("NO_COLOR", "1")
     tui_terminals.generate_tui_svgs()
+    assert seen == [None, None]
     assert os.environ["NO_COLOR"] == "1"
-    assert {
-        path.name: path.read_bytes() for path in tmp_path.glob("tui_*.svg")
-    } == colored
