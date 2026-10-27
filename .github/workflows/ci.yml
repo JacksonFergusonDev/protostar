@@ -107,6 +107,12 @@ jobs:
 
     - name: Verify snapshots and documentation assets are up-to-date
       if: ${{ !cancelled() && steps.setup.outcome == 'success' && needs.select.outputs.scope == 'full' }}
+      # The scenarios install real projects. The runner's /tmp is a separate,
+      # quota-limited filesystem, where uv can't hardlink from its cache and
+      # the ml template's full copies exceed the quota; the runner's own temp
+      # directory shares the cache's disk.
+      env:
+        TMPDIR: ${{ runner.temp }}
       run: uv run python -m scripts.run_snapshots
 
     - name: Validate embedded documentation links
