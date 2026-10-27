@@ -178,9 +178,7 @@ hide:
 
 <script type="module">
 import { initCopyCommands } from "./house/js/copy-command.js";
-
-// The version jacksonferguson.me bundles.
-const THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.186.0/+esm";
+import { afterLoad } from "./house/js/field.js";
 
 // The landing page hides the theme's header; these drive its controls.
 const home = document.querySelector(".ps-home");
@@ -194,25 +192,17 @@ if (home && !home.dataset.psReady) {
     document.querySelector("[data-md-component=palette] label:not([hidden])")?.click();
   });
 
-  // The background field loads after the page is up, so the first screen is text.
-  const startField = () => {
-    const idle = window.requestIdleCallback ?? ((callback) => window.setTimeout(callback, 200));
-    idle(() => {
-      Promise.all([import(THREE_URL), import("./house/js/field.js")])
-        .then(([THREE, { startField }]) => {
-          const field = startField(THREE, home.querySelector(".hs-field"), home.querySelector(".hs-motion"));
-          // The field takes its colours from CSS, which the color scheme changes.
-          new MutationObserver(() => field?.refresh()).observe(document.body, {
-            attributeFilter: ["data-md-color-scheme"],
-          });
-        })
-        .catch(() => {});
-    });
-  };
-  if (document.readyState === "complete") {
-    startField();
-  } else {
-    window.addEventListener("load", startField, { once: true });
-  }
+  // The accretion disk loads after the page is up, so the first screen is text.
+  afterLoad(() => {
+    import("./javascripts/accretion-disk.js")
+      .then(({ startDisk }) => {
+        const field = startDisk(home.querySelector(".hs-field"), home.querySelector(".hs-motion"));
+        // The disk takes its colours from CSS, which the color scheme changes.
+        new MutationObserver(() => field?.refresh()).observe(document.body, {
+          attributeFilter: ["data-md-color-scheme"],
+        });
+      })
+      .catch(() => {});
+  });
 }
 </script>
