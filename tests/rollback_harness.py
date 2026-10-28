@@ -402,6 +402,7 @@ class FaultInjector:
         self.armed = armed
         self.rollback = rollback
         self.sites: list[str] = []
+        self.command_errors: list[str] = []
         self.fired = False
         # The project as the commit left it, when a fault fires just after it.
         self.committed: Tree | None = None
@@ -500,7 +501,13 @@ class FaultInjector:
             if position is Position.MID:
                 injector._run_partially(cmd, declared)
                 injector._raise(SiteKind.COMMAND, cmd)
-            output = injector._run(self, cmd, declared, timeout, env)
+            try:
+                output = injector._run(self, cmd, declared, timeout, env)
+            except CommandExecutionError as error:
+                injector.command_errors.append(
+                    f"{error}\n{error.output_detail or '(no command output)'}"
+                )
+                raise
             if position is Position.AFTER:
                 injector._raise(SiteKind.COMMAND, cmd)
             return output
@@ -703,6 +710,7 @@ class Outcome:
     journaled: frozenset[Path]
     fired: bool
     committed: Tree | None
+    command_errors: tuple[str, ...]
 
 
 @dataclasses.dataclass
@@ -818,6 +826,7 @@ def run(
         journaled=frozenset(injector.journaled),
         fired=injector.fired,
         committed=injector.committed,
+        command_errors=tuple(injector.command_errors),
     )
 
 
