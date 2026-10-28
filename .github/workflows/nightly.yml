@@ -227,10 +227,14 @@ jobs:
 
     - name: Fail init at every site
       uses: ./.github/actions/pytest
+      # Keep pytest projects beside uv's cache, outside quota-limited /tmp,
+      # so uv can link scientific packages instead of copying them.
+      env:
+        TMPDIR: ${{ runner.temp }}
       with:
-        # Concurrent scientific environments compete for disk and CPU on
-        # Windows, where uv copies packages and nbdime can exceed its timeout.
-        workers: ${{ matrix.os == 'windows-latest' && '1' || 'auto' }}
+        # Bound concurrent scientific environments on Linux too. Windows
+        # copies packages and nbdime can exceed its timeout under contention.
+        workers: ${{ (matrix.os == 'windows-latest' || (matrix.os == 'ubuntu-latest' && matrix.template == 'ml')) && '1' || 'auto' }}
         args: >-
           tests/test_rollback.py --rollback-scope full --rollback-real all
           --rollback-templates ${{ matrix.template }} -o faulthandler_timeout=300

@@ -307,9 +307,10 @@ def _unreached(site: str, outcome: Outcome) -> str:
     passed = "\n".join(outcome.sites) or "(none)"
     warned = "\n".join(_warnings(outcome)) or "(none)"
     error = json.dumps(outcome.payload.get("error"), indent=2, ensure_ascii=True)
+    commands = "\n".join(outcome.command_errors) or "(none)"
     return (
         f"the run never reached {site}; it passed:\n{passed}\nit warned:\n{warned}"
-        f"\nit failed with:\n{error}"
+        f"\nit failed with:\n{error}\ncommand output:\n{commands}"
     )
 
 
@@ -339,6 +340,33 @@ def test_a_command_timeout_before_the_fault_reports_the_underlying_error(
     _assert_unchanged("the home directory", before[1], workspace.capture()[1])
 
 
+def test_a_command_failure_before_the_fault_reports_captured_output(monkeypatch, seed):
+    """Keep subprocess output when the JSON envelope only names the command."""
+    from protostar.errors import CommandExecutionError
+    from protostar.system import ProcessRunner
+
+    case = _last_write(REPRESENTATIVE)
+    workspace = seed(REPRESENTATIVE)
+    before = workspace.capture()
+
+    def failed(self, cmd, timeout=None, env=None):
+        raise CommandExecutionError(
+            cmd, 1, stdout="resolving packages", stderr="Disk quota exceeded"
+        )
+
+    monkeypatch.setattr(ProcessRunner, "run", failed)
+    outcome = run(workspace, REPRESENTATIVE, Runner.REAL, monkeypatch, case)
+    assert not outcome.fired
+    assert outcome.code == 1
+    error = _unreached(case.site, outcome)
+    assert "--- STDOUT ---\nresolving packages" in error
+    assert "--- STDERR ---\nDisk quota exceeded" in error
+    with pytest.raises(AssertionError, match="Disk quota exceeded"):
+        _assert_clean_run(outcome, workspace, before)
+    _assert_unchanged("the project", before[0], workspace.capture()[0])
+    _assert_unchanged("the home directory", before[1], workspace.capture()[1])
+
+
 def _assert_unchanged(name: str, before: Tree, after: Tree) -> None:
     differences = before.differences(after)
     assert not differences, f"{name} changed:\n" + "\n".join(differences)
@@ -348,7 +376,7 @@ def _assert_clean_run(
     outcome: Outcome, workspace: Workspace, before: tuple[Tree, Tree]
 ) -> None:
     """Checks a run succeeded without a warning, journaled every change, and left home alone."""
-    assert outcome.code == 0, json.dumps(outcome.payload, indent=2, ensure_ascii=True)
+    assert outcome.code == 0, _unreached("a clean run", outcome)
     warnings = _warnings(outcome)
     assert not warnings, "a clean run warned:\n" + "\n".join(warnings)
     project, home = workspace.capture()

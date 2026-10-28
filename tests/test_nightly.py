@@ -343,7 +343,7 @@ def test_a_manual_nightly_can_narrow_the_rollback_jobs():
     assert args[args.index("--rollback-real") + 1] == "all"
 
 
-def test_windows_rollback_jobs_run_one_environment_at_a_time():
+def test_windows_and_linux_ml_rollback_jobs_run_one_environment_at_a_time():
     step = next(
         s
         for s in job("nightly.yml", "rollback")["steps"]
@@ -351,7 +351,7 @@ def test_windows_rollback_jobs_run_one_environment_at_a_time():
     )
     assert (
         step["with"]["workers"]
-        == "${{ matrix.os == 'windows-latest' && '1' || 'auto' }}"
+        == "${{ (matrix.os == 'windows-latest' || (matrix.os == 'ubuntu-latest' && matrix.template == 'ml')) && '1' || 'auto' }}"
     )
     action = YAML(typ="safe").load(
         (REPO_ROOT / ".github/actions/pytest/action.yml").read_text()
