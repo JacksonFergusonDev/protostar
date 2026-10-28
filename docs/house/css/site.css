@@ -12,6 +12,7 @@
  *       <div class="hs-bar-end">
  *         <button class="hs-bar-icon" aria-label="Search"><svg>…</svg></button>
  *         <a class="hs-bar-link" href="https://github.com/…"><svg>…</svg>GitHub</a>
+ *         <!-- html/bar-home.html: the link home to jacksonferguson.me -->
  *       </div>
  *     </div>
  *   </header>
@@ -130,13 +131,26 @@
 .hs-bar-link:hover {
   color: var(--accent);
 }
+/*
+ * Header icons sit dimmer than their labels and turn the accent with them on
+ * hover. Only the bar does this; icons elsewhere take the text's colour.
+ */
 .hs-bar-link .hs-icon,
 .hs-bar-link svg {
   width: 14px;
   height: 14px;
+  color: var(--muted);
+  transition: color 0.15s ease;
+}
+.hs-bar-link:hover .hs-icon,
+.hs-bar-link:hover svg,
+.hs-bar-link--accent .hs-icon,
+.hs-bar-link--accent svg {
   color: inherit;
 }
-.hs-bar-link img {
+/* The jacksonferguson.me mark fills its whole square, so it needs more room to read. */
+.hs-bar-link img,
+.hs-bar-link .hs-bar-link-mark {
   width: 18px;
   height: 18px;
 }

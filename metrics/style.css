@@ -11,8 +11,6 @@ h1, h2, h3, h4, p { margin: 0; }
 h1, h2, h3, h4 { font-weight: 500; }
 code { font-family: var(--mono); font-size: var(--fs-ui); }
 .page-width { width: min(1160px, calc(100% - 64px)); margin-inline: auto; }
-.skip-link { position: absolute; top: -100px; left: 16px; z-index: 10; padding: 12px 18px; background: var(--panel); border: 1px solid var(--accent); }
-.skip-link:focus { top: 12px; }
 .text-link, .personal-link { display: inline-flex; align-items: center; gap: 10px; }
 .personal-link { color: var(--muted); }
 .text-link:hover, .personal-link:hover { color: var(--accent); }

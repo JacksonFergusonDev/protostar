@@ -28,7 +28,7 @@ hide:
         <svg class="ps-icon-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>
       </button>
       <a class="hs-bar-link" href="https://github.com/jacksonfergusondev/protostar"><span class="hs-icon hs-icon-brand-github" aria-hidden="true"></span>GitHub</a>
-      <a class="hs-bar-link hs-wide" href="https://jacksonferguson.me"><img src="house/icons/jacksonferguson.svg" alt="" width="18" height="18">jacksonferguson.me</a>
+      --8<-- "docs/house/html/bar-home.html"
     </div>
   </div>
 </header>

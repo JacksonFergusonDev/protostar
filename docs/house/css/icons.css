@@ -69,6 +69,10 @@
   -webkit-mask-image: url('../icons/github.svg');
   mask-image: url('../icons/github.svg');
 }
+.hs-icon-jacksonferguson {
+  -webkit-mask-image: url('../icons/jacksonferguson.svg');
+  mask-image: url('../icons/jacksonferguson.svg');
+}
 .hs-icon-mail {
   -webkit-mask-image: url('../icons/mail.svg');
   mask-image: url('../icons/mail.svg');

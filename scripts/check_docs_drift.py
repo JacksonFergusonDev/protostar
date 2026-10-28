@@ -515,33 +515,23 @@ def check_link_icons() -> list[str]:
     return problems
 
 
-# Words house-style's voice rules name as selling or softening a step, and the
-# exit-code label Protostar once used: its codes come from BSD's sysexits.h.
-_UNWANTED_WORDS = re.compile(
-    r"\b(?:simply|seamless(?:ly)?|effortless(?:ly)?|powerful|leverag(?:e|es|ed|ing)"
-    r"|blazing|robust|POSIX[- ](?:exit|status|routing|compliant)\w*)\b",
-    re.IGNORECASE,
+# The exit-code label Protostar once used: its codes come from BSD's sysexits.h.
+# house-style's check_voice.py (`just check-voice`) checks the shared voice rules.
+_POSIX_EXIT_WORDING = re.compile(
+    r"\bPOSIX[- ](?:exit|status|routing|compliant)\w*\b", re.IGNORECASE
 )
 
 
-def check_writing_voice() -> list[str]:
-    """Prose avoids hype words and em dashes (house-style's voice)."""
+def check_exit_code_wording() -> list[str]:
+    """Prose never calls Protostar's exit codes POSIX codes."""
     problems: list[str] = []
     for page in _hand_written_pages():
         prose = _prose(page.read_text(encoding="utf-8"))
         for line in prose.splitlines():
-            # A table cell holding only a dash marks "not applicable".
-            if line.lstrip().startswith("|"):
-                line = re.sub(r"\|\s*—\s*(?=\|)", "|", line)
-            if "—" in line:
-                problems.append(
-                    f"{_rel(page)}: an em dash in {line.strip()[:60]!r}. "
-                    "Use a comma, a colon, or a new sentence"
-                )
-            for word in _UNWANTED_WORDS.findall(line):
+            for word in _POSIX_EXIT_WORDING.findall(line):
                 problems.append(
                     f"{_rel(page)}: {word!r} in {line.strip()[:60]!r}. "
-                    "Say what actually happens instead"
+                    "The codes come from BSD's sysexits.h"
                 )
     return problems
 
@@ -995,7 +985,7 @@ CHECKS: tuple[Callable[[], list[str]], ...] = (
     check_page_front_matter,
     check_card_grids,
     check_link_icons,
-    check_writing_voice,
+    check_exit_code_wording,
     check_site_links,
     check_cli_reference_sections,
     check_execution_order,

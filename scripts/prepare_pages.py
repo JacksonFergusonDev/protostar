@@ -40,6 +40,8 @@ METRICS_DATA = (
 )
 HOUSE_DIR = REPO_ROOT / "docs" / "house"
 FOOTER_HTML = REPO_ROOT / "overrides" / "partials" / "site-footer.html"
+# house-style's link home to jacksonferguson.me, shared by every project site's header bar.
+BAR_HOME_HTML = HOUSE_DIR / "html" / "bar-home.html"
 # jacksonferguson.me's policy: search and AI search agents read the docs,
 # AI training crawlers don't.
 ROBOTS = """\
@@ -70,11 +72,12 @@ Sitemap: {sitemap}
 
 
 def render_metrics_index() -> str:
-    """Render the dashboard with the docs landing page's shared footer."""
+    """Render the dashboard with the shared footer and house-style's link home."""
     return (
         (METRICS_DIR / "index.html")
         .read_text(encoding="utf-8")
         .replace("<!-- site-footer -->", FOOTER_HTML.read_text(encoding="utf-8"))
+        .replace("<!-- bar-home -->", BAR_HOME_HTML.read_text(encoding="utf-8"))
     )
 
 

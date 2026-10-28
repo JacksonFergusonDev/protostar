@@ -122,6 +122,14 @@ repos:
         files: ^(docs/|README\.md|CONTRIBUTING\.md|AGENTS\.md|justfile|zensical\.toml|pyproject\.toml|src/protostar/|tests/|scripts/check_docs_drift\.py|\.github/ISSUE_TEMPLATE/feature_request\.yml)
         stages: [pre-push]
 
+      - id: check-voice
+        name: check the writing voice
+        entry: uv run just check-voice
+        language: system
+        pass_filenames: false
+        files: ^(docs/.*\.md|README\.md|CONTRIBUTING\.md|AGENTS\.md|justfile)$
+        stages: [pre-push]
+
       - id: check-schemas
         name: check schema validity
         entry: uv run --locked python -m scripts.check_schemas

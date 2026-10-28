@@ -87,7 +87,7 @@ mutate module workers="2":
     @printf "{{ green }}✔ Mutation run complete (what to fix: mutants/survivors.md){{ nc }}\n"
 
 # Run the fast local CI pipeline executed before pushing
-ci: lint typecheck test docs check-snapshots check-doc-links check-docs-drift check-schemas secrets
+ci: lint typecheck test docs check-snapshots check-doc-links check-docs-drift check-voice check-schemas secrets
     @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
 
 # Remove caches, artifacts, and temp files
@@ -158,12 +158,17 @@ sync-secret-rules: sync
     uv run python -m scripts.sync_secret_rules
 
 # The house-style release vendored into docs/house/
-house_style := "v3.0.0"
+house_style := "v3.1.0"
 
 # Vendor the house-style release pinned in `house_style` into docs/house/ (--check to compare only)
 sync-house-style *args:
     @printf "\n{{ blue }}=== Vendoring house-style {{ house_style }} ==={{ nc }}\n"
     uv run https://raw.githubusercontent.com/JacksonFergusonDev/house-style/{{ house_style }}/scripts/vendor.py --tag {{ house_style }} --parts docs,site docs/house {{ args }}
+
+# Check hand-written prose against house-style's voice rules: no em dashes or hype words
+check-voice:
+    @printf "\n{{ blue }}=== Checking the Writing Voice (house-style {{ house_style }}) ==={{ nc }}\n"
+    uv run https://raw.githubusercontent.com/JacksonFergusonDev/house-style/{{ house_style }}/scripts/check_voice.py README.md CONTRIBUTING.md AGENTS.md $(git ls-files 'docs/*.md' ':!:docs/generated/*')
 
 # Pre-warm environment and caches for demo generation
 demo-prewarm: sync

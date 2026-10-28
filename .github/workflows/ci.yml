@@ -127,6 +127,10 @@ jobs:
       if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
       run: uv run just sync-house-style --check
 
+    - name: Check the writing voice
+      if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+      run: uv run just check-voice
+
     - name: Build documentation (strict)
       if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
       run: uv run zensical build --strict
