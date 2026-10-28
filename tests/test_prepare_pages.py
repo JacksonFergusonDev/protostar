@@ -297,3 +297,10 @@ def test_recorded_json_survives_pages_assembly_without_obsolete_assets(
         ).read_bytes()
     assert (output / "metrics/index.html").exists()
     assert not (output / "metrics/retired.js").exists()
+
+
+def test_the_metrics_header_takes_house_styles_link_home() -> None:
+    page = render_metrics_index()
+
+    assert "<!-- bar-home -->" not in page
+    assert 'class="hs-bar-link-mark"' in page

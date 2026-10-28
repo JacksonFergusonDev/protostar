@@ -194,20 +194,30 @@ export function startDisk(canvas, button) {
   const gl = canvas.getContext("webgl2", { alpha: true, premultipliedAlpha: true, antialias: false });
   if (!gl) return undefined;
 
-  const program = link(gl);
-  if (!program) return undefined;
-  const at = (name) => gl.getUniformLocation(program, name);
-  const u = {
-    viewport: at("uViewport"),
-    center: at("uCenter"),
-    scale: at("uScale"),
-    time: at("uTime"),
-    color: at("uColor"),
-    strength: at("uStrength"),
-    wide: at("uWide"),
-    light: at("uLight"),
-  };
-  gl.useProgram(program);
+  // Links the program and finds its uniforms: at startup, and again when a
+  // lost context comes back, since the new context has none of the old ones.
+  function build() {
+    const program = link(gl);
+    if (!program) return null;
+    const at = (name) => gl.getUniformLocation(program, name);
+    gl.useProgram(program);
+    return {
+      program,
+      u: {
+        viewport: at("uViewport"),
+        center: at("uCenter"),
+        scale: at("uScale"),
+        time: at("uTime"),
+        color: at("uColor"),
+        strength: at("uStrength"),
+        wide: at("uWide"),
+        light: at("uLight"),
+      },
+    };
+  }
+  let built = build();
+  if (!built) return undefined;
+  let { program, u } = built;
 
   let strength = 0.36;
   let portrait = false;
@@ -243,6 +253,11 @@ export function startDisk(canvas, button) {
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
+    },
+    // runField restyles and resizes after this, which sets the uniforms again.
+    restore() {
+      built = build();
+      if (built) ({ program, u } = built);
     },
     dispose() {
       gl.deleteProgram(program);

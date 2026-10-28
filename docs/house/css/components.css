@@ -1,4 +1,4 @@
-/* Section markers and buttons: the pieces every house page opens with. */
+/* Section markers, buttons, and the skip link: the pieces every house page opens with. */
 
 /* A numbered section label, e.g. <div class="hs-section-marker"><span>01 / ABOUT</span></div>. */
 .hs-section-marker {
@@ -49,4 +49,31 @@
   .hs-section-marker {
     margin-bottom: 24px;
   }
+}
+
+/*
+ * The first link on every page, shown only when focused:
+ * <a class="hs-skip-link" href="#main">Skip to content</a>.
+ */
+.hs-skip-link {
+  position: fixed;
+  top: -80px;
+  left: 20px;
+  z-index: 30;
+  padding: 12px;
+  background: var(--accent);
+  color: var(--button-fg);
+}
+.hs-skip-link:focus {
+  top: 15px;
+}
+
+/* Text for screen readers only, e.g. a label an icon stands in for. */
+.hs-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
