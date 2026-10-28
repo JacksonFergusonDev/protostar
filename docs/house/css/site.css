@@ -37,8 +37,8 @@
  *     </div>
  *   </footer>
  *
- * Icons are inline SVG or css/icons.css spans; either is sized here. js/field.js
- * draws the field and drives the motion button.
+ * Icons are inline SVG or css/icons.css spans; either is sized here. Each site
+ * draws its own field; js/field.js runs it and drives the motion button.
  */
 
 /* --- Header bar --- */
@@ -207,7 +207,7 @@
   background-position: center top;
   background-size: 80px 80px;
 }
-/* The hero has no grid: js/field.js draws behind it, faint enough to read as texture. */
+/* The hero has no grid: the site's field draws behind it, faint enough to read as texture. */
 .hs-hero {
   /* Padding counts inside the height, whatever box model the site uses. */
   box-sizing: border-box;
@@ -218,7 +218,7 @@
   padding: 36px 0 115px;
 }
 .hs-field {
-  /* js/field.js reads these; a site may override them, e.g. for a light scheme. */
+  /* js/field.js hands these to the site's drawing; a site may override them, e.g. for a light scheme. */
   --hs-field-color: var(--accent);
   --hs-field-strength: 0.36;
   --hs-field-blend: add;
@@ -229,13 +229,8 @@
   z-index: -1;
   width: 100vw;
   height: 100%;
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 1.2s ease;
   mask-image: linear-gradient(180deg, #000 80%, transparent);
-}
-.hs-field--ready {
-  opacity: 1;
 }
 .hs-motion {
   position: absolute;

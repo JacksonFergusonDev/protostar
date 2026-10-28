@@ -111,11 +111,17 @@
 }
 
 /* --- The header, hero field, jump links, section grid, and footer are
-       house-style's site shell (house/css/site.css). In the light scheme
-       the field draws a faint teal ink on white. --- */
+       house-style's site shell (house/css/site.css). The accretion disk
+       draws stronger than house-style's default, so its filaments read;
+       its own guard keeps the copy clear. In the light scheme it draws a
+       teal ink on white. --- */
+.ps-home .hs-field {
+    --hs-field-strength: 0.85;
+}
+
 [data-md-color-scheme="default"] .ps-home .hs-field {
     --hs-field-color: #0e7490;
-    --hs-field-strength: 0.24;
+    --hs-field-strength: 0.5;
     --hs-field-blend: normal;
 }
 

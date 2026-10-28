@@ -158,7 +158,7 @@ sync-secret-rules: sync
     uv run python -m scripts.sync_secret_rules
 
 # The house-style release vendored into docs/house/
-house_style := "v2.0.0"
+house_style := "v3.0.0"
 
 # Vendor the house-style release pinned in `house_style` into docs/house/ (--check to compare only)
 sync-house-style *args:
