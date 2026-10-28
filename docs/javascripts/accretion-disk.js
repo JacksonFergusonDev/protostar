@@ -1,25 +1,32 @@
 /**
  * The landing page's moving background: a protostar's accretion disk.
  *
- * A young star still gathering its mass from a tilted disk of gas and dust.
- * The disk is drawn as thousands of fine, wavy filaments following their
- * orbits, each radius turning at its own orbital speed, so the inner disk
- * whirls while the edge drifts. It's brightest just outside the cavity around
- * the star, where the brightest strands catch the light. The star shows at
- * the centre, partly hidden by the disk's near side, and thin jets leave both
- * poles with knots travelling outward.
+ * A young star still gathering its mass from a tilted disk of gas and dust,
+ * drawn as light rather than shapes, so it reads like a telescope image:
  *
- * It's one fragment shader in raw WebGL2, drawn at the screen's resolution so
- * the filaments stay sharp; each layer of detail fades out where it would be
- * finer than a pixel, so nothing shimmers. house-style's `runField` decides
- * when it draws, under the motion rules, and hands it the canvas's
- * `--hs-field-*` style.
+ * - The gas is turbulent: its density is log-normal, so most of it is dim and
+ *   a few clumps are very bright, curled by a slow warp and stretched along
+ *   orbits that turn faster near the star.
+ * - It glows by the star's light, falling off with distance, and the inner
+ *   rim, puffed up where the star first heats it, is brightest where we see
+ *   it face-on, on the far side.
+ * - Dust in the near side's midplane absorbs the light behind it, dimming the
+ *   star and the far rim, and a soft bloom surrounds the bright inner disk.
+ * - Faint knotty jets leave both poles, a dim envelope surrounds the disk,
+ *   and a starfield sits behind it all.
+ *
+ * Colour comes from light: each channel saturates on its own, so dim gas
+ * stays a deep shade of the accent and the brightest gas burns towards white,
+ * as an exposure does. It's one fragment shader in raw WebGL2, at the
+ * screen's resolution, with every layer of detail fading out where it would
+ * be finer than a pixel. house-style's `runField` decides when it draws,
+ * under the motion rules, and hands it the canvas's `--hs-field-*` style.
  */
 
 import { runField } from "../house/js/field.js";
 
 // The disk's tilt from face-on, as the cosine that squashes its far axis.
-const TILT = 0.4;
+const TILT = 0.38;
 // The tilt of its axis on screen, in radians.
 const POSITION_ANGLE = -0.36;
 
@@ -35,6 +42,7 @@ precision highp float;
 uniform vec2 uViewport;
 uniform vec2 uCenter;
 uniform float uScale;
+uniform float uPixel;
 uniform float uTime;
 uniform vec3 uColor;
 uniform float uStrength;
@@ -50,69 +58,81 @@ float hash(vec2 p) {
   return fract((p3.x + p3.y) * p3.z);
 }
 
-// Value noise from 0 to 1 that repeats every \`period\` cells along x, so it
-// wraps seamlessly around the disk.
+vec2 gradient(vec2 cell) {
+  float a = hash(cell) * TAU;
+  return vec2(cos(a), sin(a));
+}
+
+// Gradient noise from -0.5 to 0.5 that repeats every \`period\` cells along x,
+// so it wraps seamlessly around the disk.
 float noise(vec2 p, float period) {
   vec2 i = floor(p);
   vec2 f = fract(p);
-  vec2 u = f * f * (3.0 - 2.0 * f);
+  vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
   float x0 = mod(i.x, period);
   float x1 = mod(i.x + 1.0, period);
-  return mix(
-    mix(hash(vec2(x0, i.y)), hash(vec2(x1, i.y)), u.x),
-    mix(hash(vec2(x0, i.y + 1.0)), hash(vec2(x1, i.y + 1.0)), u.x),
-    u.y
-  );
+  float a = dot(gradient(vec2(x0, i.y)), f);
+  float b = dot(gradient(vec2(x1, i.y)), f - vec2(1.0, 0.0));
+  float c = dot(gradient(vec2(x0, i.y + 1.0)), f - vec2(0.0, 1.0));
+  float d = dot(gradient(vec2(x1, i.y + 1.0)), f - vec2(1.0, 1.0));
+  return 0.7 * mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
 }
 
-// Filaments: noise stretched along the orbits, long around the disk and thin
-// across it. \`turn\` is the position around the disk (0 to 1) and \`r\` the
-// radius; \`blur\` is how much of each a pixel covers, so detail finer than a
-// pixel fades to its average instead of shimmering.
-float filaments(float turn, float r, vec2 blur) {
-  float around = 12.0;
-  float across = 80.0;
-  float amplitude = 0.5;
+// Turbulence on the disk: octaves of noise stretched along the orbits.
+// \`blur\` is how much of the disk one pixel covers around and across, and
+// each octave fades out where it would be finer than a pixel.
+float turbulence(vec2 at, float around, float across, vec2 blur, int octaves) {
   float sum = 0.0;
-  float total = 0.0;
-  for (int octave = 0; octave < 7; octave++) {
-    float fine = max(around * blur.x, across * blur.y);
-    float keep = 1.0 - smoothstep(0.35, 0.8, fine);
-    float n = noise(vec2(turn * around, r * across), around);
-    sum += amplitude * mix(0.5, n, keep);
-    total += amplitude;
+  float amplitude = 1.0;
+  for (int octave = 0; octave < 8; octave++) {
+    if (octave >= octaves) break;
+    float keep = 1.0 - smoothstep(0.3, 0.7, max(around * blur.x, across * blur.y));
+    sum += amplitude * keep * noise(vec2(at.x * around, at.y * across), around);
     around *= 2.0;
-    across *= 2.1;
-    amplitude *= 0.75;
-  }
-  return sum / total;
-}
-
-// Fibres: thin ridges where the noise crosses its middle, so they read as
-// single bright hairs rather than bands.
-float fibres(float turn, float r, vec2 blur) {
-  float sum = 0.0;
-  float around = 40.0;
-  float across = 210.0;
-  for (int octave = 0; octave < 2; octave++) {
-    float keep = 1.0 - smoothstep(0.3, 0.6, max(around * blur.x, across * blur.y));
-    float n = noise(vec2(turn * around, r * across), around);
-    sum += keep * pow(1.0 - abs(2.0 * n - 1.0), 8.0) * (octave == 0 ? 0.65 : 0.45);
-    around *= 2.0;
-    across *= 1.7;
+    across *= 2.0;
+    amplitude *= 0.7;
   }
   return sum;
 }
 
-// Specks: sparse points of light caught on the strands, each a cell of a
-// grid stretched along the orbits that happens to hold one.
-float specks(float turn, float r, vec2 blur) {
-  vec2 grid = vec2(turn * 420.0, r * 140.0);
-  float keep = 1.0 - smoothstep(0.4, 0.9, max(420.0 * blur.x, 140.0 * blur.y));
-  vec2 cell = floor(grid);
-  float lit = step(0.93, hash(vec2(mod(cell.x, 420.0), cell.y) + 7.3));
-  vec2 at = fract(grid) - 0.5;
-  return keep * lit * smoothstep(0.5, 0.0, length(at));
+// Where a point of the disk was \`age\` seconds ago, as a turn (0 to 1) around
+// it: each radius turns at its own orbital speed, faster near the star.
+float turnAt(float theta, float r, float age) {
+  return fract((theta - 0.008 * pow(max(r, 0.12), -1.5) * age) / TAU);
+}
+
+// How much of the disk one pixel covers around and across. The turn jumps
+// from 1 to 0 at one angle, so its change is also measured away from the jump.
+vec2 pixelSpan(float turn, float r) {
+  return vec2(min(fwidth(turn), fwidth(fract(turn + 0.5))), fwidth(r));
+}
+
+// The gas carried round by the orbits for \`age\` seconds. A slow warp curls
+// the flow, then turbulence stretches along the orbits.
+float gasAt(float theta, float r, float age, float seed) {
+  float turn = turnAt(theta, r, age);
+  vec2 blur = pixelSpan(turn, r);
+  vec2 warp = vec2(
+    turbulence(vec2(turn, r + seed), 5.0, 6.0, blur, 3),
+    turbulence(vec2(turn + 0.37, r + seed + 2.1), 5.0, 6.0, blur, 3)
+  );
+  vec2 flow = vec2(turn + 0.035 * warp.x, r + seed + 0.025 * warp.y);
+  return turbulence(flow, 14.0, 64.0, blur, 7);
+}
+
+// One layer of stars: a candidate in each \`size\`-pixel cell, at a random spot,
+// with a brightness skewed by \`rarity\` so few are bright, drawn as a point
+// \`radius\` pixels wide.
+float starLayer(vec2 pixel, float size, float rarity, float radius, float seed) {
+  vec2 cell = floor(pixel / size);
+  vec2 offset = pixel - (cell + vec2(hash(cell + seed), hash(cell + seed + 9.2))) * size;
+  float bright = pow(hash(cell + seed + 4.4), rarity);
+  return bright * exp(-dot(offset, offset) / (radius * radius));
+}
+
+// Exposure: each channel saturates on its own, so bright light whitens.
+vec3 expose(vec3 light) {
+  return 1.0 - exp(-light);
 }
 
 void main() {
@@ -126,60 +146,102 @@ void main() {
   vec2 d = vec2(q.x, q.y / ${TILT.toFixed(3)});
   float r = length(d);
   float theta = atan(d.y, d.x);
+  // Facing: 1 on the far side, whose lit upper surface we see; -1 near.
+  float facing = d.y / max(r, 1e-4);
 
-  // Each radius turns at its own orbital speed, faster near the star.
-  float omega = 0.035 * pow(max(r, 0.12), -1.5);
-  float turn = fract((theta - omega * uTime) / TAU);
-  // How much of the disk one pixel spans, around and across. The turn jumps
-  // from 1 to 0 at one angle, so its change is measured away from the jump too.
-  float dTurn = min(fwidth(turn), fwidth(fract(turn + 0.5)));
-  vec2 blur = vec2(dTurn, fwidth(r));
+  // The orbits shear the gas ever tighter, until its detail is finer than a
+  // pixel and fades to a blur. So two copies of the gas each shear for one
+  // cycle and start again unwound, half a cycle apart, crossfading so neither
+  // restart shows; the mix is rescaled so the texture never dims between them.
+  const float CYCLE = 50.0;
+  float phase = fract(uTime / CYCLE);
+  float wA = 1.0 - abs(2.0 * phase - 1.0);
+  float wB = 1.0 - wA;
+  float gasA = gasAt(theta, r, phase * CYCLE, floor(uTime / CYCLE) * 3.1);
+  float gasB = gasAt(theta, r, fract(phase + 0.5) * CYCLE, floor(uTime / CYCLE + 0.5) * 3.1 + 1.7);
+  float gas = (wA * gasA + wB * gasB) / sqrt(wA * wA + wB * wB);
+  // Exponentiating it gives the long bright tail of real gas.
+  float density = exp(3.4 * gas - 0.5);
 
-  // The filaments ripple: their radius wanders slowly around the disk.
-  float wander = (noise(vec2(turn * 14.0, r * 7.0), 14.0) - 0.5) * 0.05
-    + (noise(vec2(turn * 40.0, r * 19.0 + 3.0), 40.0) - 0.5) * 0.015;
-  float f = filaments(turn, r + wander, blur);
-  // Contrast: bright strands over dark lanes.
-  float strands = pow(smoothstep(0.3, 0.78, f), 1.8);
-  float hair = fibres(turn, r + wander, blur);
-  float glint = specks(turn, r + wander, blur);
+  // Features that turn with the disk as a whole, slowly enough not to shear.
+  float turn = fract((theta - 0.008 * uTime) / TAU);
+  vec2 blur = pixelSpan(turn, r);
 
-  // Brightest just outside the cavity, dimming outward to a ragged edge.
-  float edge = 0.92 + 0.12 * (noise(vec2(turn * 9.0, 0.5), 9.0) - 0.5);
-  float body = smoothstep(0.1, 0.2, r)
-    * mix(1.8, 0.34, smoothstep(0.18, 0.8, r))
-    * (1.0 - smoothstep(edge - 0.2, edge, r));
-  // The far side shows its lit, flared surface, so it reads a little brighter.
-  float far = 0.82 + 0.18 * smoothstep(-0.5, 0.5, d.y / max(r, 1e-3));
-  float disk = body * far * (0.06 + 1.3 * strands + hair * (0.25 + 1.1 * strands) + glint * (0.4 + 1.6 * strands));
+  // Starlight on the disk: falling off outward from the inner edge, with a
+  // ragged outer edge where the gas thins into the envelope.
+  float edge = 0.95 + 0.25 * turbulence(vec2(turn, 0.3), 6.0, 1.0, blur, 3);
+  float lit = smoothstep(0.08, 0.19, r) * pow(max(r, 0.15) / 0.2, -2.3)
+    * (1.0 - smoothstep(edge - 0.35, edge, r));
+  // The far side shows its lit, flared upper surface; the near side its
+  // shadowed underside.
+  lit *= 0.55 + 0.45 * smoothstep(-0.8, 0.8, facing);
+  float disk = lit * density;
 
-  // The star, partly behind the near side of the disk.
-  float core = exp(-dot(q, q) / 0.00018) * mix(1.0, 0.4, uLight);
-  float halo = exp(-length(q) / 0.045) * 0.3;
-  float nearSide = smoothstep(0.004, -0.03, q.y) * (1.0 - smoothstep(0.15, 0.3, r));
-  float star = (core + halo) * mix(1.0, 0.25, nearSide);
+  // The inner rim, puffed up where the star first heats the gas: lit gas, so
+  // it follows the gas's own clumps, seen most face-on on the far side and
+  // fading smoothly towards the near side, where it's seen edge-on.
+  float rim = exp(-pow((r - 0.16) / 0.03, 2.0)) * mix(0.35, 1.0, smoothstep(-0.7, 0.9, facing))
+    * density;
 
-  // Jets leave both poles along the axis, wobbling as the axis precesses,
-  // with knots travelling outward. The far jet is partly hidden by dust.
+  // The star and its glow.
+  float rq = length(q);
+  float star = exp(-rq * rq / 0.00008) * 14.0 + exp(-rq / 0.025) * 1.2;
+  // Dust in the near side's midplane absorbs what lies behind it.
+  float lane = exp(-pow((q.y + 0.004) / (0.02 + 0.03 * clamp(r, 0.0, 1.0)), 2.0))
+    * smoothstep(0.05, -0.01, q.y) * (1.0 - smoothstep(0.25, 0.55, r));
+  float behind = exp(-2.2 * lane);
+  star *= behind;
+  // Only light from behind the near side passes through its dust.
+  rim *= mix(1.0, behind, smoothstep(0.5, -0.3, facing));
+
+  // Bloom: the bright inner disk's light spills softly around it.
+  float bloom = 0.3 * exp(-r / 0.09) + 0.02 * exp(-length(p) / 0.35);
+
+  // Jets: faint and irregular, knots of shocked gas strung along each pole,
+  // broadening as they go. The far jet is dimmer behind the dust.
   float along = abs(q.y);
-  float across = q.x - 0.02 * sin(along * 7.0 - uTime * 0.35) * along;
-  float width = 0.004 + 0.018 * along;
-  float knots = 0.4 + 0.6 * pow(0.5 + 0.5 * sin(along * 18.0 - uTime * 0.9), 3.0);
-  float jet = exp(-pow(across / width, 2.0)) * smoothstep(0.05, 0.16, along)
-    * (1.0 - smoothstep(0.5, 1.2, along)) * knots * (q.y > 0.0 ? 0.5 : 0.3);
+  float across = q.x - 0.015 * sin(along * 6.0 - uTime * 0.08) * along;
+  float width = 0.004 + 0.022 * along;
+  float knots = exp(3.0 * noise(vec2(along * 9.0 - uTime * 0.1, q.y > 0.0 ? 3.0 : 7.0), 1000.0));
+  float jet = exp(-pow(across / width, 2.0)) * smoothstep(0.06, 0.2, along)
+    * (1.0 - smoothstep(0.4, 1.1, along)) * knots * (q.y > 0.0 ? 0.07 : 0.04);
 
-  float light = disk + star + jet;
+  // The envelope: dim, dusty nebulosity the disk is still drawing from.
+  float envelope = 0.025 * exp(-length(p) / 0.6)
+    * exp(2.0 * turbulence(vec2(fract(atan(p.y, p.x) / TAU), length(p)), 6.0, 3.0, vec2(0.0), 4));
+
+  // A starfield, still behind it all: a dense layer of faint stars and a
+  // sparser one of brighter stars with a little more glow.
+  vec2 pixel = gl_FragCoord.xy / uPixel;
+  float stars = starLayer(pixel, 16.0, 7.0, 0.7, 1.7) * 0.8
+    + starLayer(pixel, 55.0, 2.5, 1.0, 23.1) * 1.6;
+
+  float light = (disk * 1.0 + rim * 1.2 + star + bloom + jet + envelope) * uStrength;
 
   // Keep the hero's copy readable: on wide screens the field rises to the
-  // right of it, as house-style's attractor did; on narrow ones, below it.
-  float right = 0.3 + 0.7 * smoothstep(0.3, 0.68, gl_FragCoord.x / uViewport.x);
-  float below = 0.25 + 0.75 * smoothstep(0.5, 0.78, 1.0 - gl_FragCoord.y / uViewport.y);
-  float alpha = (1.0 - exp(-1.5 * light)) * uStrength * mix(below, right, uWide);
-  alpha = clamp(alpha, 0.0, 1.0);
-  // On dark pages the brightest strands run hot, towards white; on light
-  // pages the disk is ink, so it stays in the accent.
-  float hot = smoothstep(0.4, 1.3, light) * (1.0 - uLight) * 0.8;
-  outColor = vec4(mix(uColor, vec3(1.0), hot) * alpha, alpha);
+  // right of it; on narrow ones, below it.
+  float right = 0.25 + 0.75 * smoothstep(0.3, 0.68, gl_FragCoord.x / uViewport.x);
+  float below = 0.2 + 0.8 * smoothstep(0.5, 0.78, 1.0 - gl_FragCoord.y / uViewport.y);
+  float guard = mix(below, right, uWide);
+  light *= guard;
+  float starlight = stars * uStrength * sqrt(guard);
+
+  // A whisper of noise keeps the faint gradients from banding.
+  float dither = (hash(gl_FragCoord.xy + fract(uTime) * 61.0) - 0.5) / 255.0;
+
+  if (uLight > 0.5) {
+    // On a light page the disk is ink: absorbed light in the accent.
+    float ink = clamp(1.0 - exp(-0.9 * light), 0.0, 1.0) + dither;
+    outColor = vec4(uColor * ink, ink);
+  } else {
+    // On a dark page, light in the accent's hue, exposed channel by channel.
+    // Cooler outer gas sits a little deeper towards blue, which reads as depth.
+    vec3 hue = uColor / max(max(uColor.r, uColor.g), uColor.b);
+    hue = mix(hue, hue * vec3(0.55, 0.8, 1.0), 0.6 * smoothstep(0.25, 0.9, r));
+    vec3 col = expose(light * 1.6 * hue) + starlight * vec3(0.85, 0.95, 1.0) + dither;
+    col = clamp(col, 0.0, 1.0);
+    outColor = vec4(col, max(max(col.r, col.g), col.b));
+  }
 }`;
 
 /**
@@ -207,6 +269,7 @@ export function startDisk(canvas, button) {
         viewport: at("uViewport"),
         center: at("uCenter"),
         scale: at("uScale"),
+        pixel: at("uPixel"),
         time: at("uTime"),
         color: at("uColor"),
         strength: at("uStrength"),
@@ -229,7 +292,7 @@ export function startDisk(canvas, button) {
       strength = value;
     },
     resize(width, height) {
-      // Full resolution keeps the filaments sharp; past 1.5 device pixels per
+      // Full resolution keeps the detail sharp; past 1.5 device pixels per
       // CSS pixel the extra detail isn't worth the GPU.
       const scale = Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.width = Math.max(1, Math.round(width * scale));
@@ -245,6 +308,7 @@ export function startDisk(canvas, button) {
       // gl_FragCoord counts up from the bottom.
       gl.uniform2f(u.center, center[0] * scale, (height - center[1]) * scale);
       gl.uniform1f(u.scale, radius * scale);
+      gl.uniform1f(u.pixel, scale);
       gl.uniform1f(u.wide, wide ? 1 : 0);
     },
     draw(time) {
