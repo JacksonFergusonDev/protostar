@@ -116,12 +116,12 @@
        its own guard keeps the copy clear. In the light scheme it draws a
        teal ink on white. --- */
 .ps-home .hs-field {
-    --hs-field-strength: 0.85;
+    --hs-field-strength: 0.6;
 }
 
 [data-md-color-scheme="default"] .ps-home .hs-field {
     --hs-field-color: #0e7490;
-    --hs-field-strength: 0.5;
+    --hs-field-strength: 0.4;
     --hs-field-blend: normal;
 }
 
