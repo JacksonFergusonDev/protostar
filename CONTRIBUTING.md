@@ -68,7 +68,7 @@ To try Protostar without touching your own configuration or projects:
 
 ## Documentation
 
-The docs site lives in `docs/` and is built by Zensical; `just serve` previews it. It shares its design rules with jacksonferguson.me through [house-style](https://github.com/JacksonFergusonDev/house-style), whose guidelines are vendored at `docs/house/GUIDELINES.txt`: read them before changing a page. Write each Markdown paragraph on one line, never hard-wrapped. `just check-docs-drift` fails when a page disagrees with the code, such as a command, an error, or a file path that no longer exists.
+The docs site lives in `docs/` and is built by Zensical; `just serve` previews it at <http://127.0.0.1:4400/>. The metrics preview (`just serve-metrics`) uses port 4401. These ports belong to Protostar; the personal site uses 4300–4302 and Star Ground uses 4500–4504. Stop a preview with `Ctrl+C` before starting another. For a second worktree, choose an unused port with `uv run zensical serve -a 127.0.0.1:4410` or `just serve-metrics 4411`. It shares its design rules with jacksonferguson.me through [house-style](https://github.com/JacksonFergusonDev/house-style), whose guidelines are vendored at `docs/house/GUIDELINES.txt`: read them before changing a page. Write each Markdown paragraph on one line, never hard-wrapped. `just check-docs-drift` fails when a page disagrees with the code, such as a command, an error, or a file path that no longer exists.
 
 ### Publishing
 

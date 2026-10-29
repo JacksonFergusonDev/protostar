@@ -58,8 +58,8 @@ def test_source_edits_are_visible_without_restarting(
 
 
 def test_the_default_port_is_separate_from_zensical() -> None:
-    assert serve_metrics.DEFAULT_PORT == 8765
-    assert serve_metrics.DEFAULT_PORT != 8000
+    assert serve_metrics.DEFAULT_PORT == 4401
+    assert serve_metrics.DEFAULT_PORT != 4400
 
 
 @pytest.mark.parametrize("optional_published", [False, True])

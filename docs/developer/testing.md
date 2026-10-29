@@ -172,13 +172,13 @@ Pass Protostar arguments to run one command without entering a shell, such as `j
     ```
 
 === "Local Server"
-    Spins up the Zensical server for local documentation preview.
+    Spins up the Zensical server at `http://127.0.0.1:4400/` for local documentation preview.
     ```bash
     just serve
     ```
 
 === "Metrics Dashboard"
-    Opens the metrics dashboard at `http://127.0.0.1:8765/metrics/`, independently of the documentation server on port 8000. It fetches the published measurements once; refresh the page to see source edits. Stop it with `Ctrl+C`, or choose another port with `just serve-metrics 8766`.
+    Opens the metrics dashboard at `http://127.0.0.1:4401/metrics/`, independently of the documentation server on port 4400. It fetches the published measurements once; refresh the page to see source edits. Stop it with `Ctrl+C`, or choose another port with `just serve-metrics 4410`.
     ```bash
     just serve-metrics
     ```

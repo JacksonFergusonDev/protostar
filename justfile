@@ -240,8 +240,8 @@ serve: sync
     @printf "\n{{ blue }}=== Launching Zensical Server ==={{ nc }}\n"
     uv run zensical serve -o
 
-# Preview the metrics dashboard on port 8765, separately from the docs server
-serve-metrics port="8765":
+# Preview the metrics dashboard on port 4401, separately from the docs server
+serve-metrics port="4401":
     uv run python -m scripts.serve_metrics --port {{ port }}
 
 # Refresh release inputs, offer to wait for CI and Nightly, and verify local builds before bumping

@@ -1,4 +1,5 @@
 [project]
+dev_addr = "127.0.0.1:4400"
 site_name = "Protostar"
 site_description = "Simple Python project scaffolding that understands your tools."
 site_url = "https://protostar.jacksonferguson.me/"

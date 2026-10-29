@@ -24,7 +24,7 @@ from scripts.prepare_pages import (
     render_metrics_index,
 )
 
-DEFAULT_PORT = 8765
+DEFAULT_PORT = 4401
 DATA_URL = "https://protostar.jacksonferguson.me/metrics/"
 # Published once the first nightly comparison is recorded; until then the
 # dashboard says no runs are published, and so does the preview.
@@ -118,7 +118,7 @@ def main() -> None:
         except OSError as error:
             report(f"Cannot start the metrics preview: {error}", stderr=True)
             report(
-                "Stop the other preview, or choose a port with `just serve-metrics 8766`.",
+                "Stop the other preview, or choose a port with `just serve-metrics 4410`.",
                 stderr=True,
             )
             sys.exit(1)
