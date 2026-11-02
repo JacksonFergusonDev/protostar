@@ -3936,5 +3936,184 @@
         "status": "steady"
       }
     }
+  },
+  {
+    "commit": "475abcfe0f000eb7a776ec7c1945e71ab5b0577f",
+    "baseline": "d9fc856e8d1eca29f0cff9e16854b04551aa72db",
+    "date": "2026-11-02T22:53:50+00:00",
+    "run_id": "41540258541",
+    "os": "ubuntu-latest",
+    "python": "3.14.4",
+    "runs": 10,
+    "scenarios": {
+      "diff": {
+        "commands": 0.0,
+        "cpu": 362.063,
+        "protostar": 386.624,
+        "wall": 386.624,
+        "change": {
+          "ratio": 0.991,
+          "low": 0.9625,
+          "high": 1.0186
+        },
+        "status": "steady"
+      },
+      "editor": {
+        "commands": 0.0,
+        "cpu": 607.433,
+        "protostar": 803.666,
+        "wall": 803.666,
+        "change": {
+          "ratio": 0.9905,
+          "low": 0.9505,
+          "high": 1.0358
+        },
+        "status": "steady"
+      },
+      "help-init": {
+        "commands": 0.0,
+        "cpu": 118.467,
+        "protostar": 148.694,
+        "wall": 148.694,
+        "change": {
+          "ratio": 1.0079,
+          "low": 0.9901,
+          "high": 1.0314
+        },
+        "status": "steady"
+      },
+      "init-api": {
+        "commands": 356.479,
+        "cpu": 334.669,
+        "protostar": 404.997,
+        "wall": 764.269,
+        "change": {
+          "ratio": 0.9955,
+          "low": 0.9665,
+          "high": 1.0236
+        },
+        "status": "steady"
+      },
+      "init-astro": {
+        "commands": 1793.525,
+        "cpu": 211.198,
+        "protostar": 310.458,
+        "wall": 2101.988,
+        "change": {
+          "ratio": 0.9983,
+          "low": 0.9652,
+          "high": 1.0378
+        },
+        "status": "steady"
+      },
+      "init-cli": {
+        "commands": 659.513,
+        "cpu": 491.863,
+        "protostar": 594.032,
+        "wall": 1259.059,
+        "change": {
+          "ratio": 1.0283,
+          "low": 1.016,
+          "high": 1.0532
+        },
+        "status": "steady"
+      },
+      "init-dry-run": {
+        "commands": 0.0,
+        "cpu": 282.14,
+        "protostar": 315.812,
+        "wall": 315.812,
+        "change": {
+          "ratio": 1.0013,
+          "low": 0.9949,
+          "high": 1.0207
+        },
+        "status": "steady"
+      },
+      "init-lib": {
+        "commands": 647.275,
+        "cpu": 478.616,
+        "protostar": 579.93,
+        "wall": 1238.1,
+        "change": {
+          "ratio": 1.0081,
+          "low": 0.9838,
+          "high": 1.0181
+        },
+        "status": "steady"
+      },
+      "init-ml": {
+        "commands": 2040.306,
+        "cpu": 217.941,
+        "protostar": 329.808,
+        "wall": 2378.13,
+        "change": {
+          "ratio": 0.9845,
+          "low": 0.9679,
+          "high": 1.0114
+        },
+        "status": "steady"
+      },
+      "status": {
+        "commands": 0.0,
+        "cpu": 376.083,
+        "protostar": 410.124,
+        "wall": 410.124,
+        "change": {
+          "ratio": 1.0025,
+          "low": 0.9896,
+          "high": 1.0114
+        },
+        "status": "steady"
+      },
+      "status-human": {
+        "commands": 0.0,
+        "cpu": 370.86,
+        "protostar": 400.784,
+        "wall": 400.784,
+        "change": {
+          "ratio": 1.0185,
+          "low": 0.986,
+          "high": 1.036
+        },
+        "status": "steady"
+      },
+      "sync": {
+        "commands": 0.0,
+        "cpu": 383.638,
+        "protostar": 417.655,
+        "wall": 417.655,
+        "change": {
+          "ratio": 0.9975,
+          "low": 0.9951,
+          "high": 1.008
+        },
+        "status": "steady"
+      },
+      "sync-check": {
+        "commands": 0.0,
+        "cpu": 387.874,
+        "protostar": 421.742,
+        "wall": 421.742,
+        "change": {
+          "ratio": 0.9969,
+          "low": 0.989,
+          "high": 1.0117
+        },
+        "status": "steady"
+      },
+      "version": {
+        "commands": 0.0,
+        "cpu": 105.725,
+        "protostar": 131.256,
+        "wall": 131.256,
+        "change": {
+          "ratio": 0.9933,
+          "low": 0.9741,
+          "high": 1.0202
+        },
+        "status": "steady"
+      }
+    }
   }
 ]
