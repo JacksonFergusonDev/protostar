@@ -22,7 +22,7 @@ from protostar.errors import (
 from protostar.executor import SystemExecutor
 from protostar.ide import IDEType
 from protostar.intent import TemplateOrigin, TemplateReference, validate_configuration
-from protostar.manifest import EnvironmentManifest
+from protostar.manifest import EnvironmentManifest, ProjectMetadata
 from protostar.modules import DockerModule
 from protostar.network import GitHost, RemoteSource, RemoteTemplate
 from protostar.recipe import (
@@ -1401,7 +1401,7 @@ def test_a_recipe_reports_only_a_source_path_it_has():
 
 def test_an_established_recipe_records_the_metadata_it_was_given(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    metadata = {
+    metadata: ProjectMetadata = {
         "description": "A thing",
         "author_name": "Ada",
         "author_email": "ada@example.com",
@@ -1598,12 +1598,15 @@ def remote_calls(mocker):
     return mocker.Mock(
         list_refs=mocker.patch("protostar.network.list_refs", return_value=listing),
         acquire_remote=mocker.patch(
-            "protostar.network.acquire_remote", return_value="bytes"
+            "protostar.network.acquire_remote", return_value=mocker.sentinel.bytes
         ),
         from_remote=mocker.patch(
-            "protostar.config.TemplateSource.from_remote", return_value="loaded"
+            "protostar.config.TemplateSource.from_remote",
+            return_value=mocker.sentinel.loaded,
         ),
         listing=listing,
+        loaded=mocker.sentinel.loaded,
+        bytes=mocker.sentinel.bytes,
     )
 
 
@@ -1612,13 +1615,13 @@ FORGE_REMOTE = RemoteSource(FORGE, GitHost.GITHUB, "sub")
 
 
 def test_a_ref_is_resolved_through_the_repositorys_refs(remote_calls, tmp_path):
-    assert FORGE_SOURCE.acquire(tmp_path) == "loaded"
+    assert FORGE_SOURCE.acquire(tmp_path) is remote_calls.loaded
 
     remote_calls.list_refs.assert_called_once_with(FORGE_REMOTE)
     remote_calls.listing.resolve.assert_called_once_with("v1", FORGE)
     remote_calls.acquire_remote.assert_called_once_with(FORGE_REMOTE, "resolved-sha")
     remote_calls.from_remote.assert_called_once_with(
-        RemoteTemplate(FORGE_REMOTE, "bytes", "v1", "resolved-sha")
+        RemoteTemplate(FORGE_REMOTE, remote_calls.bytes, "v1", "resolved-sha")
     )
 
 
@@ -1663,27 +1666,30 @@ def test_a_moved_ref_or_missing_commit_is_resolved_again(
 
 def test_a_source_with_no_ref_is_fetched_without_a_revision(remote_calls, tmp_path):
     source = RecipeSource(TemplateOrigin.REMOTE, PLAIN_URL)
+    remote = RemoteSource(PLAIN_URL)
 
     source.acquire(tmp_path)
 
     remote_calls.list_refs.assert_not_called()
-    remote_calls.acquire_remote.assert_called_once_with(source.remote, None)
+    remote_calls.acquire_remote.assert_called_once_with(remote, None)
     remote_calls.from_remote.assert_called_once_with(
-        RemoteTemplate(source.remote, "bytes", None, None)
+        RemoteTemplate(remote, remote_calls.bytes, None, None)
     )
 
 
 def test_a_local_source_is_loaded_from_under_the_project_root(mocker, tmp_path):
-    load = mocker.patch("protostar.config.TemplateSource.load", return_value="loaded")
+    load = mocker.patch(
+        "protostar.config.TemplateSource.load", return_value=mocker.sentinel.loaded
+    )
 
     result = RecipeSource(TemplateOrigin.LOCAL, "t/protostar.toml").acquire(tmp_path)
 
-    assert result == "loaded"
+    assert result is mocker.sentinel.loaded
     load.assert_called_once_with(str(tmp_path / "t/protostar.toml"), built_in=None)
 
 
 def test_a_built_in_source_is_loaded_from_the_packaged_templates(mocker, tmp_path):
-    load = mocker.patch("protostar.config.TemplateSource.load", return_value="loaded")
+    load = mocker.patch("protostar.config.TemplateSource.load")
 
     RecipeSource(TemplateOrigin.BUILT_IN, BUILT_IN).acquire(tmp_path)
 
@@ -1701,7 +1707,11 @@ def inspected(mocker):
     """Records what ``inspect`` examines and what it then acquires."""
     return mocker.Mock(
         capture=mocker.patch("protostar.review_workspace.capture_node"),
-        acquire=mocker.patch.object(RecipeSource, "acquire", return_value="acquired"),
+        acquire=mocker.patch.object(
+            RecipeSource, "acquire", return_value=mocker.sentinel.acquired
+        ),
+        acquired=mocker.sentinel.acquired,
+        listing=mocker.sentinel.listing,
     )
 
 
@@ -1720,9 +1730,9 @@ def test_inspecting_a_template_directory_examines_every_file_it_ships(
     source = RecipeSource(TemplateOrigin.LOCAL, "tpl")
     recorded = TemplateReference(TemplateOrigin.LOCAL, "tpl", "digest")
 
-    result = source.inspect(tmp_path, recorded, "listing")
+    result = source.inspect(tmp_path, recorded, inspected.listing)
 
-    assert result == "acquired"
+    assert result is inspected.acquired
     seen = captured(inspected)
     assert seen[:3] == [directory, directory / "protostar.toml", directory / "template"]
     assert sorted(seen[3:]) == sorted(
@@ -1732,7 +1742,7 @@ def test_inspecting_a_template_directory_examines_every_file_it_ships(
             directory / "template" / "pkg" / "b.txt",
         ]
     )
-    inspected.acquire.assert_called_once_with(tmp_path, recorded, "listing")
+    inspected.acquire.assert_called_once_with(tmp_path, recorded, inspected.listing)
 
 
 def test_inspecting_a_template_file_examines_the_template_beside_it(
@@ -1762,10 +1772,11 @@ def test_inspecting_a_built_in_examines_its_packaged_files(inspected, tmp_path):
 
 
 def test_inspecting_a_remote_source_examines_nothing_on_disk(inspected, tmp_path):
-    assert FORGE_SOURCE.inspect(tmp_path, None, "listing") == "acquired"
+    result = FORGE_SOURCE.inspect(tmp_path, None, inspected.listing)
 
+    assert result is inspected.acquired
     inspected.capture.assert_not_called()
-    inspected.acquire.assert_called_once_with(tmp_path, None, "listing")
+    inspected.acquire.assert_called_once_with(tmp_path, None, inspected.listing)
 
 
 def test_removing_a_recipe_keeps_the_header_of_another_tool():
