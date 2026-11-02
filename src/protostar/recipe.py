@@ -92,7 +92,7 @@ def validate_tools(enabled: set[Tool]) -> None:
                 hint="Remove either --pre-commit or --prek from your selection.",
             )
     for tool, required in TOOL_REQUIREMENTS.items():
-        if tool in enabled and not required <= enabled:
+        if tool in enabled and required - enabled:
             raise ConfigurationError(
                 "Read the Docs scaffolding requires the Zensical module to be enabled.",
                 hint="Enable the Zensical documentation module (--zensical or [tooling] zensical = true) or remove the Read the Docs module.",
@@ -474,11 +474,10 @@ def decode_recipe(data: object) -> ProjectRecipe:
 
             try:
                 request = parse_remote_url(locator)
+                # A URL that names a ref or a path is longer than its repository's
+                # canonical locator, so the first test rejects it.
                 if (
                     request.source.locator != locator
-                    or request.source.path
-                    or request.ref is not None
-                    or request.ref_and_path is not None
                     or (
                         request.source.versioned
                         and (ref is None or template_path(path) != path)
@@ -648,15 +647,24 @@ def edit_recipe(content: str, recipe: ProjectRecipe) -> str:
     if "protostar" not in tool_data and not any(s.path == ("tool",) for s in sections):
         tool_indexes = [i for i, s in enumerate(sections) if s.path[:1] == ("tool",)]
         index = tool_indexes[-1] + 1 if tool_indexes else len(sections)
+        body = _edit_recipe_text("", desired)
         insert_section(
             sections,
-            Section(("tool", "protostar"), _edit_recipe_text("", desired)),
+            # join_sections reads a section's text, never its path.
+            Section(("tool", "protostar"), body),  # pragma: no mutate
             index,
         )
         return join_sections(sections)
     # Out-of-order recipe tables, or a [tool] that is not a table of tables: edit each
     # leaf where it stands.
-    tool = document.setdefault("tool", tomlkit.table())
+    # Both paths here start from a [tool] that exists: it holds a recipe, or a
+    # section of its own keys.
+    tool = document["tool"]
+    if isinstance(tool, tomlkit.items.InlineTable):
+        raise ConfigurationError(
+            "Cannot record a [tool.protostar] recipe inside an inline `tool` table.",
+            hint="Write `tool = { ... }` as [tool.<name>] tables, then run Protostar again.",
+        )
     _update_recipe(tool.setdefault("protostar", tomlkit.table()), desired)
     return tomlkit.dumps(document)
 
@@ -679,7 +687,9 @@ def remove_recipe(content: str) -> str:
     has_other_tool = any(
         (section.path == ("tool",) and bool(section.body.strip()))
         or (
-            len(section.path) > 1
+            # A section for [tool] itself always has a body, so the first test
+            # takes it and a path of one never reaches this one.
+            len(section.path) > 1  # pragma: no mutate
             and section.path[0] == "tool"
             and section.path[1] not in {"", "hatch"}
         )
@@ -691,13 +701,12 @@ def remove_recipe(content: str) -> str:
     for section in sections:
         if not section.tail:
             continue
+        # A tail always holds a managed line, so one with no decoration comes back
+        # unchanged.
         lines = section.tail.splitlines(keepends=True)
-        if any(line.strip() in decoration for line in lines):
-            section.tail = "".join(
-                line for line in lines if line.strip() not in decoration
-            )
-            if not section.tail.strip():
-                section.tail = ""
+        section.tail = "".join(line for line in lines if line.strip() not in decoration)
+        if not section.tail.strip():
+            section.tail = ""
     return join_sections(sections)
 
 
@@ -719,7 +728,10 @@ def _edit_recipe_text(text: str, desired: dict[str, Any]) -> str:
     section, so tables sit in schema order with one blank line between them.
     """
     document = tomlkit.parse(text)
-    tool = document.setdefault("tool", tomlkit.table(is_super_table=True))
+    # A table already in the text is returned as it is, and compose_children lays
+    # out the headers of a new one, so a super table or not changes no byte.
+    new_tool = tomlkit.table(is_super_table=True)  # pragma: no mutate
+    tool = document.setdefault("tool", new_tool)
     table = tool.setdefault("protostar", tomlkit.table())
     before = {str(key) for key in table}
     _update_recipe(table, desired)

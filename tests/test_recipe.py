@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 
 from protostar.config import TemplateBlueprint, UserConfig
+from protostar.documents.pyproject_layout import BANNER
 from protostar.errors import (
     ConfigurationError,
     FileSystemError,
@@ -20,9 +21,10 @@ from protostar.errors import (
 )
 from protostar.executor import SystemExecutor
 from protostar.ide import IDEType
-from protostar.intent import TemplateOrigin, validate_configuration
-from protostar.manifest import EnvironmentManifest
+from protostar.intent import TemplateOrigin, TemplateReference, validate_configuration
+from protostar.manifest import EnvironmentManifest, ProjectMetadata
 from protostar.modules import DockerModule
+from protostar.network import GitHost, RemoteSource, RemoteTemplate
 from protostar.recipe import (
     RecipeIntent,
     RecipeSource,
@@ -32,8 +34,11 @@ from protostar.recipe import (
     edit_recipe,
     establish_recipe,
     read_recipe,
+    remove_recipe,
     select_tooling,
+    validate_tools,
 )
+from protostar.templates import builtin_template_aliases
 
 
 def recipe():
@@ -1147,3 +1152,673 @@ def test_an_unformattable_new_pyproject_is_reported_as_a_diagnostic(
     assert "protostar" in written["tool"]
     messages = [event.message for event in executor.diagnostics]
     assert any("Left pyproject.toml unformatted" in m for m in messages), messages
+
+
+# ---- what a recorded recipe may say, and exactly how it fails ---- #
+
+INVALID_RECIPE_HINT = (
+    "Correct the schema-v1 recipe fields; see docs/usage/project-recipes.md."
+)
+FORGE = "https://github.com/acme/template"
+PLAIN_URL = "https://example.com/acme/protostar.toml"
+
+
+def template_recipe(**source: Any) -> dict[str, Any]:
+    """Returns recipe data whose template source is exactly ``source``."""
+    return recipe().to_dict() | {"mode": "template", "source": source}
+
+
+def recipe_with_source(source: object) -> dict[str, Any]:
+    """Returns recipe data for a template whose source is any value."""
+    return recipe().to_dict() | {"mode": "template", "source": source}
+
+
+def assert_invalid(data: object) -> None:
+    with pytest.raises(ConfigurationError) as error:
+        decode_recipe(data)
+    assert str(error.value) == "Invalid [tool.protostar] project recipe."
+    assert error.value.hint == INVALID_RECIPE_HINT
+
+
+def test_an_invalid_recipe_says_what_to_correct():
+    assert_invalid("not a table")
+
+
+def test_a_tooling_only_recipe_has_no_source():
+    assert decode_recipe(recipe().to_dict()).source is None
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        {"origin": "remote", "locator": FORGE, "ref": "v1"},
+        {"origin": "remote", "locator": FORGE, "path": "sub", "ref": "v1"},
+        {"origin": "remote", "locator": PLAIN_URL},
+        {"origin": "local", "locator": "templates/mine"},
+        {"origin": "built-in", "locator": next(iter(builtin_template_aliases()))},
+    ],
+)
+def test_every_kind_of_source_decodes_as_recorded(source):
+    decoded = decode_recipe(template_recipe(**source)).source
+
+    assert decoded == RecipeSource(
+        TemplateOrigin(source["origin"]),
+        source["locator"],
+        source.get("path", ""),
+        source.get("ref"),
+    )
+
+
+BUILT_IN = next(iter(builtin_template_aliases()))
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "not a table",
+        {"origin": "local"},
+        {"locator": "x"},
+        {"origin": "local", "locator": "x", "extra": 1},
+        {"origin": "local", "locator": 5},
+        {"origin": "local", "locator": ""},
+        {"origin": "nowhere", "locator": "x"},
+        {"origin": "remote", "locator": FORGE, "path": 1, "ref": "v1"},
+        {"origin": "remote", "locator": FORGE, "ref": 1},
+        {"origin": "remote", "locator": FORGE, "ref": ""},
+        {"origin": "local", "locator": "x", "path": "sub"},
+        {"origin": "local", "locator": "x", "ref": "v1"},
+        {"origin": "built-in", "locator": BUILT_IN, "path": "sub"},
+        {"origin": "built-in", "locator": BUILT_IN, "ref": "v1"},
+        {"origin": "local", "locator": "a/../b"},
+        {"origin": "local", "locator": "a\\b"},
+        {"origin": "local", "locator": "a\x00b"},
+        {"origin": "local", "locator": "C:b"},
+        {"origin": "remote", "locator": FORGE + ".git", "ref": "v1"},
+        {"origin": "remote", "locator": FORGE},
+        {"origin": "remote", "locator": FORGE, "path": "./sub", "ref": "v1"},
+        {"origin": "remote", "locator": FORGE + "/tree/v1", "ref": "v1"},
+        {"origin": "remote", "locator": FORGE + "/tree/main/sub", "ref": "v1"},
+        {"origin": "remote", "locator": FORGE + "/blob/main/protostar.toml"},
+        {"origin": "remote", "locator": "http://github.com/acme/template"},
+        {"origin": "remote", "locator": PLAIN_URL, "ref": "v1"},
+        {"origin": "remote", "locator": PLAIN_URL, "path": "sub"},
+    ],
+)
+def test_a_malformed_source_is_invalid(source):
+    assert_invalid(recipe_with_source(source))
+
+
+def test_a_source_must_be_present_for_a_template_recipe():
+    assert_invalid(recipe().to_dict() | {"mode": "template"})
+
+
+def test_a_forge_source_that_names_its_path_decodes_it():
+    source = decode_recipe(
+        template_recipe(origin="remote", locator=FORGE, path="sub", ref="v1")
+    ).source
+
+    assert source is not None
+    assert source.path == "sub"
+    assert source.ref == "v1"
+
+
+@pytest.mark.parametrize(
+    "context",
+    [
+        {"CURRENT_YEAR": "20x6"},
+        {"CURRENT_YEAR": "202"},
+        {"PYTHON_VERSION": "3.99"},
+    ],
+)
+def test_the_recorded_context_must_be_well_formed(context):
+    data = recipe().to_dict()
+    data["context"] = data["context"] | context
+
+    assert_invalid(data)
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        ["fast"],
+        {"1st": True},
+        {"fast": 1},
+        {"fast": "Not A Choice!"},
+        {"fast": ["x"]},
+    ],
+)
+def test_recorded_options_are_booleans_or_choices(options):
+    assert_invalid(recipe().to_dict() | {"options": options})
+
+
+def test_recorded_options_that_are_booleans_or_choices_decode():
+    decoded = decode_recipe(
+        recipe().to_dict() | {"options": {"fast": True, "mode": "strict"}}
+    )
+
+    assert dict(decoded.options) == {"fast": True, "mode": "strict"}
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        {"description": ["a"]},
+        {"description": 5},
+        {"license": 5},
+        {"docker_port": ["8000"]},
+        {"docker_port": True},
+        {"docker_port": 3.5},
+        {"supported_os": [1]},
+        {"supported_os": ["Linux", 1]},
+        {"supported_os": {"os": "Linux"}},
+        {"supported_os": 5},
+        {"supported_os": "Linux"},
+        {"unknown": "x"},
+        "description",
+    ],
+)
+def test_recorded_metadata_has_the_shape_of_its_key(metadata):
+    data = recipe().to_dict()
+    data["metadata"] = metadata
+
+    assert_invalid(data)
+
+
+def test_recorded_metadata_decodes_with_each_shape():
+    data = recipe().to_dict()
+    data["metadata"] = {
+        "description": "A thing",
+        "docker_port": 8080,
+        "supported_os": ["Linux", "macOS"],
+    }
+
+    decoded = decode_recipe(data)
+
+    assert dict(decoded.metadata) == {
+        "description": "A thing",
+        "docker_port": 8080,
+        "supported_os": ("Linux", "macOS"),
+    }
+
+
+def test_a_recorded_tier_needs_a_template():
+    assert_invalid(recipe().to_dict() | {"tier": "strict"})
+
+
+def test_incompatible_tools_say_how_to_choose():
+    with pytest.raises(ConfigurationError) as error:
+        validate_tools({Tool.PRE_COMMIT, Tool.PREK})
+
+    assert str(error.value) == (
+        "Cannot use both '--pre-commit' and '--prek' simultaneously. "
+        "Please choose one git hook manager."
+    )
+    assert error.value.hint == (
+        "Remove either --pre-commit or --prek from your selection."
+    )
+
+
+def test_a_tool_whose_requirement_is_missing_says_what_to_enable():
+    with pytest.raises(ConfigurationError) as error:
+        validate_tools({Tool.READTHEDOCS})
+
+    assert str(error.value) == (
+        "Read the Docs scaffolding requires the Zensical module to be enabled."
+    )
+    assert error.value.hint == (
+        "Enable the Zensical documentation module (--zensical or [tooling] "
+        "zensical = true) or remove the Read the Docs module."
+    )
+
+
+def test_a_tool_with_its_requirement_is_accepted():
+    validate_tools({Tool.READTHEDOCS, Tool.ZENSICAL})
+    validate_tools({Tool.PRE_COMMIT})
+    validate_tools(set())
+
+
+def test_unknown_template_flags_name_every_valid_tool():
+    with pytest.raises(ConfigurationError) as error:
+        recipe().selections({"imaginary": True})
+
+    assert error.value.hint == (
+        "Use recognized tool names with boolean selections: "
+        + ", ".join(sorted(tool.value for tool in Tool))
+        + "."
+    )
+
+
+def test_a_recipe_reports_only_a_source_path_it_has():
+    plain = {"origin": "remote", "locator": FORGE, "ref": "v1"}
+    nested = plain | {"path": "sub"}
+
+    assert decode_recipe(template_recipe(**plain)).to_dict()["source"] == plain
+    assert decode_recipe(template_recipe(**nested)).to_dict()["source"] == nested
+
+
+# ---- establishing a recipe ---- #
+
+
+def test_an_established_recipe_records_the_metadata_it_was_given(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    metadata: ProjectMetadata = {
+        "description": "A thing",
+        "author_name": "Ada",
+        "author_email": "ada@example.com",
+    }
+
+    established = establish_recipe(UserConfig(), RecipeIntent(metadata=metadata))
+
+    assert dict(established.metadata) == metadata
+
+
+def test_an_established_recipe_follows_the_configured_python(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    established = establish_recipe(UserConfig(python_version="3.11"))
+
+    assert established.python == "3.11"
+    assert dict(established.context)["PYTHON_VERSION"] == "3.11"
+
+
+def test_an_unnamed_author_is_a_placeholder(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    established = establish_recipe(UserConfig())
+
+    assert dict(established.context)["AUTHOR_NAME"] == "your-name"
+
+
+def test_a_directory_name_is_normalized_only_in_a_new_unnamed_project(
+    tmp_path, monkeypatch
+):
+    project = tmp_path / "My_Project"
+    project.mkdir()
+    monkeypatch.chdir(project)
+
+    def name(metadata=None):
+        intent = RecipeIntent(metadata=metadata)
+        return dict(establish_recipe(UserConfig(), intent).context)["PROJECT_NAME"]
+
+    assert name() == "my-project"
+    assert name({"project_name": "My_Project"}) == "My_Project"
+    assert name({"name": "My_Project"}) == "My_Project"
+    (project / "pyproject.toml").write_text('[project]\nname = "My_Project"\n')
+    assert name() == "My_Project"
+
+
+def test_an_established_recipe_records_the_source_path(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    reference = TemplateReference(
+        TemplateOrigin.REMOTE, FORGE, "digest", path="sub", ref="v1"
+    )
+
+    established = establish_recipe(UserConfig(), RecipeIntent(reference=reference))
+
+    assert established.source == RecipeSource(TemplateOrigin.REMOTE, FORGE, "sub", "v1")
+
+
+# ---- reading, editing, and removing the recorded recipe ---- #
+
+
+def test_an_unsupported_recipe_target_is_named(tmp_path):
+    target = tmp_path / "real.toml"
+    target.write_text("")
+    link = tmp_path / "pyproject.toml"
+    try:
+        link.symlink_to(target)
+    except OSError:
+        pytest.skip("symlinks are unavailable")
+
+    with pytest.raises(UnsupportedFilesystemNodeError) as error:
+        read_recipe(link)
+
+    assert error.value.path == link
+    assert error.value.node_type == "unsupported recipe target"
+
+
+def test_a_file_without_a_recipe_reads_as_none(tmp_path):
+    path = tmp_path / "pyproject.toml"
+
+    assert read_recipe(path) is None
+    path.write_text('[project]\nname = "x"\n')
+    assert read_recipe(path) is None
+    path.write_text("[tool.other]\nx = 1\n")
+    assert read_recipe(path) is None
+
+
+def test_a_tool_entry_that_is_not_a_table_is_not_a_recipe(tmp_path):
+    path = tmp_path / "pyproject.toml"
+    path.write_text("tool = 5\n")
+
+    with pytest.raises(ConfigurationError, match="Invalid"):
+        read_recipe(path)
+
+
+def test_a_recipe_can_be_written_into_a_file_with_no_tool_tables():
+    written = edit_recipe('[project]\nname = "x"\n', recipe())
+
+    assert written.startswith('[project]\nname = "x"\n\n[tool.protostar]\n')
+    assert read_recipe_text(written) == recipe()
+
+
+def read_recipe_text(text: str):
+    return decode_recipe(tomllib.loads(text)["tool"]["protostar"])
+
+
+@pytest.mark.parametrize("content", ["tool = 5\n", "[tool.protostar]\nversion = 2\n"])
+def test_editing_refuses_a_recorded_recipe_it_cannot_read(content):
+    with pytest.raises(ConfigurationError, match="Invalid"):
+        edit_recipe(content, recipe())
+
+
+def test_editing_a_recipe_leaves_its_tables_in_the_users_order():
+    written = edit_recipe("", recipe())
+    head, *tables = written.split("\n[tool.protostar.")
+    reordered = "\n[tool.protostar.".join([head, *reversed(tables)])
+    assert reordered != written
+
+    edited = edit_recipe(reordered, replace(recipe(), ide=IDEType.VSCODE))
+
+    assert edited == reordered.replace('ide = "none"', 'ide = "vscode"')
+
+
+def test_a_recipe_is_added_beside_a_tool_table_that_holds_its_own_keys():
+    written = edit_recipe("[tool]\nfoo = 1\n", recipe())
+
+    assert written.startswith("[tool]\nfoo = 1\n\n[tool.protostar]\n")
+
+
+def test_removing_a_recipe_from_a_file_without_one_changes_nothing():
+    for content in ("", '[project]\nname = "x"\n', "[tool.other]\nx = 1\n"):
+        assert remove_recipe(content) == content
+
+
+@pytest.mark.parametrize("content", ["tool = 5\n", "[tool\n"])
+def test_removing_a_recipe_from_unreadable_toml_is_invalid(content):
+    with pytest.raises(ConfigurationError, match="Invalid"):
+        remove_recipe(content)
+
+
+def test_removing_the_only_tool_removes_the_banner_with_it():
+    banner = "\n".join(BANNER)
+    content = (
+        f'[project]\nname = "x"\n\n{banner}\n\n# ---- Protostar ---- #\n\n'
+        "[tool.hatch.build]\nx = 1\n"
+    )
+
+    removed = remove_recipe(edit_recipe(content, recipe()))
+
+    assert removed == '[project]\nname = "x"\n[tool.hatch.build]\nx = 1\n\n'
+
+
+def test_removing_a_recipe_keeps_the_banner_while_another_tool_remains():
+    banner = "\n".join(BANNER)
+    content = (
+        f'[project]\nname = "x"\n\n{banner}\n\n# ---- Protostar ---- #\n\n'
+        "[tool.ruff]\nline-length = 88\n"
+    )
+
+    removed = remove_recipe(edit_recipe(content, recipe()))
+
+    assert removed == (
+        f'[project]\nname = "x"\n\n{banner}\n\n\n[tool.ruff]\nline-length = 88\n\n'
+    )
+
+
+def test_removing_a_recipe_finds_its_marker_after_sections_without_one():
+    content = (
+        '[project]\nname = "x"\n\n[tool.ruff]\nx = 1\n\n'
+        "# ---- Protostar ---- #\n[tool.protostar]\nversion = 1\n"
+    )
+
+    assert remove_recipe(content) == '[project]\nname = "x"\n\n[tool.ruff]\nx = 1\n'
+
+
+def test_removing_a_recipe_keeps_the_line_breaks_between_other_tables():
+    content = (
+        '[project]\nname = "x"\n\n[tool.ruff]\nx = 1\n\n'
+        "# ---- Protostar ---- #\n\n[tool.protostar]\nversion = 1\n\n"
+        "[tool.zzz]\ny = 2\n"
+    )
+
+    assert remove_recipe(content) == (
+        '[project]\nname = "x"\n\n[tool.ruff]\nx = 1\n[tool.zzz]\ny = 2\n'
+    )
+
+
+# ---- acquiring a recorded source ---- #
+
+
+@pytest.fixture
+def remote_calls(mocker):
+    """Fakes the network and the template loader, recording how they are called."""
+    listing = mocker.Mock()
+    listing.resolve.return_value.revision = "resolved-sha"
+    return mocker.Mock(
+        list_refs=mocker.patch("protostar.network.list_refs", return_value=listing),
+        acquire_remote=mocker.patch(
+            "protostar.network.acquire_remote", return_value=mocker.sentinel.bytes
+        ),
+        from_remote=mocker.patch(
+            "protostar.config.TemplateSource.from_remote",
+            return_value=mocker.sentinel.loaded,
+        ),
+        listing=listing,
+        loaded=mocker.sentinel.loaded,
+        bytes=mocker.sentinel.bytes,
+    )
+
+
+FORGE_SOURCE = RecipeSource(TemplateOrigin.REMOTE, FORGE, "sub", "v1")
+FORGE_REMOTE = RemoteSource(FORGE, GitHost.GITHUB, "sub")
+
+
+def test_a_ref_is_resolved_through_the_repositorys_refs(remote_calls, tmp_path):
+    assert FORGE_SOURCE.acquire(tmp_path) is remote_calls.loaded
+
+    remote_calls.list_refs.assert_called_once_with(FORGE_REMOTE)
+    remote_calls.listing.resolve.assert_called_once_with("v1", FORGE)
+    remote_calls.acquire_remote.assert_called_once_with(FORGE_REMOTE, "resolved-sha")
+    remote_calls.from_remote.assert_called_once_with(
+        RemoteTemplate(FORGE_REMOTE, remote_calls.bytes, "v1", "resolved-sha")
+    )
+
+
+def test_a_listing_the_caller_has_is_used_instead_of_fetching(remote_calls, tmp_path):
+    FORGE_SOURCE.acquire(tmp_path, listing=remote_calls.listing)
+
+    remote_calls.list_refs.assert_not_called()
+    remote_calls.listing.resolve.assert_called_once_with("v1", FORGE)
+
+
+def test_the_recorded_commit_is_used_while_the_recipe_names_the_same_ref(
+    remote_calls, tmp_path
+):
+    recorded = TemplateReference(
+        TemplateOrigin.REMOTE, FORGE, "digest", ref="v1", revision="recorded-sha"
+    )
+
+    FORGE_SOURCE.acquire(tmp_path, recorded)
+
+    remote_calls.list_refs.assert_not_called()
+    remote_calls.acquire_remote.assert_called_once_with(FORGE_REMOTE, "recorded-sha")
+
+
+@pytest.mark.parametrize(
+    "recorded",
+    [
+        TemplateReference(
+            TemplateOrigin.REMOTE, FORGE, "digest", ref="v0", revision="old-sha"
+        ),
+        TemplateReference(TemplateOrigin.REMOTE, FORGE, "digest", ref="v1"),
+        TemplateReference(TemplateOrigin.REMOTE, FORGE, "digest", revision="old-sha"),
+    ],
+)
+def test_a_moved_ref_or_missing_commit_is_resolved_again(
+    remote_calls, tmp_path, recorded
+):
+    FORGE_SOURCE.acquire(tmp_path, recorded)
+
+    remote_calls.list_refs.assert_called_once_with(FORGE_REMOTE)
+    remote_calls.acquire_remote.assert_called_once_with(FORGE_REMOTE, "resolved-sha")
+
+
+def test_a_source_with_no_ref_is_fetched_without_a_revision(remote_calls, tmp_path):
+    source = RecipeSource(TemplateOrigin.REMOTE, PLAIN_URL)
+    remote = RemoteSource(PLAIN_URL)
+
+    source.acquire(tmp_path)
+
+    remote_calls.list_refs.assert_not_called()
+    remote_calls.acquire_remote.assert_called_once_with(remote, None)
+    remote_calls.from_remote.assert_called_once_with(
+        RemoteTemplate(remote, remote_calls.bytes, None, None)
+    )
+
+
+def test_a_local_source_is_loaded_from_under_the_project_root(mocker, tmp_path):
+    load = mocker.patch(
+        "protostar.config.TemplateSource.load", return_value=mocker.sentinel.loaded
+    )
+
+    result = RecipeSource(TemplateOrigin.LOCAL, "t/protostar.toml").acquire(tmp_path)
+
+    assert result is mocker.sentinel.loaded
+    load.assert_called_once_with(str(tmp_path / "t/protostar.toml"), built_in=None)
+
+
+def test_a_built_in_source_is_loaded_from_the_packaged_templates(mocker, tmp_path):
+    load = mocker.patch("protostar.config.TemplateSource.load")
+
+    RecipeSource(TemplateOrigin.BUILT_IN, BUILT_IN).acquire(tmp_path)
+
+    (target,), options = load.call_args
+    assert Path(target).name == f"{BUILT_IN}.toml"
+    assert Path(target).parent.name == "templates"
+    assert options == {"built_in": BUILT_IN}
+
+
+# ---- inspecting a source before acquiring it ---- #
+
+
+@pytest.fixture
+def inspected(mocker):
+    """Records what ``inspect`` examines and what it then acquires."""
+    return mocker.Mock(
+        capture=mocker.patch("protostar.review_workspace.capture_node"),
+        acquire=mocker.patch.object(
+            RecipeSource, "acquire", return_value=mocker.sentinel.acquired
+        ),
+        acquired=mocker.sentinel.acquired,
+        listing=mocker.sentinel.listing,
+    )
+
+
+def captured(inspected) -> list[Path]:
+    return [call.args[0] for call in inspected.capture.call_args_list]
+
+
+def test_inspecting_a_template_directory_examines_every_file_it_ships(
+    inspected, tmp_path
+):
+    directory = tmp_path / "tpl"
+    (directory / "template" / "pkg").mkdir(parents=True)
+    (directory / "protostar.toml").write_text("")
+    (directory / "template" / "a.txt").write_text("")
+    (directory / "template" / "pkg" / "b.txt").write_text("")
+    source = RecipeSource(TemplateOrigin.LOCAL, "tpl")
+    recorded = TemplateReference(TemplateOrigin.LOCAL, "tpl", "digest")
+
+    result = source.inspect(tmp_path, recorded, inspected.listing)
+
+    assert result is inspected.acquired
+    seen = captured(inspected)
+    assert seen[:3] == [directory, directory / "protostar.toml", directory / "template"]
+    assert sorted(seen[3:]) == sorted(
+        [
+            directory / "template" / "a.txt",
+            directory / "template" / "pkg",
+            directory / "template" / "pkg" / "b.txt",
+        ]
+    )
+    inspected.acquire.assert_called_once_with(tmp_path, recorded, inspected.listing)
+
+
+def test_inspecting_a_template_file_examines_the_template_beside_it(
+    inspected, tmp_path
+):
+    (tmp_path / "template").mkdir()
+    (tmp_path / "template" / "a.txt").write_text("")
+    (tmp_path / "mine.toml").write_text("")
+
+    RecipeSource(TemplateOrigin.LOCAL, "mine.toml").inspect(tmp_path)
+
+    assert captured(inspected) == [
+        tmp_path / "mine.toml",
+        tmp_path / "template",
+        tmp_path / "template" / "a.txt",
+    ]
+    inspected.acquire.assert_called_once_with(tmp_path, None, None)
+
+
+def test_inspecting_a_built_in_examines_its_packaged_files(inspected, tmp_path):
+    RecipeSource(TemplateOrigin.BUILT_IN, BUILT_IN).inspect(tmp_path)
+
+    first = captured(inspected)[0]
+    assert first.name == f"{BUILT_IN}.toml"
+    assert first.parent.name == "templates"
+    assert tmp_path not in first.parents
+
+
+def test_inspecting_a_remote_source_examines_nothing_on_disk(inspected, tmp_path):
+    result = FORGE_SOURCE.inspect(tmp_path, None, inspected.listing)
+
+    assert result is inspected.acquired
+    inspected.capture.assert_not_called()
+    inspected.acquire.assert_called_once_with(tmp_path, None, inspected.listing)
+
+
+def test_removing_a_recipe_keeps_the_header_of_another_tool():
+    content = (
+        '[project]\nname = "x"\n\n# ---- Ruff ---- #\n[tool.ruff]\nx = 1\n\n'
+        "# ---- Protostar ---- #\n[tool.protostar]\nversion = 1\n"
+    )
+
+    assert remove_recipe(content) == (
+        '[project]\nname = "x"\n\n# ---- Ruff ---- #\n[tool.ruff]\nx = 1\n'
+    )
+
+
+def test_an_inline_tool_table_counts_as_another_tool_when_a_recipe_goes():
+    banner = "\n".join(BANNER)
+    content = (
+        f"tool = {{protostar = {{version = 1}}, x = 1}}\n\n{banner}\n\n"
+        '[project]\nname = "x"\n'
+    )
+
+    removed = remove_recipe(content)
+
+    assert banner in removed
+    assert tomllib.loads(removed)["tool"] == {"x": 1}
+
+
+def test_a_recipe_cannot_be_written_inside_an_inline_tool_table():
+    with pytest.raises(ConfigurationError) as error:
+        edit_recipe("tool = { x = 1 }\n", recipe())
+
+    assert str(error.value) == (
+        "Cannot record a [tool.protostar] recipe inside an inline `tool` table."
+    )
+    assert error.value.hint == (
+        "Write `tool = { ... }` as [tool.<name>] tables, then run Protostar again."
+    )
+
+
+def test_a_recorded_tier_that_names_no_tier_keeps_the_reason():
+    data = template_recipe(origin="local", locator="x") | {"tier": "bogus"}
+
+    with pytest.raises(ConfigurationError) as error:
+        decode_recipe(data)
+
+    assert str(error.value.__cause__) == "The recorded tier names no tier: 'bogus'."
