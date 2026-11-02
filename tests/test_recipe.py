@@ -1765,3 +1765,35 @@ def test_inspecting_a_remote_source_examines_nothing_on_disk(inspected, tmp_path
 
     inspected.capture.assert_not_called()
     inspected.acquire.assert_called_once_with(tmp_path, None, "listing")
+
+
+def test_removing_a_recipe_keeps_the_header_of_another_tool():
+    content = (
+        '[project]\nname = "x"\n\n# ---- Ruff ---- #\n[tool.ruff]\nx = 1\n\n'
+        "# ---- Protostar ---- #\n[tool.protostar]\nversion = 1\n"
+    )
+
+    assert remove_recipe(content) == (
+        '[project]\nname = "x"\n\n# ---- Ruff ---- #\n[tool.ruff]\nx = 1\n'
+    )
+
+
+def test_an_inline_tool_table_counts_as_another_tool_when_a_recipe_goes():
+    banner = "\n".join(BANNER)
+    content = (
+        f"tool = {{protostar = {{version = 1}}, x = 1}}\n\n{banner}\n\n"
+        '[project]\nname = "x"\n'
+    )
+
+    removed = remove_recipe(content)
+
+    assert banner in removed
+    assert tomllib.loads(removed)["tool"] == {"x": 1}
+
+
+def test_a_recipe_cannot_be_written_inside_an_inline_tool_table():
+    with pytest.raises(ConfigurationError) as error:
+        edit_recipe("tool = { x = 1 }\n", recipe())
+
+    assert "inline `tool` table" in str(error.value)
+    assert error.value.hint
