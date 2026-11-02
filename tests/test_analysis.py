@@ -1,5 +1,6 @@
 """Existing-project analysis reads tools and facts without changing anything."""
 
+import configparser
 import importlib.resources
 import json
 import subprocess
@@ -7,12 +8,14 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from packaging.specifiers import Specifier
 
 from protostar.analysis import (
     AnalysisNote,
     Fact,
     NoteKind,
     ProjectAnalysis,
+    ProjectFacts,
     ToolEvidence,
     analyze_project,
 )
@@ -492,3 +495,174 @@ def test_dry_run_json_has_no_analysis_once_a_recipe_exists(capsys, monkeypatch, 
     payload = run_dry_run(capsys, monkeypatch, legacy)
 
     assert payload["analysis"] is None
+
+
+def test_serialization_names_every_key_and_orders_by_tool_then_kind_and_path():
+    analysis = ProjectAnalysis(
+        existing=True,
+        tools=(
+            ToolEvidence(Tool.RUFF, ("second", "first")),
+            ToolEvidence(Tool.JUST, ("justfile",)),
+        ),
+        notes=(
+            AnalysisNote(NoteKind.UNREADABLE, "b.toml"),
+            AnalysisNote(NoteKind.OTHER_WORKFLOW, "z.yml"),
+            AnalysisNote(NoteKind.OTHER_WORKFLOW, "a.yml"),
+        ),
+    )
+
+    assert analysis.to_dict() == {
+        "existing": True,
+        "tools": [
+            {"tool": "just", "sources": ["justfile"]},
+            {"tool": "ruff", "sources": ["second", "first"]},
+        ],
+        "facts": {},
+        "notes": [
+            {"kind": "other-workflow", "path": "a.yml"},
+            {"kind": "other-workflow", "path": "z.yml"},
+            {"kind": "unreadable", "path": "b.toml"},
+        ],
+    }
+
+
+def test_facts_serialize_past_the_ones_not_found():
+    facts = ProjectFacts(description=Fact("A service.", "somewhere"))
+
+    assert facts.to_dict() == {
+        "description": {"value": "A service.", "source": "somewhere"}
+    }
+
+
+def test_every_fact_names_where_it_was_read(legacy):
+    pyproject = "pyproject.toml"
+    classifiers = f"{pyproject} [project].classifiers"
+    requires = f"{pyproject} [project].requires-python"
+    authors = f"{pyproject} [project].authors"
+
+    assert analyze_project(legacy).facts.to_dict() == {
+        "author_email": {"value": "ada@example.com", "source": authors},
+        "author_name": {"value": "Ada Lovelace", "source": authors},
+        "current_year": {"value": "2021", "source": "LICENSE"},
+        "description": {
+            "value": "A legacy service.",
+            "source": f"{pyproject} [project].description",
+        },
+        "github_username": {"value": "ada", "source": f"{pyproject} [project.urls]"},
+        "license": {"value": "MIT", "source": classifiers},
+        "minimum_python": {"value": "3.12", "source": requires},
+        "python_version": {"value": "3.12", "source": requires},
+        "supported_os": {"value": ["MacOS", "Linux"], "source": classifiers},
+    }
+
+
+def test_a_license_file_names_its_file_as_the_source(tmp_path):
+    write(tmp_path, {"COPYING": "MIT License\n\nCopyright (c) 2019 Ada\n"})
+
+    facts = analyze_project(tmp_path).facts
+
+    assert fact(facts.license) == Fact(LicenseType.MIT, "COPYING")
+    assert fact(facts.current_year) == Fact("2019", "COPYING")
+
+
+def test_files_are_read_as_utf8(tmp_path, mocker):
+    write(tmp_path, {"pyproject.toml": "[project]\nname = 'x'\n"})
+    read = mocker.spy(Path, "read_text")
+
+    analyze_project(tmp_path)
+
+    assert read.call_count
+    assert {call.kwargs.get("encoding") for call in read.call_args_list} == {"utf-8"}
+
+
+def test_duplicate_ini_options_do_not_hide_a_section(tmp_path):
+    write(tmp_path, {"setup.cfg": "[mypy]\nstrict = true\nstrict = false\n"})
+
+    analysis = analyze_project(tmp_path)
+
+    assert sources(analysis) == {Tool.MYPY: ("setup.cfg [mypy]",)}
+    assert analysis.notes == ()
+
+
+def test_ini_files_are_parsed_leniently(tmp_path, mocker):
+    write(tmp_path, {"setup.cfg": "[mypy]\nstrict = true\n"})
+    parser = mocker.spy(configparser, "ConfigParser")
+
+    analyze_project(tmp_path)
+
+    assert parser.call_args.kwargs["strict"] is False
+
+
+def test_requirements_skip_what_is_not_a_requirement_and_read_on(tmp_path):
+    write(
+        tmp_path,
+        {
+            "pyproject.toml": """\
+[project]
+name = "x"
+
+[dependency-groups]
+dev = ["not a requirement ==", { include-group = "docs" }, "ruff"]
+""",
+        },
+    )
+
+    assert set(sources(analyze_project(tmp_path))) == {Tool.RUFF}
+
+
+def test_the_first_author_with_the_field_supplies_it(tmp_path):
+    write(
+        tmp_path,
+        {
+            "pyproject.toml": """\
+[project]
+authors = ["Ada <ada@example.com>", { name = "Grace Hopper" }]
+""",
+        },
+    )
+
+    facts = analyze_project(tmp_path).facts
+
+    assert value(facts.author_name) == "Grace Hopper"
+    assert facts.author_email is None
+
+
+def test_a_pin_without_a_version_is_no_version(tmp_path):
+    write(tmp_path, {".python-version": "system\n"})
+
+    facts = analyze_project(tmp_path).facts
+
+    assert facts.python_version is None
+
+
+def test_the_lower_bound_is_found_after_other_specifiers(tmp_path, mocker):
+    # A specifier set has no order, so fix one that puts the bound last.
+    mocker.patch(
+        "protostar.analysis.SpecifierSet",
+        return_value=[Specifier("!=3.9"), Specifier("<4"), Specifier(">=3.12")],
+    )
+    write(tmp_path, {"pyproject.toml": '[project]\nrequires-python = ">=3.12"\n'})
+
+    assert value(analyze_project(tmp_path).facts.minimum_python) == "3.12"
+
+
+def test_a_license_header_is_read_from_its_first_three_lines(tmp_path):
+    write(tmp_path, {"LICENSE": "GNU\nGENERAL PUBLIC\nLICENSE\nVersion 3\n"})
+
+    assert analyze_project(tmp_path).facts.license is None
+
+
+def test_workflow_files_with_either_yaml_extension_are_noted(tmp_path):
+    write(
+        tmp_path,
+        {
+            ".github/workflows/lint.yaml": "name: Lint\n",
+            ".github/workflows/other.yml": "name: Other\n",
+            ".github/workflows/README.md": "Not a workflow.\n",
+        },
+    )
+
+    assert analyze_project(tmp_path).notes == (
+        AnalysisNote(NoteKind.OTHER_WORKFLOW, ".github/workflows/lint.yaml"),
+        AnalysisNote(NoteKind.OTHER_WORKFLOW, ".github/workflows/other.yml"),
+    )

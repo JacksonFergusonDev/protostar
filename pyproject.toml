@@ -279,6 +279,7 @@ fail_under = 85
 # `also_copy` lists what the suite reads from disk; mutmut runs it from a copy.
 [tool.mutmut]
 source_paths = [
+    "src/protostar/analysis.py",
     "src/protostar/appends.py",
     "src/protostar/dependencies.py",
     "src/protostar/documents/pyproject_layout.py",
