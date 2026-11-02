@@ -701,13 +701,12 @@ def remove_recipe(content: str) -> str:
     for section in sections:
         if not section.tail:
             continue
+        # A tail always holds a managed line, so one with no decoration comes back
+        # unchanged.
         lines = section.tail.splitlines(keepends=True)
-        if any(line.strip() in decoration for line in lines):
-            section.tail = "".join(
-                line for line in lines if line.strip() not in decoration
-            )
-            if not section.tail.strip():
-                section.tail = ""
+        section.tail = "".join(line for line in lines if line.strip() not in decoration)
+        if not section.tail.strip():
+            section.tail = ""
     return join_sections(sections)
 
 

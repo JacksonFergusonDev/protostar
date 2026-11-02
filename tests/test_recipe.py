@@ -1312,6 +1312,7 @@ def test_recorded_options_that_are_booleans_or_choices_decode():
         {"supported_os": ["Linux", 1]},
         {"supported_os": {"os": "Linux"}},
         {"supported_os": 5},
+        {"supported_os": "Linux"},
         {"unknown": "x"},
         "description",
     ],
@@ -1795,5 +1796,18 @@ def test_a_recipe_cannot_be_written_inside_an_inline_tool_table():
     with pytest.raises(ConfigurationError) as error:
         edit_recipe("tool = { x = 1 }\n", recipe())
 
-    assert "inline `tool` table" in str(error.value)
-    assert error.value.hint
+    assert str(error.value) == (
+        "Cannot record a [tool.protostar] recipe inside an inline `tool` table."
+    )
+    assert error.value.hint == (
+        "Write `tool = { ... }` as [tool.<name>] tables, then run Protostar again."
+    )
+
+
+def test_a_recorded_tier_that_names_no_tier_keeps_the_reason():
+    data = template_recipe(origin="local", locator="x") | {"tier": "bogus"}
+
+    with pytest.raises(ConfigurationError) as error:
+        decode_recipe(data)
+
+    assert str(error.value.__cause__) == "The recorded tier names no tier: 'bogus'."
