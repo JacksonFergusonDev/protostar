@@ -1,5 +1,6 @@
 """Existing-project analysis reads tools and facts without changing anything."""
 
+import configparser
 import importlib.resources
 import json
 import subprocess
@@ -581,6 +582,15 @@ def test_duplicate_ini_options_do_not_hide_a_section(tmp_path):
 
     assert sources(analysis) == {Tool.MYPY: ("setup.cfg [mypy]",)}
     assert analysis.notes == ()
+
+
+def test_ini_files_are_parsed_leniently(tmp_path, mocker):
+    write(tmp_path, {"setup.cfg": "[mypy]\nstrict = true\n"})
+    parser = mocker.spy(configparser, "ConfigParser")
+
+    analyze_project(tmp_path)
+
+    assert parser.call_args.kwargs["strict"] is False
 
 
 def test_requirements_skip_what_is_not_a_requirement_and_read_on(tmp_path):
