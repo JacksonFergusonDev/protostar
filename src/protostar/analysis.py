@@ -17,12 +17,12 @@ import tomllib
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, assert_never
 
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.utils import canonicalize_name
-from packaging.version import InvalidVersion, Version
+from packaging.version import Version
 
 from .documents import github_workflows, pyproject
 from .metadata import LicenseType, MetadataKey
@@ -245,9 +245,14 @@ class _Workspace:
             parser: configparser.ConfigParser | None = None
             text = self.read_text(path)
             if text is not None:
-                parser = configparser.ConfigParser(interpolation=None, strict=False)
+                parser = configparser.ConfigParser(
+                    # Only section names are read, and nothing is interpolated.
+                    interpolation=None,  # pragma: no mutate
+                    strict=False,
+                )
                 try:
-                    parser.read_string(text, source=path)
+                    # The source names the file in errors, which are caught below.
+                    parser.read_string(text, source=path)  # pragma: no mutate
                 except configparser.Error:
                     self.notes.append(AnalysisNote(NoteKind.UNREADABLE, path))
                     parser = None
@@ -308,7 +313,8 @@ def _match(workspace: _Workspace, signal: Signal, packages: frozenset[str]) -> s
         if signal.name in packages:
             return f"{signal.name} in {pyproject.TARGET} dependencies"
         return ""
-    return ""
+    # Every signal type is handled above; this checks that none is missing.
+    assert_never(signal)  # pragma: no mutate
 
 
 def _tools(workspace: _Workspace) -> tuple[ToolEvidence, ...]:
@@ -327,7 +333,8 @@ def _tools(workspace: _Workspace) -> tuple[ToolEvidence, ...]:
     # runners is pre-commit, whose configuration format both read.
     for pair in EXCLUSIVE_TOOL_PAIRS:
         matched = sorted(tool for tool in pair if tool in found)
-        if len(matched) > 1:
+        # A lone match is its own keep, so >= 1 would remove nothing either.
+        if len(matched) > 1:  # pragma: no mutate
             keep = max(
                 matched, key=lambda tool: (len(found[tool]), -matched.index(tool))
             )
@@ -351,10 +358,8 @@ def _lower_bound(requires: str) -> str | None:
     for specifier in specifiers:
         if specifier.operator not in (">=", "~=", "=="):
             continue
-        try:
-            bounds.append(Version(specifier.version.removesuffix(".*")))
-        except InvalidVersion:
-            continue
+        # A specifier validates its version when it is built, so this parses.
+        bounds.append(Version(specifier.version.removesuffix(".*")))
     if not bounds:
         return None
     lowest = min(bounds)
@@ -408,9 +413,7 @@ def _license_file(workspace: _Workspace) -> tuple[str, str] | None:
 
 
 def _license(
-    workspace: _Workspace,
-    project: dict[str, Any],
-    license_file: tuple[str, str] | None,
+    project: dict[str, Any], license_file: tuple[str, str] | None
 ) -> Fact[LicenseType] | None:
     declared = project.get("license")
     if isinstance(declared, dict):
@@ -502,7 +505,7 @@ def _facts(workspace: _Workspace) -> ProjectFacts:
         author_name=_author(project, "name"),
         author_email=_author(project, "email"),
         github_username=github,
-        license=_license(workspace, project, license_file),
+        license=_license(project, license_file),
         supported_os=_supported_os(project),
         current_year=year,
     )
