@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 200" width="700" height="200">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 587.18722 152.4875" width="587.18722" height="152.4875">
   <defs>
     <style>
       .wordmark {
@@ -11,7 +11,7 @@
     </style>
   </defs>
 
-  <g transform="translate(100, 100)">
+  <g transform="translate(76.24375, 76.24375) scale(0.611611675125)">
     <rect x="-96" y="-96" width="192" height="192" rx="40" fill="#0f172a" stroke="#22d3ee" stroke-width="5"/>
 
     <line x1="0" y1="-70" x2="0" y2="-18" stroke="#22d3ee" stroke-width="11" stroke-linecap="round"/>
@@ -28,5 +28,5 @@
     <circle cx="0" cy="0" r="4"  fill="#ffffff" opacity="0.95"/>
   </g>
 
-  <text x="220" y="135" class="wordmark">Protostar</text>
+  <text x="162.2275" y="107.11375" class="wordmark">Protostar</text>
 </svg>
