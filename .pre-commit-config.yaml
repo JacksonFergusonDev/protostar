@@ -90,6 +90,13 @@ repos:
         language: system
         files: ^\.github/renovate\.json$
 
+      - id: pnpm-lock-check
+        name: pnpm lock check
+        entry: pnpm --dir metrics install --lockfile-only --frozen-lockfile --ignore-scripts --offline
+        language: system
+        pass_filenames: false
+        files: ^(metrics/(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc)|\.npmrc|\.pre-commit-config\.yaml)$
+
       # --- Pre-push hooks --- #
 
       - id: metrics-dashboard
