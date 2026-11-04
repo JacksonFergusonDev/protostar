@@ -51,14 +51,19 @@ jobs:
           uv run --no-default-groups --group docs --locked python -m scripts.prepare_pages pages-source \
             --output published --config latest-zensical.toml
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: metrics/package.json
+
       - name: Install metrics checking dependencies
-        run: npm --prefix metrics ci --ignore-scripts
+        run: pnpm --dir metrics install --frozen-lockfile --ignore-scripts
 
       - name: Check metrics JavaScript types
-        run: npm --prefix metrics run typecheck
+        run: pnpm --dir metrics run typecheck
 
       - name: Test metrics dashboard data handling
-        run: node --test tests/metrics_dashboard.test.mjs
+        run: pnpm --dir metrics test
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

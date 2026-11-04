@@ -28,26 +28,28 @@ You need:
 - **Python 3.12+**
 - **[uv](https://docs.astral.sh/uv/getting-started/installation/)**, for the environment and dependencies
 - **[just](https://just.systems/man/en/packages.html)**, the command runner
+- **[Node.js](https://nodejs.org/)** and **[pnpm](https://pnpm.io/installation)**, for dashboard type checking and tests
 
-On macOS with Homebrew, `brew install uv just` installs both. Then fork the repository, clone your fork, and install the environment and the commit hooks:
+On macOS with Homebrew, `brew install uv just node pnpm` installs these tools. Then fork the repository, clone your fork, and install the environment and the commit hooks:
 
 ```bash
 git clone https://github.com/<your-username>/protostar.git
 cd protostar
 uv sync
 uv run prek install
+pnpm --dir metrics install --frozen-lockfile --ignore-scripts
 ```
 
-Add dependencies with `uv add` (or `uv add --dev`), never by editing `pyproject.toml`, so `uv.lock` stays in step.
+Add dependencies with `uv add` (or `uv add --dev`), never by editing `pyproject.toml`, so `uv.lock` stays in step. Manage dashboard dependencies with `pnpm --dir metrics add --save-dev --save-exact <package>`; commit `metrics/pnpm-lock.yaml` with the manifest. The dashboard pins its pnpm version in `metrics/package.json`.
 
 ## Checks and Tests
 
 The hooks run the checks for you:
 
 - **On commit:** `uv lock --check`, Ruff, mypy, rumdl, actionlint, zizmor, the Renovate schema check, and gitleaks.
-- **On push:** the full test suite, the strict docs build, and the docs, schema, and snapshot checks.
+- **On push:** dashboard type checking and tests, the full test suite, the strict docs build, and the docs, schema, and snapshot checks.
 
-If a hook fails or reformats a file, look at what it reported, fix it, and stage again. While you work, run what your change touches, such as `uv run pytest tests/test_executor.py`. `just test` runs the whole suite in parallel, and `just` lists every recipe. `just ci` runs everything CI runs, one after another; the hooks already cover it, so reach for it only to debug a difference from CI.
+If a hook fails or reformats a file, look at what it reported, fix it, and stage again. While you work, run what your change touches, such as `uv run pytest tests/test_executor.py`. `just check-metrics` installs dashboard dependencies from the lockfile and runs strict JavaScript type checking and the dashboard tests. `just test` runs the Python suite in parallel, and `just` lists every recipe. `just ci` runs everything CI runs, one after another; the hooks already cover it, so reach for it only to debug a difference from CI.
 
 Tests write only under `pytest`'s `tmp_path` and mock commands at the boundary they exercise, usually `ProcessRunner.run`. Only tests marked `integration` run real `uv`, `git`, or hook commands, through the `real_tool_env` fixture. Some changes need checked-in results regenerated, and the pull request should say why they changed:
 
