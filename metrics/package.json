@@ -9,5 +9,6 @@
   "devDependencies": {
     "echarts": "6.1.0",
     "typescript": "7.0.2"
-  }
+  },
+  "packageManager": "pnpm@12.16.1"
 }

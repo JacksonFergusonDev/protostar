@@ -44,9 +44,9 @@ typecheck: sync
 
 # Check dashboard JavaScript types and behavior without building browser assets
 check-metrics:
-    npm --prefix metrics ci --ignore-scripts
-    npm --prefix metrics run typecheck
-    npm --prefix metrics test
+    pnpm --dir metrics install --frozen-lockfile --ignore-scripts
+    pnpm --dir metrics run typecheck
+    pnpm --dir metrics test
 
 # Run the full automated testing matrix
 test: sync
@@ -336,11 +336,11 @@ sandbox-linux-build:
     FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
     ENV DEBIAN_FRONTEND=noninteractive
     COPY --from=node:22-bookworm-slim /usr/local/include/node /usr/local/include/node
-    COPY --from=node:22-bookworm-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
     COPY --from=node:22-bookworm-slim /usr/local/bin/node /usr/local/bin/node
+    COPY --from=ghcr.io/pnpm/pnpm:12.16.1 /opt/pnpm /opt/pnpm
+    ENV PNPM_HOME=/pnpm
+    ENV PATH="/pnpm/bin:/opt/pnpm:$PATH"
     RUN ln -s /usr/local/bin/node /usr/local/bin/nodejs && \
-        ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
-        ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx && \
         apt-get update -qq && \
         apt-get install -qq -y \
             git \
@@ -350,7 +350,7 @@ sandbox-linux-build:
             ripgrep \
             fd-find \
             nano && \
-        npm install -g markdownlint-cli2 && \
+        pnpm add --global --ignore-scripts markdownlint-cli2 && \
         ln -s /usr/bin/batcat /usr/local/bin/bat && \
         ln -s /usr/bin/fdfind /usr/local/bin/fd && \
         # Install eza binary dynamically for current architecture

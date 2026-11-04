@@ -164,6 +164,7 @@ def test_the_workflow_wires_selection_and_does_not_filter_out_required_checks():
     for step in jobs["images-and-dashboard"]["steps"]:
         if step.get("name") in {
             None,
+            "Install pnpm",
             "Install metrics checking dependencies",
             "Check metrics JavaScript types",
             "Test metrics dashboard data handling",
