@@ -2,8 +2,10 @@ import { mutationHistory, mutationScore, mutationSeries } from './mutations.mjs'
 import { escapeHtml } from './metrics.mjs';
 import { loadCharts } from './charts.mjs';
 
-const status = document.getElementById('mutation-status');
+const status = /** @type {HTMLElement} */ (document.getElementById('mutation-status'));
+/** @param {unknown} value */
 const percent = value => typeof value !== 'number' ? 'N/A' : `${value.toFixed(1)}%`;
+/** @param {import('./mutations.mjs').MutationPoint} entry */
 const scope = entry => entry.scopeChanged
   ? `Scope changed: ${[...entry.added.map(name => `added ${name}`), ...entry.removed.map(name => `removed ${name}`)].join('; ')}`
   : `${entry.modules.length} modules`;
@@ -16,23 +18,23 @@ const scope = entry => entry.scopeChanged
   }
   if (!response.ok) throw new Error('History could not load');
   const history = mutationHistory(await response.json());
-  if (!history.length) {
+  const latest = history.at(-1);
+  if (!latest) {
     status.textContent = 'No complete mutation runs published yet.';
     return;
   }
-  const latest = history.at(-1);
-  document.getElementById('mutation-latest').textContent =
+  (/** @type {HTMLElement} */ (document.getElementById('mutation-latest'))).textContent =
     `${percent(latest.value)} overall · ${latest.modules.length} modules · ${latest.shortSha} · ${new Date(latest.date).toLocaleString()}`;
-  const modules = document.getElementById('mutation-modules');
+  const modules = /** @type {HTMLTableSectionElement} */ (document.getElementById('mutation-modules'));
   for (const row of latest.modules) {
     const cells = modules.insertRow();
     const caught = row.killed + row.timeout;
     for (const value of [row.module, percent(mutationScore([row])),
       `${caught} / ${caught + row.survived + row.suspicious}`, row.no_tests]) {
-      cells.insertCell().textContent = value;
+      cells.insertCell().textContent = String(value);
     }
   }
-  const runs = document.getElementById('mutation-runs');
+  const runs = /** @type {HTMLTableSectionElement} */ (document.getElementById('mutation-runs'));
   for (const entry of history.slice(-30).reverse()) {
     const row = runs.insertRow();
     row.insertCell().textContent = new Date(entry.date).toLocaleString();
@@ -47,13 +49,14 @@ const scope = entry => entry.scopeChanged
     row.insertCell().appendChild(link);
     row.insertCell().textContent = scope(entry);
   }
-  document.getElementById('mutation-results').hidden = false;
+  (/** @type {HTMLElement} */ (document.getElementById('mutation-results'))).hidden = false;
   status.textContent = '';
 
   try {
     await loadCharts();
     await document.fonts.ready;
     const tokens = getComputedStyle(document.documentElement);
+    /** @param {string} name */
     const token = name => tokens.getPropertyValue(name).trim();
     const text = token('--text'), muted = token('--muted'), line = token('--line');
     const accent = token('--accent'), mono = token('--mono');
@@ -65,7 +68,8 @@ const scope = entry => entry.scopeChanged
       label: { formatter: 'Scope changed', color: muted, fontFamily: mono },
       data: history.flatMap((entry, index) => entry.scopeChanged ? [{ xAxis: index }] : []),
     };
-    const chart = echarts.init(document.getElementById('chart-mutations'), null, { renderer: 'canvas' });
+    const chart = echarts.init(
+      /** @type {HTMLElement} */ (document.getElementById('chart-mutations')), null, { renderer: 'canvas' });
     // Blend the house palette's hex tokens into canvas-compatible RGB colors.
     const colors = series.slice(1).map((_, index) => {
       const weight = (35 + (index % 5) * 13) / 100;
@@ -74,7 +78,7 @@ const scope = entry => entry.scopeChanged
         parseInt(text.slice(offset, offset + 2), 16) * (1 - weight)));
       return `rgb(${channels.join(', ')})`;
     });
-    chart.setOption({
+    chart.setOption(/** @satisfies {import('echarts').EChartsOption} */ ({
       animation: false, backgroundColor: 'transparent',
       color: [accent, ...colors],
       textStyle: { color: text, fontFamily: mono },
@@ -85,7 +89,8 @@ const scope = entry => entry.scopeChanged
         trigger: 'axis', confine: true, backgroundColor: token('--panel'), borderColor: line,
         textStyle: { color: text, fontSize: parseFloat(token('--fs-ui')) },
         formatter(params) {
-          const entry = history[params[0]?.dataIndex];
+          if (!Array.isArray(params)) return '';
+          const entry = history[params[0]?.dataIndex ?? -1];
           if (!entry) return '';
           return `<div class="echarts-tooltip-custom">${escapeHtml(entry.shortSha)} · ${escapeHtml(new Date(entry.date).toLocaleString())}<br>` +
             params.map(item => `${escapeHtml(item.seriesName)}: ${percent(item.value)}`).join('<br>') +
@@ -105,8 +110,8 @@ const scope = entry => entry.scopeChanged
         { type: 'inside', startValue: Math.max(0, history.length - 100), endValue: history.length - 1 },
       ],
       series,
-    });
-    chart.on('click', params => {
+    }));
+    chart.on('click', /** @param {import('echarts').ECElementEvent} params */ params => {
       const entry = history[params.dataIndex];
       if (entry) window.open(entry.url, '_blank', 'noopener,noreferrer');
     });

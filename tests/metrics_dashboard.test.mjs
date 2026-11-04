@@ -32,6 +32,8 @@ test('invalid measurements cannot contaminate the archive or its commit links', 
   const invalidUnit = run(1, editor, 20);
   invalidUnit.benches[0].unit = 'seconds';
   assert.deepEqual(metricHistory([
+    null, 'invalid', {}, { commit: {} }, { commit: { id: 123 } },
+    { ...run(1, editor, 20), benches: [null, 'invalid', { name: editor, unit: 'ms', value: '20' }] },
     run(1, editor, NaN), run(1, editor, Infinity), run(1, editor, -1),
     run(NaN, editor, 20), run(1, editor, 20, 'javascript:alert(1)'), invalidUnit,
   ], editor), []);
@@ -69,9 +71,12 @@ test('benchmark history sorts by date, keeps safe links, and lists slower scenar
 test('benchmark data rejects unsafe commits, bad dates, and malformed timings or changes', () => {
   const valid = night('2026-10-01T00:00:00Z', 'ubuntu-latest', { sync: timing(500) });
   for (const entry of [
+    null, 'invalid', [], { ...valid, commit: 123 },
     { ...valid, commit: 'javascript:alert(1)' }, { ...valid, baseline: 'main' },
     { ...valid, date: 'invalid' }, { ...valid, os: ' ' }, { ...valid, scenarios: {} },
-    { ...valid, scenarios: [timing(500)] }, { ...valid, scenarios: { sync: timing(-1) } },
+    { ...valid, scenarios: [timing(500)] },
+    { ...valid, scenarios: { sync: { ...timing(500), change: null } } },
+    { ...valid, scenarios: { sync: { ...timing(500), wall: '500' } } }, { ...valid, scenarios: { sync: timing(-1) } },
     { ...valid, scenarios: { sync: timing(NaN) } },
     { ...valid, scenarios: { sync: timing(500, 'steady', { ratio: 1, low: 1.1, high: 1.2 }) } },
     { ...valid, scenarios: { sync: timing(500, 'steady', { ratio: 0, low: 0, high: 0 }) } },
@@ -317,8 +322,10 @@ test('empty mutation histories and zero denominators cannot invent a score', () 
 test('mutation data rejects malformed dates, unsafe commits, duplicate modules, and invalid counts', () => {
   const valid = mutationRun('2026-10-01T00:00:00Z', [moduleResult('a', 1)]);
   for (const entry of [
+    null, 'invalid', [], { ...valid, commit: 123 },
     { ...valid, commit: 'javascript:alert(1)' }, { ...valid, date: 'invalid' },
-    { ...valid, modules: [] }, { ...valid, modules: [moduleResult('a', -1)] },
+    { ...valid, modules: [] }, { ...valid, modules: [null] },
+    { ...valid, modules: [moduleResult('a', '1')] }, { ...valid, modules: [moduleResult('a', -1)] },
     { ...valid, modules: [moduleResult('a', 1.2)] },
     { ...valid, modules: [moduleResult('a', 1, 0, { suspicious: NaN })] },
     { ...valid, modules: [moduleResult('a', 1), moduleResult('a', 2)] },
@@ -442,8 +449,10 @@ test('rollback scope changes follow the set of jobs, not the counts', () => {
 test('rollback data rejects malformed dates, unsafe commits, duplicate jobs, and invalid counts', () => {
   const valid = rollbackRun('2026-10-01T00:00:00Z', [rollbackCell('ubuntu', 'cli', 1)]);
   for (const entry of [
+    null, 'invalid', [], { ...valid, commit: 123 },
     { ...valid, commit: 'javascript:alert(1)' }, { ...valid, date: 'invalid' },
-    { ...valid, cells: [] }, { ...valid, cells: [rollbackCell('ubuntu', 'cli', -1)] },
+    { ...valid, cells: [] }, { ...valid, cells: [null] },
+    { ...valid, cells: [rollbackCell('ubuntu', 'cli', '1')] }, { ...valid, cells: [rollbackCell('ubuntu', 'cli', -1)] },
     { ...valid, cells: [rollbackCell('ubuntu', 'cli', 1.5)] },
     { ...valid, cells: [rollbackCell('', 'cli', 1)] },
     { ...valid, cells: [rollbackCell('ubuntu', 'cli', 1), rollbackCell('ubuntu', 'cli', 2)] },

@@ -1,0 +1,13 @@
+{
+  "name": "protostar-metrics",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --project tsconfig.json",
+    "test": "node --test ../tests/metrics_dashboard.test.mjs"
+  },
+  "devDependencies": {
+    "echarts": "6.1.0",
+    "typescript": "7.0.2"
+  }
+}

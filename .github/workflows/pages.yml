@@ -51,6 +51,12 @@ jobs:
           uv run --no-default-groups --group docs --locked python -m scripts.prepare_pages pages-source \
             --output published --config latest-zensical.toml
 
+      - name: Install metrics checking dependencies
+        run: npm --prefix metrics ci --ignore-scripts
+
+      - name: Check metrics JavaScript types
+        run: npm --prefix metrics run typecheck
+
       - name: Test metrics dashboard data handling
         run: node --test tests/metrics_dashboard.test.mjs
 

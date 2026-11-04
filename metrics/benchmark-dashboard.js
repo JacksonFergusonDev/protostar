@@ -3,11 +3,13 @@ import { MEASURES, VERDICTS, benchmarkHistory, benchmarkSeries, changeText, osNa
 import { escapeHtml } from './metrics.mjs';
 import { loadCharts } from './charts.mjs';
 
-const status = document.getElementById('benchmark-status');
+const status = /** @type {HTMLElement} */ (document.getElementById('benchmark-status'));
+/** @param {unknown} value */
 const milliseconds = value => typeof value !== 'number' ? 'N/A' : `${value.toFixed(0)} ms`;
 // The lines shown first; the legend turns on the rest.
 const FEATURED = ['version', 'sync', 'init-lib', 'editor'];
 
+/** @param {string} href @param {string} text */
 function commitLink(href, text) {
   const link = document.createElement('a');
   link.href = href;
@@ -19,6 +21,7 @@ function commitLink(href, text) {
   return link;
 }
 
+/** @param {HTMLSelectElement} select @param {string} value @param {string} label */
 function option(select, value, label) {
   const item = document.createElement('option');
   item.value = value;
@@ -40,13 +43,14 @@ function option(select, value, label) {
   }
 
   const oses = systems(history);
-  document.getElementById('benchmark-latest').textContent = oses.map(os => {
+  (/** @type {HTMLElement} */ (document.getElementById('benchmark-latest'))).textContent = oses.map(os => {
     const latest = history.filter(entry => entry.os === os).at(-1);
+    if (!latest) return '';
     const flagged = latest.flagged.length ? `${latest.flagged.length} slower` : 'nothing slower';
     return `${osName(os)}: ${latest.shortSha}, ${flagged}`;
   }).join(' · ');
 
-  const runs = document.getElementById('benchmark-runs');
+  const runs = /** @type {HTMLTableSectionElement} */ (document.getElementById('benchmark-runs'));
   for (const entry of history.slice(-30).reverse()) {
     const row = runs.insertRow();
     row.insertCell().textContent = new Date(entry.date).toLocaleString();
@@ -56,17 +60,18 @@ function option(select, value, label) {
     row.insertCell().textContent = entry.flagged.length ? entry.flagged.join(', ') : 'None';
   }
 
-  const osSelect = document.getElementById('benchmark-os');
-  const measureSelect = document.getElementById('benchmark-measure');
+  const osSelect = /** @type {HTMLSelectElement} */ (document.getElementById('benchmark-os'));
+  const measureSelect = /** @type {HTMLSelectElement} */ (document.getElementById('benchmark-measure'));
   for (const os of oses) option(osSelect, os, osName(os));
   for (const [measure, label] of Object.entries(MEASURES)) option(measureSelect, measure, label);
   osSelect.value = oses[0];
   measureSelect.value = 'wall';
 
-  const table = document.getElementById('benchmark-scenarios');
+  const table = /** @type {HTMLTableSectionElement} */ (document.getElementById('benchmark-scenarios'));
   function showLatest() {
     const latest = history.filter(entry => entry.os === osSelect.value).at(-1);
-    document.getElementById('benchmark-latest-range').textContent =
+    if (!latest) return;
+    (/** @type {HTMLElement} */ (document.getElementById('benchmark-latest-range'))).textContent =
       `${osName(latest.os)} · ${latest.shortSha} against ${latest.baselineSha}`;
     table.replaceChildren();
     for (const [name, result] of Object.entries(latest.scenarios).sort(([a], [b]) => a.localeCompare(b))) {
@@ -80,20 +85,23 @@ function option(select, value, label) {
     }
   }
   showLatest();
-  document.getElementById('benchmark-results').hidden = false;
+  (/** @type {HTMLElement} */ (document.getElementById('benchmark-results'))).hidden = false;
   status.textContent = '';
 
   try {
     await loadCharts();
     await document.fonts.ready;
     const tokens = getComputedStyle(document.documentElement);
+    /** @param {string} name */
     const token = name => tokens.getPropertyValue(name).trim();
     const text = token('--text'), muted = token('--muted'), line = token('--line');
     const accent = token('--accent'), mono = token('--mono');
-    const chart = echarts.init(document.getElementById('chart-benchmarks'), null, { renderer: 'canvas' });
+    const chart = echarts.init(
+      /** @type {HTMLElement} */ (document.getElementById('chart-benchmarks')), null, { renderer: 'canvas' });
     function draw() {
-      const { runs: shown, series } = benchmarkSeries(history, osSelect.value, measureSelect.value);
-      document.getElementById('benchmark-caption').textContent = `${MEASURES[measureSelect.value]} / ms`;
+      const measure = /** @type {import('./benchmarks.mjs').Measure} */ (measureSelect.value);
+      const { runs: shown, series } = benchmarkSeries(history, osSelect.value, measure);
+      (/** @type {HTMLElement} */ (document.getElementById('benchmark-caption'))).textContent = `${MEASURES[measure]} / ms`;
       // Blend the house palette's hex tokens into canvas-compatible RGB colors.
       const colors = series.map((_, index) => {
         const weight = (35 + (index % 5) * 13) / 100;
@@ -103,7 +111,7 @@ function option(select, value, label) {
         return `rgb(${channels.join(', ')})`;
       });
       const featured = series.some(item => FEATURED.includes(item.name));
-      chart.setOption({
+      chart.setOption(/** @satisfies {import('echarts').EChartsOption} */ ({
         animation: false, backgroundColor: 'transparent', color: [accent, ...colors],
         textStyle: { color: text, fontFamily: mono },
         legend: { type: 'scroll', top: 0, textStyle: { color: muted, fontSize: parseFloat(token('--fs-label')) },
@@ -114,7 +122,8 @@ function option(select, value, label) {
           trigger: 'axis', confine: true, backgroundColor: token('--panel'), borderColor: line,
           textStyle: { color: text, fontSize: parseFloat(token('--fs-ui')) },
           formatter(params) {
-            const entry = shown[params[0]?.dataIndex];
+            if (!Array.isArray(params)) return '';
+            const entry = shown[params[0]?.dataIndex ?? -1];
             if (!entry) return '';
             return `<div class="echarts-tooltip-custom">${escapeHtml(entry.shortSha)} against ` +
               `${escapeHtml(entry.baselineSha)} · ${escapeHtml(new Date(entry.date).toLocaleString())}<br>` +
@@ -134,9 +143,9 @@ function option(select, value, label) {
           { type: 'inside', startValue: Math.max(0, shown.length - 100), endValue: shown.length - 1 },
         ],
         series,
-      }, true);
+      }), true);
       chart.off('click');
-      chart.on('click', params => {
+      chart.on('click', /** @param {import('echarts').ECElementEvent} params */ params => {
         const entry = shown[params.dataIndex];
         if (entry) window.open(entry.compareUrl, '_blank', 'noopener,noreferrer');
       });

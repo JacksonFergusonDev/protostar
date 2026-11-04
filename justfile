@@ -42,6 +42,12 @@ typecheck: sync
     uv run mypy .
     @printf "{{ green }}✔ Type checking passed{{ nc }}\n"
 
+# Check dashboard JavaScript types and behavior without building browser assets
+check-metrics:
+    npm --prefix metrics ci --ignore-scripts
+    npm --prefix metrics run typecheck
+    npm --prefix metrics test
+
 # Run the full automated testing matrix
 test: sync
     @printf "\n{{ blue }}=== Running Tests ==={{ nc }}\n"
@@ -87,7 +93,7 @@ mutate module workers="2":
     @printf "{{ green }}✔ Mutation run complete (what to fix: mutants/survivors.md){{ nc }}\n"
 
 # Run the fast local CI pipeline executed before pushing
-ci: lint typecheck test docs check-snapshots check-doc-links check-docs-drift check-voice check-schemas secrets
+ci: lint typecheck check-metrics test docs check-snapshots check-doc-links check-docs-drift check-voice check-schemas secrets
     @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
 
 # Remove caches, artifacts, and temp files

@@ -8,15 +8,16 @@ const SERIES = [
   ['Help-command startup', 'Protostar Headless Latency'],
   ['Recipe editor first frame', 'Protostar Recipe Editor First Frame Latency'],
 ];
-const archive = document.getElementById('benchmark-archive');
-const status = document.getElementById('archive-status');
+const archive = /** @type {HTMLDetailsElement} */ (document.getElementById('benchmark-archive'));
+const status = /** @type {HTMLElement} */ (document.getElementById('archive-status'));
+/** @param {number} date */
 const month = date => new Date(date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
 function loadData() {
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = 'data.js';
-    script.onload = resolve;
+    script.onload = () => resolve(undefined);
     script.onerror = reject;
     document.body.appendChild(script);
   });
@@ -30,6 +31,7 @@ archive.addEventListener('toggle', async () => {
   try {
     await loadData();
     const runs = Object.values(window.BENCHMARK_DATA?.entries ?? {}).flat();
+    /** @type {[string, import('./metrics.mjs').MetricPoint[]][]} */
     const histories = SERIES.map(([label, name]) => [label, metricHistory(runs, name)]);
     const dates = histories.flatMap(([, history]) => history.map(point => point.date));
     if (!dates.length) {
@@ -41,11 +43,13 @@ archive.addEventListener('toggle', async () => {
     await loadCharts();
     await document.fonts.ready;
     const tokens = getComputedStyle(document.documentElement);
+    /** @param {string} name */
     const token = name => tokens.getPropertyValue(name).trim();
     const text = token('--text'), muted = token('--muted'), line = token('--line');
     const accent = token('--accent'), mono = token('--mono');
-    const chart = echarts.init(document.getElementById('chart-archive'), null, { renderer: 'canvas' });
-    chart.setOption({
+    const chart = echarts.init(
+      /** @type {HTMLElement} */ (document.getElementById('chart-archive')), null, { renderer: 'canvas' });
+    chart.setOption(/** @satisfies {import('echarts').EChartsOption} */ ({
       animation: false, backgroundColor: 'transparent', color: [accent, muted],
       textStyle: { color: text, fontFamily: mono },
       legend: { top: 0, textStyle: { color: muted, fontSize: parseFloat(token('--fs-label')) } },
@@ -54,7 +58,8 @@ archive.addEventListener('toggle', async () => {
         trigger: 'item', confine: true, backgroundColor: token('--panel'), borderColor: line,
         textStyle: { color: text, fontSize: parseFloat(token('--fs-ui')) },
         formatter(params) {
-          const point = histories[params.seriesIndex]?.[1][params.dataIndex];
+          if (Array.isArray(params)) return '';
+          const point = histories[params.seriesIndex ?? -1]?.[1][params.dataIndex];
           if (!point) return '';
           return `<div class="echarts-tooltip-custom">${escapeHtml(params.seriesName)}: ` +
             `${point.value.toFixed(0)} ms<br>${escapeHtml(point.shortSha)} · ` +
@@ -69,7 +74,7 @@ archive.addEventListener('toggle', async () => {
         name: label, type: 'line', showSymbol: false, smooth: false,
         data: history.map(point => [point.date, point.value]),
       })),
-    });
+    }));
     window.addEventListener('resize', () => chart.resize());
   } catch {
     status.textContent = 'The archived timings could not load. Download them below.';

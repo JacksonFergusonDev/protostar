@@ -30,3 +30,6 @@ mutants/
 
 # Local Claude Code settings
 .claude/
+
+# Dashboard type-checking dependencies
+node_modules/

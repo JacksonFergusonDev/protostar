@@ -162,7 +162,12 @@ def test_the_workflow_wires_selection_and_does_not_filter_out_required_checks():
         "needs.select.outputs.scope == 'full' || needs.select.outputs.scope == 'dashboard'"
     )
     for step in jobs["images-and-dashboard"]["steps"]:
-        if step.get("name") in {None, "Test metrics dashboard data handling"}:
+        if step.get("name") in {
+            None,
+            "Install metrics checking dependencies",
+            "Check metrics JavaScript types",
+            "Test metrics dashboard data handling",
+        }:
             continue
         # Steps following a successful install cannot execute on the
         # dashboard path, where installation is skipped.
