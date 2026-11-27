@@ -7,7 +7,7 @@ import tomllib
 from pathlib import Path
 
 import pytest
-from ruamel.yaml import YAML
+import yaml_edit
 
 from scripts.mutation_report import ModuleResult, combine_results
 
@@ -16,9 +16,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 @pytest.fixture
 def planner(tmp_path, monkeypatch):
-    workflow = YAML(typ="safe").load(
+    workflow = yaml_edit.Document.parse(
         (REPO_ROOT / ".github/workflows/mutation.yml").read_text(encoding="utf-8")
-    )
+    ).to_python()
     steps = workflow["jobs"]["plan"]["steps"]
     assert steps[0]["uses"].startswith("actions/checkout@")
     script = next(step["run"] for step in steps if step.get("id") == "matrix")

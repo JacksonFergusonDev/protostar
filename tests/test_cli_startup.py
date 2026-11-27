@@ -75,7 +75,7 @@ def test_information_requests_load_no_operation_implementations(
         "protostar.cli.eject",
         "protostar.cli.check_template",
         "textual",
-        "ruamel.yaml",
+        "yaml_edit",
     }
     assert not loaded & forbidden
     if "--json" in arguments:

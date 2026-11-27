@@ -11,9 +11,9 @@ dependencies = [
     "pygments>=2.21.0",
     "rich>=15.0.0",
     "rich-argparse>=1.7.2",
-    "ruamel-yaml>=0.19.1,<0.20",
     "textual>=8.2.8",
     "tomlkit>=0.14.0",
+    "yaml-edit>=0.2.1,<0.3",
 ]
 license = { file = "LICENSE" }
 classifiers = [
@@ -194,11 +194,8 @@ ignore_names = [
     # Module-level lazy imports.
     "__getattr__",
     "__dir__",
-    # Read by argcomplete, ruamel.yaml, and pytest.
+    # Read by argcomplete and pytest.
     "completer",
-    "preserve_quotes",
-    "allow_duplicate_keys",
-    "always_dump",
     "pytest_*",
     # Parameters a protocol requires.
     "namespace",

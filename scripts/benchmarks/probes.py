@@ -42,8 +42,7 @@ SEAMS: tuple[tuple[str, str], ...] = (
     ("tomlkit", "loads"),
     ("tomlkit.api", "parse"),
     ("tomlkit.api", "loads"),
-    ("ruamel.yaml.main", "YAML.compose"),
-    ("ruamel.yaml.main", "YAML.load"),
+    ("protostar.yaml_ast", "_parse_yaml"),
     ("subprocess", "Popen.__init__"),
 )
 
@@ -267,12 +266,11 @@ def record(*, commands: bool = True) -> Iterator[Recorder]:
                 )
 
     def yaml(module: ModuleType) -> None:
-        for name in ("compose", "load"):
-            patches.replace(
-                module.YAML,
-                name,
-                lambda parse: _counted(recorder, "parse:yaml", "yaml", parse),
-            )
+        patches.replace(
+            module,
+            "_parse_yaml",
+            lambda parse: _counted(recorder, "parse:yaml", "yaml", parse),
+        )
 
     patches.replace(
         subprocess.Popen, "__init__", lambda init: _launched(recorder, init)
@@ -282,7 +280,7 @@ def record(*, commands: bool = True) -> Iterator[Recorder]:
         "protostar.registry": registry,
         "protostar.jsonc_ast": jsonc,
         "tomlkit": toml,
-        "ruamel.yaml.main": yaml,
+        "protostar.yaml_ast": yaml,
     }
     with _watching(hooks, patches):
         yield recorder

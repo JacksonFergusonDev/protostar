@@ -10,7 +10,7 @@ command:uv run nbdime config-git --enable 1
 import:argcomplete
 import:packaging
 import:rich
-import:ruamel
 import:tomlkit
+import:yaml_edit
 parse:toml 28
 registry:fetch 1

@@ -1718,7 +1718,7 @@ async def test_review_marks_collisions_and_shows_first_batch_diffs(collisions):
         diff = plain(app, "#diff")
         assert "+++ b/.pre-commit-config.yaml" in diff
         assert "\n   - repo: local\n" in diff
-        assert "+    repo: https://github.com/gitleaks/gitleaks" in diff
+        assert "+  - repo: https://github.com/gitleaks/gitleaks" in diff
         await highlight(pilot, "justfile")
         diff = plain(app, "#diff")
         assert "Whole file  It was in your file before Protostar managed it." in diff
@@ -2076,7 +2076,7 @@ async def test_review_and_execution_share_one_hook_snapshot(collisions, mocker):
     async with app.run_test(size=(120, 45)) as pilot:
         await settle(pilot)
         await highlight(pilot, ".pre-commit-config.yaml")
-        assert "+  - rev: v9.9.9" in plain(app, "#diff")
+        assert "+    rev: v9.9.9" in plain(app, "#diff")
         # Re-preparing for a choice reuses the snapshot.
         await highlight(pilot, "justfile")
         await pilot.press("k")

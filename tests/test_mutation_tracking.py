@@ -214,12 +214,12 @@ def test_publication_retries_concurrent_pages_push_without_losing_data(
     import os
     import shutil
 
-    from ruamel.yaml import YAML
+    import yaml_edit
 
     repo = Path(__file__).resolve().parent.parent
-    workflow = YAML(typ="safe").load(
+    workflow = yaml_edit.Document.parse(
         (repo / ".github/workflows/mutation.yml").read_text()
-    )
+    ).to_python()
     script = next(
         step["run"]
         for step in workflow["jobs"]["publish"]["steps"]

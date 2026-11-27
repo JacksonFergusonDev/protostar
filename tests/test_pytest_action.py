@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from ruamel.yaml import YAML
+import yaml_edit
 
 ACTION = Path(__file__).resolve().parent.parent / ".github/actions/pytest/action.yml"
 
@@ -20,7 +20,7 @@ ACTION = Path(__file__).resolve().parent.parent / ".github/actions/pytest/action
 def test_retry_reports_only_tests_that_passed_and_preserves_failure(
     tmp_path, remaining
 ):
-    action = YAML(typ="safe").load(ACTION.read_text())
+    action = yaml_edit.Document.parse(ACTION.read_text()).to_python()
     step = action["runs"]["steps"][0]
     assert action["runs"]["steps"][1]["with"]["name"] == (
         "test-results-${{ inputs.artifact }}"

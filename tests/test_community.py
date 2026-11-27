@@ -4,7 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from ruamel.yaml import YAML
+import yaml_edit
 
 from protostar.community import (
     CommunitySpec,
@@ -39,7 +39,7 @@ STATE = Path("protostar.lock")
 
 
 def load_yaml(text):
-    return YAML(typ="safe").load(text)
+    return yaml_edit.Document.parse(text).to_python()
 
 
 # --- Generators ------------------------------------------------------------

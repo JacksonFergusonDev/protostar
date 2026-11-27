@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from ruamel.yaml import YAML
+import yaml_edit
 
 from scripts.nightly_report import (
     FAILING,
@@ -61,7 +61,9 @@ def expand(matrix: dict[str, Any]) -> list[Entry]:
 
 
 def yaml_workflow(workflow: str) -> dict[str, Any]:
-    return YAML(typ="safe").load((WORKFLOWS / workflow).read_text(encoding="utf-8"))
+    return yaml_edit.Document.parse(
+        (WORKFLOWS / workflow).read_text(encoding="utf-8")
+    ).to_python()
 
 
 def jobs(workflow: str) -> dict[str, Any]:
@@ -353,9 +355,9 @@ def test_windows_and_linux_ml_rollback_jobs_run_one_environment_at_a_time():
         step["with"]["workers"]
         == "${{ (matrix.os == 'windows-latest' || (matrix.os == 'ubuntu-latest' && matrix.template == 'ml')) && '1' || 'auto' }}"
     )
-    action = YAML(typ="safe").load(
+    action = yaml_edit.Document.parse(
         (REPO_ROOT / ".github/actions/pytest/action.yml").read_text()
-    )
+    ).to_python()
     assert action["inputs"]["workers"]["default"] == "auto"
     run = action["runs"]["steps"][0]
     assert run["env"]["WORKERS"] == "${{ inputs.workers }}"
@@ -483,11 +485,11 @@ def test_no_job_caches_uvs_downloads():
 def test_only_pull_requests_and_main_restore_prek_hook_environments():
     """Nightly and a release build hook environments as a user's first commit does,
     and only main saves them."""
-    action = YAML(typ="safe").load(
+    action = yaml_edit.Document.parse(
         (REPO_ROOT / ".github/actions/template-smoke/action.yml").read_text(
             encoding="utf-8"
         )
-    )
+    ).to_python()
     steps = action["runs"]["steps"]
     (restore,) = [
         s for s in steps if s.get("uses", "").startswith("actions/cache/restore@")
