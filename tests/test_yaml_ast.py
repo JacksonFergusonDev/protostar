@@ -832,3 +832,58 @@ def test_the_last_line_keeps_its_trailing_spaces():
     result = plain("a: 1\nb: 2  # c   \n", "a: 2\n", {"a": 1})
 
     assert result.content == "a: 2\nb: 2  # c   \n"
+
+
+@pytest.mark.parametrize(
+    ("local", "desired", "expected"),
+    [
+        ("k: old\n", "k: 'x: y'\n", "k: 'x: y'\n"),
+        ("k: &keep old # note\n", "k: 'true'\n", "k: &keep 'true' # note\n"),
+        ("{k: old}\n", "k: x, y\n", '{k: "x, y"}\n'),
+    ],
+)
+def test_plain_string_updates_quote_for_the_destination(local, desired, expected):
+    result = merge(local, desired, {"k": "old"})
+    assert result.content == expected
+    assert result.baseline == decode_yaml_baseline(desired)
+
+
+def test_edit_keeps_comments_and_directives_outside_the_document():
+    local = "# header\n%YAML 1.2\n---\nk: old\n...\n# trailer\n"
+    assert merge(local, "k: new\n", {"k": "old"}).content == local.replace("old", "new")
+
+
+@pytest.mark.parametrize("literal", ["'<<'", '"<<"'])
+def test_quoted_merge_key_allows_independent_sibling_edit(literal):
+    local = f"{literal}: ordinary\nk: old\n"
+    result = merge(local, "k: new\n", {"k": "old"})
+    assert result.content == local.replace("old", "new")
+    assert not result.conflicts
+    with pytest.raises(ConfigurationError):
+        decode_yaml_baseline(f"{literal}: first\n{literal}: second\n")
+
+
+def test_aliases_count_their_expanded_nodes(monkeypatch):
+    source = "defaults: &defaults [one, two]\ncopy: *defaults\n"
+    # One root, two keys and two copies of the three-node list.
+    monkeypatch.setattr(yaml_ast, "_MAX_NODES", 9)
+    assert decode_yaml_baseline(source)["copy"] == ["one", "two"]
+    monkeypatch.setattr(yaml_ast, "_MAX_NODES", 8)
+    with pytest.raises(ConfigurationError):
+        decode_yaml_baseline(source + "# uncached\n")
+
+
+def test_alias_height_counts_at_the_reference_site():
+    source = "defaults: &defaults [[one]]\ncopy: " + "[" * 98 + "*defaults" + "]" * 98
+    with pytest.raises(ConfigurationError) as error:
+        decode_yaml_baseline(source)
+    assert str(error.value) == "Invalid or unsupported YAML configuration."
+
+
+def test_tagged_anchor_and_anchor_like_comment_use_the_real_target():
+    source = "items: !!seq &items [one, two]\ncopy: *items\n"
+    assert decode_yaml_baseline(source)["copy"] == ["one", "two"]
+    local = "k: &shared\n  # &unrelated\n  value: old\ncopy: *shared\n"
+    result = merge(local, "k: {value: new}\n", {"k": {"value": "old"}})
+    assert result.content == local
+    assert result.conflicts[0].reason is ConflictReason.SHARED_STRUCTURE

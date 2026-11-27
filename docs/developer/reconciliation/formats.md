@@ -39,7 +39,7 @@ YAML 1.2 is the default, and explicit 1.1 directives are rejected instead of sil
 - JSON-like scalar types.
 - Finite, acyclic collections.
 
-Binary, set, and custom tags, and multiple documents, fail with a domain error. Input is bounded to 1 MB, 100 nesting levels, and 10,000 nodes. Tree validation precedes alias resolution, and recursive aliases are rejected.
+Binary, set, and custom tags, and multiple documents, fail with a domain error. Input is bounded to 1 MB, 100 nesting levels, and 10,000 expanded nodes. Before resolving aliases, the adapter charges each reference for its target’s full size and depth and rejects recursive aliases.
 
 ### Ownership and Conflicts
 

@@ -59,7 +59,10 @@ _ALLOWED_TAGS = frozenset(
         "tag:yaml.org,2002:merge",
     }
 )
-_ANCHOR_RE = re.compile(r"&([^\s,\[\]{}]+)")
+# Only inspect the properties and separators before a CST node. Skip complete
+# comments and tags so an ampersand inside either cannot bind an alias.
+_PROPERTY = re.compile(rb"#[^\r\n]*|![^\s,\[\]{}]*|&([^\s,\[\]{}]+)")
+_SIMPLE_PLAIN = re.compile(r"[a-zA-Z0-9_][a-zA-Z0-9_./%+-]*")
 
 
 def _invalid() -> ConfigurationError:
@@ -74,7 +77,29 @@ def _parse_yaml(content: str) -> ye.YamlFile:
     return ye.YamlFile.parse(content)
 
 
-def _load(content: str) -> tuple[ye.Document, dict[str, Value], bytes]:
+def _merge_key(node: ye.Node) -> bool:
+    scalar = node.as_scalar()
+    return scalar is not None and scalar.value() == "<<"
+
+
+type _Range = tuple[int, int]
+
+
+@dataclass(frozen=True)
+class _Anchor:
+    size: int
+    height: int
+    span: _Range
+
+
+def _anchor_name(raw: bytes, start: int, end: int) -> str | None:
+    for match in _PROPERTY.finditer(raw, start, end):
+        if match[1] is not None:
+            return match[1].decode("utf-8")
+    return None
+
+
+def _load(content: str) -> tuple[ye.YamlFile, dict[str, Value], set[_Range]]:
     raw = content.encode("utf-8")
     if len(raw) > _MAX_BYTES:
         raise _invalid()
@@ -91,68 +116,77 @@ def _load(content: str) -> tuple[ye.Document, dict[str, Value], bytes]:
         if root is None or not root.is_mapping():
             raise _invalid()
 
+        # Remember each completed anchor's expanded size and height. Charging
+        # these at every alias bounds construction without expanding the graph.
+        anchors: dict[str, _Anchor] = {}
+        shared: set[_Range] = set()
+        has_anchors = b"&" in raw
         count = 0
 
-        def visit(node: ye.Node, depth: int) -> None:
+        def visit(node: ye.Node, depth: int, prefix: int) -> int:
             nonlocal count
+            before = count
             count += 1
             if count > _MAX_NODES or depth > 100:
                 raise _invalid()
-            if node.is_tagged():
-                tagged = node.as_tagged()
-                if tagged is None or tagged.tag() not in _ALLOWED_TAGS:
+            tagged = node.as_tagged()
+            if tagged is not None and tagged.tag() not in _ALLOWED_TAGS:
+                raise _invalid()
+            mapping = tagged.as_mapping() if tagged else node.as_mapping()
+            sequence = tagged.as_sequence() if tagged else node.as_sequence()
+            anchor = None
+            if has_anchors:
+                # Properties precede the value. A tagged node includes those
+                # properties in its range, so use its inner value's start.
+                inner = mapping if mapping is not None else sequence
+                start = node.byte_range()[0]
+                if inner is not None:
+                    start = inner.byte_range()[0]
+                elif tagged is not None and (scalar := tagged.value()) is not None:
+                    start = scalar.byte_range()[0]
+                anchor = _anchor_name(raw, prefix, start)
+                if anchor is not None:
+                    anchors.pop(anchor, None)  # A new binding shadows the old one.
+
+            height = 0
+            if (alias := node.as_alias()) is not None:
+                target = anchors.get(alias.name())
+                if target is None:
                     raise _invalid()
-                if (tagged_map := tagged.as_mapping()) is not None:
-                    seen_t: set[str] = set()
-                    for entry in tagged_map.entries():
-                        key_node = entry.key()
-                        if key_node is None or not key_node.is_scalar():
-                            raise _invalid()
-                        key_py = key_node.to_python()
-                        if not isinstance(key_py, str):
-                            raise _invalid()
-                        if key_py != "<<" and key_py in seen_t:
-                            raise _invalid()
-                        seen_t.add(key_py)
-                        visit(key_node, depth + 1)
-                        val_node = entry.value()
-                        if val_node is not None:
-                            visit(val_node, depth + 1)
-                elif (tagged_seq := tagged.as_sequence()) is not None:
-                    for child in tagged_seq.values():
-                        visit(child, depth + 1)
-                return
-            if node.is_mapping():
-                mapping = node.as_mapping()
-                if mapping is None:
+                shared.update((node.byte_range(), target.span))
+                height = target.height
+                count += target.size - 1
+                if count > _MAX_NODES or depth + height > 100:
                     raise _invalid()
+            elif mapping is not None:
                 seen: set[str] = set()
                 for entry in mapping.entries():
-                    key_node = entry.key()
-                    if key_node is None or not key_node.is_scalar():
+                    key = entry.key()
+                    if key is None or not key.is_scalar():
                         raise _invalid()
-                    key_py = key_node.to_python()
-                    if not isinstance(key_py, str):
+                    name = key.to_python()
+                    if not isinstance(name, str) or name in seen:
                         raise _invalid()
-                    if key_py != "<<" and key_py in seen:
-                        raise _invalid()
-                    seen.add(key_py)
-                    # A key is a scalar; its value meets the depth limit first.
-                    visit(key_node, depth + 1)  # pragma: no mutate
-                    val_node = entry.value()
-                    if val_node is not None:
-                        visit(val_node, depth + 1)
-            elif node.is_sequence():
-                sequence = node.as_sequence()
-                if sequence is None:
-                    raise _invalid()
+                    seen.add(name)
+                    visit(key, depth + 1, entry.byte_range()[0])
+                    height = max(height, 1)
+                    if (value := entry.value()) is not None:
+                        height = max(
+                            height, 1 + visit(value, depth + 1, key.byte_range()[1])
+                        )
+            elif sequence is not None:
+                start = sequence.byte_range()[0]
                 for child in sequence.values():
-                    visit(child, depth + 1)
+                    height = max(height, 1 + visit(child, depth + 1, start))
+                    start = child.byte_range()[1]
+            if anchor is not None:
+                anchors[anchor] = _Anchor(count - before, height, node.byte_range())
+            return height
 
-        visit(root, 0)
+        visit(root, 0, 0)
         # Resolve aliases and merge keys from the checked CST without reparsing.
         plain = as_mapping(_plain(document.to_python()))
-        return document, plain, raw
+        return parsed, plain, shared
     except ConfigurationError:
         raise
     except (
@@ -493,100 +527,6 @@ def _place(base: Value, path: tuple[str, ...], value: Value) -> Value:
     return root
 
 
-def _collect_alias_counts(root: ye.Node) -> dict[str, int]:
-    counts: dict[str, int] = {}
-
-    def walk(node: ye.Node) -> None:
-        if node.is_alias():
-            alias = node.as_alias()
-            if alias is not None:
-                name = alias.name()
-                counts[name] = counts.get(name, 0) + 1
-        elif node.is_mapping():
-            mapping = node.as_mapping()
-            if mapping is not None:
-                for entry in mapping.entries():
-                    value = entry.value()
-                    if value is not None:
-                        walk(value)
-        elif node.is_sequence():
-            sequence = node.as_sequence()
-            if sequence is not None:
-                for item in sequence.values():
-                    walk(item)
-        elif node.is_tagged():
-            tagged = node.as_tagged()
-            if tagged is not None:
-                if (tagged_map := tagged.as_mapping()) is not None:
-                    for entry in tagged_map.entries():
-                        value = entry.value()
-                        if value is not None:
-                            walk(value)
-                elif (tagged_seq := tagged.as_sequence()) is not None:
-                    for item in tagged_seq.values():
-                        walk(item)
-
-    walk(root)
-    return counts
-
-
-def _anchor_before(raw: bytes, start_bound: int, node: ye.Node) -> str | None:
-    node_start, _ = node.byte_range()
-    if node_start <= start_bound:
-        return None
-    gap = raw[start_bound:node_start].decode("utf-8", errors="ignore")
-    matches = _ANCHOR_RE.findall(gap)
-    return matches[-1] if matches else None
-
-
-def _collect_shared_ranges(
-    root: ye.Node, raw: bytes, alias_counts: dict[str, int]
-) -> set[tuple[int, int]]:
-    shared: set[tuple[int, int]] = set()
-    if not alias_counts:
-        return shared
-
-    def walk(node: ye.Node, prefix_start: int) -> None:
-        if node.is_alias():
-            shared.add(node.byte_range())
-            return
-        anchor = _anchor_before(raw, prefix_start, node)
-        if anchor is not None and alias_counts.get(anchor, 0) >= 1:
-            shared.add(node.byte_range())
-        if node.is_mapping():
-            mapping = node.as_mapping()
-            if mapping is not None:
-                for entry in mapping.entries():
-                    key_node = entry.key()
-                    val_node = entry.value()
-                    if key_node is not None and val_node is not None:
-                        walk(val_node, key_node.byte_range()[1])
-        elif node.is_sequence():
-            sequence = node.as_sequence()
-            if sequence is not None:
-                prev_end = node.byte_range()[0]
-                for item in sequence.values():
-                    walk(item, prev_end)
-                    prev_end = item.byte_range()[1]
-        elif node.is_tagged():
-            tagged = node.as_tagged()
-            if tagged is not None:
-                if (tagged_map := tagged.as_mapping()) is not None:
-                    for entry in tagged_map.entries():
-                        key_node = entry.key()
-                        val_node = entry.value()
-                        if key_node is not None and val_node is not None:
-                            walk(val_node, key_node.byte_range()[1])
-                elif (tagged_seq := tagged.as_sequence()) is not None:
-                    prev_end = node.byte_range()[0]
-                    for item in tagged_seq.values():
-                        walk(item, prev_end)
-                        prev_end = item.byte_range()[1]
-
-    walk(root, 0)
-    return shared
-
-
 def _mapping_keys(mapping: ye.Mapping) -> list[str]:
     return list(mapping.keys())
 
@@ -639,9 +579,12 @@ def reconcile_yaml(
     Returns:
         Emitted text, the composite owned baseline, and structured conflicts.
     """
-    desired_doc, desired_plain, _ = _load(desired)
+    desired_file, desired_plain, _ = _load(desired)
     wanted = as_mapping(keyed_view(spec, desired_plain, strict=True))
-    doc, doc_plain, doc_raw = _load(original) if not missing_file else _load("{}\n")
+    local_file, doc_plain, shared_ranges = (
+        _load(original) if not missing_file else _load("{}\n")
+    )
+    doc = local_file[0]
     local = as_mapping(keyed_view(spec, doc_plain))
     base = keyed_view(spec, base, strict=True)
     ambiguous = _ambiguous(spec, local)
@@ -720,8 +663,6 @@ def reconcile_yaml(
     doc_root = doc.root()
     if doc_root is None:
         raise _invalid()
-    alias_counts = _collect_alias_counts(doc_root)
-    shared_ranges = _collect_shared_ranges(doc_root, doc_raw, alias_counts)
 
     # Snapshot hazard paths on the untouched CST before edits shift byte offsets.
     hazardous_paths: set[tuple[str, ...]] = set()
@@ -737,7 +678,7 @@ def reconcile_yaml(
                 for entry in mapping.entries():
                     key_node = entry.key()
                     val_node = entry.value()
-                    if key_node is not None and key_node.to_python() == "<<":
+                    if key_node is not None and _merge_key(key_node):
                         has_merge = True
                     if key_node is not None and val_node is not None:
                         key_name = str(key_node.to_python())
@@ -981,19 +922,23 @@ def reconcile_yaml(
                 )
                 if (
                     node is not None
-                    and node.is_scalar()
+                    and (scalar := node.as_scalar()) is not None
                     and isinstance(old, str)
                     and isinstance(child, str)
                 ):
-                    scalar = node.as_scalar()
-                    if scalar is not None:
-                        style = scalar.style()
-                        if style == "plain":
-                            scalar.set_value(child)
-                            continue
-                        replacement: Any = ye.ScalarValue(child, style=style)
-                    else:
-                        replacement = deepcopy(_unkeyed(spec, child, path))
+                    # The string emitter quotes for the destination mapping.
+                    # Reuse simple plain spellings such as 85% in either layout.
+                    replacement: Any = child
+                    if scalar.style() != "plain":
+                        replacement = ye.ScalarValue(child, style=scalar.style())
+                    elif (
+                        styled_val is not None
+                        and (desired_scalar := styled_val.as_scalar()) is not None
+                        and desired_scalar.value() == child
+                        and desired_scalar.to_python() == child
+                        and _SIMPLE_PLAIN.fullmatch(child)
+                    ):
+                        replacement = styled_val
                 elif styled_val is not None and semantic_equal(
                     keyed_view(spec, _plain(styled_val.to_python()), path),
                     child,
@@ -1013,7 +958,7 @@ def reconcile_yaml(
         # A document that reaches the patch is owned.
         baseline if isinstance(baseline, dict) else {},  # pragma: no mutate
         base if isinstance(base, dict) else {},
-        desired_doc.as_mapping(),
+        desired_file[0].as_mapping(),
         (),
     )
 
@@ -1034,7 +979,7 @@ def reconcile_yaml(
         # A fully accepted new file keeps the desired text, including its comments.
         content = desired
     else:
-        content = str(doc)
+        content = str(local_file)
         if not original.endswith("\n\n"):
             # A removed trailing item leaves its separator blank line on the item before.
             content = content.rstrip("\n") + "\n"
