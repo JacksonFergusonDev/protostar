@@ -62,7 +62,7 @@ When the local file does not end with a blank line, an emitted document ends wit
 
 ### Keyed Records
 
-Pre-commit configuration uses exact `repo` identities and `(repo, id)` hook identities, including `repo: local`. The adapter presents keyed semantic values to the kernel and then patches accepted fields on the original sequence records, so repository and hook order, comments, and foreign fields remain in the local AST. Owned snapshots stay ordinary YAML with `repos` and `hooks` sequences and never contain copied foreign hooks.
+Pre-commit configuration uses exact `repo` identities and `(repo, id)` hook identities, including `repo: local`. The adapter presents keyed semantic values to the kernel and then patches accepted fields on the original sequence records, so repository and hook order, comments, and foreign fields remain in the local CST. Owned snapshots stay ordinary YAML with `repos` and `hooks` sequences and never contain copied foreign hooks.
 
 - Repository revisions are owned independently of hook fields. Adding a managed hook to an existing repository adopts neither its revision nor its other hooks.
 - Duplicate local repository blocks or hook IDs preserve the entire ambiguous repository with a `duplicate-identity` conflict. Independent repositories can still change.
