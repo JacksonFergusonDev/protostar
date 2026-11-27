@@ -7,12 +7,6 @@ schema_version = 1
 producer_version = "0.0.0"
 hook_pins = []
 
-[template]
-origin = "built-in"
-locator = "astro"
-digest = "4f1a6f7423b45b0f7056bb3eeca5430ece13b8ddcca67be12b12fdda3734c843"
-display_name = "astro"
-
 [[files]]
 path = ".envrc"
 policy = "seed-only"
@@ -31,12 +25,72 @@ digest = "4bb87ac35b32fc2ad36b2f5517041345a3fe9cce419275ece69a658dd56cf840"
 [[files]]
 path = "justfile"
 policy = "text"
-baseline = "set shell := [\"bash\", \"-euc\", \"-o\", \"pipefail\"]\nset unstable\nset quiet\n\n# --- ANSI Colors ---\n\nblue := '\\033[1;34m'\ngreen := '\\033[1;32m'\nnc := '\\033[0m'\n\n# Show available commands\ndefault:\n    @just --list\n\n# Sync/install dependencies using uv\nsync:\n    uv sync --quiet\n\n# Auto-format code\nformat: sync\n    @printf \"\\n{{ blue }}=== Formatting Code ==={{ nc }}\\n\"\n    uv run ruff check --fix .\n    uv run ruff format .\n    @printf \"{{ green }}✔ Formatting complete{{ nc }}\\n\"\n\n# Run linters\nlint: sync\n    @printf \"\\n{{ blue }}=== Running Linters ==={{ nc }}\\n\"\n    uv run ruff check .\n    uv run ruff format --check .\n    @printf \"{{ green }}✔ Linting passed{{ nc }}\\n\"\n\n# Run the fast local CI pipeline executed before pushing\nci: lint\n    @printf \"\\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\\n\"\n\n# Remove caches, artifacts, and temp files\nclean:\n    @printf \"\\n{{ blue }}=== Cleaning Workspace ==={{ nc }}\\n\"\n    rm -rf \\\n        .ruff_cache\n    find . -type d -name \"__pycache__\" -exec rm -rf {} +\n    @printf \"{{ green }}✔ Workspace cleaned{{ nc }}\\n\"\n"
+baseline = '''
+set shell := ["bash", "-euc", "-o", "pipefail"]
+set unstable
+set quiet
+
+# --- ANSI Colors ---
+
+blue := '\033[1;34m'
+green := '\033[1;32m'
+nc := '\033[0m'
+
+# Show available commands
+default:
+    @just --list
+
+# Sync/install dependencies using uv
+sync:
+    uv sync --quiet
+
+# Auto-format code
+format: sync
+    @printf "\n{{ blue }}=== Formatting Code ==={{ nc }}\n"
+    uv run ruff check --fix .
+    uv run ruff format .
+    @printf "{{ green }}✔ Formatting complete{{ nc }}\n"
+
+# Run linters
+lint: sync
+    @printf "\n{{ blue }}=== Running Linters ==={{ nc }}\n"
+    uv run ruff check .
+    uv run ruff format --check .
+    @printf "{{ green }}✔ Linting passed{{ nc }}\n"
+
+# Run the fast local CI pipeline executed before pushing
+ci: lint
+    @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
+
+# Remove caches, artifacts, and temp files
+clean:
+    @printf "\n{{ blue }}=== Cleaning Workspace ==={{ nc }}\n"
+    rm -rf \
+        .ruff_cache
+    find . -type d -name "__pycache__" -exec rm -rf {} +
+    @printf "{{ green }}✔ Workspace cleaned{{ nc }}\n"
+'''
 
 [[files]]
 path = "pyproject.toml"
 policy = "structured-toml"
-baseline = "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nextend-select = [\"PD\", \"NPY\"]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n"
+baseline = """
+[project]
+description = "Add your description here."
+readme = "README.md"
+
+[[project.authors]]
+email = "your-email@example.com"
+name = "your-name"
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+extend-select = ["PD", "NPY"]
+ignore = ["E501"]
+select = ["A", "B", "C4", "E", "F", "I", "RUF", "UP"]
+"""
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -109,3 +163,9 @@ name = "specutils"
 marker = ""
 declared = "specutils"
 materialized = "specutils>=2.4.0"
+
+[template]
+origin = "built-in"
+locator = "astro"
+digest = "4f1a6f7423b45b0f7056bb3eeca5430ece13b8ddcca67be12b12fdda3734c843"
+display_name = "astro"

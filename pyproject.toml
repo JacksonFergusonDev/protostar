@@ -11,6 +11,7 @@ dependencies = [
     "pygments>=2.21.0",
     "rich>=15.0.0",
     "rich-argparse>=1.7.2",
+    "rtoml>=0.14.0",
     "textual>=8.2.8",
     "tomlkit>=0.14.0",
     "yaml-edit>=0.2.1,<0.3",

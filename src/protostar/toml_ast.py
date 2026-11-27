@@ -1,23 +1,17 @@
 """AST-preserving TOML aggregation and spec-driven reconciliation."""
 
+from __future__ import annotations
+
+import tomllib
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass, replace
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
-import tomlkit
-import tomlkit.items
-from tomlkit.container import Container, OutOfOrderTableProxy
-from tomlkit.items import (
-    AbstractTable,
-    AoT,
-    Comment,
-    InlineTable,
-    Item,
-    Table,
-    Whitespace,
-)
-from tomlkit.toml_document import TOMLDocument
+if TYPE_CHECKING:
+    from tomlkit.container import Container, OutOfOrderTableProxy
+    from tomlkit.items import AbstractTable, Item, Table
+    from tomlkit.toml_document import TOMLDocument
 
 from .errors import ConfigurationError
 from .intent import StructuredContribution, validate_configuration
@@ -105,10 +99,15 @@ DEFAULT_TOML_SPEC = TomlDocumentSpec()
 
 @dataclass(frozen=True)
 class AggregatedToml:
-    """Semantic desired value paired with its comment-preserving TOML AST."""
+    """Semantic desired value paired with a lazily built comment-preserving TOML AST."""
 
     value: dict[str, Value]
-    document: TOMLDocument
+    _contributions: tuple[StructuredContribution, ...] = ()
+
+    @property
+    def document(self) -> TOMLDocument:
+        """Builds the comment-preserving TOML AST on demand."""
+        return _build_toml_document(self._contributions)
 
 
 @dataclass(frozen=True)
@@ -118,12 +117,50 @@ class TomlReconciliation(StructuredReconciliation):
     layout_notes: tuple[str, ...] = ()
 
 
+def _build_toml_document(
+    contributions: tuple[StructuredContribution, ...],
+) -> TOMLDocument:
+    """Overlays contribution ASTs with tomlkit only when a mutation needs them."""
+    import tomlkit
+    from tomlkit.items import AbstractTable
+
+    desired_doc = tomlkit.document()
+
+    def overlay_ast(
+        target: AbstractTable | Container, incoming: AbstractTable | Container
+    ) -> None:
+        # None would read as False too.
+        overlap_seen = False  # pragma: no mutate
+        # None would read as False too.
+        separator_added = False  # pragma: no mutate
+        for key, value in incoming.items():
+            existed = key in target
+            current = target[key] if existed else None
+            if isinstance(current, AbstractTable) and isinstance(value, AbstractTable):
+                overlay_ast(current, value)
+            else:
+                if (
+                    not existed
+                    and overlap_seen
+                    and not separator_added
+                    and isinstance(target, AbstractTable)
+                    and not isinstance(value, AbstractTable)
+                ):
+                    target.add(tomlkit.nl())
+                    separator_added = True
+                target[key] = deepcopy(value)
+            overlap_seen = overlap_seen or existed
+
+    for contribution in contributions:
+        overlay_ast(desired_doc, tomlkit.parse(contribution.content))
+    return desired_doc
+
+
 def aggregate_toml_document(
     contributions: list[StructuredContribution],
 ) -> AggregatedToml:
-    """Aggregates semantic precedence and the corresponding desired TOML AST."""
+    """Aggregates semantic precedence and records contributions for lazy AST overlay."""
     desired: dict[str, Value] = {}
-    desired_doc = tomlkit.document()
     owners: dict[tuple[str, ...], str] = {}
 
     def add_semantic(
@@ -162,38 +199,13 @@ def aggregate_toml_document(
                 target[key] = {}
                 add_semantic(as_mapping(target[key]), value, producer, keys)
 
-    def overlay_ast(
-        target: AbstractTable | Container, incoming: AbstractTable | Container
-    ) -> None:
-        # None would read as False too.
-        overlap_seen = False  # pragma: no mutate
-        # None would read as False too.
-        separator_added = False  # pragma: no mutate
-        for key, value in incoming.items():
-            existed = key in target
-            current = target[key] if existed else None
-            if isinstance(current, AbstractTable) and isinstance(value, AbstractTable):
-                overlay_ast(current, value)
-            else:
-                if (
-                    not existed
-                    and overlap_seen
-                    and not separator_added
-                    and isinstance(target, AbstractTable)
-                    and not isinstance(value, AbstractTable)
-                ):
-                    target.add(tomlkit.nl())
-                    separator_added = True
-                target[key] = deepcopy(value)
-            overlap_seen = overlap_seen or existed
-
-    for contribution in sorted(
-        contributions, key=lambda item: item.producer.startswith("template:")
-    ):
+    ordered = tuple(
+        sorted(contributions, key=lambda item: item.producer.startswith("template:"))
+    )
+    for contribution in ordered:
         data = as_mapping(validate_configuration(contribution.content))
         add_semantic(desired, data, contribution.producer)
-        overlay_ast(desired_doc, tomlkit.parse(contribution.content))
-    return AggregatedToml(desired, desired_doc)
+    return AggregatedToml(desired, ordered)
 
 
 def aggregate_toml(contributions: list[StructuredContribution]) -> dict[str, Value]:
@@ -312,6 +324,8 @@ def _nested_path(name: str, namespaces: frozenset[tuple[str, ...]]) -> tuple[str
 
 def _inline(member: dict[str, Value]) -> Value:
     """An inline table spaced as TOML's own examples are, ``{ a = 1 }``."""
+    import tomlkit
+
     table = tomlkit.inline_table()
     table.update(member)
     body = table.as_string()[1:-1]
@@ -328,6 +342,9 @@ def _inline_only(ast: Table | Container, key: str) -> bool:
     ``key = { a = 1 }``, cannot hold a table with its own header. A table spread
     over out-of-order headers is neither; its members cannot be told apart.
     """
+    from tomlkit.container import Container
+    from tomlkit.items import InlineTable
+
     if isinstance(ast[key], InlineTable):
         return True
     container = ast if isinstance(ast, Container) else ast.value
@@ -439,6 +456,8 @@ def _trailing_comments(table: Table) -> int | None:
     the next header in the table's own body, so a header comment such as
     ``# ---- Mypy ---- #`` reads as the end of the table before it.
     """
+    from tomlkit.items import Comment, Whitespace
+
     body = table.value.body
     start = len(body)
     while start and body[start - 1][0] is None:
@@ -456,6 +475,8 @@ def _above_trailing_comments(table: Table, key: str, start: int) -> None:
     Otherwise the value lands below a comment that introduces the next
     section, and the document's layout reads it as that section's.
     """
+    from tomlkit.items import AoT, Table
+
     # The value was just appended below the block, so it is always found there;
     # a table, or a dotted key's table, keeps its own place.
     item = next(item for k, item in table.value.body if k is not None and k.key == key)
@@ -476,7 +497,7 @@ def reconcile_toml(
     overwrite: bool = False,
     initializing: bool = False,
     missing_file: bool = False,
-    desired_ast: TOMLDocument | None = None,
+    desired_ast: TOMLDocument | AggregatedToml | None = None,
     resolutions: Resolutions = NO_RESOLUTIONS,
     proposing: bool = False,
 ) -> TomlReconciliation:
@@ -491,7 +512,8 @@ def reconcile_toml(
         overwrite: Whether explicit overwrite owns declared values.
         initializing: Whether Protostar is creating this document.
         missing_file: Whether the workspace file is absent.
-        desired_ast: Desired AST whose styling is kept for accepted values.
+        desired_ast: Desired AST (or lazy ``AggregatedToml``) whose styling is
+            kept for accepted values.
         resolutions: Choices settling conflicts, keyed by conflict identity.
         proposing: Whether the document existed before Protostar owned any of
             it, so each change into it is a proposal.
@@ -500,13 +522,12 @@ def reconcile_toml(
         Emitted text, the composite owned baseline, conflicts, and layout notes.
     """
     try:
-        doc = tomlkit.parse(original)
-    except tomlkit.exceptions.TOMLKitError as e:
+        raw_local = as_mapping(tomllib.loads(original))
+    except tomllib.TOMLDecodeError as e:
         raise ConfigurationError(
             "Invalid structured TOML file.",
             hint="Correct the target TOML syntax before retrying.",
         ) from e
-    raw_local = as_mapping(doc.unwrap())
     raw_desired = desired
     local = as_mapping(flatten_names(raw_local, spec))
     desired = as_mapping(flatten_names(desired, spec))
@@ -547,8 +568,42 @@ def reconcile_toml(
         proposals = result.proposals
         preserved = result.preserved
 
+    # The baseline is compared by name too, but kept in the document's spelling
+    # so a lockfile never changes for a spelling alone.
+    inline: set[tuple[str, ...]] = set()
+    value = as_mapping(
+        respell_names(value, raw_local, raw_desired, spec, inline),
+    )
+    baseline = respell_names(baseline, raw_local, raw_desired, spec)
+
+    # Unchanged documents return original without importing or parsing via tomlkit.
+    if semantic_equal(raw_local, value):  # pragma: no mutate
+        return TomlReconciliation(
+            original,
+            baseline,
+            conflicts,
+            resolved=resolved,
+            proposals=proposals,
+            preserved=preserved,
+        )
+
+    import tomlkit
+    from tomlkit.container import Container, OutOfOrderTableProxy
+    from tomlkit.items import InlineTable, Table
+
+    try:
+        doc = tomlkit.parse(original)
+    except tomlkit.exceptions.TOMLKitError as e:
+        raise ConfigurationError(
+            "Invalid structured TOML file.",
+            hint="Correct the target TOML syntax before retrying.",
+        ) from e
+    resolved_desired_ast: TOMLDocument | None = (
+        desired_ast.document if isinstance(desired_ast, AggregatedToml) else desired_ast
+    )
+
     def desired_node(keys: tuple[str, ...]) -> Item | Container | None:
-        node: Any = desired_ast
+        node: Any = resolved_desired_ast
         if node is None:
             return None
         try:
@@ -644,19 +699,9 @@ def reconcile_toml(
                 _above_trailing_comments(ast, key, closing)
                 closing += 1
 
-    # The baseline is compared by name too, but kept in the document's spelling
-    # so a lockfile never changes for a spelling alone.
-    inline: set[tuple[str, ...]] = set()
-    value = as_mapping(
-        respell_names(value, raw_local, raw_desired, spec, inline),
-    )
-    baseline = respell_names(baseline, raw_local, raw_desired, spec)
     patch(doc, raw_local, value)
     layout_notes: list[str] = []
-    # tomlkit round-trips an unchanged document.
-    if semantic_equal(raw_local, value):  # pragma: no mutate
-        content = original
-    elif spec.layout is not None and initializing:
+    if spec.layout is not None and initializing:
         content = spec.layout.create(doc, layout_notes.append)
     elif spec.layout is not None:
         content = spec.layout.extend(original, doc, layout_notes.append)

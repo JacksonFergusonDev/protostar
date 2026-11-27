@@ -114,9 +114,7 @@ def test_json_fallback_uses_its_display_language(mocker):
         ConflictReason.TYPE_MISMATCH,
         ConflictSides(1, 2, 3),
     )
-    mocker.patch(
-        "protostar.cli.tui.conflicts.sides.tomlkit.dumps", side_effect=TypeError
-    )
+    mocker.patch("protostar.cli.tui.conflicts.sides.rtoml.dumps", side_effect=TypeError)
     rendered = side_text(conflict, "local")
     assert rendered.plain == '{\n  "name": 2\n}'
     assert color_at(rendered, '"name"') == Style(color=CYAN).color

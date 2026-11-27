@@ -1,9 +1,13 @@
 """pyproject.toml policy: merge spec, layout, personal seeds, and group includes."""
 
-from collections.abc import Callable, Collection
+from __future__ import annotations
 
-import tomlkit
-import tomlkit.items
+import tomllib
+from collections.abc import Callable, Collection
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import tomlkit
 
 from ..errors import ConfigurationError
 from ..intent import (
@@ -70,6 +74,8 @@ def finalize_new_pyproject(
     `[dependency-groups]` and the recipe is inserted after it, so the finished file
     needs one more pass. Never call this on a project the user already had.
     """
+    import tomlkit
+
     return format_document(tomlkit.parse(content), on_fallback)
 
 
@@ -104,9 +110,22 @@ def declare_contribution(
 
 
 def _parse_toml_document(original: str, *, action: str) -> tomlkit.TOMLDocument:
+    import tomlkit
+    import tomlkit.exceptions
+
     try:
         return tomlkit.parse(original)
     except tomlkit.exceptions.ParseError as e:
+        raise ConfigurationError(
+            "Invalid dependency configuration.",
+            hint=f"Correct pyproject.toml before {action}.",
+        ) from e
+
+
+def _parse_toml_data(original: str, *, action: str) -> dict[str, object]:
+    try:
+        return tomllib.loads(original)
+    except tomllib.TOMLDecodeError as e:
         raise ConfigurationError(
             "Invalid dependency configuration.",
             hint=f"Correct pyproject.toml before {action}.",
@@ -129,11 +148,22 @@ def remove_requirements(
     Raises:
         ConfigurationError: If the document or its dependency tables are invalid.
     """
+    data = _parse_toml_data(original, action="removing requirements")
+    table_key = "project" if group is DependencyGroup.MAIN else "dependency-groups"
+    array_key = "dependencies" if group is DependencyGroup.MAIN else group.value
+    raw_table = data.get(table_key)
+    raw_array = raw_table.get(array_key) if isinstance(raw_table, dict) else None
+    if not isinstance(raw_array, list) or not any(
+        isinstance(item, str) and item in entries for item in raw_array
+    ):
+        return original
+
+    import tomlkit
+    import tomlkit.items
+
     doc = _parse_toml_document(original, action="removing requirements")
-    table = doc.get(
-        "project" if group is DependencyGroup.MAIN else "dependency-groups", {}
-    )
-    array = table.get("dependencies" if group is DependencyGroup.MAIN else group.value)
+    table = doc.get(table_key, {})
+    array = table.get(array_key)
     if not isinstance(array, tomlkit.items.Array):
         return original
     for index in reversed(range(len(array))):
@@ -144,6 +174,40 @@ def remove_requirements(
 
 def apply_dependency_includes(original: str, edges: list[DependencyInclude]) -> str:
     """Returns an AST-preserving additive application of typed group includes."""
+    data = _parse_toml_data(original, action="applying dependency includes")
+    raw_groups = data.get("dependency-groups")
+    if raw_groups is not None and not isinstance(raw_groups, dict):
+        raise ConfigurationError(
+            "dependency-groups must be a TOML table.",
+            hint="Correct the dependency-groups table.",
+        )
+    needs_change = False
+    if raw_groups is None:
+        needs_change = True
+    else:
+        for edge in edges:
+            if edge.group not in raw_groups or edge.include not in raw_groups:
+                needs_change = True
+            raw_entries = raw_groups.get(edge.group)
+            raw_included = raw_groups.get(edge.include)
+            if (raw_entries is not None and not isinstance(raw_entries, list)) or (
+                raw_included is not None and not isinstance(raw_included, list)
+            ):
+                raise ConfigurationError(
+                    "Dependency-group entries must be arrays.",
+                    hint="Use requirement strings and include-group records inside each group array.",
+                )
+            if not isinstance(raw_entries, list) or not any(
+                isinstance(e, dict) and e.get("include-group") == edge.include
+                for e in raw_entries
+            ):
+                needs_change = True
+    if not needs_change:
+        return original
+
+    import tomlkit
+    import tomlkit.items
+
     doc = _parse_toml_document(original, action="applying dependency includes")
     groups = doc.get("dependency-groups")
     if groups is not None and not isinstance(groups, tomlkit.items.AbstractTable):

@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import rtoml
 import tomlkit
 
 from protostar import yaml_ast
@@ -38,9 +39,10 @@ def test_a_parse_that_calls_another_parse_counts_once() -> None:
     with probes.record() as recorder:
         tomlkit.parse("a = 1\n")
         tomlkit.loads("b = 2\n")
+        rtoml.loads("d = 4\n")
         yaml_ast._parse_yaml("c: 3\n")
 
-    assert recorder.counts == {"parse:toml": 2, "parse:yaml": 1}
+    assert recorder.counts == {"parse:toml": 3, "parse:yaml": 1}
 
 
 def test_recording_ends_with_every_seam_restored() -> None:

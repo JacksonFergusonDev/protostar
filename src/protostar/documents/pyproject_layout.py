@@ -23,16 +23,18 @@ touching any other byte. The managed banner and headers that trail a piece are k
 apart in ``Section.tail`` and are matched by exact line, never by pattern.
 """
 
+from __future__ import annotations
+
 import logging
 import tomllib
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import tomlkit
-from tomlkit.items import AoT, Item, Key, Table
-from tomlkit.toml_document import TOMLDocument
+if TYPE_CHECKING:
+    from tomlkit.items import Item, Key
+    from tomlkit.toml_document import TOMLDocument
 
 logger = logging.getLogger("protostar")
 
@@ -152,6 +154,8 @@ def _split_tail(text: str) -> tuple[str, str]:
 
 def _render(key_path: list[Key | str | None], item: Item) -> str:
     """Renders one item on its own, using only tomlkit's public API."""
+    import tomlkit
+
     document = tomlkit.document()
     if len(key_path) == 1:
         document.append(key_path[0], item)
@@ -164,6 +168,8 @@ def _render(key_path: list[Key | str | None], item: Item) -> str:
 
 def _decomposable(tool: Item) -> bool:
     """Whether [tool] is a plain table of tables that can be split per tool."""
+    from tomlkit.items import AoT, Table
+
     return isinstance(tool, Table) and all(
         key is None or isinstance(child, (Table, AoT)) for key, child in tool.value.body
     )
@@ -241,6 +247,8 @@ def format_document(
     project's configuration. That is logged and reported to ``on_fallback``, so it is
     never silent.
     """
+    import tomlkit
+
     raw = tomlkit.dumps(document)
 
     def fall_back(reason: str) -> str:
@@ -292,6 +300,9 @@ def compose_children(
     ``order`` does not name follow, in their existing order. Comments inside a child
     stay with it. The document is consumed: its child tables are removed.
     """
+    import tomlkit
+    from tomlkit.items import Table
+
     parent: Any = document
     for key in path:
         parent = parent[key]
@@ -465,6 +476,8 @@ def place_new_sections(
     proven to hold the same data as a plain dump, the plain dump is returned and the
     reason reported.
     """
+    import tomlkit
+
     raw = tomlkit.dumps(merged)
     before = split_sections(tomlkit.parse(original))
     by_path: dict[SectionPath, list[Section]] = {}
