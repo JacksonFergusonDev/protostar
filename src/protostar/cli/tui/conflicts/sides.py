@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-import tomlkit
+import rtoml
 from rich.console import Group, RenderableType
 from rich.text import Text
 
@@ -46,7 +46,9 @@ def _structured(conflict: MergeConflict, value: Value) -> CodeSource:
     suffix = Path(conflict.location.file).suffix
     try:
         if suffix == ".toml" and isinstance(data, dict):
-            return CodeSource(tomlkit.dumps(data), conflict.location.file, "toml")
+            return CodeSource(
+                rtoml.dumps(data, none_value=None), conflict.location.file, "toml"
+            )
         if suffix in (".yaml", ".yml") and isinstance(data, dict):
             return CodeSource(
                 encode_yaml_baseline(data), conflict.location.file, "yaml"

@@ -3,7 +3,7 @@ from datetime import UTC, date, datetime, time
 from typing import Any
 
 import pytest
-import tomlkit
+import rtoml
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -141,7 +141,7 @@ def test_a_state_text_read_repeatedly_is_parsed_once(mocker):
     """One run reads the same state several times; the parse is shared."""
     content = serialize_state(sample_state())
     sync_state.deserialize_state.cache_clear()
-    parse = mocker.spy(tomlkit, "parse")
+    parse = mocker.spy(rtoml, "loads")
 
     first = deserialize_state(content)
     second = deserialize_state(content)
@@ -155,7 +155,7 @@ def test_serializing_an_unchanged_state_does_not_parse_it_again(mocker):
     state = sample_state()
     content = serialize_state(state)
     deserialize_state(content)
-    parse = mocker.spy(tomlkit, "parse")
+    parse = mocker.spy(rtoml, "loads")
 
     assert serialize_state(state) == content
 
@@ -164,7 +164,7 @@ def test_serializing_an_unchanged_state_does_not_parse_it_again(mocker):
 
 def test_a_state_text_that_fails_is_parsed_and_rejected_every_time(mocker):
     """An invalid text is never cached, so each read raises its own error."""
-    parse = mocker.spy(tomlkit, "parse")
+    parse = mocker.spy(rtoml, "loads")
 
     for _ in range(2):
         with pytest.raises(ConfigurationError):
@@ -184,6 +184,11 @@ def test_record_and_baseline_order_do_not_change_serialized_bytes():
     assert encode_toml_baseline(
         {"b": {"y": 2, "x": 1}, "a": 3}
     ) == encode_toml_baseline({"a": 3, "b": {"x": 1, "y": 2}})
+
+
+def test_toml_baseline_preserves_large_template_integers():
+    values = decode_toml_baseline("masks = [0xffffffffffffffffffffffffffffffff, -1]")
+    assert decode_toml_baseline(encode_toml_baseline(values)) == values
 
 
 def test_baseline_preserves_native_toml_shapes():
@@ -1026,8 +1031,8 @@ def test_a_recipe_alone_also_marks_a_tracked_project(tmp_path, mocker):
         check_one_shot_workspace(tmp_path)
 
 
-def test_a_state_tomlkit_cannot_write_is_refused(mocker):
-    mocker.patch("protostar.sync_state.tomlkit.dumps", side_effect=ValueError("boom"))
+def test_a_state_toml_encoder_cannot_write_is_refused(mocker):
+    mocker.patch("protostar.sync_state.rtoml.dumps", side_effect=ValueError("boom"))
 
     with pytest.raises(ConfigurationError) as caught:
         serialize_state(SyncState("x"))
@@ -1035,3 +1040,12 @@ def test_a_state_tomlkit_cannot_write_is_refused(mocker):
     assert str(caught.value) == "Invalid Protostar state: cannot serialize state."
     assert caught.value.hint == HINT
     assert isinstance(caught.value.__cause__, ValueError)
+
+
+def test_deserialize_state_normalizes_crlf_line_endings_in_multiline_baselines():
+    """Windows CRLF writes or autocrlf checkouts must not corrupt multiline baselines."""
+    lf_content = serialize_state(sample_state())
+    crlf_content = lf_content.replace("\n", "\r\n")
+    sync_state.deserialize_state.cache_clear()
+
+    assert deserialize_state(crlf_content) == deserialize_state(lf_content)

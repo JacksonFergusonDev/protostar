@@ -6,12 +6,6 @@
 schema_version = 1
 producer_version = "0.0.0"
 
-[template]
-origin = "built-in"
-locator = "lib"
-digest = "3ca7e262706542905921f89d03c6f983722e4c2dc34b1ad40e425f25aa081207"
-display_name = "lib"
-
 [[files]]
 path = ".envrc"
 policy = "seed-only"
@@ -30,7 +24,35 @@ digest = "bd9612b52e1a29303327def7f01d102caabaf444463d54560cc7aa0e763e9ebb"
 [[files]]
 path = ".github/codecov.yml"
 policy = "structured-yaml"
-baseline = "comment:\n  behavior: default\n  layout: reach,diff,flags,files\n  require_changes: true\ncoverage:\n  precision: 2\n  range: 80...100\n  round: down\n  status:\n    patch:\n      default:\n        if_ci_failed: error\n        if_not_found: success\n        informational: false\n        target: '80%'\n        threshold: '2%'\n    project:\n      default:\n        if_ci_failed: error\n        if_not_found: error\n        target: '80%'\n        threshold: '2%'\nignore:\n- 'tests/**'\n- 'docs/**'\n- 'scripts/**'\n- '**/__init__.py'\n"
+baseline = """
+comment:
+  behavior: default
+  layout: reach,diff,flags,files
+  require_changes: true
+coverage:
+  precision: 2
+  range: 80...100
+  round: down
+  status:
+    patch:
+      default:
+        if_ci_failed: error
+        if_not_found: success
+        informational: false
+        target: '80%'
+        threshold: '2%'
+    project:
+      default:
+        if_ci_failed: error
+        if_not_found: error
+        target: '80%'
+        threshold: '2%'
+ignore:
+- 'tests/**'
+- 'docs/**'
+- 'scripts/**'
+- '**/__init__.py'
+"""
 
 [[files]]
 path = ".github/pull_request_template.md"
@@ -40,27 +62,323 @@ digest = "0d5f79200b5e611bd11b0558dbe149cd1ba1bea3d663175231236c9bd81c57c7"
 [[files]]
 path = ".github/renovate.json"
 policy = "structured-jsonc"
-baseline = "{\n  \"$schema\": \"https://docs.renovatebot.com/renovate-schema.json\",\n  \"extends\": [\n    \"config:best-practices\",\n    \":semanticCommits\"\n  ],\n  \"internalChecksFilter\": \"strict\",\n  \"packageRules\": [\n    {\n      \"description\": \"Require a package to be 2 weeks old before updating, but exclude vulnerability remediation from this wait.\",\n      \"matchUpdateTypes\": [\n        \"major\",\n        \"minor\",\n        \"patch\",\n        \"pin\",\n        \"digest\"\n      ],\n      \"minimumReleaseAge\": \"2 weeks\"\n    },\n    {\n      \"automerge\": true,\n      \"description\": \"Group all python dev-dependencies into one PR and automerge them.\",\n      \"groupName\": \"python-dev-tools\",\n      \"matchDepTypes\": [\n        \"dependency-groups\"\n      ],\n      \"matchFileNames\": [\n        \"pyproject.toml\"\n      ]\n    },\n    {\n      \"automerge\": true,\n      \"description\": \"Group GitHub Actions updates into one PR and automerge them.\",\n      \"groupName\": \"github-actions\",\n      \"matchManagers\": [\n        \"github-actions\"\n      ]\n    }\n  ],\n  \"rebaseWhen\": \"conflicted\",\n  \"schedule\": [\n    \"before 4am on monday\"\n  ],\n  \"vulnerabilityAlerts\": {\n    \"schedule\": [\n      \"at any time\"\n    ]\n  }\n}\n"
+baseline = """
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices",
+    ":semanticCommits"
+  ],
+  "internalChecksFilter": "strict",
+  "packageRules": [
+    {
+      "description": "Require a package to be 2 weeks old before updating, but exclude vulnerability remediation from this wait.",
+      "matchUpdateTypes": [
+        "major",
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
+      "minimumReleaseAge": "2 weeks"
+    },
+    {
+      "automerge": true,
+      "description": "Group all python dev-dependencies into one PR and automerge them.",
+      "groupName": "python-dev-tools",
+      "matchDepTypes": [
+        "dependency-groups"
+      ],
+      "matchFileNames": [
+        "pyproject.toml"
+      ]
+    },
+    {
+      "automerge": true,
+      "description": "Group GitHub Actions updates into one PR and automerge them.",
+      "groupName": "github-actions",
+      "matchManagers": [
+        "github-actions"
+      ]
+    }
+  ],
+  "rebaseWhen": "conflicted",
+  "schedule": [
+    "before 4am on monday"
+  ],
+  "vulnerabilityAlerts": {
+    "schedule": [
+      "at any time"
+    ]
+  }
+}
+"""
 
 [[files]]
 path = ".github/workflows/ci.yml"
 policy = "structured-yaml"
-baseline = "jobs:\n  lint:\n    name: 'Lint & Type Check'\n    permissions:\n      contents: read\n    runs-on: ubuntu-latest\n    steps:\n    - name: Checkout\n      uses: actions/checkout@v7\n      with:\n        persist-credentials: false\n    - name: Install uv\n      uses: astral-sh/setup-uv@v10.0.0\n      with:\n        enable-cache: true\n        python-version: '3.13'\n    - name: Install dependencies\n      run: uv sync --all-extras --dev --locked\n    - name: Lint Markdown with rumdl\n      run: uv run rumdl check --output-format github .\n    - name: Check Markdown formatting with rumdl\n      run: uv run rumdl fmt --check --output-format github .\n    - env:\n        GH_TOKEN: ${{ github.token }}\n      name: Run zizmor\n      run: uv run zizmor --format=github .\n    - name: Run Ruff Linter\n      run: uv run ruff check --output-format=github .\n    - name: Run Ruff Formatter\n      run: uv run ruff format --check --output-format=github .\n    - name: Run Mypy\n      run: uv run mypy .\n    - name: Run actionlint\n      uses: raven-actions/actionlint@v2\n  test:\n    name: Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}\n    permissions:\n      contents: read\n    runs-on: ${{ matrix.os }}\n    steps:\n    - name: Checkout\n      uses: actions/checkout@v7\n      with:\n        persist-credentials: false\n    - name: Install uv\n      uses: astral-sh/setup-uv@v10.0.0\n      with:\n        enable-cache: true\n        python-version: ${{ matrix.python-version }}\n    - name: Install dependencies\n      run: |\n        uv sync --all-extras --dev --locked\n        uv pip install pytest-github-actions-annotate-failures\n    - name: Run tests\n      run: \"uv run pytest ${{ matrix.coverage && '--cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy' || '' }}\"\n    - if: matrix.coverage\n      name: Upload coverage to Codecov\n      uses: codecov/codecov-action@v7\n      with:\n        disable_search: true\n        fail_ci_if_error: true\n        files: coverage.xml\n        name: coverage\n        token: ${{ secrets.CODECOV_TOKEN }}\n    - if: '${{ matrix.coverage && !cancelled() }}'\n      name: Upload test analytics to Codecov\n      uses: codecov/codecov-action@v7\n      with:\n        disable_search: true\n        files: junit.xml\n        name: test-results\n        report_type: test_results\n        token: ${{ secrets.CODECOV_TOKEN }}\n    strategy:\n      matrix:\n        include:\n        - coverage: true\n          os: ubuntu-latest\n          python-version: '3.14'\n        os:\n        - macos-latest\n        - ubuntu-latest\n        - windows-latest\n        python-version:\n        - '3.13'\n        - '3.14'\nname: CI\n'on':\n  pull_request:\n    branches:\n    - main\n  push:\n    branches:\n    - main\n"
+baseline = """
+jobs:
+  lint:
+    name: 'Lint & Type Check'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+    - name: Install uv
+      uses: astral-sh/setup-uv@v10.0.0
+      with:
+        enable-cache: true
+        python-version: '3.13'
+    - name: Install dependencies
+      run: uv sync --all-extras --dev --locked
+    - name: Lint Markdown with rumdl
+      run: uv run rumdl check --output-format github .
+    - name: Check Markdown formatting with rumdl
+      run: uv run rumdl fmt --check --output-format github .
+    - env:
+        GH_TOKEN: ${{ github.token }}
+      name: Run zizmor
+      run: uv run zizmor --format=github .
+    - name: Run Ruff Linter
+      run: uv run ruff check --output-format=github .
+    - name: Run Ruff Formatter
+      run: uv run ruff format --check --output-format=github .
+    - name: Run Mypy
+      run: uv run mypy .
+    - name: Run actionlint
+      uses: raven-actions/actionlint@v2
+  test:
+    name: Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+    permissions:
+      contents: read
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+    - name: Install uv
+      uses: astral-sh/setup-uv@v10.0.0
+      with:
+        enable-cache: true
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        uv sync --all-extras --dev --locked
+        uv pip install pytest-github-actions-annotate-failures
+    - name: Run tests
+      run: "uv run pytest ${{ matrix.coverage && '--cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy' || '' }}"
+    - if: matrix.coverage
+      name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v7
+      with:
+        disable_search: true
+        fail_ci_if_error: true
+        files: coverage.xml
+        name: coverage
+        token: ${{ secrets.CODECOV_TOKEN }}
+    - if: '${{ matrix.coverage && !cancelled() }}'
+      name: Upload test analytics to Codecov
+      uses: codecov/codecov-action@v7
+      with:
+        disable_search: true
+        files: junit.xml
+        name: test-results
+        report_type: test_results
+        token: ${{ secrets.CODECOV_TOKEN }}
+    strategy:
+      matrix:
+        include:
+        - coverage: true
+          os: ubuntu-latest
+          python-version: '3.14'
+        os:
+        - macos-latest
+        - ubuntu-latest
+        - windows-latest
+        python-version:
+        - '3.13'
+        - '3.14'
+name: CI
+'on':
+  pull_request:
+    branches:
+    - main
+  push:
+    branches:
+    - main
+"""
 
 [[files]]
 path = ".github/workflows/release.yml"
 policy = "structured-yaml"
-baseline = "jobs:\n  pypi-publish:\n    environment:\n      name: pypi\n      url: https://pypi.org/p/${{ github.event.repository.name }}\n    name: Build and Publish to PyPI\n    permissions:\n      contents: read\n      id-token: write\n    runs-on: ubuntu-latest\n    steps:\n    - name: Checkout\n      uses: actions/checkout@v7\n      with:\n        persist-credentials: false\n    - name: Install uv\n      uses: astral-sh/setup-uv@v10.0.0\n    - name: Build package\n      run: uv build\n    - name: Publish to PyPI\n      uses: pypa/gh-action-pypi-publish@release/v1\nname: Release\n'on':\n  push:\n    tags:\n    - 'v*'\n"
+baseline = """
+jobs:
+  pypi-publish:
+    environment:
+      name: pypi
+      url: https://pypi.org/p/${{ github.event.repository.name }}
+    name: Build and Publish to PyPI
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+    - name: Install uv
+      uses: astral-sh/setup-uv@v10.0.0
+    - name: Build package
+      run: uv build
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+name: Release
+'on':
+  push:
+    tags:
+    - 'v*'
+"""
 
 [[files]]
 path = ".pre-commit-config.yaml"
 policy = "structured-yaml"
-baseline = "default_install_hook_types:\n- pre-commit\n- commit-msg\n- pre-push\ndefault_stages:\n- pre-commit\nrepos:\n- hooks:\n  - exclude: ^uv\\.lock$\n    id: check-added-large-files\n  - id: check-merge-conflict\n  - id: check-case-conflict\n  - id: check-symlinks\n  - id: check-executables-have-shebangs\n  - exclude: \\.py$\n    id: trailing-whitespace\n  - exclude: \\.py$\n    id: end-of-file-fixer\n  - id: check-yaml\n  - id: check-json\n  - id: check-toml\n  repo: builtin\n- hooks:\n  - entry: uv lock --check\n    files: '^(pyproject\\.toml|uv\\.lock)$'\n    id: uv-lock-check\n    language: system\n    name: uv lock check\n    pass_filenames: false\n  - entry: uv run rumdl check --fix\n    id: rumdl-check\n    language: system\n    name: rumdl check\n    require_serial: true\n    types:\n    - markdown\n  - entry: uv run rumdl fmt\n    id: rumdl-fmt\n    language: system\n    name: rumdl fmt\n    require_serial: true\n    types:\n    - markdown\n  - entry: uv run zizmor --offline --no-progress\n    files: '(^|/)(\\.github/(workflows/[^/]+|dependabot)\\.ya?ml|action\\.ya?ml|\\.pre-commit-(config|hooks)\\.ya?ml)$'\n    id: zizmor\n    language: system\n    name: zizmor\n    require_serial: true\n    types:\n    - yaml\n  - entry: uv run ruff check --fix\n    id: ruff-check\n    language: system\n    name: ruff check\n    require_serial: true\n    types:\n    - python\n  - entry: uv run ruff format\n    id: ruff-format\n    language: system\n    name: ruff format\n    require_serial: true\n    types:\n    - python\n  - entry: uv run mypy .\n    id: mypy\n    language: system\n    name: mypy\n    pass_filenames: false\n    types:\n    - python\n  - entry: uv run pytest\n    files: '^(src/|tests/|pyproject\\.toml|uv\\.lock)'\n    id: pytest\n    language: system\n    name: pytest\n    pass_filenames: false\n    stages:\n    - pre-push\n  - entry: uv run check-jsonschema --builtin-schema vendor.renovate --force-filetype json5\n    files: ^\\.github/renovate\\.json$\n    id: check-renovate\n    language: system\n    name: check renovate config\n  - entry: uv run check-jsonschema --builtin-schema vendor.readthedocs\n    files: ^\\.readthedocs\\.yaml$\n    id: check-readthedocs\n    language: system\n    name: check read the docs config\n  repo: local\n- hooks:\n  - id: gitleaks\n  repo: https://github.com/gitleaks/gitleaks\n  rev: v8.30.1\n- hooks:\n  - id: commitizen\n    stages:\n    - commit-msg\n  repo: https://github.com/commitizen-tools/commitizen\n  rev: v4.19.2\n- hooks:\n  - id: actionlint\n  repo: https://github.com/rhysd/actionlint\n  rev: v1.7.12\n"
+baseline = '''
+default_install_hook_types:
+- pre-commit
+- commit-msg
+- pre-push
+default_stages:
+- pre-commit
+repos:
+- hooks:
+  - exclude: ^uv\.lock$
+    id: check-added-large-files
+  - id: check-merge-conflict
+  - id: check-case-conflict
+  - id: check-symlinks
+  - id: check-executables-have-shebangs
+  - exclude: \.py$
+    id: trailing-whitespace
+  - exclude: \.py$
+    id: end-of-file-fixer
+  - id: check-yaml
+  - id: check-json
+  - id: check-toml
+  repo: builtin
+- hooks:
+  - entry: uv lock --check
+    files: '^(pyproject\.toml|uv\.lock)$'
+    id: uv-lock-check
+    language: system
+    name: uv lock check
+    pass_filenames: false
+  - entry: uv run rumdl check --fix
+    id: rumdl-check
+    language: system
+    name: rumdl check
+    require_serial: true
+    types:
+    - markdown
+  - entry: uv run rumdl fmt
+    id: rumdl-fmt
+    language: system
+    name: rumdl fmt
+    require_serial: true
+    types:
+    - markdown
+  - entry: uv run zizmor --offline --no-progress
+    files: '(^|/)(\.github/(workflows/[^/]+|dependabot)\.ya?ml|action\.ya?ml|\.pre-commit-(config|hooks)\.ya?ml)$'
+    id: zizmor
+    language: system
+    name: zizmor
+    require_serial: true
+    types:
+    - yaml
+  - entry: uv run ruff check --fix
+    id: ruff-check
+    language: system
+    name: ruff check
+    require_serial: true
+    types:
+    - python
+  - entry: uv run ruff format
+    id: ruff-format
+    language: system
+    name: ruff format
+    require_serial: true
+    types:
+    - python
+  - entry: uv run mypy .
+    id: mypy
+    language: system
+    name: mypy
+    pass_filenames: false
+    types:
+    - python
+  - entry: uv run pytest
+    files: '^(src/|tests/|pyproject\.toml|uv\.lock)'
+    id: pytest
+    language: system
+    name: pytest
+    pass_filenames: false
+    stages:
+    - pre-push
+  - entry: uv run check-jsonschema --builtin-schema vendor.renovate --force-filetype json5
+    files: ^\.github/renovate\.json$
+    id: check-renovate
+    language: system
+    name: check renovate config
+  - entry: uv run check-jsonschema --builtin-schema vendor.readthedocs
+    files: ^\.readthedocs\.yaml$
+    id: check-readthedocs
+    language: system
+    name: check read the docs config
+  repo: local
+- hooks:
+  - id: gitleaks
+  repo: https://github.com/gitleaks/gitleaks
+  rev: v8.30.1
+- hooks:
+  - id: commitizen
+    stages:
+    - commit-msg
+  repo: https://github.com/commitizen-tools/commitizen
+  rev: v4.19.2
+- hooks:
+  - id: actionlint
+  repo: https://github.com/rhysd/actionlint
+  rev: v1.7.12
+'''
 
 [[files]]
 path = ".readthedocs.yaml"
 policy = "structured-yaml"
-baseline = "build:\n  jobs:\n    build:\n      html:\n      - 'mkdir -p \"$READTHEDOCS_OUTPUT/html\"'\n      - 'UV_PROJECT_ENVIRONMENT=\"${READTHEDOCS_VIRTUALENV_PATH}\" uv run zensical build'\n      - 'cp -r site/* \"$READTHEDOCS_OUTPUT/html/\"'\n    create_environment:\n    - 'uv venv \"${READTHEDOCS_VIRTUALENV_PATH}\"'\n    install:\n    - 'UV_PROJECT_ENVIRONMENT=\"${READTHEDOCS_VIRTUALENV_PATH}\" uv sync --only-group docs'\n    pre_create_environment:\n    - pip install uv\n  os: ubuntu-24.04\n  tools:\n    python: '3.13'\nversion: 2\n"
+baseline = """
+build:
+  jobs:
+    build:
+      html:
+      - 'mkdir -p "$READTHEDOCS_OUTPUT/html"'
+      - 'UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv run zensical build'
+      - 'cp -r site/* "$READTHEDOCS_OUTPUT/html/"'
+    create_environment:
+    - 'uv venv "${READTHEDOCS_VIRTUALENV_PATH}"'
+    install:
+    - 'UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv sync --only-group docs'
+    pre_create_environment:
+    - pip install uv
+  os: ubuntu-24.04
+  tools:
+    python: '3.13'
+version: 2
+"""
 
 [[files]]
 path = "CHANGELOG.md"
@@ -79,7 +397,49 @@ policy = "regions"
 [[files.regions]]
 tag = "b7a348d5"
 id = "contributing"
-baseline = "<!-- region: protostar b7a348d5 -->\n# Contributing to demo-project\n\n<!-- Protostar generates and updates this section from the project's tooling. Keep your own notes outside the surrounding Protostar markers. -->\n\nThank you for helping improve demo-project. This guide covers setting up a development environment and the checks every change passes.\n\n## Development Setup\n\n1. Install [uv](https://docs.astral.sh/uv/).\n1. Clone your fork and run `uv sync` to create the environment with Python 3.13.\n1. Run `uv run prek install` to install the git hooks.\n\nAdd dependencies with `uv add <package>`, or `uv add --dev <package>` for development tools, so `uv.lock` stays in sync.\n\n## Commands\n\n- `just format`: apply formatters and safe lint fixes.\n- `just lint`: run the linters.\n- `just typecheck`: run static type checks.\n- `just test`: run the test suite.\n- `just ci`: run lint, typecheck, test; the local check to pass before pushing.\n\n## Git Hooks\n\nprek runs the hooks in `.pre-commit-config.yaml` on every commit and runs the tests before every push. If a hook fails or rewrites a file, fix the cause, restage, and commit again.\n\n## Commit Messages\n\nCommit messages follow [Conventional Commits](https://www.conventionalcommits.org/), such as `feat: add an export command` or `fix: handle empty input`. Commitizen reads them to bump the version and write the changelog. The `commit-msg` hook rejects any other message.\n\n## Pull Requests\n\n1. For a larger change, open an issue first so the approach can be agreed before you start.\n1. Keep each pull request focused on one change, with tests that cover it.\n1. Make sure `just ci` passes before you push. CI runs the same checks on every pull request.\n1. Fill in the pull request template.\n\n## Conduct and Security\n\nEveryone taking part in this project is expected to follow its code of conduct. Report security vulnerabilities privately, as the security policy describes, never in a public issue.\n<!-- endregion: protostar b7a348d5 -->"
+baseline = """
+<!-- region: protostar b7a348d5 -->
+# Contributing to demo-project
+
+<!-- Protostar generates and updates this section from the project's tooling. Keep your own notes outside the surrounding Protostar markers. -->
+
+Thank you for helping improve demo-project. This guide covers setting up a development environment and the checks every change passes.
+
+## Development Setup
+
+1. Install [uv](https://docs.astral.sh/uv/).
+1. Clone your fork and run `uv sync` to create the environment with Python 3.13.
+1. Run `uv run prek install` to install the git hooks.
+
+Add dependencies with `uv add <package>`, or `uv add --dev <package>` for development tools, so `uv.lock` stays in sync.
+
+## Commands
+
+- `just format`: apply formatters and safe lint fixes.
+- `just lint`: run the linters.
+- `just typecheck`: run static type checks.
+- `just test`: run the test suite.
+- `just ci`: run lint, typecheck, test; the local check to pass before pushing.
+
+## Git Hooks
+
+prek runs the hooks in `.pre-commit-config.yaml` on every commit and runs the tests before every push. If a hook fails or rewrites a file, fix the cause, restage, and commit again.
+
+## Commit Messages
+
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/), such as `feat: add an export command` or `fix: handle empty input`. Commitizen reads them to bump the version and write the changelog. The `commit-msg` hook rejects any other message.
+
+## Pull Requests
+
+1. For a larger change, open an issue first so the approach can be agreed before you start.
+1. Keep each pull request focused on one change, with tests that cover it.
+1. Make sure `just ci` passes before you push. CI runs the same checks on every pull request.
+1. Fill in the pull request template.
+
+## Conduct and Security
+
+Everyone taking part in this project is expected to follow its code of conduct. Report security vulnerabilities privately, as the security policy describes, never in a public issue.
+<!-- endregion: protostar b7a348d5 -->"""
 
 [[files]]
 path = "README.md"
@@ -99,12 +459,194 @@ digest = "ceb0460ebc192cf5249ce3a1f507173b92411441f3cc4738fbc22714c336a3b8"
 [[files]]
 path = "justfile"
 policy = "text"
-baseline = "set shell := [\"bash\", \"-euc\", \"-o\", \"pipefail\"]\nset unstable\nset quiet\n\n# --- ANSI Colors ---\n\nblue := '\\033[1;34m'\ngreen := '\\033[1;32m'\nnc := '\\033[0m'\n\n# Show available commands\ndefault:\n    @just --list\n\n# Sync/install dependencies using uv\nsync:\n    uv sync --quiet\n\n# Auto-format code\nformat: sync\n    @printf \"\\n{{ blue }}=== Formatting Code ==={{ nc }}\\n\"\n    uv run rumdl check --fix .\n    uv run rumdl fmt .\n    uv run ruff check --fix .\n    uv run ruff format .\n    @printf \"{{ green }}✔ Formatting complete{{ nc }}\\n\"\n\n# Run linters\nlint: sync\n    @printf \"\\n{{ blue }}=== Running Linters ==={{ nc }}\\n\"\n    uv run rumdl check .\n    uv run rumdl fmt --check .\n    uv run zizmor --offline .\n    uv run ruff check .\n    uv run ruff format --check .\n    if command -v actionlint >/dev/null 2>&1; then \\\n        actionlint; \\\n    else \\\n        printf \"⚠ actionlint not found. Skipping workflow linting.\\n\"; \\\n    fi\n    @printf \"{{ green }}✔ Linting passed{{ nc }}\\n\"\n\n# Run static type checking\ntypecheck: sync\n    @printf \"\\n{{ blue }}=== Running Type Checks ==={{ nc }}\\n\"\n    uv run mypy .\n    @printf \"{{ green }}✔ Type checking passed{{ nc }}\\n\"\n\n# Run the full automated testing matrix\ntest: sync\n    @printf \"\\n{{ blue }}=== Running Tests ==={{ nc }}\\n\"\n    uv run pytest\n    @printf \"{{ green }}✔ All tests passed{{ nc }}\\n\"\n\n# Run tests with coverage\ntest-cov: sync\n    @printf \"\\n{{ blue }}=== Running Tests with Coverage ==={{ nc }}\\n\"\n    uv run pytest --cov\n    @printf \"{{ green }}✔ Coverage run complete{{ nc }}\\n\"\n\n# Run the fast local CI pipeline executed before pushing\nci: lint typecheck test\n    @printf \"\\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\\n\"\n\n# Remove caches, artifacts, and temp files\nclean:\n    @printf \"\\n{{ blue }}=== Cleaning Workspace ==={{ nc }}\\n\"\n    rm -rf \\\n        .rumdl_cache \\\n        .ruff_cache \\\n        .mypy_cache \\\n        .pytest_cache \\\n        htmlcov \\\n        .coverage \\\n        coverage.xml\n    find . -type d -name \"__pycache__\" -exec rm -rf {} +\n    @printf \"{{ green }}✔ Workspace cleaned{{ nc }}\\n\"\n\n# Start the documentation preview server\nserve: sync\n    @printf \"\\n{{ blue }}=== Launching Zensical Server ==={{ nc }}\\n\"\n    uv run zensical serve -o\n"
+baseline = '''
+set shell := ["bash", "-euc", "-o", "pipefail"]
+set unstable
+set quiet
+
+# --- ANSI Colors ---
+
+blue := '\033[1;34m'
+green := '\033[1;32m'
+nc := '\033[0m'
+
+# Show available commands
+default:
+    @just --list
+
+# Sync/install dependencies using uv
+sync:
+    uv sync --quiet
+
+# Auto-format code
+format: sync
+    @printf "\n{{ blue }}=== Formatting Code ==={{ nc }}\n"
+    uv run rumdl check --fix .
+    uv run rumdl fmt .
+    uv run ruff check --fix .
+    uv run ruff format .
+    @printf "{{ green }}✔ Formatting complete{{ nc }}\n"
+
+# Run linters
+lint: sync
+    @printf "\n{{ blue }}=== Running Linters ==={{ nc }}\n"
+    uv run rumdl check .
+    uv run rumdl fmt --check .
+    uv run zizmor --offline .
+    uv run ruff check .
+    uv run ruff format --check .
+    if command -v actionlint >/dev/null 2>&1; then \
+        actionlint; \
+    else \
+        printf "⚠ actionlint not found. Skipping workflow linting.\n"; \
+    fi
+    @printf "{{ green }}✔ Linting passed{{ nc }}\n"
+
+# Run static type checking
+typecheck: sync
+    @printf "\n{{ blue }}=== Running Type Checks ==={{ nc }}\n"
+    uv run mypy .
+    @printf "{{ green }}✔ Type checking passed{{ nc }}\n"
+
+# Run the full automated testing matrix
+test: sync
+    @printf "\n{{ blue }}=== Running Tests ==={{ nc }}\n"
+    uv run pytest
+    @printf "{{ green }}✔ All tests passed{{ nc }}\n"
+
+# Run tests with coverage
+test-cov: sync
+    @printf "\n{{ blue }}=== Running Tests with Coverage ==={{ nc }}\n"
+    uv run pytest --cov
+    @printf "{{ green }}✔ Coverage run complete{{ nc }}\n"
+
+# Run the fast local CI pipeline executed before pushing
+ci: lint typecheck test
+    @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
+
+# Remove caches, artifacts, and temp files
+clean:
+    @printf "\n{{ blue }}=== Cleaning Workspace ==={{ nc }}\n"
+    rm -rf \
+        .rumdl_cache \
+        .ruff_cache \
+        .mypy_cache \
+        .pytest_cache \
+        htmlcov \
+        .coverage \
+        coverage.xml
+    find . -type d -name "__pycache__" -exec rm -rf {} +
+    @printf "{{ green }}✔ Workspace cleaned{{ nc }}\n"
+
+# Start the documentation preview server
+serve: sync
+    @printf "\n{{ blue }}=== Launching Zensical Server ==={{ nc }}\n"
+    uv run zensical serve -o
+'''
 
 [[files]]
 path = "pyproject.toml"
 policy = "structured-toml"
-baseline = "[build-system]\nbuild-backend = \"hatchling.build\"\nrequires = [\"hatchling\"]\n\n[dependency-groups]\ndocs = []\n[[dependency-groups.dev]]\ninclude-group = \"docs\"\n\n[project]\nclassifiers = [\"Programming Language :: Python :: 3\", \"Programming Language :: Python :: 3.13\", \"Programming Language :: Python :: 3.14\", \"Operating System :: MacOS\", \"Operating System :: POSIX :: Linux\", \"Operating System :: Microsoft :: Windows\"]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[tool.commitizen]\nchangelog_incremental = true\nname = \"cz_conventional_commits\"\ntag_format = \"v$version\"\nupdate_changelog_on_bump = true\nversion_provider = \"pep621\"\nversion_scheme = \"semver2\"\n\n[tool.coverage.report]\nfail_under = 90\nomit = [\"**/__init__.py\"]\nshow_missing = true\nskip_covered = true\n\n[tool.coverage.run]\nbranch = true\n\n[tool.hatch.build.targets.wheel]\npackages = [\"src/demo_project\"]\n\n[tool.mypy]\ncheck_untyped_defs = true\nexplicit_package_bases = true\nmypy_path = \"src\"\npretty = true\npython_version = \"3.13\"\nshow_error_codes = true\nshow_error_context = true\nstrict = true\nwarn_return_any = true\nwarn_unused_configs = true\n\n[[tool.mypy.overrides]]\ndisallow_incomplete_defs = false\ndisallow_untyped_calls = false\ndisallow_untyped_defs = false\nmodule = [\"tests.*\"]\nwarn_return_any = false\n\n[tool.pytest.ini_options]\naddopts = \"--strict-markers\"\npythonpath = [\".\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nextend-select = [\"D\", \"N\", \"PT\", \"RET\", \"SIM\", \"T20\", \"TC\"]\nignore = [\"D100\", \"D104\", \"D107\", \"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n\n[tool.ruff.lint.per-file-ignores]\n\"tests/*.py\" = [\"T201\", \"D\"]\n\n[tool.ruff.lint.pydocstyle]\nconvention = \"google\"\n\n[tool.rumdl]\ndisable = [\"MD013\", \"MD033\", \"MD077\"]\n\n[tool.rumdl.MD003]\nstyle = \"atx\"\n\n[tool.rumdl.MD004]\nstyle = \"dash\"\n\n[tool.rumdl.MD009]\nbr-spaces = 2\nstrict = false\n\n[tool.rumdl.MD024]\nsiblings-only = true\n\n[tool.rumdl.MD029]\nstyle = \"one\"\n\n[tool.rumdl.per-file-ignores]\n\"docs/**/*.md\" = [\"MD041\", \"MD046\"]\n"
+baseline = """
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[dependency-groups]
+docs = []
+
+[[dependency-groups.dev]]
+include-group = "docs"
+
+[project]
+description = "Add your description here."
+readme = "README.md"
+classifiers = ["Programming Language :: Python :: 3", "Programming Language :: Python :: 3.13", "Programming Language :: Python :: 3.14", "Operating System :: MacOS", "Operating System :: POSIX :: Linux", "Operating System :: Microsoft :: Windows"]
+
+[[project.authors]]
+email = "your-email@example.com"
+name = "your-name"
+
+[tool.commitizen]
+changelog_incremental = true
+name = "cz_conventional_commits"
+tag_format = "v$version"
+update_changelog_on_bump = true
+version_provider = "pep621"
+version_scheme = "semver2"
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_covered = true
+omit = ["**/__init__.py"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/demo_project"]
+
+[tool.mypy]
+check_untyped_defs = true
+explicit_package_bases = true
+mypy_path = "src"
+pretty = true
+python_version = "3.13"
+show_error_codes = true
+show_error_context = true
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+disallow_untyped_defs = false
+warn_return_any = false
+module = ["tests.*"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+extend-select = ["D", "N", "PT", "RET", "SIM", "T20", "TC"]
+ignore = ["D100", "D104", "D107", "E501"]
+select = ["A", "B", "C4", "E", "F", "I", "RUF", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["T201", "D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.rumdl]
+disable = ["MD013", "MD033", "MD077"]
+
+[tool.rumdl.MD003]
+style = "atx"
+
+[tool.rumdl.MD004]
+style = "dash"
+
+[tool.rumdl.MD009]
+br-spaces = 2
+strict = false
+
+[tool.rumdl.MD024]
+siblings-only = true
+
+[tool.rumdl.MD029]
+style = "one"
+
+[tool.rumdl.per-file-ignores]
+"docs/**/*.md" = ["MD041", "MD046"]
+"""
 
 [[files]]
 path = "src/demo_project/__init__.py"
@@ -129,7 +671,112 @@ digest = "dbbea70c901f6f25eef799c98f43edccf87c5b797f51df682a9dc8f56830c3da"
 [[files]]
 path = "zensical.toml"
 policy = "structured-toml"
-baseline = "[project]\nsite_description = \"Add your project description here.\"\nsite_name = \"demo-project\"\n\n[project.extra]\ngenerator = false\n\n[project.markdown_extensions.abbr]\n\n[project.markdown_extensions.admonition]\n\n[project.markdown_extensions.attr_list]\n\n[project.markdown_extensions.def_list]\n\n[project.markdown_extensions.footnotes]\n\n[project.markdown_extensions.md_in_html]\n\n[project.markdown_extensions.pymdownx.arithmatex]\ngeneric = true\n\n[project.markdown_extensions.pymdownx.betterem]\n\n[project.markdown_extensions.pymdownx.caret]\n\n[project.markdown_extensions.pymdownx.details]\n\n[project.markdown_extensions.pymdownx.emoji]\nemoji_generator = \"zensical.extensions.emoji.to_svg\"\nemoji_index = \"zensical.extensions.emoji.twemoji\"\n\n[project.markdown_extensions.pymdownx.highlight]\nanchor_linenums = true\nline_spans = \"__span\"\npygments_lang_class = true\n\n[project.markdown_extensions.pymdownx.inlinehilite]\n\n[project.markdown_extensions.pymdownx.keys]\n\n[project.markdown_extensions.pymdownx.magiclink]\n\n[project.markdown_extensions.pymdownx.mark]\n\n[project.markdown_extensions.pymdownx.smartsymbols]\n\n[[project.markdown_extensions.pymdownx.superfences.custom_fences]]\nclass = \"mermaid\"\nformat = \"pymdownx.superfences.fence_code_format\"\nname = \"mermaid\"\n\n[project.markdown_extensions.pymdownx.tabbed]\nalternate_style = true\ncombine_header_slug = true\n\n[project.markdown_extensions.pymdownx.tasklist]\ncustom_checkbox = true\n\n[project.markdown_extensions.pymdownx.tilde]\n\n[project.markdown_extensions.toc]\npermalink = true\n\n[[project.nav]]\nHome = \"index.md\"\n\n[project.plugins.mkdocstrings.handlers.python.options]\nshow_root_heading = true\nshow_source = true\n\n[project.theme]\nfeatures = [\"content.code.copy\", \"content.tabs.link\", \"content.tooltips\", \"navigation.footer\", \"navigation.instant\", \"navigation.instant.prefetch\", \"navigation.top\", \"search.highlight\"]\n\n[project.theme.font]\ncode = \"JetBrains Mono\"\ntext = \"Inter\"\n\n[[project.theme.palette]]\nmedia = \"(prefers-color-scheme)\"\n\n[project.theme.palette.toggle]\nicon = \"material/brightness-auto\"\nname = \"Switch to light mode\"\n\n[[project.theme.palette]]\naccent = \"cyan\"\nmedia = \"(prefers-color-scheme: light)\"\nprimary = \"white\"\nscheme = \"default\"\n\n[project.theme.palette.toggle]\nicon = \"material/weather-sunny\"\nname = \"Switch to dark mode\"\n\n[[project.theme.palette]]\naccent = \"cyan\"\nmedia = \"(prefers-color-scheme: dark)\"\nprimary = \"deep purple\"\nscheme = \"slate\"\n\n[project.theme.palette.toggle]\nicon = \"material/weather-night\"\nname = \"Switch to system preference\"\n"
+baseline = """
+[project]
+site_description = "Add your project description here."
+site_name = "demo-project"
+
+[[project.nav]]
+Home = "index.md"
+
+[project.extra]
+generator = false
+
+[project.markdown_extensions.abbr]
+
+[project.markdown_extensions.admonition]
+
+[project.markdown_extensions.attr_list]
+
+[project.markdown_extensions.def_list]
+
+[project.markdown_extensions.footnotes]
+
+[project.markdown_extensions.md_in_html]
+
+[project.markdown_extensions.pymdownx.arithmatex]
+generic = true
+
+[project.markdown_extensions.pymdownx.betterem]
+
+[project.markdown_extensions.pymdownx.caret]
+
+[project.markdown_extensions.pymdownx.details]
+
+[project.markdown_extensions.pymdownx.emoji]
+emoji_generator = "zensical.extensions.emoji.to_svg"
+emoji_index = "zensical.extensions.emoji.twemoji"
+
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = true
+line_spans = "__span"
+pygments_lang_class = true
+
+[project.markdown_extensions.pymdownx.inlinehilite]
+
+[project.markdown_extensions.pymdownx.keys]
+
+[project.markdown_extensions.pymdownx.magiclink]
+
+[project.markdown_extensions.pymdownx.mark]
+
+[project.markdown_extensions.pymdownx.smartsymbols]
+
+[[project.markdown_extensions.pymdownx.superfences.custom_fences]]
+class = "mermaid"
+format = "pymdownx.superfences.fence_code_format"
+name = "mermaid"
+
+[project.markdown_extensions.pymdownx.tabbed]
+alternate_style = true
+combine_header_slug = true
+
+[project.markdown_extensions.pymdownx.tasklist]
+custom_checkbox = true
+
+[project.markdown_extensions.pymdownx.tilde]
+
+[project.markdown_extensions.toc]
+permalink = true
+
+[project.plugins.mkdocstrings.handlers.python.options]
+show_root_heading = true
+show_source = true
+
+[project.theme]
+features = ["content.code.copy", "content.tabs.link", "content.tooltips", "navigation.footer", "navigation.instant", "navigation.instant.prefetch", "navigation.top", "search.highlight"]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+
+[project.theme.palette.toggle]
+icon = "material/brightness-auto"
+name = "Switch to light mode"
+
+[[project.theme.palette]]
+accent = "cyan"
+media = "(prefers-color-scheme: light)"
+primary = "white"
+scheme = "default"
+
+[project.theme.palette.toggle]
+icon = "material/weather-sunny"
+name = "Switch to dark mode"
+
+[[project.theme.palette]]
+accent = "cyan"
+media = "(prefers-color-scheme: dark)"
+primary = "deep purple"
+scheme = "slate"
+
+[project.theme.palette.toggle]
+icon = "material/weather-night"
+name = "Switch to system preference"
+
+[project.theme.font]
+code = "JetBrains Mono"
+text = "Inter"
+"""
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -252,3 +899,9 @@ path = ".pre-commit-config.yaml"
 repo = "https://github.com/rhysd/actionlint"
 revision = "v1.7.12"
 provenance = "fallback"
+
+[template]
+origin = "built-in"
+locator = "lib"
+digest = "3ca7e262706542905921f89d03c6f983722e4c2dc34b1ad40e425f25aa081207"
+display_name = "lib"

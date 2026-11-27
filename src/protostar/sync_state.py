@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import tomllib
 from copy import deepcopy
 from dataclasses import dataclass, replace
 from enum import StrEnum
@@ -11,11 +12,10 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import cast
 from urllib.parse import urlsplit
 
-import tomlkit
+import rtoml
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
-from tomlkit.exceptions import TOMLKitError
 
 from .docs_registry import DocsPage
 from .errors import ConfigurationError, OutdatedProtostarError
@@ -426,12 +426,25 @@ def decode_toml_baseline(content: str) -> dict[str, Value]:
     return deepcopy(_decode_toml_baseline(content))
 
 
+def _reject_toml_null(value: object) -> None:
+    """TOML has no null; rtoml would otherwise silently omit or stringify None."""
+    if value is None:
+        raise TypeError("TOML does not support null values.")
+    if isinstance(value, dict):
+        for item in value.values():
+            _reject_toml_null(item)
+    elif isinstance(value, list):
+        for item in value:
+            _reject_toml_null(item)
+
+
 @lru_cache(maxsize=256)
 def _decode_toml_baseline(content: str) -> dict[str, Value]:
     # One sync decodes the same baselines hundreds of times; callers get a copy.
+    # tomllib produces stdlib datetime.timezone objects that deepcopy handles natively.
     try:
-        value = cast(dict[str, Value], tomlkit.parse(content).unwrap())
-    except (TOMLKitError, ValueError, TypeError, RecursionError) as e:
+        value = cast(dict[str, Value], tomllib.loads(content))
+    except (tomllib.TOMLDecodeError, ValueError, TypeError, RecursionError) as e:
         raise _invalid("malformed TOML baseline.") from e
     validate_value(value)
     return value
@@ -443,8 +456,15 @@ def encode_toml_baseline(value: dict[str, Value]) -> str:
     # A cast informs only the type checker, so mutating it changes nothing.
     ordered = cast(dict[str, object], sort_value_keys(value))  # pragma: no mutate
     try:
-        content = tomlkit.dumps(ordered)
-    except (TOMLKitError, ValueError, TypeError, RecursionError) as e:
+        _reject_toml_null(ordered)
+        try:
+            content = rtoml.dumps(ordered)
+        except rtoml.TomlSerializationError:
+            # tomllib accepts integers wider than rtoml can encode.
+            import tomlkit
+
+            content = tomlkit.dumps(ordered)
+    except (rtoml.TomlSerializationError, ValueError, TypeError, RecursionError) as e:
         raise _invalid("baseline contains values unsupported by TOML.") from e
     decode_toml_baseline(content)
     return content
@@ -479,7 +499,9 @@ def deserialize_state(content: str) -> SyncState:
     is shared. A text that fails to parse is not cached and raises every time.
     """
     try:
-        raw = tomlkit.parse(content).unwrap()
+        # rtoml leaves raw CRLF intact inside multiline strings (unlike tomllib);
+        # normalize file line endings so Windows CRLF checkouts/writes match LF.
+        raw = rtoml.loads(content.replace("\r\n", "\n"))
         root = _record(
             raw,
             {"schema_version", "producer_version"},
@@ -581,7 +603,7 @@ def deserialize_state(content: str) -> SyncState:
             # Only the supported version reaches here, and it is the default.
             version,  # pragma: no mutate
         )
-    except (TOMLKitError, ValueError, TypeError, RecursionError) as e:
+    except (rtoml.TomlParsingError, ValueError, TypeError, RecursionError) as e:
         raise _invalid("malformed or unsupported record.") from e
 
 
@@ -651,8 +673,8 @@ def serialize_state(state: SyncState) -> str:
         for record in sorted(state.hook_pins, key=lambda item: (item.path, item.repo))
     ]
     try:
-        content = tomlkit.dumps(data)
-    except (TOMLKitError, ValueError, TypeError, RecursionError) as e:
+        content = rtoml.dumps(data, none_value=None)
+    except (rtoml.TomlSerializationError, ValueError, TypeError, RecursionError) as e:
         raise _invalid("cannot serialize state.") from e
     content = STATE_HEADER + content
     deserialize_state(content)

@@ -4,15 +4,17 @@ Pure and headless: the form hands in values, and this returns the new text
 without writing it. The CLI writes it once the user has seen the change.
 """
 
+from __future__ import annotations
+
 from collections.abc import Mapping
 from dataclasses import dataclass
-
-import tomlkit
-from tomlkit.container import Container
-from tomlkit.items import Comment, Table
+from typing import TYPE_CHECKING
 
 from protostar.config import UserConfig
 from protostar.modules import TOOLING_MODULES
+
+if TYPE_CHECKING:
+    from tomlkit.container import Container
 
 type EnvValue = str | bool | None
 """A value under ``[env]``; ``None`` leaves the key unset."""
@@ -83,6 +85,9 @@ def edit_config(
         ConfigurationError: If the current text or the result is invalid,
             such as both hook managers enabled.
     """
+    import tomlkit
+    from tomlkit.items import Table
+
     current = config_values(UserConfig.parse(content, source))
     document = tomlkit.parse(content)
     env = document.get("env")
@@ -112,6 +117,8 @@ def edit_config(
 
 def _insert(env: Container, key: str, value: str | bool) -> None:
     """Adds ``key`` after its commented example, or after the last setting."""
+    from tomlkit.items import Comment
+
     index = None
     for position, (existing, item) in enumerate(env.body):
         if existing is not None:

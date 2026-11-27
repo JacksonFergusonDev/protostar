@@ -981,7 +981,7 @@ class Reconciliation:
                 overwrite=is_overwrite,
                 initializing=initializing,
                 missing_file=not self.workspace.exists(target),
-                desired_ast=aggregated.document,
+                desired_ast=aggregated,
                 resolutions=self.resolutions,
                 proposing=not is_overwrite and self._proposing(target, record),
             )

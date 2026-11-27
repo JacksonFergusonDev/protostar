@@ -1293,3 +1293,62 @@ def test_a_changed_key_leaves_the_added_one_right_above_the_closing_comment():
     )
 
     assert result.content == "[a]\nx = 2\ny = 1\nz = 3\n# next\n\n[b]\nq = 1\n"
+
+
+def test_read_only_and_noop_toml_paths_never_import_tomlkit():
+    """sync_state and unchanged TOML operations stay off tomlkit until a write."""
+    import subprocess
+    import sys
+
+    script = """
+import sys
+from protostar.config import UserConfig
+from protostar.documents.pyproject import apply_dependency_includes, remove_requirements
+from protostar.intent import DependencyGroup, DependencyInclude, StructuredContribution
+from protostar.merge import MergeLocation
+from protostar.recipe import _OPTIONAL_TABLES, RecipeIntent, edit_recipe, establish_recipe
+import rtoml
+from protostar.sync_state import (
+    SyncState,
+    decode_toml_baseline,
+    deserialize_state,
+    encode_toml_baseline,
+    serialize_state,
+)
+from protostar.toml_ast import DEFAULT_TOML_SPEC, aggregate_toml_document, reconcile_toml
+
+state = SyncState("0.10.3")
+assert deserialize_state(serialize_state(state)) == state
+assert decode_toml_baseline(encode_toml_baseline({"a": 1})) == {"a": 1}
+
+original = '[tool.demo]\\nx = 1\\n'
+aggregated = aggregate_toml_document([StructuredContribution("module:demo", original)])
+result = reconcile_toml(
+    DEFAULT_TOML_SPEC,
+    original,
+    aggregated.value,
+    {"tool": {"demo": {"x": 1}}},
+    MergeLocation("pyproject.toml"),
+    desired_ast=aggregated,
+)
+assert result.content == original
+
+pyproject = '[dependency-groups]\\ndev = [{ include-group = "docs" }]\\ndocs = []\\n'
+edges = [DependencyInclude(DependencyGroup.DEV, DependencyGroup.DOCS)]
+assert apply_dependency_includes(pyproject, edges) == pyproject
+assert remove_requirements(pyproject, DependencyGroup.DEV, {"missing"}) == pyproject
+
+recipe = establish_recipe(UserConfig(ruff=True, mypy=False), RecipeIntent())
+desired_recipe = {k: v for k, v in recipe.to_dict().items() if k not in _OPTIONAL_TABLES or v}
+recipe_toml = rtoml.dumps({"tool": {"protostar": desired_recipe}})
+assert edit_recipe(recipe_toml, recipe) == recipe_toml
+
+assert "tomlkit" not in sys.modules, "tomlkit was imported on read-only/no-op paths"
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr

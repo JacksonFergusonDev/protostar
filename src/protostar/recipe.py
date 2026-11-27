@@ -12,8 +12,6 @@ from enum import StrEnum
 from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING, Any
 
-import tomlkit
-
 from .documents.pyproject_layout import (
     BANNER,
     Section,
@@ -27,6 +25,7 @@ from .ide import IDEType
 from .intent import TemplateOrigin, TemplateReference
 from .interpolation import BUILT_IN_VARIABLES, VARIABLE_NAME
 from .manifest import ProjectMetadata
+from .merge import semantic_equal
 from .metadata import validate_metadata
 from .options import CHOICE_VALUE, OptionValue
 from .tiers import Tier, parse_tier
@@ -626,7 +625,6 @@ def edit_recipe(content: str, recipe: ProjectRecipe) -> str:
             raise _invalid()
         if "protostar" in tool_data:
             decode_recipe(tool_data["protostar"])
-        document = tomlkit.parse(content)
     except tomllib.TOMLDecodeError as e:
         raise _invalid() from e
     # Empty tables are noise in the file; the reader treats an absent table as empty.
@@ -635,6 +633,13 @@ def edit_recipe(content: str, recipe: ProjectRecipe) -> str:
         for key, value in recipe.to_dict().items()
         if key not in _OPTIONAL_TABLES or value
     }
+    if "protostar" in tool_data and semantic_equal(tool_data["protostar"], desired):
+        return content
+
+    import tomlkit
+    import tomlkit.items
+
+    document = tomlkit.parse(content)
 
     sections = split_sections(document)
     recipe_sections = [
@@ -678,8 +683,15 @@ def remove_recipe(content: str) -> str:
             raise _invalid()
         if "protostar" not in tool_data:
             return content
+    except tomllib.TOMLDecodeError as error:
+        raise _invalid() from error
+
+    import tomlkit
+    import tomlkit.exceptions
+
+    try:
         document = tomlkit.parse(content)
-    except (tomllib.TOMLDecodeError, tomlkit.exceptions.TOMLKitError) as error:
+    except tomlkit.exceptions.TOMLKitError as error:
         raise _invalid() from error
 
     del document["tool"]["protostar"]
@@ -711,6 +723,8 @@ def remove_recipe(content: str) -> str:
 
 
 def _update_recipe(current: Any, values: dict[str, Any]) -> None:
+    import tomlkit
+
     for key in list(current):
         if key not in values:
             del current[key]
@@ -727,6 +741,8 @@ def _edit_recipe_text(text: str, desired: dict[str, Any]) -> str:
     Editing leaves in place changes nothing else. Adding a table recomposes the
     section, so tables sit in schema order with one blank line between them.
     """
+    import tomlkit
+
     document = tomlkit.parse(text)
     # A table already in the text is returned as it is, and compose_children lays
     # out the headers of a new one, so a super table or not changes no byte.

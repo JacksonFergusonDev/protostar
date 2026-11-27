@@ -7,12 +7,6 @@ schema_version = 1
 producer_version = "0.0.0"
 hook_pins = []
 
-[template]
-origin = "built-in"
-locator = "cli"
-digest = "1822516e2bb588715955f1c6a1d64a7073dbdccb32f6a636333ab2811290ae8c"
-display_name = "cli"
-
 [[files]]
 path = ".envrc"
 policy = "seed-only"
@@ -26,12 +20,81 @@ digest = "37c77381868c59a8a87717f8c70016477dc028054b636446323b9bfcf2c9bdf3"
 [[files]]
 path = "justfile"
 policy = "text"
-baseline = "set shell := [\"bash\", \"-euc\", \"-o\", \"pipefail\"]\nset unstable\nset quiet\n\n# --- ANSI Colors ---\n\nblue := '\\033[1;34m'\ngreen := '\\033[1;32m'\nnc := '\\033[0m'\n\n# Show available commands\ndefault:\n    @just --list\n\n# Sync/install dependencies using uv\nsync:\n    uv sync --quiet\n\n# Auto-format code\nformat: sync\n    @printf \"\\n{{ blue }}=== Formatting Code ==={{ nc }}\\n\"\n    uv run ruff check --fix .\n    uv run ruff format .\n    @printf \"{{ green }}✔ Formatting complete{{ nc }}\\n\"\n\n# Run linters\nlint: sync\n    @printf \"\\n{{ blue }}=== Running Linters ==={{ nc }}\\n\"\n    uv run ruff check .\n    uv run ruff format --check .\n    @printf \"{{ green }}✔ Linting passed{{ nc }}\\n\"\n\n# Run the fast local CI pipeline executed before pushing\nci: lint\n    @printf \"\\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\\n\"\n\n# Remove caches, artifacts, and temp files\nclean:\n    @printf \"\\n{{ blue }}=== Cleaning Workspace ==={{ nc }}\\n\"\n    rm -rf \\\n        .ruff_cache\n    find . -type d -name \"__pycache__\" -exec rm -rf {} +\n    @printf \"{{ green }}✔ Workspace cleaned{{ nc }}\\n\"\n"
+baseline = '''
+set shell := ["bash", "-euc", "-o", "pipefail"]
+set unstable
+set quiet
+
+# --- ANSI Colors ---
+
+blue := '\033[1;34m'
+green := '\033[1;32m'
+nc := '\033[0m'
+
+# Show available commands
+default:
+    @just --list
+
+# Sync/install dependencies using uv
+sync:
+    uv sync --quiet
+
+# Auto-format code
+format: sync
+    @printf "\n{{ blue }}=== Formatting Code ==={{ nc }}\n"
+    uv run ruff check --fix .
+    uv run ruff format .
+    @printf "{{ green }}✔ Formatting complete{{ nc }}\n"
+
+# Run linters
+lint: sync
+    @printf "\n{{ blue }}=== Running Linters ==={{ nc }}\n"
+    uv run ruff check .
+    uv run ruff format --check .
+    @printf "{{ green }}✔ Linting passed{{ nc }}\n"
+
+# Run the fast local CI pipeline executed before pushing
+ci: lint
+    @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
+
+# Remove caches, artifacts, and temp files
+clean:
+    @printf "\n{{ blue }}=== Cleaning Workspace ==={{ nc }}\n"
+    rm -rf \
+        .ruff_cache
+    find . -type d -name "__pycache__" -exec rm -rf {} +
+    @printf "{{ green }}✔ Workspace cleaned{{ nc }}\n"
+'''
 
 [[files]]
 path = "pyproject.toml"
 policy = "structured-toml"
-baseline = "[build-system]\nbuild-backend = \"hatchling.build\"\nrequires = [\"hatchling\"]\n\n[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[project.scripts]\ndemo-project = \"demo_project.cli:app\"\n\n[tool.hatch.build.targets.wheel]\npackages = [\"src/demo_project\"]\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n"
+baseline = """
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[project]
+description = "Add your description here."
+readme = "README.md"
+
+[[project.authors]]
+email = "your-email@example.com"
+name = "your-name"
+
+[project.scripts]
+demo-project = "demo_project.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/demo_project"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+ignore = ["E501"]
+select = ["A", "B", "C4", "E", "F", "I", "RUF", "UP"]
+"""
 
 [[files]]
 path = "src/demo_project/__init__.py"
@@ -66,3 +129,9 @@ name = "typer"
 marker = ""
 declared = "typer"
 materialized = "typer>=0.27.2"
+
+[template]
+origin = "built-in"
+locator = "cli"
+digest = "1822516e2bb588715955f1c6a1d64a7073dbdccb32f6a636333ab2811290ae8c"
+display_name = "cli"
