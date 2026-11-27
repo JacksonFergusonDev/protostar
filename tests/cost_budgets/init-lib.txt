@@ -10,8 +10,8 @@ command:uv run prek install 1
 import:argcomplete
 import:packaging
 import:rich
-import:ruamel
 import:tomlkit
+import:yaml_edit
 parse:jsonc 14
 parse:toml 73
 parse:yaml 20

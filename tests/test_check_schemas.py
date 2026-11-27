@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from ruamel.yaml import YAML
+import yaml_edit
 
 from scripts import check_schemas
 
@@ -71,8 +71,9 @@ def test_schema_validation_runs_every_validator_without_syncing_dependencies(
 
 def test_schema_callers_require_the_committed_lock():
     root = Path(__file__).resolve().parent.parent
-    yaml = YAML(typ="safe")
-    hooks = yaml.load((root / ".pre-commit-config.yaml").read_text(encoding="utf-8"))
+    hooks = yaml_edit.Document.parse(
+        (root / ".pre-commit-config.yaml").read_text(encoding="utf-8")
+    ).to_python()
     hook = next(
         hook
         for repo in hooks["repos"]
@@ -81,9 +82,9 @@ def test_schema_callers_require_the_committed_lock():
     )
     command = "uv run --locked python -m scripts.check_schemas"
     assert hook["entry"] == command
-    workflow = yaml.load(
+    workflow = yaml_edit.Document.parse(
         (root / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-    )
+    ).to_python()
     steps = workflow["jobs"]["checks"]["steps"]
     assert (
         next(step for step in steps if step.get("name") == "Validate schemas")["run"]

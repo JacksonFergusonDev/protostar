@@ -26,14 +26,11 @@ from protostar.sync_state import (
     serialize_state,
 )
 from protostar.yaml_ast import (
-    DEFAULT_STYLE,
     WILDCARD,
     KeyedSequence,
     YamlDocumentSpec,
     YamlGuard,
-    YamlStyle,
     decode_yaml_baseline,
-    detect_style,
     encode_yaml_baseline,
     reconcile_yaml,
     validate_yaml_baseline,
@@ -67,7 +64,6 @@ def merge(local, remote, base=MISSING, **kwargs):
         "a: &cycle {a: *cycle}\n",
         "a: [unterminated",
         "1: value\n",
-        "a: 2026-09-16\n",
         "a: !!set {x: null}\n",
         "a: !!binary YQ==\n",
         pytest.param("a: " + "[" * 102 + "0" + "]" * 102, id="max-depth-exceeded"),
@@ -133,35 +129,27 @@ def test_decoded_floats_and_anchored_booleans_keep_their_types():
 
 def test_a_document_is_parsed_once_and_built_from_the_checked_tree(mocker):
     """The bounds check and the document share one parse of the text."""
-    from ruamel.yaml.main import YAML
-
-    compose = mocker.spy(YAML, "compose")
-    load = mocker.spy(YAML, "load")
+    parse = mocker.spy(yaml_ast, "_parse_yaml")
 
     yaml_ast._load("a: 1\nb: [x, y]\n")
 
-    assert compose.call_count == 1
-    assert load.call_count == 0
+    assert parse.call_count == 1
 
 
 def test_a_document_built_from_the_checked_tree_matches_a_plain_load():
-    """Anchors, merge keys, quotes, and comments come out as a fresh parse gives."""
-    from io import StringIO
+    """Anchors, merge keys, quotes, and comments come out verbatim."""
+    import yaml_edit
 
     text = (
         "# top\nd: &d {a: 1}  # anchored\njob:\n  <<: *d\n  b: 'kept'\n"
         'e: *d\nlist:\n  - one  # first\n  - "two"\n'
     )
 
-    document = yaml_ast._load(text)
-    reference = yaml_ast._codec().load(text)
+    document, plain, _ = yaml_ast._load(text)
+    reference = yaml_edit.Document.parse(text)
 
-    assert document["job"].merge.value[0] is document["d"]
-    assert document["e"] is document["d"]
-    dumped, expected = StringIO(), StringIO()
-    yaml_ast._codec().dump(document, dumped)
-    yaml_ast._codec().dump(reference, expected)
-    assert dumped.getvalue() == expected.getvalue() == text
+    assert plain == reference.to_python()
+    assert str(document) == str(reference) == text
 
 
 def test_encoding_rejects_a_missing_value():
@@ -200,7 +188,7 @@ def test_clean_update_keeps_trivia_and_foreign_values():
     assert "# note" in result.content
     assert "# ignores" in result.content
     assert "foreign: |\n  hello\n  world\n" in result.content
-    assert 'ignore: ["tests/**", "custom/**", docs/**]' in result.content
+    assert 'ignore: ["tests/**", "custom/**", "docs/**"]' in result.content
     assert result.baseline == {
         "coverage": {"target": "85%", "threshold": 2},
         "ignore": ["tests/**", "docs/**"],
@@ -350,52 +338,6 @@ def changed_lines(before: str, after: str) -> list[str]:
         )
         if line[:1] in "+-" and line[:3] not in ("+++", "---")
     ]
-
-
-@pytest.mark.parametrize(
-    ("content", "style"),
-    [
-        pytest.param("", DEFAULT_STYLE, id="empty"),
-        pytest.param("a: 1\n", DEFAULT_STYLE, id="flat"),
-        pytest.param("a:\n  - x\n", YamlStyle(2, 4, 2), id="indented-sequence"),
-        pytest.param("a:\n- x\n", YamlStyle(2, 2, 0), id="indentless-sequence"),
-        pytest.param("a:\n    b: 1\n", YamlStyle(4, 6, 4), id="four-space-mapping"),
-        pytest.param(
-            "a:\n    b:\n    -   x\n", YamlStyle(4, 4, 0), id="wide-sequence-gap"
-        ),
-        pytest.param(
-            "# lead\n\na: # trailing\n  # between\n\n  b: 1\nc:\n- x\n",
-            YamlStyle(2, 2, 0),
-            id="comments-and-blank-lines",
-        ),
-        pytest.param(
-            "repos:\n  - repo: local\n    hooks:\n      - id: x\n",
-            YamlStyle(2, 4, 2),
-            id="key-inside-sequence-item",
-        ),
-        pytest.param(
-            "a:\n  - - x\n", YamlStyle(2, 4, 2), id="nested-sequence-dash-key"
-        ),
-        pytest.param("a:\n b: 1\n", YamlStyle(1, 3, 1), id="one-space-mapping"),
-        pytest.param(
-            "a:\nb: 1\nc:\n   d: 1\n", YamlStyle(3, 5, 3), id="sibling-is-not-nesting"
-        ),
-        pytest.param("- a:\n    b: 1\n", YamlStyle(2, 4, 2), id="key-after-a-dash"),
-        pytest.param(
-            "a:\n  # note\n    b: 1\n", YamlStyle(4, 6, 4), id="indented-comment"
-        ),
-        pytest.param(
-            "a:\n  - x\nb:\n- y\n", YamlStyle(2, 4, 2), id="first-sequence-wins"
-        ),
-        pytest.param(
-            "a:\n  - x\nb:\n    c: 1\n",
-            YamlStyle(4, 4, 2),
-            id="mapping-after-a-sequence",
-        ),
-    ],
-)
-def test_detect_style(content, style):
-    assert detect_style(content) == style
 
 
 def test_long_lines_are_not_rewrapped_on_merge():
@@ -890,3 +832,58 @@ def test_the_last_line_keeps_its_trailing_spaces():
     result = plain("a: 1\nb: 2  # c   \n", "a: 2\n", {"a": 1})
 
     assert result.content == "a: 2\nb: 2  # c   \n"
+
+
+@pytest.mark.parametrize(
+    ("local", "desired", "expected"),
+    [
+        ("k: old\n", "k: 'x: y'\n", "k: 'x: y'\n"),
+        ("k: &keep old # note\n", "k: 'true'\n", "k: &keep 'true' # note\n"),
+        ("{k: old}\n", "k: x, y\n", '{k: "x, y"}\n'),
+    ],
+)
+def test_plain_string_updates_quote_for_the_destination(local, desired, expected):
+    result = merge(local, desired, {"k": "old"})
+    assert result.content == expected
+    assert result.baseline == decode_yaml_baseline(desired)
+
+
+def test_edit_keeps_comments_and_directives_outside_the_document():
+    local = "# header\n%YAML 1.2\n---\nk: old\n...\n# trailer\n"
+    assert merge(local, "k: new\n", {"k": "old"}).content == local.replace("old", "new")
+
+
+@pytest.mark.parametrize("literal", ["'<<'", '"<<"'])
+def test_quoted_merge_key_allows_independent_sibling_edit(literal):
+    local = f"{literal}: ordinary\nk: old\n"
+    result = merge(local, "k: new\n", {"k": "old"})
+    assert result.content == local.replace("old", "new")
+    assert not result.conflicts
+    with pytest.raises(ConfigurationError):
+        decode_yaml_baseline(f"{literal}: first\n{literal}: second\n")
+
+
+def test_aliases_count_their_expanded_nodes(monkeypatch):
+    source = "defaults: &defaults [one, two]\ncopy: *defaults\n"
+    # One root, two keys and two copies of the three-node list.
+    monkeypatch.setattr(yaml_ast, "_MAX_NODES", 9)
+    assert decode_yaml_baseline(source)["copy"] == ["one", "two"]
+    monkeypatch.setattr(yaml_ast, "_MAX_NODES", 8)
+    with pytest.raises(ConfigurationError):
+        decode_yaml_baseline(source + "# uncached\n")
+
+
+def test_alias_height_counts_at_the_reference_site():
+    source = "defaults: &defaults [[one]]\ncopy: " + "[" * 98 + "*defaults" + "]" * 98
+    with pytest.raises(ConfigurationError) as error:
+        decode_yaml_baseline(source)
+    assert str(error.value) == "Invalid or unsupported YAML configuration."
+
+
+def test_tagged_anchor_and_anchor_like_comment_use_the_real_target():
+    source = "items: !!seq &items [one, two]\ncopy: *items\n"
+    assert decode_yaml_baseline(source)["copy"] == ["one", "two"]
+    local = "k: &shared\n  # &unrelated\n  value: old\ncopy: *shared\n"
+    result = merge(local, "k: {value: new}\n", {"k": {"value": "old"}})
+    assert result.content == local
+    assert result.conflicts[0].reason is ConflictReason.SHARED_STRUCTURE

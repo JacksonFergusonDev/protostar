@@ -15,8 +15,8 @@ from typing import Any
 
 import pytest
 import tomlkit
+import yaml_edit
 from pytest_mock import MockerFixture
-from ruamel.yaml import YAML
 
 from protostar.cli.main import handle_init
 from protostar.config import UserConfig
@@ -132,7 +132,9 @@ def _mock_process_runner(cmd: list[str], *args: Any, **kwargs: Any) -> None:
     elif "install" in cmd and any(tool in cmd for tool in ("pre-commit", "prek")):
         # Like the real runners, install one script per declared hook type.
         runner = "prek" if "prek" in cmd else "pre-commit"
-        config = YAML(typ="safe").load(Path(".pre-commit-config.yaml"))
+        config = yaml_edit.Document.parse(
+            Path(".pre-commit-config.yaml").read_text(encoding="utf-8")
+        ).to_python()
         for hook_type in config["default_install_hook_types"]:
             hook_path = Path(".git/hooks") / hook_type
             hook_path.parent.mkdir(parents=True, exist_ok=True)

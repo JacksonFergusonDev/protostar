@@ -11,7 +11,7 @@ No engine knows a file by name. Each reconciles whatever spec it is handed; see 
 | Engine | Module | Backing library |
 | :--- | :--- | :--- |
 | TOML | `toml_ast.py` | `tomlkit` |
-| YAML | `yaml_ast.py` | `ruamel.yaml` |
+| YAML | `yaml_ast.py` | `yaml-edit` |
 | JSONC | `jsonc_ast.py` | Standard library only |
 | Free-form text | `text_merge.py` | Standard library only |
 
@@ -29,7 +29,7 @@ The TOML adapter keeps semantic intent separate from a desired `tomlkit` AST. Th
 
 ## YAML
 
-`yaml_ast.py` isolates `ruamel.yaml` typing and round-trip AST operations. The runtime dependency is `ruamel.yaml>=0.19.1,<0.20`, used through the [instance API](https://yaml.dev/doc/ruamel.yaml/api/) in pure-Python round-trip mode, without C extras or custom constructors.
+`yaml_ast.py` isolates `yaml-edit` typing and round-trip CST operations. The runtime dependency is `yaml-edit>=0.2.1,<0.3`, backed by a Rust lossless CST (`rowan`) with pre-built wheels across macOS, Linux, and Windows.
 
 ### Accepted Input
 
@@ -39,7 +39,7 @@ YAML 1.2 is the default, and explicit 1.1 directives are rejected instead of sil
 - JSON-like scalar types.
 - Finite, acyclic collections.
 
-Timestamp, binary, set, and custom tags, and multiple documents, fail with a domain error. Input is bounded to 1 MB, 100 nesting levels, and 10,000 expanded nodes. Graph validation precedes construction, so recursive aliases are rejected.
+Binary, set, and custom tags, and multiple documents, fail with a domain error. Input is bounded to 1 MB, 100 nesting levels, and 10,000 expanded nodes. Before resolving aliases, the adapter charges each reference for its target’s full size and depth and rejects recursive aliases.
 
 ### Ownership and Conflicts
 
@@ -51,21 +51,18 @@ Shared alias nodes and merge-key mappings are protected whenever an edit could c
 
 ### Preserving the File
 
-The adapter patches accepted nodes in the local AST, and comments, quotes, flow and block styles, and anchors are retained where the [round-trip implementation](https://yaml.dev/doc/ruamel.yaml/detail/) supports it.
+The adapter patches accepted nodes in the local lossless CST, so untouched comments, quotes, flow and block styles, indentation, long lines, and anchors stay verbatim.
 
-- A semantic no-op returns the original bytes without dumping.
+- A semantic no-op returns the original bytes without serializing.
 - A missing file that accepts the whole desired document receives the desired text verbatim, so its comments survive.
-- A changed document is emitted in the block indentation detected from the local file (nested mapping indent, sequence dash offset, item indent, and indentless sequences), with no line-width limit, so untouched long lines are never folded.
+- Untouched regions keep their original indentation, line wrapping, and flow spacing, even in files that mix styles.
 - New mapping keys and records are inserted after their nearest earlier desired sibling that exists locally, otherwise before their nearest later one, otherwise at the end.
-
-!!! warning "Byte preservation is not universal"
-    The emitter applies one style per document. A file that mixes indentation styles, or uses non-default flow spacing such as `[ a ]`, can be normalized outside the edited values.
 
 When the local file does not end with a blank line, an emitted document ends with exactly one newline. Removing a trailing item would otherwise leave its separator blank line behind on the item before it.
 
 ### Keyed Records
 
-Pre-commit configuration uses exact `repo` identities and `(repo, id)` hook identities, including `repo: local`. The adapter presents keyed semantic values to the kernel and then patches accepted fields on the original sequence records, so repository and hook order, comments, and foreign fields remain in the local AST. Owned snapshots stay ordinary YAML with `repos` and `hooks` sequences and never contain copied foreign hooks.
+Pre-commit configuration uses exact `repo` identities and `(repo, id)` hook identities, including `repo: local`. The adapter presents keyed semantic values to the kernel and then patches accepted fields on the original sequence records, so repository and hook order, comments, and foreign fields remain in the local CST. Owned snapshots stay ordinary YAML with `repos` and `hooks` sequences and never contain copied foreign hooks.
 
 - Repository revisions are owned independently of hook fields. Adding a managed hook to an existing repository adopts neither its revision nor its other hooks.
 - Duplicate local repository blocks or hook IDs preserve the entire ambiguous repository with a `duplicate-identity` conflict. Independent repositories can still change.

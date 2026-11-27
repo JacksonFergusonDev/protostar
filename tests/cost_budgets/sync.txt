@@ -4,8 +4,8 @@ exit 0
 import:argcomplete
 import:packaging
 import:rich
-import:ruamel
 import:tomlkit
+import:yaml_edit
 parse:jsonc 10
 parse:toml 32
 parse:yaml 20

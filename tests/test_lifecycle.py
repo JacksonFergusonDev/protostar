@@ -1044,9 +1044,7 @@ def test_recipe_tool_evolution_retains_keyed_hook_edits_and_forgets_deleted_arti
 ):
     """Omitted opinions evolve; a tool switched off forgets a document already deleted."""
     import tomlkit
-    from ruamel.yaml import YAML
-
-    yaml = YAML(typ="rt")
+    import yaml_edit
 
     from protostar.lifecycle import prepare_project
     from protostar.recipe import SelectionLayer
@@ -1059,13 +1057,27 @@ def test_recipe_tool_evolution_retains_keyed_hook_edits_and_forgets_deleted_arti
     project.write_text("ruff = true\nprek = true\nrenovate = true\n")
     prepare_project().apply()
     hooks = Path(".pre-commit-config.yaml")
-    data = yaml.load(hooks.read_text())
-    local = next(repo for repo in data["repos"] if repo["repo"] == "local")
-    next(hook for hook in local["hooks"] if hook["id"] == "ruff-check")["entry"] = (
-        "local ruff"
+    doc = yaml_edit.Document.parse(hooks.read_text())
+    repos = doc.get_sequence("repos")
+    assert repos is not None
+    local = next(
+        m
+        for repo in repos.values()
+        if (m := repo.as_mapping()) is not None
+        and (val := m.get("repo")) is not None
+        and val.to_python() == "local"
     )
-    with hooks.open("w") as stream:
-        yaml.dump(data, stream)
+    local_hooks = local.get_sequence("hooks")
+    assert local_hooks is not None
+    ruff_hook = next(
+        m
+        for hook in local_hooks.values()
+        if (m := hook.as_mapping()) is not None
+        and (val := m.get("id")) is not None
+        and val.to_python() == "ruff-check"
+    )
+    ruff_hook.set("entry", "local ruff")
+    hooks.write_text(str(doc))
     Path(".github/renovate.json").unlink()
     process.reset_mock()
     recipe_doc = tomlkit.parse(Path("pyproject.toml").read_text())
@@ -1084,7 +1096,7 @@ def test_recipe_tool_evolution_retains_keyed_hook_edits_and_forgets_deleted_arti
     )
     prepared.apply()
     process.assert_called_once()
-    data = yaml.load(hooks.read_text())
+    data = yaml_edit.Document.parse(hooks.read_text()).to_python()
     local = next(repo for repo in data["repos"] if repo["repo"] == "local")
     assert (
         next(hook for hook in local["hooks"] if hook["id"] == "ruff-check")["entry"]
@@ -1322,28 +1334,30 @@ def test_a_switched_off_document_keeps_the_users_own_settings(project, mocker):
 
 
 def test_a_switched_off_workflow_with_an_edited_job_is_retracted(project, mocker):
-    from ruamel.yaml import YAML
+    import yaml_edit
 
     from protostar.lifecycle import prepare_project
 
-    yaml = YAML(typ="rt")
     mocker.patch(
         "protostar.system.ProcessRunner.run", autospec=True, side_effect=_any_resolved
     )
     reprepare = _released(project, "ci = true\n", "ci = false\n")
     workflow = Path(".github/workflows/ci.yml")
-    data = yaml.load(workflow.read_text())
-    job = next(iter(data["jobs"]))
-    data["jobs"][job]["timeout-minutes"] = 5
-    with workflow.open("w") as stream:
-        yaml.dump(data, stream)
+    doc = yaml_edit.Document.parse(workflow.read_text())
+    jobs = doc.get_mapping("jobs")
+    assert jobs is not None
+    job = next(iter(jobs.keys()))
+    job_map = jobs.get_mapping(job)
+    assert job_map is not None
+    job_map.set("timeout-minutes", 5)
+    workflow.write_text(str(doc))
     prepared = reprepare()
 
     (conflict,) = prepared.review.conflicts
     assert conflict.reason is ConflictReason.RETRACTED
     assert conflict.location.keys == ("jobs",)
     prepared.apply()
-    kept = yaml.load(workflow.read_text())
+    kept = yaml_edit.Document.parse(workflow.read_text()).to_python()
     assert set(kept) == {"jobs"}
     assert kept["jobs"][job]["timeout-minutes"] == 5
 
@@ -1387,9 +1401,9 @@ def test_sync_reports_a_retracted_document_removal(project, monkeypatch, capsys)
 
 
 def _hook_ids(path=".pre-commit-config.yaml"):
-    from ruamel.yaml import YAML
+    import yaml_edit
 
-    config = YAML(typ="safe").load(Path(path).read_text())
+    config = yaml_edit.Document.parse(Path(path).read_text()).to_python()
     return {hook["id"] for repo in config["repos"] for hook in repo["hooks"]}
 
 
@@ -1402,17 +1416,25 @@ def test_a_switched_off_tools_hook_is_retracted_and_the_users_stay(project, mock
         project, "prek = true\nmypy = true\n", "prek = true\nmypy = false\n"
     )
     assert "mypy" in _hook_ids()
-    from ruamel.yaml import YAML
+    import yaml_edit
 
-    yaml = YAML(typ="rt")
     config = Path(".pre-commit-config.yaml")
-    data = yaml.load(config.read_text())
-    local = next(repo for repo in data["repos"] if repo["repo"] == "local")
-    local["hooks"].append(
+    doc = yaml_edit.Document.parse(config.read_text())
+    repos = doc.get_sequence("repos")
+    assert repos is not None
+    local = next(
+        m
+        for repo in repos.values()
+        if (m := repo.as_mapping()) is not None
+        and (val := m.get("repo")) is not None
+        and val.to_python() == "local"
+    )
+    local_hooks = local.get_sequence("hooks")
+    assert local_hooks is not None
+    local_hooks.append(
         {"id": "mine", "name": "mine", "entry": "true", "language": "system"}
     )
-    with config.open("w") as stream:
-        yaml.dump(data, stream)
+    config.write_text(str(doc))
     prepared = reprepare()
     assert not prepared.review.conflicts
     prepared.apply()

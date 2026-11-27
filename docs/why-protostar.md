@@ -265,7 +265,7 @@ Speed is still watched. Every pull request checks what each command costs (the p
 ### Why Python Fits
 
 - **Its users already have it.** Everyone who sets up a Python project has Python and uv. Protostar is one pure-Python package, so `uv tool install protostar` works the same on every platform, with nothing built for each one.
-- **Its hardest job has mature libraries.** Protostar edits files people have already written, so it must change one setting without disturbing the comments and layout around it. [tomlkit](https://github.com/python-poetry/tomlkit) and [ruamel.yaml](https://yaml.dev/doc/ruamel.yaml/) do exactly that for TOML and YAML, and Protostar's merging is built on them. [Textual](https://textual.textualize.io/) draws its interactive screens.
+- **Its hardest job has mature libraries.** Protostar edits files people have already written, so it must change one setting without disturbing the comments and layout around it. [tomlkit](https://github.com/python-poetry/tomlkit) and [yaml-edit](https://github.com/jelmer/yaml-edit) do exactly that for TOML and YAML, and Protostar's merging is built on them. [Textual](https://textual.textualize.io/) draws its interactive screens.
 - **The people who'd improve it already write Python.** Each tool Protostar sets up is a short module that knows that tool's configuration, so adding a tool or improving one takes the language its users already know.
 
 ## When Another Tool Is the Better Choice

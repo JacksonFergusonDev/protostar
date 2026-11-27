@@ -8,12 +8,14 @@ import sys
 from pathlib import Path
 
 import pytest
-from ruamel.yaml import YAML
+import yaml_edit
 
 from scripts.ci_scope import Scope, select_scope
 
 ROOT = Path(__file__).resolve().parent.parent
-CI = YAML(typ="safe").load((ROOT / ".github/workflows/ci.yml").read_text())
+CI = yaml_edit.Document.parse(
+    (ROOT / ".github/workflows/ci.yml").read_text()
+).to_python()
 
 
 @pytest.mark.parametrize(

@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 import tomlkit
-from ruamel.yaml import YAML
 
+from protostar import yaml_ast
 from protostar.system import ProcessRunner
 from scripts.benchmarks import probes
 
@@ -38,20 +38,25 @@ def test_a_parse_that_calls_another_parse_counts_once() -> None:
     with probes.record() as recorder:
         tomlkit.parse("a = 1\n")
         tomlkit.loads("b = 2\n")
-        YAML().load("c: 3\n")
+        yaml_ast._parse_yaml("c: 3\n")
 
     assert recorder.counts == {"parse:toml": 2, "parse:yaml": 1}
 
 
 def test_recording_ends_with_every_seam_restored() -> None:
-    parse, compose, popen = tomlkit.parse, YAML.compose, subprocess.Popen.__init__
+    parse, parse_yaml, popen = (
+        tomlkit.parse,
+        yaml_ast._parse_yaml,
+        subprocess.Popen.__init__,
+    )
 
     with probes.record():
         assert tomlkit.parse is not parse
+        assert yaml_ast._parse_yaml is not parse_yaml
 
-    assert (tomlkit.parse, YAML.compose, subprocess.Popen.__init__) == (
+    assert (tomlkit.parse, yaml_ast._parse_yaml, subprocess.Popen.__init__) == (
         parse,
-        compose,
+        parse_yaml,
         popen,
     )
 

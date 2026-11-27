@@ -2,7 +2,7 @@ import json
 import tomllib
 
 import pytest
-from ruamel.yaml import YAML
+import yaml_edit
 
 from protostar.interpolation import (
     escape,
@@ -35,7 +35,9 @@ def test_escape_leaves_unicode_as_written():
     [
         lambda literal: tomllib.loads(f"value = {literal}")["value"],
         lambda literal: json.loads(literal),
-        lambda literal: YAML(typ="safe").load(f"value: {literal}")["value"],
+        lambda literal: yaml_edit.Document.parse(f"value: {literal}").to_python()[
+            "value"
+        ],
     ],
     ids=["toml", "json", "yaml"],
 )
