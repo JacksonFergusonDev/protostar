@@ -731,8 +731,8 @@ def test_jobs_reads_every_page_so_a_late_failure_still_counts(monkeypatch):
     ]
 
 
-def run_gate(tmp_path, *, event, last, pending, tonight="0"):
-    """Runs Nightly's gate against a fake gh, returning what it outputs."""
+def run_gate(tmp_path, *, last, pending):
+    """Runs Nightly's compare step against a fake gh, returning what it outputs."""
     import os
     import shutil
     import subprocess
@@ -740,13 +740,14 @@ def run_gate(tmp_path, *, event, last, pending, tonight="0"):
 
     gate = job("nightly.yml", "gate")
     assert gate["permissions"]["issues"] == "read"
-    step = gate["steps"][0]
+    step = next(step for step in gate["steps"] if step.get("id") == "compare")
     gh = tmp_path / "gh"
     gh.write_text(
         f"#!{sys.executable}\n"
         "import os, sys\n"
         "if sys.argv[1:3] == ['run', 'list']:\n"
-        "    print(os.environ['LAST' if '--status' in sys.argv else 'TONIGHT'])\n"
+        "    assert '--status' in sys.argv, sys.argv\n"
+        "    print(os.environ['LAST'])\n"
         "else:\n"
         "    assert sys.argv[1:3] == ['issue', 'list'], sys.argv\n"
         "    assert sys.argv[sys.argv.index('--label') + 1] == 'awaiting-verification'\n"
@@ -754,6 +755,51 @@ def run_gate(tmp_path, *, event, last, pending, tonight="0"):
     )
     gh.chmod(0o755)
     output = tmp_path / "output"
+    output.unlink(missing_ok=True)
+    bash = shutil.which("bash")
+    assert bash is not None
+    result = subprocess.run(
+        [bash, "-e", "-o", "pipefail", "-c", step["run"]],
+        cwd=tmp_path,
+        env={
+            **os.environ,
+            "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}",
+            "REPO": "owner/repo",
+            "GITHUB_SHA": "same",
+            "GITHUB_OUTPUT": str(output),
+            "LAST": last,
+            "PENDING": pending,
+        },
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    return output.read_text()
+
+
+def run_ran_tonight(tmp_path, *, event, runs, run_name="Mutation Testing (scheduled)"):
+    """Runs the shared ran-tonight action script against fake gh JSON output."""
+    import os
+    import shutil
+    import subprocess
+    import sys
+
+    action = yaml_edit.Document.parse(
+        (REPO_ROOT / ".github/actions/ran-tonight/action.yml").read_text(
+            encoding="utf-8"
+        )
+    ).to_python()
+    step = action["runs"]["steps"][0]
+    gh = tmp_path / "gh"
+    gh.write_text(
+        f"#!{sys.executable}\n"
+        "import os, sys\n"
+        "assert sys.argv[1:3] == ['run', 'list'], sys.argv\n"
+        "print(os.environ['RUNS_JSON'])\n"
+    )
+    gh.chmod(0o755)
+    output = tmp_path / "output"
+    output.unlink(missing_ok=True)
     bash = shutil.which("bash")
     assert bash is not None
     result = subprocess.run(
@@ -764,12 +810,12 @@ def run_gate(tmp_path, *, event, last, pending, tonight="0"):
             "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}",
             "REPO": "owner/repo",
             "EVENT": event,
-            "GITHUB_SHA": "same",
+            "WORKFLOW": "mutation.yml",
+            "RUN_NAME": run_name,
+            "HOURS": "20",
             "GITHUB_RUN_ID": "7",
             "GITHUB_OUTPUT": str(output),
-            "LAST": last,
-            "PENDING": pending,
-            "TONIGHT": tonight,
+            "RUNS_JSON": json.dumps(runs),
         },
         capture_output=True,
         text=True,
@@ -779,29 +825,101 @@ def run_gate(tmp_path, *, event, last, pending, tonight="0"):
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="The gate runs in bash")
-@pytest.mark.parametrize("event", ["schedule", "workflow_dispatch"])
 @pytest.mark.parametrize(
     ("last", "pending", "changed"),
     [("same", "0", False), ("same", "1", True), ("older", "0", True)],
 )
 def test_scheduled_nightly_keeps_running_while_a_fix_awaits_verification(
-    tmp_path, event, last, pending, changed
+    tmp_path, last, pending, changed
 ):
-    assert run_gate(tmp_path, event=event, last=last, pending=pending) == (
+    assert run_gate(tmp_path, last=last, pending=pending) == (
         f"changed={str(changed).lower()}\n"
     )
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="The gate runs in bash")
-def test_the_fallback_schedule_runs_nothing_after_a_scheduled_run_tonight(tmp_path):
-    """cron-job.org's run already counted tonight, so the schedule adds none."""
-    output = run_gate(
-        tmp_path, event="schedule", last="older", pending="1", tonight="1"
+@pytest.mark.skipif(sys.platform == "win32", reason="The action runs in bash")
+def test_ran_tonight_skips_delayed_schedule_after_dispatched_run(tmp_path):
+    """cron-job.org's run already counted tonight, so the schedule fallback skips."""
+    from datetime import UTC, datetime, timedelta
+
+    now = datetime.now(UTC)
+    recent = (now - timedelta(hours=9)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    stale = (now - timedelta(hours=25)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    title = "Mutation Testing (scheduled)"
+
+    # Another scheduled run started 9h ago -> skip on schedule.
+    assert (
+        run_ran_tonight(
+            tmp_path,
+            event="schedule",
+            run_name=title,
+            runs=[
+                {"databaseId": 7, "displayTitle": title, "createdAt": recent},
+                {"databaseId": 6, "displayTitle": title, "createdAt": recent},
+            ],
+        )
+        == "ran-tonight=true\n"
     )
-    assert output == "ran-tonight=true\nchanged=false\n"
-    bounds = job("nightly.yml", "dependency-bounds")
-    assert bounds["needs"] == "gate"
-    assert "needs.gate.outputs.ran-tonight != 'true'" in bounds["if"]
+    # Only the current run and a 25h-old run exist -> do not skip.
+    assert (
+        run_ran_tonight(
+            tmp_path,
+            event="schedule",
+            run_name=title,
+            runs=[
+                {"databaseId": 7, "displayTitle": title, "createdAt": recent},
+                {"databaseId": 5, "displayTitle": title, "createdAt": stale},
+                {
+                    "databaseId": 4,
+                    "displayTitle": "Mutation Testing",
+                    "createdAt": recent,
+                },
+            ],
+        )
+        == "ran-tonight=false\n"
+    )
+    # A manual/cron-job.org workflow_dispatch never skips via the fallback guard.
+    assert (
+        run_ran_tonight(
+            tmp_path,
+            event="workflow_dispatch",
+            run_name=title,
+            runs=[{"databaseId": 6, "displayTitle": title, "createdAt": recent}],
+        )
+        == "ran-tonight=false\n"
+    )
+
+
+@pytest.mark.parametrize(
+    ("workflow_file", "job_name", "expected_title"),
+    [
+        ("nightly.yml", "gate", "Nightly (scheduled)"),
+        ("mutation.yml", "plan", "Mutation Testing (scheduled)"),
+        ("benchmark.yml", "plan", "Benchmarks (scheduled)"),
+    ],
+)
+def test_every_scheduled_workflow_uses_ran_tonight_fallback_guard(
+    workflow_file, job_name, expected_title
+):
+    """Every workflow with a schedule fallback guards it with ./.github/actions/ran-tonight."""
+    workflow = yaml_workflow(workflow_file)
+    assert expected_title in workflow["run-name"]
+    gate = workflow["jobs"][job_name]
+    assert gate["permissions"]["contents"] == "read"
+    assert gate["permissions"]["actions"] == "read"
+    fallback = next(
+        step
+        for step in gate["steps"]
+        if step.get("uses") == "./.github/actions/ran-tonight"
+    )
+    assert fallback["with"] == {
+        "workflow": workflow_file,
+        "run-name": expected_title,
+    }
+    if workflow_file == "nightly.yml":
+        bounds = workflow["jobs"]["dependency-bounds"]
+        assert bounds["needs"] == "gate"
+        assert "needs.gate.outputs.ran-tonight != 'true'" in bounds["if"]
 
 
 SMOKED = [

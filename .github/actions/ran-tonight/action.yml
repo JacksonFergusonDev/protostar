@@ -1,0 +1,54 @@
+name: "Check whether tonight's scheduled run already started"
+description: "Skips a delayed GitHub Actions schedule fallback once cron-job.org's nightly dispatch has already started on main."
+inputs:
+  workflow:
+    description: "Workflow filename to query (for example, mutation.yml)"
+    required: true
+  run-name:
+    description: "Display title used by scheduled runs of this workflow"
+    required: true
+  hours:
+    description: "Window in hours considered the same night"
+    required: false
+    default: "20"
+  token:
+    description: "GitHub token with actions: read permission"
+    required: false
+    default: ${{ github.token }}
+outputs:
+  ran-tonight:
+    description: "Whether another scheduled run already started within the window ('true' or 'false')"
+    value: ${{ steps.check.outputs.ran-tonight }}
+runs:
+  using: "composite"
+  steps:
+    - name: Check whether a scheduled run already started tonight
+      id: check
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        REPO: ${{ github.repository }}
+        EVENT: ${{ github.event_name }}
+        WORKFLOW: ${{ inputs.workflow }}
+        RUN_NAME: ${{ inputs.run-name }}
+        HOURS: ${{ inputs.hours }}
+      run: |
+        # The schedule is the fallback for cron-job.org's dispatch: once a
+        # scheduled run has started tonight, the fallback skips so a delayed
+        # cron never runs a second time in the middle of the day.
+        if [ "$EVENT" != schedule ]; then
+          echo "ran-tonight=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        tonight=$(
+          gh run list --repo "$REPO" --workflow "$WORKFLOW" --branch main --limit 20 \
+            --json databaseId,displayTitle,createdAt \
+          | jq --arg name "$RUN_NAME" --argjson id "$GITHUB_RUN_ID" --argjson hours "$HOURS" \
+            '[.[] | select(.databaseId != $id and .displayTitle == $name and now - (.createdAt | fromdateiso8601) < $hours * 3600)] | length'
+        )
+        if [ "$tonight" != 0 ]; then
+          echo "A scheduled run already started tonight."
+          echo "ran-tonight=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "ran-tonight=false" >> "$GITHUB_OUTPUT"
+        fi
