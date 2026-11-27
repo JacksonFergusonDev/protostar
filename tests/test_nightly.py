@@ -526,6 +526,37 @@ def test_a_release_publishes_only_after_ci_nightly_and_its_smoke_test_pass():
     assert job("release.yml", "checks-passed")["steps"][0]["with"]["fetch-depth"] >= 3
 
 
+def test_pages_retries_deployment_after_artifact_upload_with_backoff():
+    """Artifact listing can lag upload finalization (actions/deploy-pages#451);
+    retrying only the deploy step avoids uploading a duplicate artifact."""
+    publish = job("pages.yml", "publish")
+    steps = publish["steps"]
+    uploads = [
+        i
+        for i, s in enumerate(steps)
+        if s.get("uses", "").startswith("actions/upload-pages-artifact@")
+    ]
+    deploys = [
+        (i, s)
+        for i, s in enumerate(steps)
+        if s.get("uses", "").startswith("actions/deploy-pages@")
+    ]
+    assert len(uploads) == 1
+    assert len(deploys) == 4
+    assert deploys[0][0] > uploads[0]
+    assert len({s["uses"] for _, s in deploys}) == 1
+    assert all(s.get("continue-on-error") is True for _, s in deploys[:-1])
+    assert "continue-on-error" not in deploys[-1][1]
+    for (_, prev), (idx, current) in itertools.pairwise(deploys):
+        expected_if = f"steps.{prev['id']}.outcome == 'failure'"
+        wait = steps[idx - 1]
+        assert wait["if"] == expected_if
+        assert wait["run"].startswith("sleep ")
+        assert current["if"] == expected_if
+    url = publish["environment"]["url"]
+    assert all(f"steps.{s['id']}.outputs.page_url" in url for _, s in deploys)
+
+
 class FakeGitHub:
     def __init__(self, jobs, open_issues=None, last_passing="a" * 40, builds=()):
         self._jobs = jobs
