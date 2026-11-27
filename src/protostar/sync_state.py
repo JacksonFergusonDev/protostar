@@ -457,7 +457,13 @@ def encode_toml_baseline(value: dict[str, Value]) -> str:
     ordered = cast(dict[str, object], sort_value_keys(value))  # pragma: no mutate
     try:
         _reject_toml_null(ordered)
-        content = rtoml.dumps(ordered)
+        try:
+            content = rtoml.dumps(ordered)
+        except rtoml.TomlSerializationError:
+            # tomllib accepts integers wider than rtoml can encode.
+            import tomlkit
+
+            content = tomlkit.dumps(ordered)
     except (rtoml.TomlSerializationError, ValueError, TypeError, RecursionError) as e:
         raise _invalid("baseline contains values unsupported by TOML.") from e
     decode_toml_baseline(content)

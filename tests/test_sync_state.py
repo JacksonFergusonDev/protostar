@@ -186,6 +186,11 @@ def test_record_and_baseline_order_do_not_change_serialized_bytes():
     ) == encode_toml_baseline({"a": 3, "b": {"x": 1, "y": 2}})
 
 
+def test_toml_baseline_preserves_large_template_integers():
+    values = decode_toml_baseline("masks = [0xffffffffffffffffffffffffffffffff, -1]")
+    assert decode_toml_baseline(encode_toml_baseline(values)) == values
+
+
 def test_baseline_preserves_native_toml_shapes():
     values: dict[str, Value] = {
         "str": "text",
