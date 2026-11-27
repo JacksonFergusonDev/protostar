@@ -51,33 +51,33 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:
+      contents: read
       actions: read
       issues: read
     outputs:
-      changed: ${{ steps.compare.outputs.changed }}
-      ran-tonight: ${{ steps.compare.outputs.ran-tonight }}
+      changed: ${{ steps.fallback.outputs.ran-tonight == 'true' && 'false' || steps.compare.outputs.changed }}
+      ran-tonight: ${{ steps.fallback.outputs.ran-tonight }}
 
     steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        sparse-checkout: .github/actions
+        persist-credentials: false
+
+    - name: Check whether a scheduled run already started tonight
+      id: fallback
+      uses: ./.github/actions/ran-tonight
+      with:
+        workflow: nightly.yml
+        run-name: Nightly (scheduled)
+
     - name: Compare with the last passing run
       id: compare
+      if: steps.fallback.outputs.ran-tonight != 'true'
       env:
         GH_TOKEN: ${{ github.token }}
         REPO: ${{ github.repository }}
-        EVENT: ${{ github.event_name }}
       run: |
-        # The schedule is the fallback for cron-job.org's dispatch: once a
-        # scheduled run has started tonight, it runs nothing, not even the
-        # dependency runs, so no night counts twice.
-        if [ "$EVENT" = schedule ]; then
-          tonight=$(gh run list --repo "$REPO" --workflow nightly.yml --branch main --limit 20 --json databaseId,displayTitle,createdAt \
-            --jq "[.[] | select(.databaseId != $GITHUB_RUN_ID and .displayTitle == \"Nightly (scheduled)\" and now - (.createdAt | fromdateiso8601) < 20 * 3600)] | length")
-          if [ "$tonight" != 0 ]; then
-            echo "A scheduled run already started tonight."
-            echo "ran-tonight=true" >> "$GITHUB_OUTPUT"
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-        fi
         last=$(gh run list --repo "$REPO" --workflow nightly.yml --branch main --status success --limit 1 --json headSha --jq '.[0].headSha // ""')
         pending=$(gh issue list --repo "$REPO" --label awaiting-verification --state open --limit 1 --json number --jq length)
         # Three runs must verify a fix even when no further commits land.
