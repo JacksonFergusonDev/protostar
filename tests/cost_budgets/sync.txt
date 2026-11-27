@@ -7,6 +7,6 @@ import:rich
 import:rtoml
 import:yaml_edit
 parse:jsonc 10
-parse:toml 1
+parse:toml 62
 parse:yaml 20
 registry:fetch 1

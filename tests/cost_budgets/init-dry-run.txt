@@ -7,7 +7,7 @@ import:rich
 import:rtoml
 import:yaml_edit
 parse:jsonc 8
-parse:toml 1
+parse:toml 40
 parse:yaml 14
 registry:fetch 1
 subprocess:git config --global user.email 1

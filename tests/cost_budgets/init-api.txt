@@ -14,6 +14,6 @@ import:rtoml
 import:tomlkit
 import:yaml_edit
 parse:jsonc 14
-parse:toml 15
+parse:toml 90
 parse:yaml 8
 registry:fetch 1

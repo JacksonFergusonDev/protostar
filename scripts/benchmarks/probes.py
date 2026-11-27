@@ -40,6 +40,8 @@ SEAMS: tuple[tuple[str, str], ...] = (
     ("protostar.jsonc_ast", "parse_jsonc"),
     ("rtoml", "load"),
     ("rtoml", "loads"),
+    ("tomllib", "load"),
+    ("tomllib", "loads"),
     ("tomlkit", "parse"),
     ("tomlkit", "loads"),
     ("tomlkit.api", "parse"),
@@ -258,7 +260,7 @@ def record(*, commands: bool = True) -> Iterator[Recorder]:
             lambda parse: _counted(recorder, "parse:jsonc", "jsonc", parse),
         )
 
-    def rtoml_parse(module: ModuleType) -> None:
+    def toml_load(module: ModuleType) -> None:
         for name in ("load", "loads"):
             patches.replace(
                 module,
@@ -289,7 +291,8 @@ def record(*, commands: bool = True) -> Iterator[Recorder]:
         "protostar.system": system,
         "protostar.registry": registry,
         "protostar.jsonc_ast": jsonc,
-        "rtoml": rtoml_parse,
+        "rtoml": toml_load,
+        "tomllib": toml_load,
         "tomlkit": toml,
         "protostar.yaml_ast": yaml,
     }
