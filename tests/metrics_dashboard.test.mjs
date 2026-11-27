@@ -153,23 +153,26 @@ async function renderBenchmarks(response, chartFailure = false) {
 }
 
 const benchmarkEntries = [
-  night('2026-10-01T00:00:00Z', 'ubuntu-latest', { sync: timing(600), version: timing(200) }),
-  night('2026-10-01T00:00:00Z', 'macos-latest', { sync: timing(400, 'suspect',
+  night('2026-10-01T00:00:00Z', 'ubuntu-latest', { sync: timing(600, 'suspect',
     { ratio: 1.2, low: 1.12, high: 1.25 }), 'init-api': timing(1500) }),
 ];
+
+test('benchmark toolbar shows Linux as static text without an OS dropdown', async () => {
+  const html = await readFile(new URL('../metrics/index.html', import.meta.url), 'utf8');
+  assert.doesNotMatch(html, /id="benchmark-os"/);
+  assert.match(html, /<span class="chart-meta">OS <span class="chart-value">Linux<\/span><\/span>/);
+});
 
 test('benchmark panel renders the latest run, recent runs, and featured chart lines', async () => {
   const { element, charts } = await renderBenchmarks({ ok: true, json: async () => benchmarkEntries });
   assert.equal(element('benchmark-status').textContent, '');
   assert.equal(element('benchmark-results').hidden, false);
-  assert.equal(element('benchmark-latest').textContent,
-    `macOS: ${'d'.repeat(7)}, 1 slower · Linux: ${'d'.repeat(7)}, nothing slower`);
-  assert.deepEqual(element('benchmark-os').children.map(option => option.textContent), ['macOS', 'Linux']);
+  assert.equal(element('benchmark-latest').textContent, `Linux: ${'d'.repeat(7)}, 1 slower`);
   assert.deepEqual(element('benchmark-measure').children.map(option => option.value), Object.keys(MEASURES));
   const scenarios = element('benchmark-scenarios').rows;
   assert.deepEqual(scenarios.map(row => row[0].textContent), ['init-api', 'sync']);
   assert.deepEqual(scenarios[1].map(cell => cell.textContent),
-    ['sync', '400 ms', '200 ms', '160 ms', '+20.0% (+12.0% to +25.0%)', VERDICTS.suspect]);
+    ['sync', '600 ms', '300 ms', '240 ms', '+20.0% (+12.0% to +25.0%)', VERDICTS.suspect]);
   const runs = element('benchmark-runs').rows;
   assert.equal(runs[0][2].child.href, `https://github.com/JacksonFergusonDev/protostar/commit/${'d'.repeat(40)}`);
   assert.equal(runs[0][3].child.href,
@@ -179,25 +182,22 @@ test('benchmark panel renders the latest run, recent runs, and featured chart li
   assert.equal(charts[0].legend.selected.sync, true);
 });
 
-test('Linux-only benchmark history renders without a macOS series or selector option', async () => {
-  const history = benchmarkEntries.filter(entry => entry.os === 'ubuntu-latest');
-  const { element, charts } = await renderBenchmarks({ ok: true, json: async () => history });
-  assert.equal(element('benchmark-results').hidden, false);
-  assert.equal(element('benchmark-latest').textContent, `Linux: ${'d'.repeat(7)}, nothing slower`);
-  assert.deepEqual(element('benchmark-os').children.map(option => option.textContent), ['Linux']);
-  assert.deepEqual(charts[0].series.map(line => line.name), ['sync', 'version']);
+test('benchmark chart prefers Linux runs when another OS appears in history', async () => {
+  const entries = [
+    ...benchmarkEntries,
+    night('2026-10-01T00:00:00Z', 'macos-latest', { version: timing(200) }),
+  ];
+  const { element, charts } = await renderBenchmarks({ ok: true, json: async () => entries });
+  assert.equal(element('benchmark-latest-range').textContent, `Linux · ${'d'.repeat(7)} against ${'e'.repeat(7)}`);
+  assert.deepEqual(charts[0].series.map(line => line.name), ['init-api', 'sync']);
 });
 
-test('choosing another system or measure redraws the chart and the latest run', async () => {
+test('choosing another measure redraws the chart and updates the caption', async () => {
   const { element, charts } = await renderBenchmarks({ ok: true, json: async () => benchmarkEntries });
-  element('benchmark-os').value = 'ubuntu-latest';
-  element('benchmark-os').handlers.change();
-  assert.deepEqual(element('benchmark-scenarios').rows.map(row => row[0].textContent), ['sync', 'version']);
-  assert.deepEqual(charts.at(-1).series.map(line => line.name), ['sync', 'version']);
   element('benchmark-measure').value = 'cpu';
   element('benchmark-measure').handlers.change();
   assert.equal(element('benchmark-caption').textContent, 'Protostar CPU time / ms');
-  assert.deepEqual(charts.at(-1).series[0].data, [300]);
+  assert.deepEqual(charts.at(-1).series.map(line => line.data), [[750], [300]]);
 });
 
 test('benchmark panel handles unpublished, empty, malformed, and unavailable history', async () => {
@@ -213,13 +213,11 @@ test('benchmark panel handles unpublished, empty, malformed, and unavailable his
   }
 });
 
-test('a chart-library failure keeps the timings, and choosing a system still updates them', async () => {
+test('a chart-library failure keeps the timings and commit links available', async () => {
   const { element } = await renderBenchmarks({ ok: true, json: async () => benchmarkEntries }, true);
   assert.equal(element('benchmark-results').hidden, false);
   assert.match(element('benchmark-status').textContent, /Timings and commit links remain available/);
-  element('benchmark-os').value = 'ubuntu-latest';
-  element('benchmark-os').handlers.change();
-  assert.deepEqual(element('benchmark-scenarios').rows.map(row => row[0].textContent), ['sync', 'version']);
+  assert.deepEqual(element('benchmark-scenarios').rows.map(row => row[0].textContent), ['init-api', 'sync']);
 });
 
 async function renderArchive(data, { chartFailure = false } = {}) {

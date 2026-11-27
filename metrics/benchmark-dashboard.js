@@ -43,11 +43,12 @@ function option(select, value, label) {
   }
 
   const oses = systems(history);
-  (/** @type {HTMLElement} */ (document.getElementById('benchmark-latest'))).textContent = oses.map(os => {
-    const latest = history.filter(entry => entry.os === os).at(-1);
+  const os = oses.includes('ubuntu-latest') ? 'ubuntu-latest' : oses[0];
+  (/** @type {HTMLElement} */ (document.getElementById('benchmark-latest'))).textContent = oses.map(system => {
+    const latest = history.filter(entry => entry.os === system).at(-1);
     if (!latest) return '';
     const flagged = latest.flagged.length ? `${latest.flagged.length} slower` : 'nothing slower';
-    return `${osName(os)}: ${latest.shortSha}, ${flagged}`;
+    return `${osName(system)}: ${latest.shortSha}, ${flagged}`;
   }).join(' · ');
 
   const runs = /** @type {HTMLTableSectionElement} */ (document.getElementById('benchmark-runs'));
@@ -60,17 +61,13 @@ function option(select, value, label) {
     row.insertCell().textContent = entry.flagged.length ? entry.flagged.join(', ') : 'None';
   }
 
-  const osSelect = /** @type {HTMLSelectElement} */ (document.getElementById('benchmark-os'));
   const measureSelect = /** @type {HTMLSelectElement} */ (document.getElementById('benchmark-measure'));
-  for (const os of oses) option(osSelect, os, osName(os));
   for (const [measure, label] of Object.entries(MEASURES)) option(measureSelect, measure, label);
-  osSelect.value = oses[0];
   measureSelect.value = 'wall';
 
   const table = /** @type {HTMLTableSectionElement} */ (document.getElementById('benchmark-scenarios'));
-  function showLatest() {
-    const latest = history.filter(entry => entry.os === osSelect.value).at(-1);
-    if (!latest) return;
+  const latest = history.filter(entry => entry.os === os).at(-1);
+  if (latest) {
     (/** @type {HTMLElement} */ (document.getElementById('benchmark-latest-range'))).textContent =
       `${osName(latest.os)} · ${latest.shortSha} against ${latest.baselineSha}`;
     table.replaceChildren();
@@ -84,7 +81,6 @@ function option(select, value, label) {
       row.insertCell().textContent = VERDICTS[result.status];
     }
   }
-  showLatest();
   (/** @type {HTMLElement} */ (document.getElementById('benchmark-results'))).hidden = false;
   status.textContent = '';
 
@@ -100,7 +96,7 @@ function option(select, value, label) {
       /** @type {HTMLElement} */ (document.getElementById('chart-benchmarks')), null, { renderer: 'canvas' });
     function draw() {
       const measure = /** @type {import('./benchmarks.mjs').Measure} */ (measureSelect.value);
-      const { runs: shown, series } = benchmarkSeries(history, osSelect.value, measure);
+      const { runs: shown, series } = benchmarkSeries(history, os, measure);
       (/** @type {HTMLElement} */ (document.getElementById('benchmark-caption'))).textContent = `${MEASURES[measure]} / ms`;
       // Blend the house palette's hex tokens into canvas-compatible RGB colors.
       const colors = series.map((_, index) => {
@@ -151,11 +147,9 @@ function option(select, value, label) {
       });
     }
     draw();
-    osSelect.addEventListener('change', () => { showLatest(); draw(); });
     measureSelect.addEventListener('change', draw);
     window.addEventListener('resize', () => chart.resize());
   } catch {
-    osSelect.addEventListener('change', showLatest);
     status.textContent = 'The benchmark chart could not load. Timings and commit links remain available below.';
   }
 })().catch(() => {
